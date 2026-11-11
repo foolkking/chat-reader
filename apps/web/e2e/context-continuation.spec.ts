@@ -103,3 +103,67 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
     await expect(page.locator('div[aria-label="Primary reader actions"] [data-reader-header-action="continuation"]')).toHaveCount(0);
   });
 }
+
+for (const width of [375, 1440]) test(`${width}px: lost file and package receipts recover by reads, including reopening the workspace`, async ({ page, baseURL }) => {
+  await page.setViewportSize({ width, height: 950 });
+  await settingsAppearance(page.request, baseURL!, width === 375 ? "zh-CN" : "en-US");
+  const created = await page.request.post("/api/conversations", { data: {
+    title: "Synthetic continuation acknowledgement", messages: [
+      { role: "user", content_markdown: "Synthetic canonical source" },
+      { role: "assistant", content_markdown: "Synthetic unchanged response" },
+    ],
+  } });
+  expect(created.status()).toBe(201);
+  const id = (await created.json()).conversation.id, endpoint = `/api/conversations/${id}/continuation`;
+  await page.goto(`/conversations/${id}?continuation=current`);
+  const panel = page.getByRole("region", { name: /^(上下文接续|Context continuation)$/ });
+  await expect(panel.getByRole("button", { name: /^(编辑|Edit)$/ })).toBeEnabled();
+  let fileWrites = 0, packageWrites = 0, taskId = "";
+  await page.route(`**${endpoint}/files`, async route => {
+    fileWrites++;
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    await route.abort("failed"); // The real server committed, but this browser lost its receipt.
+  });
+  await panel.getByRole("button", { name: /^(编辑|Edit)$/ }).click();
+  await panel.getByRole("textbox").fill("# Synthetic exact checked file\n\nRetained original intent.");
+  await panel.getByRole("button", { name: /^(保存|Save)$/ }).click();
+  const recovery = panel.getByTestId("continuation-write-recovery");
+  await expect(recovery).toContainText(/提交结果待核对|Submission is unconfirmed/);
+  expect((await (await page.request.get(endpoint)).json()).generation).toBe(1);
+  await expect(panel.getByRole("textbox")).toHaveValue("# Synthetic exact checked file\n\nRetained original intent.");
+  await recovery.getByRole("button", { name: /^(核对结果|Check result)$/ }).click();
+  await expect(recovery).toHaveCount(0);
+  await expect(panel.getByRole("heading", { name: "Synthetic exact checked file" })).toBeVisible();
+  expect(fileWrites).toBe(1);
+  expect((await (await page.request.get(endpoint)).json()).generation).toBe(1);
+  await page.route(`**${endpoint}/returns`, async route => {
+    packageWrites++;
+    const response = await route.fetch();
+    expect(response.status()).toBe(202);
+    taskId = (await response.json()).task_id;
+    await route.abort("failed");
+  });
+  await panel.getByRole("button", { name: /^(更新文件|Update files)$/ }).click();
+  await panel.getByText(/^(从 Context Package 更新|Update from Context Package)$/).click();
+  await panel.getByLabel("Context Package (.context.zip)").setInputFiles({
+    name: "synthetic.context.zip", mimeType: "application/zip", buffer: Buffer.from(zipSync({
+      "manifest.json": strToU8("{}"), "conversation.canjsonl": strToU8("Synthetic ignored Raw"),
+      "continuation/index.json": strToU8('{"note":"Synthetic accepted package"}'),
+    })),
+  });
+  await panel.getByRole("button", { name: /^(上传并更新文件|Upload and update files)$/ }).click();
+  await expect(recovery).toBeVisible();
+  await expect.poll(async () => (await (await page.request.get(`/api/tasks/${taskId}`)).json()).status).toBe("committed");
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: /^(关闭接续|Close continuation)$/ }).click();
+  await openReaderAction(page, "continuation"); // No document reload: retain the original in-memory request.
+  await expect(recovery).toBeVisible();
+  await recovery.getByRole("button", { name: /^(核对结果|Check result)$/ }).click();
+  await expect(recovery).toHaveCount(0);
+  await panel.getByRole("button", { name: "Index", exact: true }).click();
+  await expect(panel.getByText("Synthetic accepted package", { exact: true })).toBeVisible();
+  expect(packageWrites).toBe(1);
+  expect((await (await page.request.get(endpoint)).json()).generation).toBe(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

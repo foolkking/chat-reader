@@ -1,7 +1,7 @@
 """Direct private file snapshots; historical candidate operations are retired."""
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Request, Response, UploadFile
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,28 @@ from app.services.continuation_candidates import (
 from app.services.ownership import ownership_scope_from_request
 
 router = APIRouter(prefix="/api/conversations/{conversation_id}/continuation", tags=["context-continuation"])
+
+
+@router.get('/returns/by-request/{request_key:path}')
+def get_return_receipt(conversation_id: uuid.UUID, request: Request, response: Response,
+                       request_key: str = Path(..., min_length=1, max_length=128),
+                       db: Session = Depends(get_db)):
+    from app.models.background_job import BackgroundJob
+    try:
+        scope = ownership_scope_from_request(request)
+        owned_conversation(db, conversation_id, scope)
+        # Reuse the indexed admission identity, including terminal tasks. An
+        # absent receipt does not imply that a concurrent upload was rejected.
+        job = db.query(BackgroundJob.id, BackgroundJob.status).filter(
+            scope.predicate(BackgroundJob),
+            BackgroundJob.job_type == 'context_return',
+            BackgroundJob.idempotency_key == f'context-return:{conversation_id}:{request_key}',
+            BackgroundJob.payload['conversation_id'].as_string() == str(conversation_id),
+        ).one_or_none()
+        response.headers['Cache-Control'] = 'no-store'
+        return {'task': {'task_id': job.id, 'status': job.status} if job else None}
+    except ContinuationError as exc:
+        fail(db, exc)
 
 
 @router.post('/returns', status_code=202)

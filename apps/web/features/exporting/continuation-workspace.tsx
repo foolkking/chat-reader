@@ -56,7 +56,7 @@ export function ContinuationWorkspace({ conversationId, onClose, restoreFocus, o
         <button type="button" disabled={busy} className="flex h-11 w-11 items-center justify-center rounded-md hover:bg-subtle disabled:opacity-40" aria-label={zh ? "关闭接续" : "Close continuation"} onClick={close}><X className="h-5 w-5" /></button>
       </header>
       {closeError ? <p role="alert" className="px-5 py-3 text-sm text-[var(--danger)]">{zh ? "无法清除本机草稿，请重试或下载草稿后再关闭。" : "Could not clear the local draft. Retry or download it before closing."}</p> : null}
-      <div data-continuation-scroll className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 md:px-10"><div className="mx-auto max-w-3xl"><ContinuationGuide conversationId={conversationId} offline={offline} initiallyOpen={showGuideInitially} />{offline ? <OfflineContinuationPanel conversationId={conversationId} onNavigate={navigate} viewState={viewState} /> : <ContinuationPanel conversationId={conversationId} onDirtyChange={setDirty} onBusyChange={setBusy} onDiscardReady={registerDiscard} onNavigate={navigate} viewState={viewState} />}</div></div>
+      <div data-continuation-scroll className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 md:px-10"><div className="mx-auto max-w-3xl"><ContinuationGuide conversationId={conversationId} offline={offline} initiallyOpen={showGuideInitially} />{offline ? <OfflineContinuationPanel conversationId={conversationId} onNavigate={navigate} viewState={viewState} /> : <ContinuationPanel key={conversationId} conversationId={conversationId} onDirtyChange={setDirty} onBusyChange={setBusy} onDiscardReady={registerDiscard} onNavigate={navigate} viewState={viewState} />}</div></div>
     </div>
   </div>, document.body);
 }

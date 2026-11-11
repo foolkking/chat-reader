@@ -29,7 +29,13 @@ its artifacts have not been independently downloaded for release acceptance.
 H/I add actionable failed-return recovery, bounded private reads, retained
 drafts on failed navigation, short success feedback and same-Reader links.
 Local API186 / PG-and-recovery33 (overlapping), Node2321, Reader39 and
-Task/Continuation12 pass. H/I still require their own exact-source CI.
+Task/Continuation12 pass. H/I CI42950539410 passed API/Web/Reader but
+failed one Settings locale-hydration timestamp assertion (469passed/1failed);
+image jobs did not run. J fixes that test without relaxing its contract and
+adds retained write intents, read-only receipt/byte checks, separate saved
+vs refresh failures and exact-byte historical restore. Local Node2360,
+API128/PG4, Reader39, mounted recovery12, lint/typecheck pass. New exact
+CI/PWA still required; File references do not survive full page reload.
 Accumulate multiple related fixes per commit, as most recently requested.
 [Plan](docs/planning/SMALL_HOST_OPERATIONS_2026-11-11.md) /
 [execution and limits](docs/execution/SMALL_HOST_OPERATIONS_2026-11-11.md).

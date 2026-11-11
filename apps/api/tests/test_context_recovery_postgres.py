@@ -139,3 +139,38 @@ def test_late_retry_cannot_requeue_a_now_committed_task(retained_input):
         retry_background_job(job)
         stale.commit()
         assert job.status == "committed" and job.result == {"generation": 1}
+
+
+def test_missing_receipt_during_admission_is_not_rejection_and_same_key_reuses_task(retained_input):
+    from types import SimpleNamespace
+    from fastapi import Response
+    from app.api.routes.context_continuation import get_return_receipt
+    from app.services.ownership import OwnershipScope
+    factory, _, existing_id, _, _ = retained_input
+    with factory() as db:
+        source = db.get(BackgroundJob, existing_id)
+        conversation_id = db.query(Conversation.id).filter_by(owner_user_id=source.owner_user_id).scalar()
+        owner_id = source.owner_user_id
+    request = SimpleNamespace(state=SimpleNamespace(auth=SimpleNamespace(user_id=owner_id, principal_id=None)))
+    with factory() as writer:
+        admitted = receive_context_return(writer, BytesIO(b"Synthetic late admission"), conversation_id,
+            OwnershipScope(owner_id), base_generation=0, idempotency_key="late-receipt")
+        identity = admitted.id
+        # Admission owns the existing owner/conversation locks. A polling GET
+        # does not wait for them or infer rejection from the uncommitted row.
+        with factory() as reader:
+            reader.execute(text("SET LOCAL statement_timeout = '1500ms'"))
+            response = Response()
+            assert get_return_receipt(conversation_id, request, response, "late-receipt", reader) == {"task": None}
+            assert response.headers["cache-control"] == "no-store"
+        writer.commit()
+    with factory() as reader:
+        result = get_return_receipt(conversation_id, request, Response(), "late-receipt", reader)
+        assert result == {"task": {"task_id": identity, "status": "queued"}}
+    with factory() as retry:
+        same = receive_context_return(retry, BytesIO(b"Synthetic late admission"), conversation_id,
+            OwnershipScope(owner_id), base_generation=0, idempotency_key="late-receipt")
+        assert same.id == identity
+        retry.commit()
+        assert retry.query(BackgroundJob).filter_by(idempotency_key=f"context-return:{conversation_id}:late-receipt").count() == 1
+        assert retry.query(ExportArtifact).filter_by(job_id=identity).count() == 1

@@ -26,18 +26,32 @@ function runtime(file, mocks, window) {
     useEffect: (fn, deps) => { const index = cursor, entry = hook(() => ({}));
       if (!same(entry.deps, deps)) { pending.set(index, fn); entry.deps = deps; } },
   };
-  const compiled = ts.transpileModule(readFileSync(new URL(`../../apps/web/features/exporting/${file}.tsx`, import.meta.url), "utf8"), {
-    fileName: `${file}.tsx`, compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
-  }).outputText;
-  const module = { exports: {} };
-  new Function("require", "module", "exports", "window", "navigator", "document", compiled)(name => {
+  const modules = {};
+  const load = (name, path) => {
+    if (modules[name]) return modules[name];
+    const compiled = ts.transpileModule(readFileSync(new URL(`../../apps/web/${path}`, import.meta.url), "utf8"), {
+      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+    }).outputText;
+    const module = { exports: {} };
+    new Function("require", "module", "exports", "window", "navigator", "document", compiled)(dependency => {
+      if (dependency === "./api") return mocks["../../lib/api"];
+      return resolve(dependency);
+    }, module, module.exports, window, { onLine: true }, { body: {} });
+    return modules[name] = module.exports;
+  };
+  const resolve = name => {
     if (name === "react") return react;
     if (Object.hasOwn(mocks, name)) return mocks[name];
+    if (name === "../../lib/offline-access") return { authenticationGeneration: () => 1, AUTH_GENERATION_CHANGED_EVENT: "synthetic-auth" };
+    if (name === "../../lib/continuation-write-recovery") return load(name, "lib/continuation-write-recovery.ts");
+    if (name === "./use-continuation-write") return load(name, "features/exporting/use-continuation-write.ts");
+    if (name === "./continuation-write-feedback") return { ContinuationWriteFeedback: "WriteFeedback" };
     if (name.startsWith(".")) throw new Error(`Unexpected dependency: ${name}`);
     return appRequire(name);
-  }, module, module.exports, window, { onLine: true }, { body: {} });
+  };
+  const module = load(file, `features/exporting/${file}.tsx`);
   return {
-    render: (name, props) => { cursor = 0; tree = module.exports[name](props); return tree; },
+    render: (name, props) => { cursor = 0; tree = module[name](props); return tree; },
     flush: () => { for (const [index, fn] of pending) { hooks[index].cleanup?.(); hooks[index].cleanup = fn(); } pending.clear(); },
     dispose: () => { for (const entry of hooks) entry?.cleanup?.(); pending.clear(); },
     get tree() { return tree; },
@@ -60,15 +74,18 @@ function button(tree, label) {
   assert.ok(node, `Missing button: ${label}`); return node.props;
 }
 
-function fixture({ member = "index", accepted = false, reject = false, resume = false, failure = null, readFailure = false } = {}) {
+function fixture({ member = "index", accepted = false, reject = false, resume = false, failure = null, readFailure = false, refreshFailure = false, draftReadFailure = false, discardFailure = false } = {}) {
   const original = member === "index" ? '{"note":"Saved index"}' : "# Saved current";
   const edited = member === "index" ? '{"note":"Unsaved draft"}' : "# Unsaved draft";
   const revision = { id: "synthetic-revision", created_at: "2026-10-12T00:00:00Z", members: { current: {}, index: {} } };
   const state = { generation: 2, adopted_revision_id: revision.id, pending_return_task_id: failure ? "synthetic-return" : null };
-  const calls = { writes: [], confirms: [], discards: 0, closed: 0, drafts: [] };
+  const calls = { writes: [], confirms: [], discards: 0, closed: 0, drafts: [], cached: [], refreshes: 0 };
   let hold = null, localText = null;
   const window = { confirm: message => { calls.confirms.push(message); return accepted; }, addEventListener: noop, removeEventListener: noop };
-  const cache = { invalidateQueries: async () => {}, cancelQueries: async () => {}, setQueryData: noop };
+  const values = new Map();
+  const cache = { invalidateQueries: async () => { calls.refreshes++; if (refreshFailure) throw new Error("Synthetic refresh failure"); },
+    cancelQueries: async () => {}, getQueryData: key => values.get(JSON.stringify(key)), removeQueries: noop,
+    setQueryData: (key, value) => { calls.cached.push({ key, value }); values.set(JSON.stringify(key), value); } };
   const api = { state: async () => { if (readFailure) throw new Error("Synthetic read failure"); return state; }, revisions: async () => [revision],
     updateFiles: async (id, form) => { calls.writes.push({ id, form }); if (hold) await hold;
     if (reject) throw new Error("Synthetic save failure"); return { generation: 3, revision_id: "synthetic-next" }; } };
@@ -85,9 +102,9 @@ function fixture({ member = "index", accepted = false, reject = false, resume = 
   const panel = runtime("continuation-panel", {
     "../../components/preferences-provider": preferences,
     "../../lib/context-return-recovery": contextRecovery,
-    "@tanstack/react-query": { useQueryClient: () => cache, useQuery: ({ queryKey }) => ({ data: queryKey[2] === "state" ? state : queryKey[2] === "history" ? [revision]
+    "@tanstack/react-query": { useQueryClient: () => cache, useQuery: ({ queryKey }) => ({ data: queryKey[0] === "continuation-write" ? cache.getQueryData(queryKey) : queryKey[2] === "state" ? state : queryKey[2] === "history" ? [revision]
       : failure ? { job_type: "context_return", status: "failed", error_message: failure, result: {} } : undefined }) },
-    "../../lib/api": { continuationApi: api, getTask: noop },
+    "../../lib/api": { continuationApi: api, getTask: noop, ApiRequestError: class extends Error {} },
     "./continuation-document": { ContinuationDocument: "Document" }, "./continuation-drop-target": { ContinuationDropTarget: "Drop" },
     "./continuation-history": { ContinuationHistory: "History" },
   }, window);
@@ -95,13 +112,13 @@ function fixture({ member = "index", accepted = false, reject = false, resume = 
   renderPanel();
   const documentProps = find(panel.tree, item => item.type === "Document").props;
   const saved = { key: "synthetic-draft", value: { text: edited, original, base_generation: 2 } };
-  const local = { list: { data: resume ? [saved] : [], refetch: async () => {} }, status: "saved",
+  const local = { list: { data: resume ? [saved] : [], refetch: async () => { if (draftReadFailure) throw new Error("Synthetic draft list read failure"); } }, status: "saved",
     begin: saved => { localText = saved?.value.text ?? null; }, retain: value => { localText = value; calls.drafts.push(value); },
-    discard: async () => { calls.discards++; localText = null; }, remove: noop };
+    discard: async () => { if (discardFailure) throw new Error("Synthetic draft cleanup failure"); calls.discards++; localText = null; }, remove: noop };
   const document = runtime("continuation-document", {
     "../../components/preferences-provider": preferences,
     "@tanstack/react-query": { useQueryClient: () => cache, useQuery: () => ({ data: original }) },
-    "../../lib/api": { continuationApi: api }, "../conversations/markdown-renderer": { MarkdownRenderer: "Markdown" },
+    "../../lib/api": { continuationApi: api, ApiRequestError: class extends Error {} }, "../conversations/markdown-renderer": { MarkdownRenderer: "Markdown" },
     "./continuation-find": { ContinuationFind: "Find" }, "./continuation-index": { IndexReading: "Index" },
     "./use-continuation-draft": { useContinuationDraft: () => local },
   }, window);
@@ -113,6 +130,7 @@ function fixture({ member = "index", accepted = false, reject = false, resume = 
   const drop = () => find(panel.tree, item => item.type === "Drop").props.onFiles([new File([edited], member === "index" ? "index.json" : "current.md")]);
   return { calls, original, edited, panel, document, workspace, renderPanel, renderDocument, flush, edit, input, drop,
     localText: () => localText,
+    recoverReads: () => { refreshFailure = false; draftReadFailure = false; },
     hold: () => { let release; hold = new Promise(resolve => { release = resolve; }); return release; },
     dispose: () => { document.dispose(); panel.dispose(); workspace.dispose(); },
   };
@@ -145,12 +163,14 @@ test("accepted immediate replacement waits for save acknowledgement before disca
     release(); await setImmediate(); assert.equal(f.calls.discards, 1);
   } finally { release(); await setImmediate(); f.dispose(); }
 });
-test("failed replacement preserves dirty draft and asks again on retry", async () => {
+test("unconfirmed replacement preserves dirty draft and requires a read before retry", async () => {
   const f = fixture({ accepted: true, reject: true });
   try { f.edit(); f.input(f.edited); f.flush(); f.drop(); await setImmediate(); f.renderPanel();
     assert.equal(f.calls.discards, 0); assert.equal(f.localText(), f.edited);
-    button(f.panel.tree, "Retry file update").onClick(); await setImmediate();
-    assert.equal(f.calls.confirms.length, 2); assert.equal(f.calls.writes.length, 2); assert.equal(f.calls.discards, 0);
+    const recovery = find(f.panel.tree, item => item.type === "WriteFeedback").props.control;
+    assert.equal(recovery.receipt.phase, "unknown");
+    await recovery.retry();
+    assert.equal(f.calls.confirms.length, 1); assert.equal(f.calls.writes.length, 1); assert.equal(f.calls.discards, 0);
   } finally { f.dispose(); }
 });
 test("pristine drop writes without an unnecessary draft confirmation", async () => {
@@ -233,6 +253,37 @@ test("failed navigation reads keep the editor and local draft despite discard co
     assert.equal(f.calls.writes.length, 0);
     assert.ok(find(f.panel.tree, item => item.type === "Document"));
     assert.match(text(f.panel.tree), /Could not load the latest file state/);
+  } finally { f.dispose(); }
+});
+
+for (const failure of ["refreshFailure", "draftReadFailure"]) {
+  test(`${failure}: acknowledged editor save cannot become a save failure; recovery only reads`, async () => {
+    const f = fixture({ [failure]: true });
+    try {
+      f.edit(); f.input(f.edited); f.flush();
+      button(f.document.tree, "Save").onClick(); await setImmediate(); f.renderDocument();
+      assert.equal(f.calls.writes.length, 1);
+      assert.doesNotMatch(text(f.document.tree), /Save failed/);
+      assert.match(text(f.document.tree), /File saved/);
+      assert.ok(f.calls.cached.some(row => row.value?.generation === 3));
+      f.recoverReads();
+      button(f.document.tree, "Refresh saved files").onClick(); await setImmediate(); f.renderDocument();
+      assert.equal(f.calls.writes.length, 1);
+      assert.doesNotMatch(text(f.document.tree), /could not refresh/i);
+    } finally { f.dispose(); }
+  });
+}
+test("acknowledged drop clears its replay action even when refreshing the saved view fails", async () => {
+  const f = fixture({ refreshFailure: true });
+  try {
+    f.drop(); await setImmediate(); f.renderPanel();
+    assert.equal(f.calls.writes.length, 1);
+    assert.ok(!find(f.panel.tree, item => item.type === "button" && text(item) === "Retry file update"));
+    assert.match(text(f.panel.tree), /Files updated/);
+    assert.doesNotMatch(text(f.panel.tree), /Operation incomplete/);
+    f.recoverReads();
+    button(f.panel.tree, "Refresh saved files").onClick(); await setImmediate(); f.renderPanel();
+    assert.equal(f.calls.writes.length, 1);
   } finally { f.dispose(); }
 });
 

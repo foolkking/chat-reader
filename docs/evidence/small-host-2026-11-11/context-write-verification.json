@@ -1,0 +1,1558 @@
+{
+  "block": "J",
+  "date": "2026-11-11",
+  "scope": "synthetic-only; not deployed",
+  "prior_ci": {
+    "run": 42950539410,
+    "source": "052225a6396cf9e433784d8030a1449b7b8253d3",
+    "conclusion": "failure",
+    "jobs": [
+      {
+        "name": "api-quality",
+        "conclusion": "success"
+      },
+      {
+        "name": "web-quality",
+        "conclusion": "success"
+      },
+      {
+        "name": "settings-quality",
+        "conclusion": "failure"
+      },
+      {
+        "name": "reading-performance-comparison / compare",
+        "conclusion": "success"
+      },
+      {
+        "name": "build-images",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "inspect-release-artifact",
+        "conclusion": "skipped"
+      }
+    ],
+    "failure": "Settings task-time assertion captured a pre-hydration English title, then compared a Chinese aria-label against it",
+    "settings_passed": 469,
+    "settings_failed": 1,
+    "repair": "Expected full time derives from intended locale and original queued_at; assert title, aria-label and datetime. Mounted two-way locale switch added.",
+    "raw_log_sha256": "3c7bbb91932e7593f4fd7709b784c168d33646f9f342e41e448ad933488f71ef"
+  },
+  "local": {
+    "api": 128,
+    "sqlite_reflection_warnings": 4,
+    "postgres": 4,
+    "ux_node": 2360,
+    "lint": "passed",
+    "typecheck": "passed; incremental disabled",
+    "reader": {
+      "groups": 39,
+      "errors": [],
+      "result_sha256": "b6c23866cdeccf1255d7c54f676d5dadeda3c2e53d8171fb2552b96f8066455c"
+    },
+    "browser": {
+      "scope": "Production Task Center + ContinuationPanel/editor/history/recovery hook + React Query; synthetic network/account/Reader route, Markdown-paint and local-draft-storage adapters; actual persisted draft guards are separate tests",
+      "results": [
+        {
+          "width": 375,
+          "locale": "zh-CN",
+          "theme": "light",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 29,
+                "right": 77
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 29,
+                "right": 73
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 43,
+                "right": 91
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 29,
+                "right": 125
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 29,
+                "right": 73
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              }
+            ]
+          },
+          "screenshot": "tasks-375-zh-CN-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-375-zh-CN-light.png",
+          "writeScreenshot": "context-write-375-zh-CN-light.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 375,
+          "locale": "zh-CN",
+          "theme": "dark",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 29,
+                "right": 77
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 29,
+                "right": 73
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 43,
+                "right": 91
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 29,
+                "right": 125
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 29,
+                "right": 73
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              }
+            ]
+          },
+          "screenshot": "tasks-375-zh-CN-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-375-zh-CN-dark.png",
+          "writeScreenshot": "context-write-375-zh-CN-dark.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 375,
+          "locale": "en-US",
+          "theme": "light",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 29,
+                "right": 101.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 29,
+                "right": 147.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 29,
+                "right": 77.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 43,
+                "right": 115.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 29,
+                "right": 277.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 29,
+                "right": 147.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 29,
+                "right": 163.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 29,
+                "right": 163.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 29,
+                "right": 165.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 29,
+                "right": 77.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 29,
+                "right": 128.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-375-en-US-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-375-en-US-light.png",
+          "writeScreenshot": "context-write-375-en-US-light.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 375,
+          "locale": "en-US",
+          "theme": "dark",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 29,
+                "right": 101.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 29,
+                "right": 147.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 29,
+                "right": 77.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 43,
+                "right": 115.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 29,
+                "right": 277.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 29,
+                "right": 147.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 29,
+                "right": 163.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 29,
+                "right": 163.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 29,
+                "right": 165.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 29,
+                "right": 77.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 29,
+                "right": 128.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-375-en-US-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-375-en-US-dark.png",
+          "writeScreenshot": "context-write-375-en-US-dark.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 800,
+          "locale": "zh-CN",
+          "theme": "light",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 69,
+                "right": 117
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 69,
+                "right": 113
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 83,
+                "right": 131
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 69,
+                "right": 165
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 69,
+                "right": 113
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              }
+            ]
+          },
+          "screenshot": "tasks-800-zh-CN-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-800-zh-CN-light.png",
+          "writeScreenshot": "context-write-800-zh-CN-light.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 800,
+          "locale": "zh-CN",
+          "theme": "dark",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 69,
+                "right": 117
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 69,
+                "right": 113
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 83,
+                "right": 131
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 69,
+                "right": 165
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 69,
+                "right": 113
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              }
+            ]
+          },
+          "screenshot": "tasks-800-zh-CN-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-800-zh-CN-dark.png",
+          "writeScreenshot": "context-write-800-zh-CN-dark.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 800,
+          "locale": "en-US",
+          "theme": "light",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 69,
+                "right": 141.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 69,
+                "right": 187.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 69,
+                "right": 117.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 83,
+                "right": 155.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 69,
+                "right": 317.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 69,
+                "right": 187.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 69,
+                "right": 203.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 69,
+                "right": 203.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 69,
+                "right": 205.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 69,
+                "right": 117.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 69,
+                "right": 168.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-800-en-US-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-800-en-US-light.png",
+          "writeScreenshot": "context-write-800-en-US-light.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 800,
+          "locale": "en-US",
+          "theme": "dark",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 69,
+                "right": 141.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 69,
+                "right": 187.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 69,
+                "right": 117.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 83,
+                "right": 155.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 69,
+                "right": 317.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 69,
+                "right": 187.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 69,
+                "right": 203.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 69,
+                "right": 203.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 69,
+                "right": 205.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 69,
+                "right": 117.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 69,
+                "right": 168.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-800-en-US-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-800-en-US-dark.png",
+          "writeScreenshot": "context-write-800-en-US-dark.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 1440,
+          "locale": "zh-CN",
+          "theme": "light",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 389,
+                "right": 437
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 389,
+                "right": 433
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 403,
+                "right": 451
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 389,
+                "right": 485
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 389,
+                "right": 433
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              }
+            ]
+          },
+          "screenshot": "tasks-1440-zh-CN-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-1440-zh-CN-light.png",
+          "writeScreenshot": "context-write-1440-zh-CN-light.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 1440,
+          "locale": "zh-CN",
+          "theme": "dark",
+          "writes": 10,
+          "taskReads": 4,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 389,
+                "right": 437
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 389,
+                "right": 433
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 403,
+                "right": 451
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 389,
+                "right": 485
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 389,
+                "right": 433
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              }
+            ]
+          },
+          "screenshot": "tasks-1440-zh-CN-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-1440-zh-CN-dark.png",
+          "writeScreenshot": "context-write-1440-zh-CN-dark.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 1440,
+          "locale": "en-US",
+          "theme": "light",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 389,
+                "right": 461.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 389,
+                "right": 507.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 389,
+                "right": 437.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 403,
+                "right": 475.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 389,
+                "right": 637.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 389,
+                "right": 507.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 389,
+                "right": 523.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 389,
+                "right": 523.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 389,
+                "right": 525.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 389,
+                "right": 437.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 389,
+                "right": 488.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-1440-en-US-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-1440-en-US-light.png",
+          "writeScreenshot": "context-write-1440-en-US-light.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        },
+        {
+          "width": 1440,
+          "locale": "en-US",
+          "theme": "dark",
+          "writes": 10,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 389,
+                "right": 461.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 389,
+                "right": 507.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 389,
+                "right": 437.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 403,
+                "right": 475.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 389,
+                "right": 637.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 389,
+                "right": 507.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 389,
+                "right": 523.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 389,
+                "right": 523.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 389,
+                "right": 525.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 389,
+                "right": 437.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 389,
+                "right": 488.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-1440-en-US-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-1440-en-US-dark.png",
+          "writeScreenshot": "context-write-1440-en-US-dark.png",
+          "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+        }
+      ],
+      "errors": []
+    }
+  },
+  "limitations": [
+    "Full exact-source Next/PWA/64-frame/performance CI still required; no new local full build due to task disk capacity",
+    "Mounted recovery browser uses synthetic transport/auth/draft-persistence/Markdown adapters; actual full-site lost-receipt tests added, not locally executed",
+    "No user ZIP replay, production deployment, production cleanup or backup change",
+    "No physical tablet acceptance; original CI180ms long-task cause remains unexplained",
+    "Files retained in the existing auth-scoped query cache do not survive full document reload/browser restart",
+    "Uploading bytes has no short control-read deadline; hung upload progress/cancellation is a follow-up review, not declared solved"
+  ],
+  "screenshots": {
+    "context-write-375-zh-CN-light.png": "5cd63d6a34cdfffcec5215854a07b72cd886f82c57b7487a6607b4aa64fd4ac6",
+    "context-write-1440-en-US-dark.png": "97335d9993fb3c3058f17b0f95cd4270e3fdd056babebb84f2cb3f68ca9c64a4"
+  },
+  "source_sha256": {
+    "apps/api/app/api/routes/context_continuation.py": "aaa8b3aca8f05d938711f5a4958aebea65354ed093730ce6469b3a77492c65f7",
+    "apps/api/tests/test_context_recovery_postgres.py": "06e1b3dc77d49d5cce1c2397d575934916df298ef25c29b2e4bfc63501588930",
+    "apps/api/tests/test_context_return_receipts.py": "dc3fcb4cf90d2a3324769095a664accbbddb76e70aa14165b7eb614fba720099",
+    "apps/web/e2e/context-continuation-drop.spec.ts": "cd2eecd34ef8eba8137103d7408cb3aec24b164c04084275ea2efaa9fae212b7",
+    "apps/web/e2e/context-continuation.spec.ts": "45e6e820641c3fdda4dc8daaedba19e46e822ec83ea4d0adc47d76cc6a82e8f4",
+    "apps/web/e2e/settings-task-center.spec.ts": "0d44c23eb5e6e2ec1372462a3ebf9c1515dbd6dbb53ff5353b552179b607be01",
+    "apps/web/features/exporting/continuation-document.tsx": "a534a694838346d9a7b5c01109fed0eb720d959f2547f90396bd1ebad0b8ab8b",
+    "apps/web/features/exporting/continuation-history.tsx": "4fd1246d3ba9f19d83834af3f7ce4014ac8c90dae3e80e6eaf9036bb2f22831c",
+    "apps/web/features/exporting/continuation-panel.tsx": "3a8129df3d74057d7066b450596de30f291ec2067f5fcebc601809eeaa7524d9",
+    "apps/web/features/exporting/continuation-workspace.tsx": "9e58d9bd5af089444dcbf867863df1d2732d9c4cf62dcccf9f810c809fb329ea",
+    "apps/web/features/exporting/continuation-write-feedback.tsx": "28a20981408f9ef336ab4066ffd498a8c9be0c90909e440b7d03ddfa073824ad",
+    "apps/web/features/exporting/use-continuation-write.ts": "ca0ab8a442394c9fc5247eb2132f0010e97b87e43bace237ac4281b279b866c3",
+    "apps/web/lib/api.ts": "73c9b1ae2746282dcdb18e2a0d82b6b6f152fe97b8cae3cdbe207914f3fe8e38",
+    "apps/web/lib/continuation-write-recovery.ts": "470138ce2f462248ef0f41ae8d93b4d18d65c64671cc2857702232fa55128fbe",
+    "scripts/ux/continuation-drop-guard.test.mjs": "86480f49e2b9771b968b82fdff62c2e1953e5fa9bfa9b47e44b08ea1055ae008",
+    "scripts/ux/continuation-read-lifetime.test.mjs": "452656e991d3885c308a3c8df06795d659228c512be0c560a31a2c6ccf5b5a73",
+    "scripts/ux/continuation-write-recovery.test.mjs": "3a71209e2e9230c518dcda0da91eb695dce04c56a2f30f1703787038193c87f9",
+    "scripts/ux/import-recovery-browser.mjs": "09d91edc48ae28d33d98aa06f7463453f6764979983ae6693279108f2e072272",
+    "scripts/ux/task-status-recovery.test.mjs": "33ad1426ba8f1ac53212deac369c785201ad1a2edc3d46ee6a134f349041ce08"
+  },
+  "local_log_sha256": {
+    "context-j-confirmation-before.log": "f181dbe9b8f4431110927c7b0d4125b4c304ef3420996a2bda0818af09d8ae4b",
+    "context-j-confirmation-after.log": "fb56a136162464425496fad49fc0d942c949358e0f0cdce8761893204e4229e2",
+    "context-j-receipt-before.log": "0f6c02e6c56c7ac209889e0eb7590734cb9a1949a744f942c2e6c89f893ac866",
+    "context-j-write-recovery.log": "c473c1895d5b86c681251df73c64ad6d85ddcdbaf67e5d2f4e08631789421126",
+    "context-j-boundaries.log": "57fd214224a560818023f039b58012d3ad335f74d310bf48b4f36e96fe5941fa",
+    "context-j-receipt-pg.log": "0abbef879039ee3fb54f4b1906f696263e1518c34b64befb898a3ac2d29f66bb",
+    "context-j-ux-exact.log": "38b51c6f7a2b460da8c8b95fb0c818ffc1935eb23f70f935bc6e398e44bcb1e7",
+    "context-j-lint-exact.log": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+    "context-j-types-exact.log": "8747eaad3fafe02aab4ea44e11f1b5a6ae00729cfbb52373ac273b503f5ee79f",
+    "context-j-browser-exact.log": "dd25b20ea88ae2c6a757f555538fcf2c390eb24e69f343754d53a90b5a0b13fe",
+    "context-j-reader.log": "61f6801a228f9f8b3718c80384cd5bb75de75d0ae40344ff8885c697ba5181ff"
+  }
+}

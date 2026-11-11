@@ -32,8 +32,52 @@ editor, selections and old page. Loading is distinguished from saving.
 Confirmed replacement suppresses the superseded terminal status only in the
 current panel, not in task history. Pure success feedback lasts3seconds;
 errors, conflicts, uncertain state and failed draft cleanup remain visible.
-These changes do not claim complete unknown-write reconciliation or physical
-device acceptance. See the [verification ledger](../execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
+The follow-up below adds unknown-write reconciliation; physical-device and
+exact-source CI acceptance remain separate. See the
+[verification ledger](../execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
+
+### Confirmed writes and unknown receipts — worktree follow-up
+
+The editor, selected files, drop and historical-member restore use one retained
+intent per authentication generation/conversation in the existing query cache.
+The intent retains the original base, File references and package request key.
+It is not a disk copy, durable upload queue or cross-browser-restart guarantee.
+Closing/reopening the workspace keeps it; a full document reload loses these
+in-memory references. Editor drafts retain their existing separate Dexie rules.
+Account changes retire callbacks/cache access, and the workspace keys its
+write panel by conversation. No effect automatically resubmits bytes.
+
+A valid successful response confirms the write before view refresh or draft
+cleanup. A failed subsequent read says saved-but-not-refreshed and offers a
+read-only refresh, not another PUT. Draft cleanup failure retains its own
+explanation and existing draft deletion/download actions. Normal success stays
+brief. Format/access/size/conflict rejections retain input and explain adjustment;
+transport errors, 408, 5xx and malformed success bodies remain unconfirmed.
+
+`GET /continuation/returns/by-request/{request_key}` checks live conversation
+ownership and the indexed owner/type/original admission identity, including
+terminal tasks. Its no-store response is `{task: {task_id, status} | null}`,
+without payload, path or content. It does not require the retained upload file,
+stage/hash input or wait for an admission transaction. `null` only means no
+visible receipt yet, not rejection. An explicit retry retains the same key,
+base and bytes; existing server admission deduplication remains authoritative.
+
+For direct files, Check result reads current state, at most the submitted
+members of the selected revision, then state again. Actual bytes (BOM/newlines
+included) are compared within the existing1/8MiB limits, one member at a time.
+A changed state or failed read stays unknown; matching current bytes confirm
+the requested outcome, not which actor wrote it. Different bytes at a new
+generation require comparison/reselection, never automatic rebasing. At the
+original generation, an explicit same-intent retry may be offered; it is never
+triggered by a GET. The unsubmitted counterpart is neither compared nor replaced.
+
+Unknown-state recovery controls are outside the temporarily disabled write
+fields; retained inputs and saved files can be downloaded, and Source/Read
+remain usable. Historical restore retains the original bounded member bytes,
+not a decoded/re-encoded preview that could remove a BOM. Already confirmed operations cannot
+turn back into failed/unknown because a follow-up callback rejects. Uploads
+still have no short20-second read deadline; stalled upload progress/cancellation
+needs separate review and is not claimed solved by this change.
 
 ## Current contract — released 2026-10-19
 

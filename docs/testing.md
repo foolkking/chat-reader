@@ -1,5 +1,41 @@
 # Testing
 
+## Continuation acknowledgement recovery — 2026-11-11 (not deployed)
+
+`continuation-write-recovery.test.mjs` executes the real intent/check functions
+and retained-operation hook with controlled transport/hooks and installed query
+cache. It tests original key/base/File identity, read-only verification, unknown
+vs rejection, malformed bodies, exact bytes, mid-check changes, late auth,
+close/re-entry and success-follow-up failures. It is not mounted DOM evidence.
+`continuation-read-lifetime` additionally tests the receipt read's whole-body
+deadline and bounded byte reads. Existing draft/drop callback checks retain their
+original protection assertions and add confirmed-write/failed-refresh cases.
+
+The mandatory12-combination `import-recovery-browser` now mounts the actual
+Continuation editor/history/retained-write hook as well as Task Center/Panel.
+It verifies real click/keyboard state, no duplicate PUT after a lost response,
+same-intent package retry after a read, panel unmount/re-entry,3-second feedback
+and44px controls. Transport, identity, Markdown painting and draft persistence
+are explicit synthetic adapters. Existing full-site Context/PWA suites remain
+required; `context-continuation.spec.ts` adds real-server lost-acknowledgement
+checks at375/1440px without replaying real user input.
+
+`test_context_return_receipts.py` covers no-store/read-only terminal receipts,
+absence, encoded keys, role/target/type isolation and actual authenticated
+account switching. `test_context_recovery_postgres.py` adds uncommitted admission
+→ null read → committed receipt → same-key deduplication under real PostgreSQL,
+without a GET waiting for owner/conversation write locks.
+
+CI42950539410 failed one Settings task-time assertion (469 passed/1failed):
+the test captured an English title before preference hydration and later
+expected a Chinese prefix with that stale title. Its replacement derives the
+expected full timestamp from the intended locale and original timestamp, then
+waits for title and accessible label independently. Mounted Task Center also
+switches locales both ways while asserting the unchanged datetime. No arbitrary
+sleep, retry-only workaround or relaxed identity/time assertions.
+Local results and resource limits are recorded in the
+[execution ledger](execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
+
 ## Small-host continuation — 2026-11-11 (not deployed)
 
 `reader-window-retention.test.mjs` executes complete-turn protection including

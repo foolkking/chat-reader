@@ -142,10 +142,14 @@ for (const width of [375, 768, 1440]) {
         await expect(row).toContainText(title);
         await expect(row).toContainText(job.format === "markdown_bundle" ? "Markdown" : "CanJSON");
         await expect(row.locator("time")).toHaveAttribute("datetime", job.queued_at);
-        const fullTime = await row.locator("time").getAttribute("title");
-        expect(fullTime).toBeTruthy();
+        // Preferences may hydrate after the task rows. Derive the expected
+        // timestamp from the chosen locale, not a pre-hydration DOM snapshot.
+        const fullTime = await page.evaluate(({ value, locale }) =>
+          new Intl.DateTimeFormat(locale, { dateStyle: "full", timeStyle: "medium" }).format(new Date(value)),
+        { value: job.queued_at, locale });
+        await expect(row.locator("time")).toHaveAttribute("title", fullTime);
         await expect(row.locator("time")).toHaveAttribute("aria-label", `${locale === "zh-CN" ? "提交于" : "Submitted"} ${fullTime}`);
-        times.push(fullTime!);
+        times.push(fullTime);
         await expect(row.getByRole("progressbar")).toHaveCount(0);
         const download = row.getByRole("button", { name: /^(下载结果|Download result)$/ });
         await expect(download).toBeEnabled();

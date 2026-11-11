@@ -1,5 +1,17 @@
 # API 参考
 
+## 接续写入回执核对 — 2026-11-11（未部署）
+
+新增`GET /api/conversations/{conversation_id}/continuation/returns/by-request/{request_key}`，
+返回`{"task":{"task_id":"…","status":"…"}}`或`{"task":null}`，`Cache-Control: no-store`。
+先检查当前对话所有权/未删除，再按owner、`context_return`、原幂等键及对话读取，
+包含终态；沿用1–128字符key，支持已有带分隔符的编码key。外属/删除对话404，
+未登录沿原认证处理，不返回payload、文件路径或原文。
+GET不生成任务、不读取/哈希ZIP、不写回数据库；尚未提交的并发接收可能暂不可见，
+因此null不代表原请求失败。明确重试仍由现有POST对原key/base/SHA去重，
+不增加migration或自动重发。单文件核对复用state/revision/member只读接口。
+详见[Context合同](system/CONTEXT_PACKAGE_CONTRACT.md)。
+
 ## 来源放弃后的清理回执 — 2026-11-11（未部署）
 
 导入会话读取增加可选`source_cleanup`：固定状态

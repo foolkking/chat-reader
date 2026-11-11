@@ -17,15 +17,24 @@ writeFileSync(join(out, "loader.cjs"), `const ts=require(${JSON.stringify(requir
 module.exports=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText;`);
 writeFileSync(join(out, "adapters.tsx"), `
 import React from "react";
+import {ContinuationDocument as ActualDocument} from ${modulePath("features/exporting/continuation-document.tsx")};
+import {ContinuationHistory as ActualHistory} from ${modulePath("features/exporting/continuation-history.tsx")};
 import {translate} from ${modulePath("lib/i18n.ts")};
 import {withRequestDeadline} from ${modulePath("lib/request-deadline.ts")};
-export const usePreferences=()=>({resolvedLocale:window.gateLocale});
+export const usePreferences=()=>{
+ const [locale,setLocale]=React.useState(window.gateLocale);
+ React.useEffect(()=>{const sync=()=>setLocale(window.gateLocale);window.addEventListener("synthetic-locale",sync);
+ return ()=>window.removeEventListener("synthetic-locale",sync);},[]);
+ return {resolvedLocale:locale};
+};
 export const useTranslations=()=>key=>translate(window.gateLocale,key);
 export const authenticationGeneration=()=>window.authGeneration??1;
+export const AUTH_GENERATION_CHANGED_EVENT="synthetic-auth";
+export class ApiRequestError extends Error {constructor(message,status,path,code){super(message);Object.assign(this,{status,path,code});}}
 export const useImportDialog=()=>({openImportDialog:options=>window.openedImport=options});
 const request=(url,init={})=>withRequestDeadline(async signal=>{
   const response=await fetch(url,{...init,signal});
-  if(!response.ok) throw Object.assign(Error("Synthetic response"),{status:response.status});
+  if(!response.ok) {const body=await response.json();throw new ApiRequestError(body.detail?.code??"Synthetic response",response.status,url,body.detail?.code);}
   return response.json();
 },init.signal);
 export const getActiveTasks=()=>request("/api/tasks/active");
@@ -39,10 +48,26 @@ export const continuationApi={
  revisions:(id,offset=0,signal)=>request("/api/conversations/"+id+"/continuation/revisions",{signal}),
  updateFiles:(id,body)=>request("/api/conversations/"+id+"/continuation/files",{method:"PUT",body}),
  returnPackage:(id,body)=>request("/api/conversations/"+id+"/continuation/returns",{method:"POST",body}),
+ returnReceipt:(id,key)=>request("/api/conversations/"+id+"/continuation/returns/by-request/"+encodeURIComponent(key)),
+ member:(id,kind,revision,member)=>withRequestDeadline(async signal=>{
+  const response=await fetch("/api/conversations/"+id+"/continuation/revisions/"+revision+"/members/"+member,{signal});
+  if(!response.ok)throw Error("Synthetic member read");return response.text();}),
+ memberBytes:(id,revision,member)=>withRequestDeadline(async signal=>{
+  const response=await fetch("/api/conversations/"+id+"/continuation/revisions/"+revision+"/members/"+member,{signal});
+  if(!response.ok)throw Error("Synthetic member read");return new Uint8Array(await response.arrayBuffer());}),
 };
-export const ContinuationDocument=()=> <article>Retained synthetic continuation</article>;
+export const ContinuationDocument=props=>window.gateActualContinuation?<ActualDocument {...props}/>:<article>Retained synthetic continuation</article>;
 export const ContinuationDropTarget=({children})=> <div>{children}</div>;
-export const ContinuationHistory=()=>null;
+export const ContinuationHistory=props=>window.gateActualContinuation?<ActualHistory {...props}/>:null;
+export const MarkdownRenderer=({text})=><div data-synthetic-renderer>{text}</div>;
+export const ContinuationFind=({children})=><div>{children}</div>;
+export const IndexReading=({text})=><div>{text}</div>;
+export const useContinuationDraft=()=>{
+ const original=React.useRef(null);
+ return {list:{data:[],refetch:async()=>{}},status:"saved",begin:()=>{},
+ retain:text=>{original.current=text;window.syntheticDraft=text;},
+ discard:async()=>{window.syntheticDraft=null;original.current=null;},remove:async()=>{}};
+};
 export const ContentCleanupDialog=()=>null,CleanupDismissAction=()=>null,CleanupScanCancelAction=()=>null;
 export const cleanupScanLabel=()=>"",SettingsFocusedDialog=()=>null,ExportArtifactDelivery=()=>null;
 export default ({href,children,...props})=><a href={href} {...props}>{children}</a>;
@@ -56,7 +81,8 @@ import {ContinuationPanel} from ${modulePath("features/exporting/continuation-pa
 const client=new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});
 function Fixture(){const [open,setOpen]=useState(true);const continuation=new URL(location.href).searchParams.has("continuation");
 return <main style={{maxWidth:720,margin:"24px auto",padding:12}}>
- {continuation?<ContinuationPanel conversationId="synthetic-context-source"/>:<>
+ {continuation?<><button className="btn-secondary min-h-11 px-3 mb-4" onClick={()=>setOpen(!open)}>Toggle continuation</button>
+ {open&&<ContinuationPanel conversationId="synthetic-context-source"/>}</>:<>
  <button className="btn-secondary min-h-11 px-3 mb-4" onClick={()=>setOpen(!open)}>Toggle tasks</button>
  {open&&<ImportTaskMonitor placement="center" forceVisible/>}
  </>}
@@ -76,7 +102,7 @@ await new Promise((yes, no) => webpack({
   },
   plugins: [
     new webpack.ProvidePlugin({ process: require.resolve("next/dist/build/polyfills/process") }),
-    new webpack.NormalModuleReplacementPlugin(/(?:preferences-provider|import-dialog-provider|offline-access|content-cleanup-panel|cleanup-dismiss-action|cleanup-scan-progress|settings-focused-dialog|export-artifact-delivery|continuation-document|continuation-drop-target|continuation-history|\/lib\/api)$/, resource => { resource.request = adapter; }),
+    new webpack.NormalModuleReplacementPlugin(/(?:preferences-provider|import-dialog-provider|offline-access|content-cleanup-panel|cleanup-dismiss-action|cleanup-scan-progress|settings-focused-dialog|export-artifact-delivery|continuation-document|continuation-drop-target|continuation-history|use-continuation-draft|continuation-find|continuation-index|markdown-renderer|\/lib\/api|^\.\/api)$/, resource => { resource.request = adapter; }),
   ],
   module: { rules: [{ test: /\.tsx?$/, exclude: /node_modules/, use: join(out, "loader.cjs") }] },
 }, (error, stats) => error || stats.hasErrors() ? no(error ?? Error(stats.toString({ all: false, errors: true }))) : yes()));
@@ -94,6 +120,7 @@ try {
     page.on("pageerror", error => errors.push(error.stack ?? error.message));
     await page.addInitScript(({ locale, theme }) => {
       window.gateLocale = locale;
+      window.gateActualContinuation = new URL(location.href).searchParams.has("actual");
       document.addEventListener("DOMContentLoaded", () => { document.documentElement.dataset.theme = theme; });
     }, { locale, theme });
     const now = new Date().toISOString();
@@ -118,6 +145,20 @@ try {
     const rows = [analysis, other, limited, invalid, sourceCleanup, expired, conflict, unavailable, transient], writes = [];
     let continuationState = { generation: 0, adopted_revision_id: null, pending_return_task_id: null };
     let continuationReadFailed = false;
+    let actual = false, writeMode = "ok", packageMode = "ok", packageReceipt = null;
+    let snapshots = [], packageAttempts = [];
+    const applyFiles = async request => {
+      const form = await new Response(request.postDataBuffer(), { headers: { "content-type": request.headers()["content-type"] } }).formData();
+      if (Number(form.get("base_generation")) !== continuationState.generation) return null;
+      const prior = snapshots[0]?.contents ?? {};
+      const contents = { ...prior };
+      for (const name of ["current", "index"]) if (form.get(name)) contents[name] = Buffer.from(await form.get(name).arrayBuffer()).toString("utf8");
+      const revision = { id: `synthetic-snapshot-${continuationState.generation + 1}`, created_at: now,
+        members: { current: "current" in contents, index: "index" in contents }, contents };
+      snapshots = [revision, ...snapshots].slice(0, 3);
+      continuationState = { generation: continuationState.generation + 1, adopted_revision_id: revision.id, pending_return_task_id: null };
+      return { generation: continuationState.generation, revision_id: revision.id };
+    };
     let releaseCancel, retryFailed = false, taskReads = 0;
     const cancellation = new Promise(resolve => { releaseCancel = resolve; });
     await page.route("https://import-recovery.synthetic/**", async route => {
@@ -142,13 +183,36 @@ try {
       if (path.startsWith("/api/tasks/")) { taskReads++; return route.fulfill({ json: rows.find(row => path.endsWith("/" + row.job_id)) ?? analysis }); }
       if (path.endsWith("/continuation")) return route.fulfill(continuationReadFailed
         ? { status: 503, json: { detail: "Synthetic read failure" } } : { json: continuationState });
-      if (path.endsWith("/continuation/revisions")) return route.fulfill({ json: [] });
+      if (path.endsWith("/continuation/revisions")) return route.fulfill(actual
+        ? continuationReadFailed ? { status: 503, json: {} } : { json: snapshots }
+        : { json: [] });
+      if (actual && /\/continuation\/revisions\/[^/]+\/members\/(current|index)$/.test(path)) {
+        const parts = path.split("/"), value = snapshots.find(row => row.id === parts.at(-3))?.contents[parts.at(-1)];
+        return route.fulfill(value === undefined ? { status: 404, json: {} } : { contentType: "text/plain; charset=utf-8", body: value });
+      }
       if (path.endsWith("/continuation/files")) {
         writes.push({ path, body: route.request().postData() });
+        if (actual) {
+          const saved = await applyFiles(route.request());
+          if (!saved) return route.fulfill({ status: 409, json: { detail: { code: "CONTEXT_BASE_CHANGED" } } });
+          if (writeMode === "ack-lost") return route.abort("failed");
+          if (writeMode === "refresh-failed") continuationReadFailed = true;
+          return route.fulfill({ json: saved });
+        }
         continuationState = { generation: 1, adopted_revision_id: null, pending_return_task_id: null };
         return route.fulfill({ json: { generation: 1, revision_id: "synthetic-new-revision" } });
       }
+      if (path.includes("/continuation/returns/by-request/")) return route.fulfill({ json: { task: packageReceipt } });
       if (path.endsWith("/continuation/returns")) {
+        if (actual) {
+          writes.push({ path });
+          const form = await new Response(route.request().postDataBuffer(), { headers: { "content-type": route.request().headers()["content-type"] } }).formData();
+          packageAttempts.push({ key: form.get("idempotency_key"), base: form.get("base_generation"), bytes: await form.get("file").text() });
+          if (packageMode === "not-admitted") return route.abort("failed");
+          packageReceipt = { task_id: "synthetic-new-return", status: "committed" };
+          rows.push({ ...row(packageReceipt.task_id, "context_return", "committed"), result: {} });
+          return route.fulfill({ status: 202, json: packageReceipt });
+        }
         writes.push({ path }); return route.fulfill({ status: 500, json: {} });
       }
       return route.fulfill({ contentType: path === "/bundle.js" ? "text/javascript" : path === "/style.css" ? "text/css" : "text/html",
@@ -160,6 +224,15 @@ try {
       const a = page.locator("#task-row-analysis"), b = page.locator("#task-row-other");
       const limitRow = page.locator("#task-row-limited"), invalidRow = page.locator("#task-row-invalid");
       await expect(limitRow).toBeVisible();
+      for (const nextLocale of [locale === "zh-CN" ? "en-US" : "zh-CN", locale]) {
+        const expectedTime = await page.evaluate(({ nextLocale, value }) => {
+          window.gateLocale = nextLocale; window.dispatchEvent(new Event("synthetic-locale"));
+          return new Intl.DateTimeFormat(nextLocale, { dateStyle: "full", timeStyle: "medium" }).format(new Date(value));
+        }, { nextLocale, value: now });
+        await expect(a.locator("time")).toHaveAttribute("datetime", now);
+        await expect(a.locator("time")).toHaveAttribute("title", expectedTime);
+        await expect(a.locator("time")).toHaveAttribute("aria-label", `${nextLocale === "zh-CN" ? "提交于" : "Submitted"} ${expectedTime}`);
+      }
       await expect(limitRow.getByRole("button", { name: /^重试$|^Retry$/ })).toHaveCount(0);
       await expect(limitRow.getByRole("link", { name: /返回对话调整导出|Return to the conversation to adjust export/ }))
         .toHaveAttribute("href", "/conversations/synthetic-export-source");
@@ -268,11 +341,88 @@ try {
       assert.equal(writes.length, beforeReselection + 1);
       assert.match(writes.at(-1).body, /Newly selected synthetic continuation/);
       assert.equal(writes.filter(item => /\/context-(expired|conflict|missing)\/retry|\/continuation\/returns$/.test(item.path)).length, 0);
+      // Same production panel with actual editor/history and retained-operation
+      // hook. Markdown painting and local draft persistence are explicit adapters.
+      actual = true;
+      snapshots = [2, 1].map(n => ({ id: `synthetic-snapshot-${n}`, created_at: now,
+        members: { current: true, index: true }, contents: { current: `# Synthetic current ${n}`, index: `{"note":"Synthetic index ${n}"}` } }));
+      continuationState = { generation: 2, adopted_revision_id: snapshots[0].id, pending_return_task_id: null };
+      await page.goto("https://import-recovery.synthetic/conversations/synthetic-context-source?continuation=current&actual=1");
+      const editor = page.getByRole("region", { name: /上下文接续|Context continuation/ });
+      await expect(editor.locator("[data-synthetic-renderer]")).toHaveText("# Synthetic current 2");
+      const originalWriteCount = writes.length;
+      await editor.getByRole("button", { name: /^编辑$|^Edit$/ }).click();
+      await editor.getByRole("textbox").fill("# Synthetic verified edit");
+      writeMode = "ack-lost";
+      await editor.getByRole("button", { name: /^保存$|^Save$/ }).click();
+      const recovery = page.getByTestId("continuation-write-recovery");
+      await expect(recovery).toContainText(locale === "zh-CN" ? "提交结果待核对" : "Submission is unconfirmed");
+      await expect(editor.getByRole("textbox")).toHaveValue("# Synthetic verified edit");
+      await expect(editor.getByRole("textbox")).toBeDisabled();
+      await recovery.getByRole("button", { name: /^核对结果$|^Check result$/ }).click();
+      await expect(recovery).toHaveCount(0);
+      await expect(editor.locator("[data-synthetic-renderer]")).toHaveText("# Synthetic verified edit");
+      assert.equal(writes.length, originalWriteCount + 1);
+      assert.equal(continuationState.generation, 3);
+      writeMode = "refresh-failed";
+      await editor.getByRole("button", { name: /^编辑$|^Edit$/ }).click();
+      await editor.getByRole("textbox").fill("# Synthetic confirmed despite refresh");
+      await editor.getByRole("button", { name: /^保存$|^Save$/ }).click();
+      await expect(editor).toContainText(locale === "zh-CN" ? "文件已保存，但" : "File saved, but");
+      await expect(editor).not.toContainText(locale === "zh-CN" ? "保存失败" : "Save failed");
+      continuationReadFailed = false; writeMode = "ok";
+      await editor.getByRole("button", { name: /^刷新已保存文件$|^Refresh saved files$/ }).click();
+      await expect(editor).not.toContainText(locale === "zh-CN" ? "文件已保存，但" : "File saved, but");
+      assert.equal(writes.length, originalWriteCount + 2);
+      // Restore an actual older member, then lose the PUT response.
+      snapshots[1].contents.current = "\ufeff# Synthetic verified edit\r\n";
+      await editor.getByRole("button", { name: /^历史$|^History$/ }).click();
+      await editor.getByRole("button", { name: /^查看 current$|^View current$/ }).nth(1).click();
+      writeMode = "ack-lost"; page.once("dialog", dialog => dialog.accept());
+      await editor.getByRole("button", { name: /^仅恢复 Current$|^Restore Current only$/ }).click();
+      await expect(recovery).toBeVisible();
+      await recovery.getByRole("button", { name: /^核对结果$|^Check result$/ }).click();
+      await expect(editor.locator("[data-synthetic-renderer]")).toHaveText("# Synthetic verified edit");
+      assert.equal(writes.length, originalWriteCount + 3);
+      assert.equal(continuationState.generation, 5);
+      assert.equal(snapshots[0].contents.current, "\ufeff# Synthetic verified edit\r\n", "Restore must preserve the stored BOM and CRLF bytes");
+      // Unknown package admission survives an actual panel unmount/remount.
+      await editor.getByRole("button", { name: /^更新文件$|^Update files$/ }).click();
+      await editor.getByText(/^(从 Context Package 更新|Update from Context Package)$/).click();
+      await editor.getByLabel("Context Package (.context.zip)").setInputFiles({
+        name: "synthetic.context.zip", mimeType: "application/zip", buffer: Buffer.from("Synthetic package transport"),
+      });
+      packageMode = "not-admitted";
+      await editor.getByRole("button", { name: /^上传并更新文件$|^Upload and update files$/ }).click();
+      await expect(recovery).toBeVisible();
+      await page.getByRole("button", { name: "Toggle continuation" }).click();
+      await page.getByRole("button", { name: "Toggle continuation" }).click();
+      await expect(recovery).toBeVisible();
+      await expect(editor.getByRole("button", { name: /^(下载文件|Download file)$/ })).toBeEnabled();
+      await expect(editor.getByRole("button", { name: /^(编辑|Edit)$/ })).toBeDisabled();
+      await editor.getByRole("button", { name: /^(原文|Source)$/ }).click();
+      await expect(editor.locator("pre")).toHaveText("# Synthetic verified edit\r\n");
+      await editor.getByRole("button", { name: /^(阅读|Read)$/ }).click();
+      assert.equal(packageAttempts.length, 1);
+      await recovery.getByRole("button", { name: /^核对结果$|^Check result$/ }).click();
+      await expect(recovery.getByRole("button", { name: /按原请求重试|Retry the original request/ })).toBeVisible();
+      assert.equal(packageAttempts.length, 1);
+      const writeScreenshot = `context-write-${width}-${locale}-${theme}.png`;
+      await page.screenshot({ path: join(out, writeScreenshot), fullPage: true });
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth) <= 1);
+      for (const bounds of await recovery.locator("button").evaluateAll(nodes => nodes.map(node => {
+        const box = node.getBoundingClientRect(); return { width: box.width, height: box.height };
+      }))) assert.ok(bounds.width >= 44 && bounds.height >= 44);
+      packageMode = "ok";
+      await recovery.getByRole("button", { name: /按原请求重试|Retry the original request/ }).click();
+      await expect(recovery).toHaveCount(0);
+      assert.equal(packageAttempts.length, 2); assert.deepEqual(packageAttempts[1], packageAttempts[0]);
       results.push({ width, locale, theme, writes: writes.length, taskReads, geometry, screenshot: filename,
         sourceCleanup: "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
         contextRecovery: "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
         contextRead: "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
-        contextScreenshot });
+        contextScreenshot, writeScreenshot,
+        continuationWrites: "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry" });
     } catch (error) {
       await page.screenshot({ path: join(out, `failure-${width}-${locale}-${theme}.png`), fullPage: true }).catch(() => {});
       writeFileSync(join(out, "failure.json"), JSON.stringify({
@@ -283,7 +433,7 @@ try {
   }
   assert.deepEqual(errors, []);
   writeFileSync(join(out, "result.json"), JSON.stringify({
-    scope: "Production Task Center + ContinuationPanel + React Query; synthetic network/account/Reader-route/adjacent-document adapters; actual editor draft protection is covered separately",
+    scope: "Production Task Center + ContinuationPanel/editor/history/recovery hook + React Query; synthetic network/account/Reader route, Markdown-paint and local-draft-storage adapters; actual persisted draft guards are separate tests",
     results, errors,
   }, null, 2));
   console.log(`Task recovery browser: ${results.length} passed; ${out}`);

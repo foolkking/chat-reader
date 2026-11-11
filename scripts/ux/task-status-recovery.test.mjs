@@ -403,6 +403,10 @@ function packageStatus(locale, status, reason = "CONTEXT_RETURN_FAILED") {
     "./continuation-document": { ContinuationDocument: "ContinuationDocument" },
     "./continuation-drop-target": { ContinuationDropTarget: "ContinuationDropTarget" },
     "./continuation-history": { ContinuationHistory: "ContinuationHistory" },
+    "./use-continuation-write": { useContinuationWrite: () => ({ receipt: null, locked: false }) },
+    "./continuation-write-feedback": { ContinuationWriteFeedback: "ContinuationWriteFeedback" },
+    "../../lib/continuation-write-recovery": { rejectedContinuationWrite: () => false },
+    "../../lib/offline-access": { authenticationGeneration: () => 1 },
     "../../lib/api": { continuationApi: {}, getTask: id => { apiCalls.push(id); throw Error("Unexpected task GET in source-only rendering"); } },
     "../../lib/context-return-recovery": contextRecovery,
   };

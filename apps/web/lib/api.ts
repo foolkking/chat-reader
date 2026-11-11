@@ -2223,23 +2223,48 @@ function readContinuation<T>(read: (signal: AbortSignal) => Promise<T>, signal?:
     return value;
   }, signal);
 }
+async function fetchContinuationMember(id: string, itemId: string, member: string, signal: AbortSignal) {
+  const generation = authenticationGeneration();
+  const path = `${continuationPath(id)}/revisions/${encodeURIComponent(itemId)}/members/${encodeURIComponent(member)}`;
+  const session = serverSession();
+  if (session.status === "sign-in-required" || session.status === "unavailable") {
+    throw new ApiRequestError("Server access is paused. Your local data is retained.", session.status === "sign-in-required" ? 401 : 503, path);
+  }
+  const response = await fetch(path, { cache: "no-store", signal });
+  if (generation === authenticationGeneration()) observeSessionResponse(response, session.userId);
+  if (response.status === 401) notifyAuthenticationFailure(generation);
+  if (!response.ok) throw await getApiRequestError(response, path);
+  return response;
+}
 export const continuationApi = {
   guidance: (id: string, signal?: AbortSignal) => readContinuation(deadline => fetchJson<{ coverage: "none" | "declared" | "unknown"; index_digest: string | null; unindexed_messages: number | null; unindexed_characters: number | null; suggest_maintenance: boolean; message_threshold: number; character_threshold: number; source_revision: number }>(`${continuationPath(id)}/guidance`, { signal: deadline }), signal),
   updateFiles: (id: string, form: FormData) => fetchJson<{ generation: number; revision_id: string }>(`${continuationPath(id)}/files`, { method: "PUT", body: form }),
   state: (id: string, signal?: AbortSignal) => readContinuation(deadline => fetchJson<{ generation: number; adopted_revision_id: string | null; pending_return_task_id?: string | null }>(continuationPath(id), { signal: deadline }), signal),
   revisions: (id: string, offset = 0, signal?: AbortSignal) => readContinuation(deadline => fetchJson<ContinuationRevisionRead[]>(`${continuationPath(id)}/revisions?limit=30&offset=${offset}`, { signal: deadline }), signal),
   returnPackage: (id: string, form: FormData) => fetchJson<{ task_id: string }>(`${continuationPath(id)}/returns`, { method: 'POST', body: form }),
-  member: (id: string, kind: 'revisions', itemId: string, member: string, signal?: AbortSignal) => readContinuation(async deadline => {
-    const generation = authenticationGeneration();
-    const path = `${continuationPath(id)}/${kind}/${encodeURIComponent(itemId)}/members/${encodeURIComponent(member)}`;
-    const session = serverSession();
-    if (session.status === "sign-in-required" || session.status === "unavailable") {
-      throw new ApiRequestError("Server access is paused. Your local data is retained.", session.status === "sign-in-required" ? 401 : 503, path);
-    }
-    const response = await fetch(path, { cache: 'no-store', signal: deadline });
-    if (generation === authenticationGeneration()) observeSessionResponse(response, session.userId);
-    if (response.status === 401) notifyAuthenticationFailure(generation);
-    if (!response.ok) throw await getApiRequestError(response, path);
-    return response.text();
+  returnReceipt: (id: string, key: string, signal?: AbortSignal) => readContinuation(deadline =>
+    fetchJson<{ task: { task_id: string; status: string } | null }>(`${continuationPath(id)}/returns/by-request/${encodeURIComponent(key)}`, { signal: deadline }), signal),
+  member: (id: string, _kind: 'revisions', itemId: string, member: string, signal?: AbortSignal) => readContinuation(async deadline =>
+    (await fetchContinuationMember(id, itemId, member, deadline)).text(), signal),
+  memberBytes: (id: string, itemId: string, member: "current" | "index", signal?: AbortSignal) => readContinuation(async deadline => {
+    const response = await fetchContinuationMember(id, itemId, member, deadline);
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("Continuation response body unavailable");
+    const limit = (member === "current" ? 1 : 8) * 1024 * 1024;
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > limit) { await reader.cancel(); throw new Error("Continuation member exceeds its limit"); }
+        chunks.push(value);
+      }
+    } finally { reader.releaseLock(); }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    return bytes;
   }, signal),
 };

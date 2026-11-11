@@ -7,7 +7,7 @@ const require = createRequire(new URL("../../apps/web/package.json", import.meta
 const compile = file => ts.transpileModule(readFileSync(new URL("../../apps/web/lib/" + file + ".ts", import.meta.url), "utf8"), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText;
-function fixture({ status = 200, hungHeaders = false, denied = false } = {}) {
+function fixture({ status = 200, hungHeaders = false, denied = false, streamChunks } = {}) {
   let generation = 1, body;
   const calls = [], timers = new Map(), failures = [], deadline = {}, api = {};
   new Function("exports", "setTimeout", "clearTimeout", compile("request-deadline"))(deadline,
@@ -24,6 +24,7 @@ function fixture({ status = 200, hungHeaders = false, denied = false } = {}) {
     const pending = new Promise(resolve => { body = resolve; });
     return hungHeaders ? pending : Promise.resolve({
       status, ok: status === 200, headers: new Headers(), json: () => pending, text: () => pending,
+      body: streamChunks ? new ReadableStream({ start(controller) { for (const chunk of streamChunks) controller.enqueue(chunk); controller.close(); } }) : undefined,
     });
   }, {});
   return { api: api.continuationApi, calls, timers, failures, resolve: value => body(value),
@@ -34,6 +35,7 @@ const reads = {
   revisions: (api, signal) => api.revisions("synthetic", 0, signal),
   guidance: (api, signal) => api.guidance("synthetic", signal),
   member: (api, signal) => api.member("synthetic", "revisions", "synthetic-revision", "current", signal),
+  returnReceipt: (api, signal) => api.returnReceipt("synthetic", "synthetic-key", signal),
 };
 for (const [name, read] of Object.entries(reads)) {
   for (const hungHeaders of [true, false]) test(`${name}: stalled ${hungHeaders ? "headers" : "body"} has a whole-response bound`, async () => {
@@ -89,4 +91,28 @@ test("uploading file bytes does not inherit a short control-read timeout", async
     assert.equal(f.calls.length, 1);
     assert.equal(f.calls[0].method, name === "updateFiles" ? "PUT" : "POST");
   }
+});
+test("byte reconciliation preserves BOM/newline bytes and fences account changes", async () => {
+  const original = new TextEncoder().encode("\ufeff# Synthetic\r\n"), f = fixture({ streamChunks: [original.slice(0, 4), original.slice(4)] });
+  assert.deepEqual(await f.api.memberBytes("synthetic", "synthetic-revision", "current"), original);
+  assert.equal(f.calls[0].cache, "no-store"); assert.equal(f.timers.size, 0);
+  const pending = f.api.memberBytes("synthetic", "synthetic-revision", "current");
+  f.switchAccount();
+  await assert.rejects(pending, /account/i); assert.equal(f.timers.size, 0);
+});
+for (const [member, limit] of [["current", 1], ["index", 8]]) test(`${member} byte reconciliation rejects over-limit responses`, async () => {
+  const f = fixture({ streamChunks: [new Uint8Array(limit * 1024 * 1024), new Uint8Array(1)] });
+  await assert.rejects(f.api.memberBytes("synthetic", "synthetic-revision", member), /exceeds its limit/);
+  assert.equal(f.timers.size, 0); assert.equal(f.calls.length, 1);
+});
+test("member reconciliation rejects absent response bodies and never treats them as empty content", async () => {
+  const f = fixture();
+  await assert.rejects(f.api.memberBytes("synthetic", "synthetic-revision", "current"), /body unavailable/);
+  assert.equal(f.timers.size, 0);
+});
+test("package receipt lookup escapes the request key and shares finite read ownership", async () => {
+  const f = fixture(), pending = f.api.returnReceipt("synthetic/id", "key?with+punctuation");
+  f.resolve({ task: null }); assert.deepEqual(await pending, { task: null });
+  assert.equal(f.calls[0].url, "/api/conversations/synthetic%2Fid/continuation/returns/by-request/key%3Fwith%2Bpunctuation");
+  assert.equal(f.calls[0].cache, "no-store"); assert.equal(f.timers.size, 0);
 });

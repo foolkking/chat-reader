@@ -8,6 +8,9 @@ import { ContinuationHistory } from "./continuation-history";
 import type { ContinuationNavigate, ContinuationViewState } from "./continuation-index";
 import { continuationApi as api, getTask } from "../../lib/api";
 import { contextReturnFailureMessage, contextReturnRecovery } from "../../lib/context-return-recovery";
+import { useContinuationWrite } from "./use-continuation-write";
+import { ContinuationWriteFeedback } from "./continuation-write-feedback";
+import { authenticationGeneration } from "../../lib/offline-access";
 const button = "min-h-11 rounded-md border border-ui px-3 py-2 text-sm text-primary hover:bg-subtle disabled:opacity-50";
 const readRetryDelay = (attemptIndex: number) => Math.min(5000, 750 * 2 ** attemptIndex);
 const terminalTaskStatuses = ["committed", "failed", "cancelled"] as const;
@@ -31,7 +34,6 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
   const registerDiscard = useCallback((discard: (() => Promise<void>) | null) => { discardEditor.current = discard; onDiscardReady?.(discard); }, [onDiscardReady]);
   const [editorBusy, setEditorBusy] = useState(false);
   const [documentKey, setDocumentKey] = useState(0);
-  const [droppedFile, setDroppedFile] = useState<{ file: File; member: "current" | "index"; key: string } | null>(null);
   const resetAfterReturn = useRef(false);
   const completedReturn = useRef<string | null>(null);
   const uploadInFlight = useRef(false);
@@ -65,15 +67,25 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
     return () => clearTimeout(timer);
   }, [taskStatus, taskId]);
   useEffect(() => {
+    let active = true;
+    const auth = authenticationGeneration();
     if (taskStatus === "committed" && taskId !== completedReturn.current) {
       completedReturn.current = taskId;
-      if (resetAfterReturn.current) {
-        resetAfterReturn.current = false;
-        void discardEditor.current?.().catch(() => undefined);
-        setDocumentKey(value => value + 1); reportEditorDirty(false);
-      }
-      void cache.invalidateQueries({ queryKey: ["continuation", id] });
+      const discard = resetAfterReturn.current ? discardEditor.current : null;
+      resetAfterReturn.current = false;
+      void (async () => {
+        try { await discard?.(); }
+        catch {
+          if (active && auth === authenticationGeneration()) setError(t("文件已更新，但本机草稿未清除。", "File updated, but the local draft was not cleared."));
+        }
+        if (!active || auth !== authenticationGeneration()) return;
+        if (discard) { setDocumentKey(value => value + 1); reportEditorDirty(false); }
+        try { await cache.invalidateQueries({ queryKey: ["continuation", id] }, { throwOnError: true }); }
+        catch { if (active && auth === authenticationGeneration()) setRefreshFailed(true); }
+      })();
     }
+    return () => { active = false; };
+    // Labels follow the action's language; changing locale must not rerun cleanup.
   }, [taskStatus, taskId, cache, id, reportEditorDirty]);
   const [files, setFiles] = useState<Record<string, File>>({});
   const [baseGeneration, setBaseGeneration] = useState<number | null>(null);
@@ -81,6 +93,7 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
   const [reading, setReading] = useState(false);
   const navigationInFlight = useRef(false);
   const [error, setError] = useState("");
+  const [refreshFailed, setRefreshFailed] = useState(false);
   const [notice, setNotice] = useState("");
   useEffect(() => {
     if (!notice) return;
@@ -103,15 +116,36 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
   const refresh = () => cache.invalidateQueries({ queryKey: ["continuation", id] });
+  const refreshSavedFiles = async () => {
+    try {
+      await cache.invalidateQueries({ queryKey: ["continuation", id] }, { throwOnError: true });
+      setRefreshFailed(false);
+    } catch { setRefreshFailed(true); }
+  };
+  const write = useContinuationWrite(id, async result => {
+    const auth = authenticationGeneration();
+    if (result.kind === "package") setTaskId(result.task_id);
+    else {
+      supersedeTerminalReturn();
+      await cache.cancelQueries({ queryKey: ["continuation", id] });
+      if (auth !== authenticationGeneration()) return;
+      cache.setQueryData(["continuation", id, "state"], { generation: result.saved.generation, adopted_revision_id: result.saved.revision_id });
+      setNotice(t("已核对，当前文件与提交内容一致。", "Verified: current files match the submitted content."));
+    }
+    setFiles({}); setPackageFile(null); setBaseGeneration(null); setFormKey(v => v + 1);
+    if (result.kind === "files") await refreshSavedFiles();
+  });
   const run = async (action: () => Promise<void>, readOnly = false) => {
-    if (!navigator.onLine) { setError(t("更新文件需要联网。", "Connect to update files.")); return; }
-    setBusy(true); setReading(readOnly); setError(""); setNotice("");
+    if (!navigator.onLine) { setError(readOnly ? t("请联网后重新读取，文件与选择仍保留。", "Reconnect to read again. Files and selections are retained.") : t("更新文件需要联网。", "Connect to update files.")); return; }
+    setBusy(true); setReading(readOnly);
+    if (!readOnly) { setError(""); setNotice(""); setRefreshFailed(false); }
     try { await action(); }
-    catch (e) { setError(e instanceof Error && e.message === "CONTEXT_BASE_CHANGED" ? t("文件已在其他窗口更新。已保留你的选择，请重新读取后再保存。", "Files changed in another window. Your selections remain; reload before saving.") : t("操作未完成，文件选择已保留，请重试。", "Operation incomplete. File selections are retained; retry.")); }
+    catch { setError(readOnly ? t("无法读取最新状态，文件和选择仍保留，请重试。", "Could not read the latest state. Files and selections are retained; retry.")
+      : t("操作未完成，文件选择已保留，请重试。", "Operation incomplete. File selections are retained; retry.")); }
     finally { setBusy(false); setReading(false); }
   };
   const navigate = async (next: "read" | "upload" | "history", nextMember = member) => {
-    if (busy || editorBusy || navigationInFlight.current) return;
+    if (busy || editorBusy || write.locked || navigationInFlight.current) return;
     const unsaved = editorDirtyRef.current || Object.keys(files).length > 0 || Boolean(packageFile);
     if (unsaved && !window.confirm(t("放弃未保存的更改？", "Discard unsaved changes?"))) return;
     navigationInFlight.current = true; setBusy(true); setReading(true);
@@ -141,7 +175,7 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
     }
   };
   const saveDropped = async (selection: { file: File; member: "current" | "index"; key: string }) => {
-    if (uploadInFlight.current || busy || editorBusy || taskBusy || !state.data) return;
+    if (uploadInFlight.current || busy || editorBusy || taskBusy || write.locked || !state.data) return;
     const { file, member: targetMember } = selection;
     const packageInput = file.name.toLowerCase().endsWith(".context.zip");
     const correctMember = targetMember === "current" ? /\.md$/i.test(file.name) : /\.json$/i.test(file.name);
@@ -155,27 +189,24 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
       setError(t("文件超过大小限制。", "The file exceeds its size limit.")); return;
     }
     if ((editorDirtyRef.current || Object.keys(files).length > 0 || Boolean(packageFile)) && !window.confirm(t("用拖入的文件替换未保存的编辑？更新失败时仍保留编辑内容。", "Replace unsaved edits with the dropped file? Your edits remain if the update fails."))) return;
-    setDroppedFile(selection); uploadInFlight.current = true;
+    uploadInFlight.current = true;
     try {
       await run(async () => {
-        const form = new FormData();
-        form.append("base_generation", String(baseGeneration ?? state.data!.generation));
         await cache.cancelQueries({ queryKey: ["continuation", id] });
-        if (packageInput) {
-          form.append("file", file); form.append("idempotency_key", selection.key);
-          const result = await api.returnPackage(id, form);
-          resetAfterReturn.current = true; setTaskId(result.task_id);
-        } else {
-          form.append(targetMember, file);
-          const result = await api.updateFiles(id, form);
-          supersedeTerminalReturn();
-          cache.setQueryData(["continuation", id, "state"], { generation: result.generation, adopted_revision_id: result.revision_id });
-          await discardEditor.current?.().catch(() => { setError(t("文件已更新，但本机草稿未清除。", "File updated, but the local draft was not cleared.")); });
-          setDocumentKey(value => value + 1); reportEditorDirty(false);
-          setNotice(t("文件已更新。", "Files updated."));
-          await refresh();
-        }
-        setDroppedFile(null); setFiles({}); setPackageFile(null); setBaseGeneration(null); setFormKey(value => value + 1);
+        const common = { key: selection.key, base: baseGeneration ?? state.data!.generation, origin: "drop" as const, member: targetMember };
+        await write.submit(packageInput ? { ...common, kind: "package", file } : { ...common, kind: "files", members: { [targetMember]: file } }, async result => {
+          if (result.kind === "package") {
+            resetAfterReturn.current = true; setTaskId(result.task_id);
+          } else {
+            supersedeTerminalReturn();
+            cache.setQueryData(["continuation", id, "state"], { generation: result.saved.generation, adopted_revision_id: result.saved.revision_id });
+            await discardEditor.current?.().catch(() => { setError(t("文件已更新，但本机草稿未清除。", "File updated, but the local draft was not cleared.")); });
+            setDocumentKey(value => value + 1); reportEditorDirty(false);
+            setNotice(t("文件已更新。", "Files updated."));
+          }
+          setFiles({}); setPackageFile(null); setBaseGeneration(null); setFormKey(value => value + 1);
+          if (result.kind === "files") await refreshSavedFiles();
+        });
       });
     } finally { uploadInFlight.current = false; }
   };
@@ -190,13 +221,14 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
   const document = stableDocument.current;
   return <section className="min-w-0 space-y-5" aria-label={t("上下文接续", "Context continuation")}>
     <nav className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-ui bg-page" aria-label={t("接续内容", "Continuation content")}>
-      <div className="flex gap-4">{(["current", "index"] as const).map(name => <button key={name} type="button" aria-pressed={surface === "read" && member === name} className={`min-h-12 border-b-2 px-1 text-sm ${surface === "read" && member === name ? "border-[var(--accent)] font-semibold text-primary" : "border-transparent text-secondary hover:text-primary"}`} onClick={() => navigate("read", name)}>{name === "current" ? "Current" : "Index"}</button>)}</div>
-      <div className="flex gap-1"><button type="button" className="min-h-11 rounded-md px-3 text-sm text-secondary hover:bg-subtle" aria-pressed={surface === "upload"} onClick={() => navigate("upload")}>{t("更新文件", "Update files")}</button><button type="button" className="min-h-11 rounded-md px-3 text-sm text-secondary hover:bg-subtle" aria-pressed={surface === "history"} onClick={() => navigate("history")}>{t("历史", "History")}</button></div>
+      <div className="flex gap-4">{(["current", "index"] as const).map(name => <button key={name} type="button" disabled={busy || editorBusy || write.locked} aria-pressed={surface === "read" && member === name} className={`min-h-12 border-b-2 px-1 text-sm disabled:opacity-50 ${surface === "read" && member === name ? "border-[var(--accent)] font-semibold text-primary" : "border-transparent text-secondary hover:text-primary"}`} onClick={() => navigate("read", name)}>{name === "current" ? "Current" : "Index"}</button>)}</div>
+      <div className="flex gap-1"><button type="button" disabled={busy || editorBusy || write.locked} className="min-h-11 rounded-md px-3 text-sm text-secondary hover:bg-subtle disabled:opacity-50" aria-pressed={surface === "upload"} onClick={() => navigate("upload")}>{t("更新文件", "Update files")}</button><button type="button" disabled={busy || editorBusy || write.locked} className="min-h-11 rounded-md px-3 text-sm text-secondary hover:bg-subtle disabled:opacity-50" aria-pressed={surface === "history"} onClick={() => navigate("history")}>{t("历史", "History")}</button></div>
     </nav>
     {state.isLoading || history.isLoading ? <p role="status">{t("正在读取…", "Loading…")}</p> : null}
-    {readUnavailable || error ? <div role="alert" className="space-y-2 text-sm text-[var(--danger)]"><p>{error || t("读取失败。", "Could not load files.")}</p><button className={button} disabled={busy} onClick={() => void run(async () => { await refresh(); const latest = await api.state(id); setBaseGeneration(latest.generation); setError(""); }, true)}>{t("重新读取", "Reload")}</button></div> : null}
-    {readRecovering ? <p role="status" className="text-sm text-secondary">{t("暂时无法读取最新状态，正在自动重试；已保存的内容保持不变。", "The latest status is temporarily unavailable. Retrying automatically; saved content remains unchanged.")}</p> : null}
-    {droppedFile ? <button type="button" className={button} disabled={busy || editorBusy || taskBusy} onClick={() => void saveDropped(droppedFile)}>{t("重试文件更新", "Retry file update")}</button> : null}
+    {(readUnavailable && !refreshFailed) || error ? <div role="alert" className="space-y-2 text-sm text-[var(--danger)]"><p>{error || t("读取失败。", "Could not load files.")}</p><button className={button} disabled={busy} onClick={() => void run(async () => { await refresh(); await api.state(id); setError(""); }, true)}>{t("重新读取", "Reload")}</button></div> : null}
+    {readRecovering && !refreshFailed ? <p role="status" className="text-sm text-secondary">{t("暂时无法读取最新状态，正在自动重试；已保存的内容保持不变。", "The latest status is temporarily unavailable. Retrying automatically; saved content remains unchanged.")}</p> : null}
+    {refreshFailed ? <div role="status" className="text-sm text-secondary"><p>{t("文件已更新，但最新视图未能刷新，无需再次提交。", "Files updated, but the latest view could not refresh. No need to submit again.")}</p><button className={button} disabled={busy} onClick={() => void run(refreshSavedFiles, true)}>{t("刷新已保存文件", "Refresh saved files")}</button></div> : null}
+    <ContinuationWriteFeedback control={write} zh={resolvedLocale === "zh-CN"} onReview={() => void navigate("read", write.receipt?.intent.member ?? member)} />
     {busy ? <p role="status" className="text-sm text-secondary">{reading ? t("正在读取，请稍候…", "Loading, please wait…") : t("正在保存，请稍候…", "Saving, please wait…")}</p> : null}
     {taskId ? <p role="status" className={`text-sm ${taskStatus === "failed" ? "text-[var(--danger)]" : "text-secondary"}`}>
       {taskRecovering ? t("暂时无法读取更新进度，最新状态尚未确认。会继续检查，也可稍后到任务中心查看。", "Update progress is temporarily unavailable. The latest state is unconfirmed. Status checks will resume; you can review it later in Task Center.") : taskStatus === "committed" ? t("整包中的接续文件已更新。", "Continuation files updated from package.") : taskStatus === "failed" && task.data ? contextReturnFailureMessage(task.data, resolvedLocale === "zh-CN") : taskStatus === "cancelled" ? t("更新已取消。", "Update cancelled.") : t("正在后台更新接续文件…可以关闭，重新打开会恢复进度。", "Updating continuation files… You can close and reopen to resume progress.")}
@@ -204,43 +236,51 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
     {taskRecovery && taskRecovery.action !== "open_list" && surface !== "upload" ? <button type="button" className={button}
       disabled={busy || editorBusy} onClick={() => void navigate("upload")}>{t("重新选择文件", "Select files again")}</button> : null}
     {notice ? <p role="status" className="text-sm text-secondary">{notice}</p> : null}
-    {surface === "read" && document ? <ContinuationDropTarget member={member} zh={resolvedLocale === "zh-CN"} disabled={busy || editorBusy || taskBusy} onFiles={selected => {
+    {surface === "read" && document ? <ContinuationDropTarget member={member} zh={resolvedLocale === "zh-CN"} disabled={busy || editorBusy || taskBusy || write.locked} onFiles={selected => {
       if (selected.length !== 1) { setError(t("请一次拖入一个文件；同时更新两份文件可拖入 .context.zip。", "Drop one file at a time, or a .context.zip to update both.")); return; }
       void saveDropped({ file: selected[0], member, key: crypto.randomUUID() });
-    }}><ContinuationDocument key={`${member}:${documentKey}`} conversationId={id} member={member} revision={document.revision} generation={document.generation} onDirtyChange={reportEditorDirty} onSavingChange={setEditorBusy} onDiscardReady={registerDiscard} onSaved={supersedeTerminalReturn} locked={busy || taskBusy} onUpload={() => navigate("upload")} onNavigate={onNavigate} viewState={viewState} />
+    }}><ContinuationDocument key={`${member}:${documentKey}`} conversationId={id} member={member} revision={document.revision} generation={document.generation} onDirtyChange={reportEditorDirty} onSavingChange={setEditorBusy} onDiscardReady={registerDiscard} onSaved={supersedeTerminalReturn} submitWrite={write.submit} writeConflict={write.receipt?.phase === "rejected"} locked={busy || taskBusy || write.locked} onUpload={() => navigate("upload")} onNavigate={onNavigate} viewState={viewState} />
       <p className="mt-8 pb-3 text-xs text-secondary">{member === "current" ? t("拖入 current.md 或 .context.zip 即可更新", "Drop current.md or .context.zip to update") : t("拖入 index.json 或 .context.zip 即可更新", "Drop index.json or .context.zip to update")}</p>
     </ContinuationDropTarget> : null}
     {surface === "upload" ? <div><h3 className="text-lg font-semibold">{t("更新接续文件", "Update continuation files")}</h3><p className="mt-2 text-sm leading-6 text-secondary">{t("上传 Current、Index 或整包。未替换的文件保持不变。", "Upload Current, Index or a package. Other files stay unchanged.")}</p></div> : null}
     {surface === "upload" ? <>
-    <fieldset key={formKey} disabled={busy || taskBusy || !state.data} className="min-w-0 space-y-3">
+    <fieldset key={formKey} disabled={busy || taskBusy || write.locked || !state.data} className="min-w-0 space-y-3">
       {[["current", "Current (.md, 1 MiB)"], ["index", "Index (.json, 8 MiB)"]].map(([name, label]) => <label key={name} className="block min-w-0 space-y-1 text-sm text-primary"><span>{label}</span><input type="file" accept={name === "current" ? ".md" : ".json"} className="min-h-11 w-full min-w-0 rounded-md border border-ui bg-surface p-2 text-base" onChange={e => { const file = e.target.files?.[0]; setFiles(old => { const next = { ...old }; if (file) next[name] = file; else delete next[name]; return next; }); setBaseGeneration(old => old ?? state.data?.generation ?? null); }} /></label>)}
       <button className={button} disabled={Object.keys(files).length === 0 || Boolean(packageFile)} onClick={() => void run(async () => {
-        const form = new FormData(); Object.entries(files).forEach(([name, file]) => form.append(name, file));
-        form.append("base_generation", String(baseGeneration ?? state.data?.generation ?? 0));
-        await api.updateFiles(id, form); supersedeTerminalReturn(); setFiles({}); setFormKey(v => v + 1); setBaseGeneration(null); await refresh();
-        setNotice(t("文件已更新。", "Files updated."));
+        await write.submit({ kind: "files", key: crypto.randomUUID(), origin: "upload", base: baseGeneration ?? state.data!.generation, members: files }, async result => {
+          if (result.kind !== "files") return;
+          supersedeTerminalReturn(); setFiles({}); setFormKey(v => v + 1); setBaseGeneration(null);
+          cache.setQueryData(["continuation", id, "state"], { generation: result.saved.generation, adopted_revision_id: result.saved.revision_id });
+          setNotice(t("文件已更新。", "Files updated."));
+          await refreshSavedFiles();
+        });
       })}>{busy ? t("正在保存…", "Saving…") : t("保存上传文件", "Save uploaded files")}</button>
     </fieldset>
     <details className="border-t border-ui pt-3"><summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">{t("从 Context Package 更新", "Update from Context Package")}</summary>
       <p className="mb-3 text-sm leading-6 text-secondary">{t("仅保存包内 Current / Index，不导入正文或附件，也不判断接续内容。", "Save only Current / Index from the package. Raw and attachments are not imported; continuation content is not assessed.")}</p>
-      <fieldset key={formKey} disabled={busy || taskBusy || !state.data} className="space-y-3">
+      <fieldset key={formKey} disabled={busy || taskBusy || write.locked || !state.data} className="space-y-3">
         <label className="block text-sm"><span>Context Package (.context.zip)</span><input type="file" accept=".zip" className="mt-1 min-h-11 w-full min-w-0 rounded-md border border-ui bg-surface p-2 text-base" onChange={e => { setPackageFile(e.target.files?.[0] ?? null); setBaseGeneration(old => old ?? state.data?.generation ?? null); packageKey.current = crypto.randomUUID(); }} /></label>
         <button className={button} disabled={!packageFile || Object.keys(files).length > 0} onClick={() => void run(async () => {
           if (!packageFile) return;
-          const form = new FormData(); form.append("file", packageFile); form.append("base_generation", String(baseGeneration ?? state.data?.generation ?? 0)); form.append("idempotency_key", packageKey.current);
-          setTaskId((await api.returnPackage(id, form)).task_id); setPackageFile(null); setFormKey(v => v + 1); setBaseGeneration(null);
+          await write.submit({ kind: "package", file: packageFile, key: packageKey.current, origin: "upload", base: baseGeneration ?? state.data!.generation }, async result => {
+            if (result.kind !== "package") return;
+            setTaskId(result.task_id); setPackageFile(null); setFormKey(v => v + 1); setBaseGeneration(null);
+          });
         })}>{t("上传并更新文件", "Upload and update files")}</button>
         {Object.keys(files).length > 0 ? <p className="text-sm text-secondary">{t("请先保存或清除上方单文件选择。", "Save or clear the individual file selections above first.")}</p> : null}
       </fieldset>
     </details>
-    {dirty ? <button type="button" className={button} disabled={busy || taskBusy} onClick={() => { setFiles({}); setPackageFile(null); setFormKey(v => v + 1); setBaseGeneration(null); }}>{t("清除文件选择", "Clear file selections")}</button> : null}
+    {dirty ? <button type="button" className={button} disabled={busy || taskBusy || write.locked} onClick={() => { setFiles({}); setPackageFile(null); setFormKey(v => v + 1); setBaseGeneration(null); }}>{t("清除文件选择", "Clear file selections")}</button> : null}
     </> : null}
-    {surface === "history" && state.data ? <ContinuationHistory conversationId={id} rows={history.data ?? []} selectedRevisionId={state.data.adopted_revision_id} generation={state.data.generation} zh={resolvedLocale === "zh-CN"} disabled={busy || taskBusy} onBusy={setEditorBusy} onRestored={async (name, saved) => {
+    {surface === "history" && state.data ? <ContinuationHistory conversationId={id} rows={history.data ?? []} selectedRevisionId={state.data.adopted_revision_id} generation={state.data.generation} zh={resolvedLocale === "zh-CN"} disabled={busy || taskBusy || write.locked} submitWrite={write.submit} onBusy={setEditorBusy} onRestored={async (name, saved) => {
+      const auth = authenticationGeneration();
       supersedeTerminalReturn();
       await cache.cancelQueries({ queryKey: ["continuation", id] });
+      if (auth !== authenticationGeneration()) return;
       cache.setQueryData(["continuation", id, "state"], { generation: saved.generation, adopted_revision_id: saved.revision_id });
-      await refresh(); setDocumentKey(value => value + 1); setSurface("read"); setMember(name); if (viewState) viewState.member = name;
+      setDocumentKey(value => value + 1); setSurface("read"); setMember(name); if (viewState) viewState.member = name;
       setNotice(t("历史文件已恢复。", "Historical file restored."));
+      await refreshSavedFiles();
     }} /> : null}
   </section>;
 }

@@ -95,7 +95,7 @@ for (const width of [375, 1440]) {
     expect(await read("index")).toBe('{"note":"Dropped index"}');
     await page.screenshot({ path: testInfo.outputPath(`declined-drop-${width}.png`) });
     await dropWithConfirmation(page, "index.json", strToU8("broken JSON"), true);
-    await expect(panel.getByRole("alert")).toContainText(/操作未完成|Operation incomplete/);
+    await expect(panel.getByRole("alert")).toContainText(/请求未被接受|request was not accepted/);
     await expect(panel.getByRole("textbox")).toHaveValue('{"note":"Unsaved draft"}');
     expect(await read("index")).toBe('{"note":"Dropped index"}');
     await dropWithConfirmation(page, "index.json", strToU8('{"note":"Replaced index"}'), true);
