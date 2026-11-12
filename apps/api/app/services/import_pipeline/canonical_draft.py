@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 PARSER_VERSION = "chat-reader-import-v6"
 NORMALIZER_VERSION = "markdown-normalizer-v2"
 MARKDOWN_PARSER_VERSION = "markdown-parser-v5"
-BLOCK_BUILDER_VERSION = "render-block-builder-v3"
+BLOCK_BUILDER_VERSION = "render-block-builder-v4"
 SEARCH_DOCUMENT_VERSION = "search-document-v2"
 
 

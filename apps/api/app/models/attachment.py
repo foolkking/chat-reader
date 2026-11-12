@@ -27,6 +27,7 @@ class AssetObject(Base):
     status: Mapped[str] = mapped_column(String, nullable=False, default="staging")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    storage_deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     attachments = relationship("Attachment", back_populates="asset_object")
 

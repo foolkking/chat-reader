@@ -72,6 +72,8 @@ class LocalAssetStore(AssetStore):
                         raise ValueError("Asset exceeds the configured size limit.")
                     digest.update(chunk)
                     destination.write(chunk)
+                    from app.services.execution_control import business_progress
+                    business_progress(byte_count=len(chunk))
                     if byte_size % (4 * 1024 * 1024) < len(chunk):
                         from app.services.adaptive_import.memory_budget import streaming_budget
                         if streaming_budget():
@@ -85,7 +87,8 @@ class LocalAssetStore(AssetStore):
                     release_file_cache(destination, written=True)
             os.chmod(path, 0o600)
         except BaseException:
-            path.unlink(missing_ok=True)
+            from app.services.artifact_lifecycle import discard_owned_temporary
+            discard_owned_temporary(path, category="asset_stage")
             raise
         return StagedAsset(path=path, sha256=digest.hexdigest(), byte_size=byte_size)
 
@@ -99,8 +102,10 @@ class LocalAssetStore(AssetStore):
         destination.parent.mkdir(parents=True, exist_ok=True)
         if destination.exists():
             raise ValueError("Asset storage key already exists.")
+        # No fallible permission change after publishing the only staged copy.
+        # Rename preserves the restrictive source mode.
+        os.chmod(source, 0o600)
         source.replace(destination)
-        os.chmod(destination, 0o600)
         return destination
 
     def resolve_key(self, storage_key: str, *, must_exist: bool = True) -> Path:

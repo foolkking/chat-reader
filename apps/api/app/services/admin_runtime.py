@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.models.administration import SystemBackupRecord
-from app.models.attachment import AssetObject
+from app.models.attachment import AssetObject, AttachmentUploadItem
+from app.models.task_execution_control import TaskExecutionControl
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
 from app.models.worker_runtime_state import WorkerRuntimeState
@@ -24,6 +25,7 @@ def _metric(db: Session, read):
         with db.begin_nested():
             if db.get_bind().dialect.name == "postgresql":
                 db.execute(text("SET LOCAL statement_timeout = '1500ms'"))
+                db.execute(text("SET LOCAL lock_timeout = '250ms'"))
             return {"available": True, **read()}
     except Exception:
         return {"available": False}
@@ -87,6 +89,31 @@ def _source_cleanup(db: Session) -> dict:
             "blocked_count": sum(int(count) for state, count in rows if state == "blocked")}
 
 
+def _upload_cleanup(db: Session) -> dict:
+    rows = db.query(AttachmentUploadItem.validation_status, func.count(AttachmentUploadItem.id)).filter(
+        AttachmentUploadItem.temporary_storage_key.is_not(None),
+    ).group_by(AttachmentUploadItem.validation_status).all()
+    return {
+        "pending_count": sum(int(count) for state, count in rows if state in {"committed", "abandoned"}),
+        "protected_count": sum(int(count) for state, count in rows if state not in {"committed", "abandoned"}),
+        "failed_count": db.query(func.count(AttachmentUploadItem.id)).filter_by(error_code="cleanup_pending").scalar(),
+    }
+
+
+def _execution(db: Session, now: datetime) -> dict | None:
+    control = db.get(TaskExecutionControl, "primary")
+    if control is None or control.finished_at:
+        return None
+    model = ImportRecord if control.task_kind == "import" else BackgroundJob
+    task = db.get(model, control.task_id)
+    # A late control row must not turn canonical completion back into failure.
+    if task is None or task.status not in {"processing", "cancelling"}:
+        return {"state": "reconciling"}
+    age = max(0, int((now - _utc(control.progress_at)).total_seconds()))
+    return {"state": "stopping" if control.stop_requested_at else "stalled" if age >= 300 else "running",
+            "progress_age_seconds": age}
+
+
 def runtime_snapshot(db: Session, settings: Settings, *, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     queue = _metric(db, lambda: {"jobs": _counts(db, BackgroundJob), "imports": _counts(db, ImportRecord)})
@@ -102,6 +129,7 @@ def runtime_snapshot(db: Session, settings: Settings, *, now: datetime | None = 
             snapshot.update(status="unavailable", heartbeat_age_seconds=None, active_task_kind=None)
         if snapshot.get("active_task_kind") not in {"import", "job"}:
             snapshot["active_task_kind"] = None
+        snapshot["execution"] = _execution(db, now)
         return snapshot
     worker = _metric(db, read_worker)
     storage = {name: _local_storage(root) for name, root in (
@@ -118,11 +146,12 @@ def runtime_snapshot(db: Session, settings: Settings, *, now: datetime | None = 
     restore = _metric(db, lambda: _backup(db, "RESTORE"))
     export_cleanup = _metric(db, lambda: _export_cleanup(db, now))
     source_cleanup = _metric(db, lambda: _source_cleanup(db))
+    upload_cleanup = _metric(db, lambda: _upload_cleanup(db))
     return {"generated_at": now.isoformat(), "worker": worker, "queue": queue,
         "storage": storage, "backup": backup, "restore": restore, "export_cleanup": export_cleanup,
-        "source_cleanup": source_cleanup,
+        "source_cleanup": source_cleanup, "upload_cleanup": upload_cleanup,
         "mail": {"configured": bool(settings.smtp_host and settings.smtp_from_address)},
-        "complete": all(metric["available"] for metric in (worker, queue, backup, restore, export_cleanup, source_cleanup))
+        "complete": all(metric["available"] for metric in (worker, queue, backup, restore, export_cleanup, source_cleanup, upload_cleanup))
                     and worker.get("status") not in {None, "unavailable"}
                     and all(metric.get("available") and metric.get("complete") for metric in storage.values())}
 

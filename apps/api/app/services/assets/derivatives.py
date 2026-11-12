@@ -56,14 +56,17 @@ def build_asset_derivative(db: Session, *, attachment_id: uuid.UUID, derivative_
         AssetObject.sha256 == staged.sha256,
         AssetObject.byte_size == staged.byte_size,
         AssetObject.status == "available",
-    ).first()
+    ).with_for_update().first()
     if derivative_asset is not None and not scan_status_allows_use(derivative_asset.scan_status):
         derivative_asset = None
     if derivative_asset is not None:
-        staged.path.unlink(missing_ok=True)
+        from app.services.artifact_lifecycle import discard_owned_temporary
+        discard_owned_temporary(staged.path, category="duplicate_derivative")
     else:
         storage_key = store.object_key()
         store.promote(staged.path, storage_key)
+        from app.services.exporting.archive_transaction import track_archive_object
+        track_archive_object(db, store, storage_key)
         derivative_asset = AssetObject(
             id=uuid.uuid4(),
             sha256=staged.sha256,

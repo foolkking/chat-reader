@@ -253,11 +253,14 @@ def test_cr_import_rejects_duplicate_object_ids_without_restaging_them(tmp_path,
         path.write_bytes(b"x")
         return SimpleNamespace(path=path, byte_size=1, sha256="synthetic")
 
-    monkeypatch.setattr(cr_archive, "get_asset_store", lambda: SimpleNamespace(stage=stage))
+    monkeypatch.setattr(cr_archive, "get_asset_store", lambda: SimpleNamespace(stage=stage, resolve_key=lambda _: tmp_path / "existing"))
     monkeypatch.setattr(cr_archive, "scan_attachment",
         lambda _: SimpleNamespace(allowed_by_policy=True, status="clean"))
-    query = SimpleNamespace(filter=lambda *_: SimpleNamespace(
-        one_or_none=lambda: SimpleNamespace(id=existing_id)))
+    locked = []
+    query = SimpleNamespace(one_or_none=lambda: SimpleNamespace(
+        id=existing_id, status="available", scan_status="clean", storage_key="existing"))
+    query.filter = lambda *_: query
+    query.with_for_update = lambda: (locked.append(True), query)[1]
     db = SimpleNamespace(query=lambda *_: query, flush=lambda: None)
     data = io.BytesIO()
     with ZipFile(data, "w") as package:
@@ -268,6 +271,7 @@ def test_cr_import_rejects_duplicate_object_ids_without_restaging_them(tmp_path,
             cr_archive._import_attachments(db, package, {"version": cr_archive.ARCHIVE_VERSION},
                 SimpleNamespace(id=uuid.uuid4()), uuid.uuid4())
     assert staged_count == [True], "A duplicate must not repeat staging/scanning."
+    assert locked == [True], "The reused asset is locked before canonical binding."
 
 
 @pytest.mark.parametrize("entry,function,row", [

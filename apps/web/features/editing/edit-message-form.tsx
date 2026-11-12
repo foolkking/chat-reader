@@ -20,6 +20,10 @@ import {
 } from "./source-context-toolbar";
 import {
   findTransientUploadReferences,
+  findMarkdownAttachmentReferences,
+  changeAttachmentReference,
+  type AttachmentReferenceTarget,
+  type SourceAttachmentInsertion,
   insertPendingMarkers,
   removePendingMarker,
   replacePendingMarker,
@@ -37,6 +41,9 @@ import { SourceDraftComparison } from "./source-draft-comparison";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
 const CodeMirror = dynamic(() => import("@uiw/react-codemirror"), { ssr: false });
+export type SourceSaveResult = {
+  canonicalText: string; versionId: string; contentHash: string; versionNumber: number; refreshPending?: boolean;
+};
 
 type SavedToolbarSelection = {
   anchor: number;
@@ -78,18 +85,27 @@ export function EditMessageForm({
   contentHash,
   onCursorOffsetChange,
   onSelectionChange,
+  onAttachmentFocus,
   onDirtyChange,
   onCancel,
   onSave,
   onReloadLatest,
+  onAcceptLatest,
+  onVerifySave,
+  onRetrySave,
+  pendingSave,
+  saveRecoveryReady = true,
+  readerRefreshPending = false,
+  onRefreshReader,
+  receiptStorageUnavailable = false,
   onAttachmentInsertionApplied,
   onAttachmentFiles,
   onAttachmentRetry,
+  onRestoreAttachmentDrafts,
   onAttachmentRemove,
   onAttachmentCancel,
   onExistingAttachment,
   onOpenAttachmentPicker,
-  conversationAttachments = [],
   showPreview = true,
   onPreviewChange,
   editorToolsOpen = false,
@@ -102,19 +118,29 @@ export function EditMessageForm({
   conversationId?: string;
   initialCursorOffset?: number;
   requestedCursorOffset?: number;
-  pendingAttachmentInsertion?: { referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null;
+  pendingAttachmentInsertion?: SourceAttachmentInsertion | null;
   versionNumber: number;
   versionId?: string;
   contentHash?: string;
   onCursorOffsetChange?: (offset: number) => void;
   onSelectionChange?: (selection: SourceTextSelection | null) => void;
+  onAttachmentFocus?: (target: AttachmentReferenceTarget | null) => void;
   onDirtyChange?: (dirty: boolean) => void;
   onCancel: (dirty: boolean) => void | Promise<void>;
-  onSave: (text: string, reason: string | undefined, mode: "create_version" | "replace_current", removedActions: Array<{ attachment_id: string; action: "keep_in_conversation" | "detach_from_conversation" }>, editorRevision: number) => Promise<{ canonicalText?: string } | void>;
-  onReloadLatest?: () => Promise<void>;
+  onSave: (text: string, reason: string | undefined, mode: "create_version" | "replace_current", removedActions: Array<{ attachment_id: string; action: "keep_in_conversation" | "detach_from_conversation" }>, editorRevision: number) => Promise<SourceSaveResult>;
+  onReloadLatest?: () => Promise<SourceSaveResult>;
+  onAcceptLatest?: () => void;
+  onVerifySave?: () => Promise<SourceSaveResult>;
+  onRetrySave?: () => Promise<SourceSaveResult>;
+  pendingSave?: { operationId: string; text: string } | null;
+  saveRecoveryReady?: boolean;
+  readerRefreshPending?: boolean;
+  onRefreshReader?: () => void;
+  receiptStorageUnavailable?: boolean;
   onAttachmentInsertionApplied?: () => void;
   onAttachmentFiles?: (files: File[], position: number, callbacks: AttachmentDraftCallbacks) => AttachmentDraft[];
   onAttachmentRetry?: (token: string) => void;
+  onRestoreAttachmentDrafts?: (tokens: string[], callbacks: AttachmentDraftCallbacks) => Promise<AttachmentDraft[]>;
   onAttachmentRemove?: (token: string) => void;
   onAttachmentCancel?: (preserve: boolean, itemIds: string[]) => Promise<void> | void;
   onExistingAttachment?: (attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void;
@@ -134,6 +160,8 @@ export function EditMessageForm({
   cursorOffsetChangeRef.current = onCursorOffsetChange;
   const selectionChangeRef = useRef(onSelectionChange);
   selectionChangeRef.current = onSelectionChange;
+  const attachmentFocusRef = useRef(onAttachmentFocus);
+  attachmentFocusRef.current = onAttachmentFocus;
   const insertFilesRef = useRef<(files: File[], position: number, originalCodePosition?: number) => void>(() => undefined);
   const insertExistingAttachmentRef = useRef<(attachment: { attachmentId: string; displayName: string; mimeType: string }, position: number, originalCodePosition?: number) => void>(() => undefined);
   const queuedFilesRef = useRef<File[]>([]);
@@ -153,6 +181,24 @@ export function EditMessageForm({
   const [revisionConflict, setRevisionConflict] = useState(false);
   const [reloadStatus, setReloadStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [saveUnknown, setSaveUnknown] = useState(false);
+  const [canRetrySave, setCanRetrySave] = useState(false);
+  useEffect(() => {
+    if (!pendingSave) return;
+    saveSnapshotRef.current = { text: pendingSave.text, revision: -1, drafts: {} };
+    setSaveUnknown(true);
+    setCanRetrySave(false);
+    setError(zh ? "上次保存结果待确认；请先核对，不会重新提交。" : "The previous save is unconfirmed. Check its result without submitting again.");
+  }, [pendingSave?.operationId, zh]);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const [comparison, setComparison] = useState<SourceSaveResult | null>(null);
+  const saveSnapshotRef = useRef<{ text: string; revision: number; drafts: Record<string, AttachmentDraftState> } | null>(null);
+  useEffect(() => {
+    if (!saveNotice) return;
+    const timer = setTimeout(() => setSaveNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [saveNotice]);
   const [attachmentDrafts, setAttachmentDrafts] = useState<Record<string, AttachmentDraftState>>({});
   const [attachmentTrayOpen, setAttachmentTrayOpen] = useState(true);
   const attachmentTrayListRef = useRef<HTMLDivElement | null>(null);
@@ -185,8 +231,6 @@ export function EditMessageForm({
     afterPosition: number;
     originalPosition: number;
   } | null>(null);
-  const [removedConfirmMode, setRemovedConfirmMode] = useState<"create_version" | "replace_current" | null>(null);
-  const [removedActions, setRemovedActions] = useState<Record<string, "keep_in_conversation" | "detach_from_conversation">>({});
   const [tableTool, setTableTool] = useState<TableToolSnapshot | null>(null);
   const [previewSnapshot, setPreviewSnapshot] = useState(() => ({ revision: 0, text: initialText }));
   useEffect(() => {
@@ -216,23 +260,32 @@ export function EditMessageForm({
     ? Math.round(visibleAttachmentDrafts.filter((draft) => draft.status === "uploading" || draft.status === "canonicalizing").reduce((sum, draft) => sum + draft.progress, 0) / uploadingAttachmentCount)
     : 100;
   const transientUploadReferences = findTransientUploadReferences(text);
-  const hasUnresolvedAttachment = transientUploadReferences.length > 0
-    || Object.values(attachmentDrafts).some((draft) => draft.status !== "ready" && draft.status !== "removed");
-  const canDetachRemovedAttachment = (attachmentId: string) => {
-    const attachment = conversationAttachments.find((item) => item.id === attachmentId);
-    const draftStillUses = countAttachmentReferences(trimmedText, attachmentId) > 0;
-    const anotherCurrentMessageUses = Boolean(
-      attachment?.occurrences?.some((item) => item.is_current_version && item.message_id !== messageId),
-    );
-    return !draftStillUses && !anotherCurrentMessageUses;
-  };
-  const performAttachmentInsert = (files: File[], position: number) => {
-    if (!files.length && pendingCodeDrop?.attachment) {
-      performExistingAttachmentInsert(pendingCodeDrop.attachment, position);
-      return;
-    }
-    const callbacks: AttachmentDraftCallbacks = {
-      onProgress: (token, progress) => setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], progress } } : current),
+  const hasUnresolvedAttachment = transientUploadReferences.length > 0 || saveUnknown || !saveRecoveryReady;
+  const restoreAttachmentsRef = useRef(onRestoreAttachmentDrafts);
+  restoreAttachmentsRef.current = onRestoreAttachmentDrafts;
+  const restoringAttachmentsRef = useRef(new Set<string>());
+  const attachmentsMountedRef = useRef(true);
+  useEffect(() => {
+    attachmentsMountedRef.current = true;
+    return () => { attachmentsMountedRef.current = false; };
+  }, []);
+  useEffect(() => {
+    const missing = findTransientUploadReferences(text).map(ref => ref.token)
+      .filter(token => !attachmentDrafts[token] && !restoringAttachmentsRef.current.has(token));
+    if (!missing.length || !restoreAttachmentsRef.current) return;
+    for (const token of missing) restoringAttachmentsRef.current.add(token);
+    void restoreAttachmentsRef.current(missing, attachmentCallbacks()).then(drafts => {
+      if (!attachmentsMountedRef.current || !drafts.length) return;
+      const liveTokens = new Set(findTransientUploadReferences(editorViewRef.current?.state.doc.toString() ?? "").map(ref => ref.token));
+      setAttachmentDrafts(current => ({ ...current, ...Object.fromEntries(drafts
+        .filter(draft => liveTokens.has(draft.token) && !current[draft.token]).map(draft => [draft.token, { ...draft,
+          status: "error", progress: 0, error: zh ? "已恢复原上传身份，请核对结果。" : "Original upload identity restored. Check the result.",
+        } as AttachmentDraftState])) }));
+    }).catch(() => undefined).finally(() => { for (const token of missing) restoringAttachmentsRef.current.delete(token); });
+  }, [text, attachmentDrafts, zh]);
+  function attachmentCallbacks(): AttachmentDraftCallbacks {
+    return {
+      onProgress: (token, progress) => setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], status: "uploading", error: undefined, recoveryAction: undefined, progress } } : current),
       onComplete: (token, item) => {
         const view = editorViewRef.current;
         const canonicalId = item.attachmentId ?? item.id;
@@ -248,13 +301,6 @@ export function EditMessageForm({
           return;
         }
         const replacement = replacePendingMarker(view, token, canonicalId);
-        if (replacement === "duplicate") {
-          setAttachmentDrafts((current) => current[token] ? {
-            ...current,
-            [token]: { ...current[token], status: "error", error: "The attachment placeholder is duplicated." },
-          } : current);
-          return;
-        }
         const canonicalDocument = view.state.doc.toString();
         // A retry can race with a late successful finalize from the previous
         // attempt. If that callback already replaced this token, the marker is
@@ -274,14 +320,21 @@ export function EditMessageForm({
         setText(canonicalDocument);
         setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], itemId: canonicalId, status: "ready", progress: 100 } } : current);
       },
-      onError: (token, message) => {
+      onError: (token, message, recoveryAction) => {
         if (!attachmentFailureTokensRef.current.has(token)) {
           attachmentFailureTokensRef.current.add(token);
           setAttachmentTrayOpen(true);
         }
-        setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], status: "error", error: message } } : current);
+        setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], status: "error", error: message, recoveryAction } } : current);
       },
     };
+  }
+  const performAttachmentInsert = (files: File[], position: number) => {
+    if (!files.length && pendingCodeDrop?.attachment) {
+      performExistingAttachmentInsert(pendingCodeDrop.attachment, position);
+      return;
+    }
+    const callbacks = attachmentCallbacks();
     const drafts = onAttachmentFiles?.(files, position, callbacks) ?? [];
     setAttachmentDrafts((current) => ({
       ...current,
@@ -313,18 +366,12 @@ export function EditMessageForm({
   };
   const removeAttachmentDraft = (draft: AttachmentDraftState) => {
     const removal = removePendingMarker(editorViewRef.current, draft.token, draft.itemId);
-    if (removal === "duplicate") {
-      setAttachmentDrafts((current) => current[draft.token] ? {
-        ...current,
-        [draft.token]: { ...current[draft.token], status: "error", error: "The attachment reference is duplicated." },
-      } : current);
-      setError(zh ? "\u9644\u4ef6\u5f15\u7528\u91cd\u590d\uff0c\u8bf7\u5728\u6e90\u7801\u4e2d\u4fdd\u7559\u4e00\u5904\u540e\u91cd\u8bd5\u3002" : "The attachment reference is duplicated. Keep one source reference and retry.");
-      return;
-    }
     if (editorViewRef.current) {
       const nextDocument = editorViewRef.current.state.doc.toString();
       if (removal === "removed") setEditorDocument(nextDocument);
       setText(nextDocument);
+      if (findTransientUploadReferences(nextDocument).some(ref => ref.token === draft.token)
+        || (draft.itemId && countAttachmentReferences(nextDocument, draft.itemId) > 0)) return;
     }
     setAttachmentDrafts((current) => ({
       ...current,
@@ -708,6 +755,13 @@ export function EditMessageForm({
     if (editorHostRef.current) editorHostRef.current.dataset.cursorOffset = String(codePointOffset);
     cursorOffsetChangeRef.current?.(codePointOffset);
     const selection = update.state.selection.main;
+    const focused = findMarkdownAttachmentReferences(source, "cr-asset").filter(ref =>
+      selection.from >= ref.nodeFrom && selection.to <= ref.nodeTo).sort((a, b) =>
+      (a.nodeTo - a.nodeFrom) - (b.nodeTo - b.nodeFrom))[0];
+    attachmentFocusRef.current?.(focused ? {
+      identifier: focused.identifier, from: focused.nodeFrom, to: focused.nodeTo,
+      original: source.slice(focused.nodeFrom, focused.nodeTo),
+    } : null);
     update.view.dom.classList.toggle("cm-has-selection", !selection.empty);
     saveToolbarSelection(selection);
     if (selection.empty) {
@@ -760,12 +814,8 @@ export function EditMessageForm({
     return () => window.removeEventListener("beforeunload", protectDraft);
   }, [hasAttachmentWork, isUnchanged]);
 
-  useEffect(() => {
-    if (initialText === baselineText || !isUnchanged) return;
-    setEditorDocument(initialText);
-    setText(initialText);
-    setBaselineText(initialText);
-  }, [baselineText, initialText, isUnchanged]);
+  // Reader refreshes are not editor input. Only an explicit comparison or a
+  // confirmed submitted snapshot may advance this workspace's source base.
 
   useEffect(() => {
     const view = editorViewRef.current;
@@ -787,6 +837,15 @@ export function EditMessageForm({
   function applyAttachmentInsertion(view: EditorView, insertion: NonNullable<typeof pendingAttachmentInsertion>) {
     const key = `${insertion.referenceUri}:${insertion.placement}`;
     if (appliedInsertionRef.current === key) return;
+    if (insertion.replace) {
+      const changed = changeAttachmentReference(view, insertion.replace, insertion.referenceUri,
+        insertion.replace.scope, insertion.replace.remove);
+      if (!changed) setError(zh ? "引用位置已变化，请重新选择该引用。" : "The reference changed. Select it again before replacing.");
+      appliedInsertionRef.current = key;
+      onAttachmentInsertionApplied?.();
+      view.focus();
+      return;
+    }
     const label = insertion.displayName.replaceAll("[", "\\[").replaceAll("]", "\\]");
     const markdown = insertion.image
       ? `![${label}](${insertion.referenceUri})`
@@ -809,13 +868,65 @@ export function EditMessageForm({
     onAttachmentInsertionApplied?.();
   }
 
-  async function submit(mode: "create_version" | "replace_current", confirmedRemoval = false) {
+  function confirmSave(saved: SourceSaveResult) {
+    const snapshot = saveSnapshotRef.current;
+    if (!snapshot) return;
+    const live = editorViewRef.current?.state.doc.toString() ?? text;
+    const unchanged = snapshot.revision === editorRevisionRef.current && live === snapshot.text;
+    void draft.acknowledge(snapshot.text, {
+      base_version: saved.versionNumber, base_version_id: saved.versionId, base_content_hash: saved.contentHash,
+    }).catch(() => undefined);
+    setBaselineText(saved.canonicalText);
+    if (unchanged) {
+      setEditorDocument(saved.canonicalText);
+      setText(saved.canonicalText);
+      setReason("");
+      setShowClosePrompt(false);
+    }
+    setAttachmentDrafts(current => Object.fromEntries(Object.entries(current).filter(([token, value]) =>
+      value !== snapshot.drafts[token] || value.status !== "ready")));
+    onDirtyChange?.(!unchanged && live !== saved.canonicalText);
+    setSaveUnknown(false);
+    setCanRetrySave(false);
+    setError(null);
+    setSaveNotice(zh ? "已保存" : "Saved");
+    saveSnapshotRef.current = null;
+  }
+
+  async function verifySave() {
+    if (savingRef.current || !onVerifySave) return;
+    savingRef.current = true; setIsSaving(true);
+    try { confirmSave(await onVerifySave()); }
+    catch (error) {
+      const absent = Boolean(error && typeof error === "object" && "code" in error && error.code === "save_not_confirmed");
+      setCanRetrySave(absent);
+      setError(absent
+        ? (zh ? "尚无保存回执。可以重试原请求，不会重复创建版本。" : "No save receipt yet. You can retry the original request without creating a duplicate version.")
+        : (zh ? "尚未确认保存结果；草稿保留，可稍后核对。" : "Save is not confirmed yet. Your draft is retained; check again later."));
+    }
+    finally { savingRef.current = false; setIsSaving(false); }
+  }
+
+  async function retryOriginalSave() {
+    if (savingRef.current || !canRetrySave || !onRetrySave) return;
+    savingRef.current = true; setIsSaving(true); setCanRetrySave(false);
+    try { confirmSave(await onRetrySave()); }
+    catch (error) {
+      const feedback = editorErrorFeedback(error, zh, "save");
+      setError(feedback.message); setRevisionConflict(feedback.revisionConflict);
+      setSaveUnknown(Boolean(error && typeof error === "object" && "code" in error && error.code === "save_result_unknown"));
+    } finally { savingRef.current = false; setIsSaving(false); }
+  }
+
+  async function submit(mode: "create_version" | "replace_current") {
+    if (savingRef.current || saveUnknown || !saveRecoveryReady) return;
     setError(null);
     setRevisionConflict(false);
     setReloadStatus("idle");
     const authoritativeSource = editorViewRef.current?.state.doc.toString() ?? text;
     const unresolvedReferences = findTransientUploadReferences(authoritativeSource);
-    const unresolved = Object.values(attachmentDrafts).find((draft) => draft.status !== "ready" && draft.status !== "removed");
+    const unresolved = Object.values(attachmentDrafts).find((draft) => draft.status !== "ready" && draft.status !== "removed"
+      && unresolvedReferences.some(reference => reference.token === draft.token));
     if (unresolved) {
       setError(zh ? `附件“${unresolved.displayName}”尚未完成，请先重试或移除。` : `Attachment “${unresolved.displayName}” is not ready. Retry or remove it before saving.`);
       return;
@@ -828,11 +939,9 @@ export function EditMessageForm({
     }
     if (!authoritativeSource.trim() || authoritativeSource === baselineText) return;
     const removedIds = removedAttachmentIds(baselineText, authoritativeSource);
-    if (removedIds.length && !confirmedRemoval) {
-      setRemovedActions(Object.fromEntries(removedIds.map((attachmentId) => [attachmentId, "keep_in_conversation"])));
-      setRemovedConfirmMode(mode);
-      return;
-    }
+    // Removing source references never implicitly deletes conversation files.
+    savingRef.current = true;
+    saveSnapshotRef.current = { text: authoritativeSource, revision: editorRevisionRef.current, drafts: attachmentDrafts };
     setIsSaving(true);
     const requestToken = ++saveRequestRef.current;
     try {
@@ -840,29 +949,20 @@ export function EditMessageForm({
         authoritativeSource,
         reason.trim() || undefined,
         mode,
-        removedIds.map((attachmentId) => ({ attachment_id: attachmentId, action: removedActions[attachmentId] ?? "keep_in_conversation" })),
+        removedIds.map((attachmentId) => ({ attachment_id: attachmentId, action: "keep_in_conversation" })),
         editorRevisionRef.current,
       );
       if (requestToken !== saveRequestRef.current) return;
-      const canonicalText = saved?.canonicalText ?? authoritativeSource;
-      // A confirmed server write remains successful even if local cleanup fails.
-      void draft.acknowledge(authoritativeSource).catch(() => undefined);
-      setBaselineText(canonicalText);
-      setEditorDocument(canonicalText);
-      setText(canonicalText);
-      setReason("");
-      setShowClosePrompt(false);
-      setAttachmentDrafts({});
-      setRemovedConfirmMode(null);
-      setRemovedActions({});
-      onDirtyChange?.(false);
+      confirmSave(saved);
     } catch (err) {
       if (requestToken !== saveRequestRef.current) return;
       const feedback = editorErrorFeedback(err, zh, "save");
       setError(feedback.message);
       setRevisionConflict(feedback.revisionConflict);
+      setSaveUnknown(Boolean(err && typeof err === "object" && "code" in err && err.code === "save_result_unknown"));
     } finally {
       if (requestToken === saveRequestRef.current) setIsSaving(false);
+      savingRef.current = false;
     }
   }
 
@@ -1083,7 +1183,6 @@ export function EditMessageForm({
           {visibleAttachmentDrafts.map((draft) => {
             const retry = () => {
               setAttachmentActionToken(null);
-              setAttachmentDrafts((current) => ({ ...current, [draft.token]: { ...current[draft.token], status: "uploading", error: undefined, progress: 0 } }));
               onAttachmentRetry?.(draft.token);
             };
             const remove = () => {
@@ -1103,12 +1202,12 @@ export function EditMessageForm({
                 {draft.status === "uploading" || draft.status === "canonicalizing" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" /> : draft.status === "ready" ? <CheckCircle2 className="h-3.5 w-3.5 text-[var(--accent)]" /> : <AlertCircle className="h-3.5 w-3.5" />}
                 <span>{status}</span>
               </span>
-              {draft.status === "error" ? <button type="button" className="hidden min-h-8 shrink-0 rounded-md px-2 text-[var(--accent)] hover:bg-surface sm:inline-flex sm:items-center" onClick={retry}>{zh ? "重试" : "Retry"}</button> : null}
+              {draft.status === "error" ? <button type="button" className="hidden min-h-8 shrink-0 rounded-md px-2 text-[var(--accent)] hover:bg-surface sm:inline-flex sm:items-center" onClick={retry}>{draft.recoveryAction === "replace_source" ? (zh ? "替换源文件" : "Replace source file") : (zh ? "重试" : "Retry")}</button> : null}
               <button type="button" className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-surface sm:inline-flex" aria-label={zh ? `移除 ${draft.displayName}` : `Remove ${draft.displayName}`} onClick={remove}><X className="h-3.5 w-3.5" /></button>
               <div className="relative sm:hidden" data-attachment-action-menu="true">
                 <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-surface" aria-label={zh ? `${draft.displayName} 的操作` : `Actions for ${draft.displayName}`} aria-expanded={attachmentActionToken === draft.token} onClick={() => setAttachmentActionToken((current) => current === draft.token ? null : draft.token)}><MoreHorizontal className="h-4 w-4" /></button>
                 {attachmentActionToken === draft.token ? <div className="absolute bottom-full right-0 z-20 mb-1 min-w-28 rounded-md border border-ui bg-raised p-1 shadow-lg">
-                  {draft.status === "error" ? <button type="button" className="min-h-10 w-full rounded px-3 text-left text-primary hover:bg-subtle" onClick={retry}>{zh ? "重试" : "Retry"}</button> : null}
+                  {draft.status === "error" ? <button type="button" className="min-h-10 w-full rounded px-3 text-left text-primary hover:bg-subtle" onClick={retry}>{draft.recoveryAction === "replace_source" ? (zh ? "替换源文件" : "Replace source file") : (zh ? "重试" : "Retry")}</button> : null}
                   <button type="button" className="min-h-10 w-full rounded px-3 text-left text-[var(--danger)] hover:bg-[var(--danger-soft)]" onClick={remove}>{zh ? "移除" : "Remove"}</button>
                 </div> : null}
               </div>
@@ -1119,7 +1218,30 @@ export function EditMessageForm({
         </div> : null}
         <button type="button" onClick={() => setShowReason((value) => !value)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-secondary hover:bg-subtle"><ChevronDown className={`h-4 w-4 transition ${showReason ? "rotate-180" : ""}`} />{zh ? "\u7f16\u8f91\u8bf4\u660e\uff08\u53ef\u9009\uff09" : "Edit note (optional)"}</button>
         {showReason ? <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder={t("editReason")} className="min-h-10 w-full rounded-lg border border-ui bg-surface px-3 text-sm text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]" /> : null}
-        {error ? <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger-soft)] p-2 text-sm text-[var(--danger)]" role="alert"><p>{error}</p><p className="mt-1 text-xs">{zh ? "\u672a\u4fdd\u5b58\u7684\u6e90\u7801\u5df2\u4fdd\u7559\uff0c\u53ef\u91cd\u8bd5\u6216\u52a0\u8f7d\u6700\u65b0\u72b6\u6001\u540e\u91cd\u65b0\u4fdd\u5b58\u3002" : "Your unsaved source is preserved. Retry, or load the latest state and save again."}</p>{revisionConflict && onReloadLatest ? <button type="button" disabled={reloadStatus === "loading"} onClick={() => { setReloadStatus("loading"); void onReloadLatest().then(() => { setError(null); setRevisionConflict(false); setReloadStatus("ready"); }).catch((reloadError) => { setReloadStatus("idle"); setError(editorErrorFeedback(reloadError, zh, "reload").message); setRevisionConflict(true); }); }} className="mt-2 min-h-10 rounded-lg border border-[var(--danger)] px-3 font-medium hover:bg-surface disabled:opacity-60">{reloadStatus === "loading" ? (zh ? "\u6b63\u5728\u52a0\u8f7d\u2026" : "Loading…") : (zh ? "\u52a0\u8f7d\u6700\u65b0\u72b6\u6001" : "Load latest state")}</button> : null}</div> : null}
+        {receiptStorageUnavailable && saveUnknown ? <p className="text-xs text-secondary" role="status">{zh ? "本机回执不可用；核对前请保留此页面。" : "Local receipts are unavailable. Keep this page open until the result is confirmed."}</p> : null}
+        {readerRefreshPending ? <p className="text-xs text-secondary" role="status">{zh ? "已保存，正文待刷新。" : "Saved. Reader refresh is pending."}<button type="button" className="min-h-11 px-2 underline" onClick={onRefreshReader}>{zh ? "刷新正文" : "Refresh reader"}</button></p> : null}
+        {error ? <div className="rounded-lg border border-[var(--danger)] p-2 text-sm text-[var(--danger)]" role="alert">
+          <p>{error}</p>
+          {saveUnknown && onVerifySave ? <button type="button" disabled={isSaving} onClick={() => void verifySave()} className="min-h-11 underline">{zh ? "核对结果" : "Check result"}</button> : null}
+          {saveUnknown && canRetrySave && onRetrySave ? <button type="button" disabled={isSaving} onClick={() => void retryOriginalSave()} className="ml-3 min-h-11 underline">{zh ? "重试原保存" : "Retry original save"}</button> : null}
+          {revisionConflict && onReloadLatest ? <button type="button" disabled={reloadStatus === "loading"} onClick={() => {
+            setReloadStatus("loading");
+            void onReloadLatest().then(latest => { setComparison(latest); setReloadStatus("ready"); })
+              .catch(reloadError => { setReloadStatus("idle"); setError(editorErrorFeedback(reloadError, zh, "reload").message); });
+          }} className="min-h-11 underline">{reloadStatus === "loading" ? (zh ? "正在加载…" : "Loading…") : (zh ? "比较最新内容" : "Compare latest source")}</button> : null}
+        </div> : null}
+        {comparison ? <div className="rounded-lg border border-ui p-2 text-sm">
+          <SourceDraftComparison current={comparison.canonicalText} draft={text} zh={zh} />
+          <button type="button" className="min-h-11 text-accent" onClick={() => {
+            onAcceptLatest?.();
+            setBaselineText(comparison.canonicalText);
+            draft.restoreBase({ conversation_id: conversationId ?? "", message_id: messageId ?? "",
+              text, saved_at: new Date().toISOString(), revision: editorRevisionRef.current,
+              base_version: comparison.versionNumber, base_version_id: comparison.versionId, base_content_hash: comparison.contentHash });
+            setComparison(null); setRevisionConflict(false); setError(null);
+          }}>{zh ? "已核对，以最新版本为基线继续编辑草稿" : "Reviewed — keep editing this draft against the latest version"}</button>
+        </div> : null}
+        <span className="pointer-events-none absolute bottom-16 right-4 text-xs text-secondary" role="status">{saveNotice}</span>
         {reloadStatus === "ready" ? <div className="rounded-lg border border-ui bg-subtle p-2 text-sm text-primary" role="status">{zh ? "\u5df2\u52a0\u8f7d\u6700\u65b0\u72b6\u6001\uff0c\u4f60\u7684\u8349\u7a3f\u4ecd\u4fdd\u7559\u3002\u8bf7\u68c0\u67e5\u540e\u91cd\u65b0\u4fdd\u5b58\u3002" : "Latest state loaded. Your draft is still preserved; review it and save again."}</div> : null}
         <div className="flex flex-wrap items-center justify-end gap-2">
           <button type="button" data-source-editor-close="true" onClick={requestClose} disabled={isSaving} className="min-h-10 rounded-lg px-3 text-sm font-medium text-secondary hover:bg-subtle">{zh ? "\u9605\u8bfb\u6a21\u5f0f" : "Reading mode"}</button>
@@ -1127,26 +1249,6 @@ export function EditMessageForm({
           <button type="submit" data-testid="source-editor-create-version" disabled={isSaving || !trimmedText || isUnchanged || hasUnresolvedAttachment} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-50"><SaveAll className="h-4 w-4" />{isSaving ? t("saving") : `${zh ? "\u521b\u5efa" : "Create"} v${versionNumber + 1}`}</button>
         </div>
       </footer>
-      {removedConfirmMode ? (
-        <div className="fixed inset-0 z-[255] flex items-end justify-center bg-[var(--overlay)] p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby={`removed-attachments-${versionNumber}`}>
-          <button type="button" className="absolute inset-0" onClick={() => setRemovedConfirmMode(null)} aria-label={zh ? "取消保存" : "Cancel save"} />
-          <section className="relative max-h-[80dvh] w-full overflow-y-auto rounded-t-xl border border-ui bg-raised p-5 shadow-2xl sm:max-w-xl sm:rounded-xl">
-            <h2 id={`removed-attachments-${versionNumber}`} className="text-base font-semibold text-primary">{zh ? "已从正文移除附件引用" : "Attachment references were removed"}</h2>
-            <p className="mt-1 text-sm text-secondary">{zh ? "默认继续保留在当前对话文件中。" : "Files remain in the conversation by default."}</p>
-            <div className="mt-4 space-y-2">{removedAttachmentIds(baselineText, text).map((attachmentId) => {
-              const attachment = conversationAttachments.find((item) => item.id === attachmentId);
-              const canDetach = canDetachRemovedAttachment(attachmentId);
-              return <div key={attachmentId} className="rounded-lg border border-ui bg-surface p-3"><p className="truncate text-sm font-medium text-primary">{attachment?.display_name ?? attachmentId}</p>{!canDetach ? <p className="mt-1 text-xs text-secondary">{zh ? "本次只移除这一处引用，该文件仍在其他位置使用。" : "Only this occurrence is removed; the file is still used elsewhere."}</p> : null}<div className="mt-2 flex flex-wrap gap-3 text-xs"><label className="flex items-center gap-1.5"><input type="radio" name={`removed-${attachmentId}`} checked={(removedActions[attachmentId] ?? "keep_in_conversation") === "keep_in_conversation"} onChange={() => setRemovedActions((current) => ({ ...current, [attachmentId]: "keep_in_conversation" }))} />{zh ? "保留在当前对话文件" : "Keep in conversation"}</label><label className={`flex items-center gap-1.5 ${canDetach ? "" : "opacity-50"}`}><input type="radio" name={`removed-${attachmentId}`} disabled={!canDetach} checked={removedActions[attachmentId] === "detach_from_conversation"} onChange={() => setRemovedActions((current) => ({ ...current, [attachmentId]: "detach_from_conversation" }))} />{zh ? "同时从当前对话文件移除" : "Detach from conversation"}</label></div></div>;
-            })}</div>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button type="button" onClick={() => setRemovedActions(Object.fromEntries(removedAttachmentIds(baselineText, text).map((id) => [id, "keep_in_conversation"])))} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{zh ? "全部保留" : "Keep all"}</button>
-              <button type="button" onClick={() => setRemovedActions(Object.fromEntries(removedAttachmentIds(baselineText, text).map((id) => [id, canDetachRemovedAttachment(id) ? "detach_from_conversation" : "keep_in_conversation"])))} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{zh ? "全部移除" : "Detach all eligible"}</button>
-              <button type="button" onClick={() => setRemovedConfirmMode(null)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm text-primary">{zh ? "取消保存" : "Cancel save"}</button>
-              <button type="button" onClick={() => { const mode = removedConfirmMode; setRemovedConfirmMode(null); void submit(mode, true); }} className="min-h-9 rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)]">{zh ? "确认并保存" : "Confirm and save"}</button>
-            </div>
-          </section>
-        </div>
-      ) : null}
       {showClosePrompt ? (
         <div className="fixed inset-0 z-[250] flex items-end justify-center bg-[var(--overlay)] p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby={`unsaved-edit-${versionNumber}`}>
           <button type="button" className="absolute inset-0" onClick={() => setShowClosePrompt(false)} aria-label={zh ? "\u7ee7\u7eed\u7f16\u8f91" : "Continue editing"} />
@@ -1342,6 +1444,21 @@ function editorErrorFeedback(error: unknown, zh: boolean, operation: EditorError
   const status = typeof statusValue === "number"
     ? statusValue
     : undefined;
+  const structured = error && typeof error === "object" ? error as { code?: string; details?: { line_number?: number } } : {};
+  if (structured.code) {
+    const line = structured.details?.line_number;
+    const prefix = line ? (zh ? `第 ${line} 行：` : `Line ${line}: `) : "";
+    const messages: Record<string, [string, string]> = {
+      source_changed: ["正文已更新；请比较最新内容。", "Source changed. Compare the latest version."],
+      source_baseline_required: ["需要先核对最新正文。", "Compare the latest source first."],
+      save_result_unknown: ["保存结果待确认；草稿仍保留。", "Save result is unknown; your draft is retained."],
+      attachment_unavailable: ["附件不可用，请定位此处引用并替换；其他文字仍保留。", "Attachment unavailable. Locate and replace this reference; your other edits are retained."],
+      attachment_reference_unmapped: ["附件引用无法定位，请检查 Markdown 写法。", "The reference cannot be mapped. Check its Markdown syntax."],
+      attachment_reference_invalid: ["附件身份无效，请重新插入文件引用。", "Invalid attachment identity. Insert the file reference again."],
+    };
+    const copy = messages[structured.code];
+    if (copy) return { message: prefix + copy[zh ? 0 : 1], revisionConflict: ["source_changed", "source_baseline_required"].includes(structured.code) };
+  }
   const kind = editorErrorKind(raw, status);
   return {
     message: editorErrorMessage(kind, zh, operation),
@@ -1418,12 +1535,12 @@ function isRevisionConflictMessage(message: string): boolean {
 
 function attachmentReferenceCounts(text: string): Map<string, number> {
   const counts = new Map<string, number>();
-  for (const match of text.matchAll(/cr-asset:\/\/([0-9a-f-]{36})/gi)) counts.set(match[1].toLowerCase(), (counts.get(match[1].toLowerCase()) ?? 0) + 1);
+  for (const ref of findMarkdownAttachmentReferences(text, "cr-asset")) counts.set(ref.identifier.toLowerCase(), (counts.get(ref.identifier.toLowerCase()) ?? 0) + 1);
   return counts;
 }
 
 function countAttachmentReferences(text: string, attachmentId: string): number { return attachmentReferenceCounts(text).get(attachmentId.toLowerCase()) ?? 0; }
-function removedAttachmentIds(before: string, after: string): string[] { const previous = attachmentReferenceCounts(before); const next = attachmentReferenceCounts(after); return Array.from(previous.entries()).filter(([id, count]) => (next.get(id) ?? 0) < count).map(([id]) => id); }
+function removedAttachmentIds(before: string, after: string): string[] { const previous = attachmentReferenceCounts(before); const next = attachmentReferenceCounts(after); return Array.from(previous.keys()).filter(id => !next.get(id)); }
 
 function codeMirrorExtensions(
   themeCompartment: Compartment,

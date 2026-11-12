@@ -391,8 +391,8 @@ def _build_offline_package(
             required_entries=("package.json",),
         )
     finally:
-        if temporary.exists():
-            temporary.unlink()
+        from app.services.artifact_lifecycle import discard_owned_temporary
+        discard_owned_temporary(temporary, category="offline_package")
     digest = published.sha256
     artifact = OfflinePackageArtifact(
         id=package_id,

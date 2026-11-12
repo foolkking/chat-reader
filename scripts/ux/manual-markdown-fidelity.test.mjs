@@ -41,15 +41,19 @@ function createFixture(userText, assistantText = "  Synthetic answer\n") {
 function editFixture(text, baselineText = "Synthetic original", { authoritative = text, fail = false, canonical, drafts = {} } = {}) {
   const saved = [], updates = {}, scope = { text, baselineText, reason: "  Synthetic reason  ", attachmentDrafts: drafts,
     editorViewRef: { current: { state: { doc: { toString: () => authoritative } } } }, saveRequestRef: { current: 0 },
-    editorRevisionRef: { current: 9 }, zh: false, removedActions: {},
+    editorRevisionRef: { current: 9 }, savingRef: { current: false }, saveUnknown: false, saveRecoveryReady: true,
+    saveSnapshotRef: { current: null }, zh: false, removedActions: {},
     draft: { acknowledge: async value => { updates.acknowledgedDraft = value; } },
     findTransientUploadReferences: () => [], removedAttachmentIds: () => [], isRevisionConflictMessage, editorErrorFeedback,
     t: key => key, onDirtyChange: value => { updates.dirty = value; },
-    onSave: async (...args) => { saved.push(args); if (fail) throw new Error("Synthetic offline"); return canonical === undefined ? undefined : { canonicalText: canonical }; },
+    onSave: async (...args) => { saved.push(args); if (fail) throw new Error("Synthetic offline"); return {
+      canonicalText: canonical ?? args[0], versionId: "synthetic-version", contentHash: "synthetic-hash", versionNumber: 2,
+    }; },
   };
-  for (const name of ["Error", "RevisionConflict", "ReloadStatus", "IsSaving", "BaselineText", "EditorDocument", "Text", "Reason", "ShowClosePrompt", "AttachmentDrafts", "RemovedConfirmMode", "RemovedActions"]) {
+  for (const name of ["Error", "RevisionConflict", "ReloadStatus", "IsSaving", "BaselineText", "EditorDocument", "Text", "Reason", "ShowClosePrompt", "AttachmentDrafts", "RemovedConfirmMode", "RemovedActions", "SaveUnknown", "SaveNotice", "CanRetrySave"]) {
     scope["set" + name] = value => { updates[name] = value; };
   }
+  scope.confirmSave = compile(editSource, "confirmSave", scope);
   return { saved, updates, scope, submit: compile(editSource, "submit", scope) };
 }
 const bodies = ["    Synthetic code", "\tSynthetic tab\n", "\n\nSynthetic paragraph\n\n", "```text\n  Synthetic line\n    ", "  合成内容🙂  \n"];
@@ -104,8 +108,37 @@ test("explicit canonical reply, including whitespace, is the new baseline", asyn
   await f.submit("create_version"); assert.equal(f.updates.BaselineText, "  Synthetic server source\n");
 });
 test("unresolved attachment still blocks an edit", async () => {
-  const f = editFixture("    Synthetic source", "Synthetic original", { drafts: { upload: { status: "uploading", displayName: "synthetic.txt" } } });
+  const f = editFixture("![pending](cr-upload://upload)", "Synthetic original", {
+    drafts: { upload: { token: "upload", status: "uploading", displayName: "synthetic.txt" } },
+  });
+  f.scope.findTransientUploadReferences = () => [{ token: "upload", lineNumber: 1 }];
+  f.submit = compile(editSource, "submit", f.scope);
   await f.submit("create_version"); assert.equal(f.saved.length, 0); assert.match(f.updates.Error, /not ready/);
+});
+test("an orphaned failed job cannot lock a source without its placeholder", async () => {
+  const f = editFixture("Synthetic prose", "Synthetic original", {
+    drafts: { upload: { token: "upload", status: "error", displayName: "synthetic.txt" } },
+  });
+  await f.submit("create_version");
+  assert.equal(f.saved.length, 1);
+});
+test("a late save confirms its snapshot without overwriting subsequent input", async () => {
+  const f = editFixture("Submitted source");
+  let release;
+  f.scope.onSave = async (...args) => {
+    f.saved.push(args);
+    await new Promise(resolve => { release = resolve; });
+    return { canonicalText: args[0], versionId: "v2", contentHash: "exact", versionNumber: 2 };
+  };
+  const pending = compile(editSource, "submit", f.scope)("create_version");
+  f.scope.editorRevisionRef.current += 1;
+  f.scope.editorViewRef.current.state.doc.toString = () => "Submitted source with later input";
+  release();
+  await pending;
+  assert.equal(f.updates.BaselineText, "Submitted source");
+  assert.equal("EditorDocument" in f.updates, false);
+  assert.equal("Text" in f.updates, false);
+  assert.equal(f.updates.dirty, true);
 });
 test("insert continues to submit exact bodies, revision and anchor", async () => {
   const calls = [], first = "    Synthetic first\n", second = "\nSynthetic second  ";

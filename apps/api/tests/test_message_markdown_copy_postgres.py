@@ -38,8 +38,11 @@ def snapshot(factory, case):
 
 def test_upgrade_downgrade_revokes_links_without_changing_canonical_source(isolated_schema, monkeypatch, tmp_path):
     engine, migrate = isolated_schema
-    migrate("20261017_0052")
+    # Seed using the current ORM only against its current schema, then exercise
+    # the old-schema roundtrip. No old deployment runs new ORM writes.
+    migrate("head")
     factory, case = prepare(engine, monkeypatch, tmp_path)
+    migrate("20261017_0052", "downgrade")
     original = snapshot(factory, case)
     migrate("head")
     with factory() as db:
@@ -55,6 +58,46 @@ def test_upgrade_downgrade_revokes_links_without_changing_canonical_source(isola
     with factory() as db:
         assert db.query(AttachmentPublicLink).count() == 0
     assert snapshot(factory, case) == original
+
+
+def test_simultaneous_same_version_saves_reject_stale_hash_and_replay_one_receipt(isolated_schema, monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from app.models.conversation_event import ConversationEvent
+    engine, migrate = isolated_schema
+    migrate("head")
+    factory, case = prepare(engine, monkeypatch, tmp_path)
+    monkeypatch.setenv("AUTH_ENABLED", "false")
+    from app.core.config import get_settings
+    get_settings.cache_clear()
+    endpoint = f"/api/messages/{case['message']}"
+    with TestClient(app, raise_server_exceptions=False) as client:
+        baseline = client.patch(endpoint, json={"content_markdown": "Synthetic second version"}).json()["message_version"]
+    barrier = Barrier(2)
+    def write(index):
+        with TestClient(app, raise_server_exceptions=False) as client:
+            barrier.wait(timeout=10)
+            return client.patch(endpoint, json={"content_markdown": f"Synthetic writer {index}",
+                "base_version_id": baseline["id"], "base_content_hash": baseline["source_content_hash"],
+                "save_mode": "replace_current", "operation_id": str(uuid.uuid4())})
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(write, range(2)))
+    assert sorted(response.status_code for response in responses) == [200, 409]
+    with factory() as db:
+        assert db.query(MessageVersion).filter_by(message_id=uuid.UUID(case["message"])).count() == 2
+    barrier = Barrier(2)
+    operation_id = str(uuid.uuid4())
+    payload = {"content_markdown": "Synthetic idempotent next version", "operation_id": operation_id}
+    def replay(_):
+        with TestClient(app, raise_server_exceptions=False) as client:
+            barrier.wait(timeout=10)
+            return client.patch(endpoint, json=payload)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(replay, range(2)))
+    assert [response.status_code for response in responses] == [200, 200]
+    assert responses[0].json()["current_version_id"] == responses[1].json()["current_version_id"]
+    with factory() as db:
+        assert db.query(MessageVersion).filter_by(message_id=uuid.UUID(case["message"])).count() == 3
+        assert db.query(ConversationEvent).filter_by(id=uuid.UUID(operation_id)).count() == 1
 
 
 @pytest.mark.parametrize("same_message", [True, False], ids=["same-message", "different-messages"])

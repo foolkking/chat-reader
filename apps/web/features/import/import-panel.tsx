@@ -110,7 +110,13 @@ export function ImportPanel({
     enabled: !session && mode === "adaptive",
     retry: false,
   });
-  const [pendingImportId, setPendingImportId] = useState<string | null>(null);
+  const [pendingImportRead, setPendingImportRead] = useState<{ importId: string; token: string } | null>(null);
+  const pendingImportId = pendingImportRead?.importId ?? null;
+  const setPendingImportId = useCallback((importId: string | null) => {
+    // A retry retains the server import ID, but cannot consume the previous
+    // attempt's fresh failed/cancelled cache before its first current GET.
+    setPendingImportRead(importId ? { importId, token: crypto.randomUUID() } : null);
+  }, []);
   const commitControlId = session?.import_id ?? archivePreview?.import_id ?? null;
   const commitControlKey = ["import-commit-control", generation.current, commitControlId];
   const commitControl = useQuery<CommitControl | null>({
@@ -159,7 +165,21 @@ export function ImportPanel({
   const [savedImportId, setSavedImportId] = useState<string | null>(null);
   const [discardConfirm, setDiscardConfirm] = useState(false);
   const [stopUnconfirmed, setStopUnconfirmed] = useState(false);
-  useEffect(() => { setSavedImportId(window.sessionStorage.getItem(activeSessionKey)); }, [activeSessionKey]);
+  useEffect(() => {
+    if (!current()) return;
+    try { setSavedImportId(window.sessionStorage.getItem(activeSessionKey)); }
+    catch { setSavedImportId(null); }
+  }, [activeSessionKey, current]);
+  const rememberImport = useCallback((importId: string | null) => {
+    if (!current()) return;
+    setSavedImportId(importId);
+    // This is only a navigation hint. Browser storage restrictions must not
+    // turn a confirmed server operation into failure or strand its busy state.
+    try {
+      if (importId) window.sessionStorage.setItem(activeSessionKey, importId);
+      else window.sessionStorage.removeItem(activeSessionKey);
+    } catch { /* Tasks and the server's unfinished list remain authoritative. */ }
+  }, [activeSessionKey, current]);
   useEffect(() => {
     setStopUnconfirmed(false);
     if (session?.state !== "CANCELING") return;
@@ -197,18 +217,18 @@ export function ImportPanel({
       .then(async (restored) => {
         if (!active || !current()) return;
         if (restored.state === "COMPLETED") {
-          const result = await getImportStatus(restored.import_id);
+          const result = await getImportStatus(restored.import_id, controller.signal);
           if (!active || !current()) return;
           if (result.status !== "committed") throw new Error("IMPORT_RESULT_UNCONFIRMED");
           setCommitResult(result);
         }
         if (["COMPLETED", "CANCELED"].includes(restored.state)) {
           resumeSessionRef.current = null;
-          window.sessionStorage.removeItem(activeSessionKey);
+          rememberImport(null);
           setSessionRestore({ phase: "idle", error: null });
           return;
         }
-        window.sessionStorage.setItem(activeSessionKey, restored.import_id);
+        rememberImport(restored.import_id);
         resumeSessionRef.current = null;
         targetSessionRef.current = restored.import_id;
         setTargetProjectId(restored.target_project_id !== undefined ? restored.target_project_id : initialProjectId);
@@ -223,7 +243,7 @@ export function ImportPanel({
       active = false;
       controller.abort();
     };
-  }, [activeSessionKey, current, initialProjectId, resumeImportId, session, sessionRestoreRetry]);
+  }, [current, initialProjectId, rememberImport, resumeImportId, session, sessionRestoreRetry]);
 
   const analysisTaskId = session?.analysis_task_id ?? null;
   const analysisSessionQuery = useQuery({
@@ -257,7 +277,7 @@ export function ImportPanel({
     completedImportRef.current = result.import_id;
     setTerminalImportError(null);
     setTerminalImportId(null);
-    window.sessionStorage.removeItem(activeSessionKey);
+    rememberImport(null);
     // The adaptive workspace owns the pre-commit session. Once the server has
     // committed it, release that surface so the terminal result summary can be
     // rendered and the user can choose where to go next.
@@ -267,33 +287,42 @@ export function ImportPanel({
     void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
     void queryClient.invalidateQueries({ queryKey: ["conversations"] });
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
-  }, [activeSessionKey, current, queryClient]);
+  }, [current, queryClient, rememberImport, setPendingImportId]);
   const finishTerminalImport = useCallback((result: CommitImportResponse) => {
     if (!current()) return;
     setPendingImportId(null);
     setCommitResult(null);
     setTerminalImportId(result.import_id);
     setTerminalImportError(result.status === "cancelled" ? "IMPORT_COMMIT_CANCELLED" : "IMPORT_COMMIT_FAILED");
-  }, [current]);
+  }, [current, setPendingImportId]);
 
   const importStatusQuery = useQuery({
-    queryKey: ["import-status", pendingImportId],
-    queryFn: () => getImportStatus(pendingImportId!),
-    enabled: Boolean(pendingImportId),
+    queryKey: ["import-status", pendingImportId, generation.current, pendingImportRead?.token],
+    queryFn: async ({ signal }) => {
+      const result = await getImportStatus(pendingImportId!, signal);
+      if (!current()) throw new Error("Account changed");
+      if (result.import_id !== pendingImportId
+        || !["queued", "processing", "committed", "failed", "cancelled"].includes(result.status)) {
+        throw new ApiRequestError("The original import result could not be confirmed.", 409,
+          `/api/imports/${pendingImportId}/status`, "IMPORT_RESULT_UNCONFIRMED");
+      }
+      return result;
+    },
+    enabled: current() && Boolean(pendingImportId),
+    gcTime: 0,
     refetchInterval: (query) => ["queued", "processing"].includes(query.state.data?.status ?? "") ? 1200 : false,
   });
   useEffect(() => {
     const result = importStatusQuery.data;
-    if (!result) return;
+    if (!result || !current() || !pendingImportId || result.import_id !== pendingImportId) return;
     if (result.status === "committed") finishCommittedImport(result);
     else if (result.status === "failed" || result.status === "cancelled") finishTerminalImport(result);
-  }, [finishCommittedImport, finishTerminalImport, importStatusQuery.data]);
+  }, [current, finishCommittedImport, finishTerminalImport, importStatusQuery.data, pendingImportId]);
 
   const upload = useImportUpload(mode === "adaptive" && !session && !resumeSessionRef.current, result => {
     if (!current()) return;
     setFiles([]); setPastedText(""); setArchivePreview(null);
-    // A disabled storage API must not turn a confirmed upload into failure.
-    try { window.sessionStorage.setItem(activeSessionKey, result.import_id); } catch { /* Query receipt remains usable. */ }
+    rememberImport(result.import_id);
     if (["COMPLETED", "CANCELED"].includes(result.state)) {
       resumeSessionRef.current = result.import_id;
       setSessionRestoreRetry(attempt => attempt + 1);
@@ -319,8 +348,7 @@ export function ImportPanel({
     onMutate: mutationOwner,
     onSuccess: (_result, _id, owner) => {
       if (!ownsMutation(owner)) return;
-      window.sessionStorage.removeItem(activeSessionKey);
-      setSavedImportId(null);
+      rememberImport(null);
       reset("adaptive");
       void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
     },
@@ -590,8 +618,7 @@ export function ImportPanel({
   function chooseFiles(nextFiles: File[], nextMode = mode) {
     if (busy) return;
     upload.clearRejected();
-    window.sessionStorage.removeItem(activeSessionKey);
-    setSavedImportId(null);
+    rememberImport(null);
     reset(nextMode);
     setFiles(nextFiles);
   }
@@ -782,6 +809,8 @@ export function ImportPanel({
     ? (pastedText.trim() ? tr("已准备一段粘贴文本") : tr("尚未粘贴文本"))
     : files.length === 0 ? tr("尚未选择文件") : files.length === 1 ? files[0]?.name : tr("已选择 {0} 个文件", files.length);
   const archiveCanCommit = Boolean(archivePreview?.can_commit ?? archivePreview?.archive_summary);
+  const archiveCommitStarted = mode === "archive" && (commitMutation.isPending || Boolean(pendingImportId) || Boolean(commitControl));
+  const importCompleted = commitResult?.status === "committed" && !pendingImportId;
   const totalOverLimit = capabilities.data?.maximum_import_total_mb != null && activeTotalBytes > capabilities.data.maximum_import_total_mb * 1024 * 1024;
   const sourceError = upload.receipt?.error;
   const formatError = sourceError instanceof ApiRequestError && ["SOURCE_UNSUPPORTED", "JSON_INVALID", "NO_MESSAGE_STRUCTURE", "MARKDOWN_ENCODING_INVALID", "MARKDOWN_FENCE_UNCLOSED"].includes(sourceError.code ?? "");
@@ -913,15 +942,15 @@ export function ImportPanel({
         <button type="button" disabled={busy} aria-expanded={conversionOpen} aria-controls={conversionId} onClick={() => setConversionOpen(open => !open)} className="flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left text-sm text-secondary hover:text-primary disabled:opacity-50">{tr("格式不支持？")}<ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${conversionOpen ? "rotate-180" : ""}`} aria-hidden="true" /></button>
         {conversionOpen ? <div id={conversionId} className="pb-4 pt-2"><FormatConversionGuide resultAction={<button type="button" disabled={busy} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => { replaceSelectionRef.current = true; fileInputRef.current?.click(); }}>{files.length > 1 ? tr("重新选择本批文件") : tr("选择转换后的文件")}</button>} /></div> : null}
       </div> : null}
-      <div className="flex flex-wrap gap-3">
-        <button ref={previewButtonRef} type="button" disabled={!(inputMethod === "paste" ? pastedText.trim() : files.length) || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={previewImportSource} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-medium">
-          {busy && !upload.locked ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在识别格式")}</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />{tr("分析并继续")}</> : tr("检查归档")}
-        </button>
-        {archivePreview ? <button type="button" disabled={!archiveCanCommit || commitMutation.isPending || Boolean(commitControl)} data-testid="commit-import-button" onClick={() => commitMutation.mutate({ importId: archivePreview.import_id, policy: duplicatePolicy })} className="btn-secondary min-h-10 px-4 text-sm font-medium">{commitMutation.isPending ? tr("正在导入") : tr("恢复归档")}</button> : null}
-      </div>
+      {!importCompleted ? <div className="flex flex-wrap gap-3">
+        {!archiveCommitStarted ? <button ref={previewButtonRef} type="button" disabled={!(inputMethod === "paste" ? pastedText.trim() : files.length) || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={previewImportSource} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-medium">
+          {busy && !upload.locked ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr(pendingImportId || commitMutation.isPending ? "正在导入" : "正在识别格式")}</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />{tr("分析并继续")}</> : tr("检查归档")}
+        </button> : null}
+        {archivePreview ? <button type="button" disabled={!archiveCanCommit || commitMutation.isPending || Boolean(pendingImportId) || Boolean(commitControl)} data-testid="commit-import-button" onClick={() => commitMutation.mutate({ importId: archivePreview.import_id, policy: duplicatePolicy })} className="btn-secondary min-h-11 px-4 text-sm font-medium">{pendingImportId && importStatusQuery.error ? tr("进度待核对") : commitMutation.isPending || pendingImportId ? tr("正在导入") : tr("恢复归档")}</button> : null}
+      </div> : null}
       {archivePreview ? <ImportPreviewCard preview={archivePreview} /> : null}
       {archivePreview?.duplicate_conversation_id ? <div className="border-l-2 border-[var(--warning)] pl-3 text-sm text-secondary"><p>{tr("系统中已有相同归档。默认会创建副本，不覆盖原记录。")}</p><Link href={`/conversations/${archivePreview.duplicate_conversation_id}`} className="mt-2 inline-block font-medium text-accent underline">{tr("打开已有对话")}</Link></div> : null}
-      {commitResult?.status === "committed" && !pendingImportId ? <ImportCompletionSummary result={commitResult} onClose={() => onImportCommitted?.()} onOpenFirst={(conversationId) => { onImportCommitted?.(); router.push(`/conversations/${conversationId}`); }} /> : null}
+      {importCompleted ? <ImportCompletionSummary result={commitResult} onClose={() => onImportCommitted?.()} onOpenFirst={(conversationId) => { onImportCommitted?.(); router.push(`/conversations/${conversationId}`); }} /> : null}
     </section>
   );
 }
@@ -1037,7 +1066,7 @@ function ErrorLine({ message, action = "read", onRetry, retrying = false }: {
   return (
     <div role="alert" className={`border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)] ${onRetry ? "flex flex-wrap items-center justify-between gap-3" : ""}`}>
       <span>{importErrorMessage(message, tr, action)}</span>
-      {onRetry ? <button type="button" disabled={retrying} onClick={onRetry} className="btn-secondary inline-flex min-h-9 shrink-0 items-center gap-2 px-3 text-xs font-medium">
+      {onRetry ? <button type="button" disabled={retrying} onClick={onRetry} className="btn-secondary inline-flex min-h-11 shrink-0 items-center gap-2 px-3 text-xs font-medium">
         {retrying ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : null}{tr("重试")}
       </button> : null}
     </div>

@@ -169,6 +169,8 @@ const english: Record<string, string> = {
   "保存为导入格式": "Format name", "验证会运行此格式的全部": "Validation checks all ", "个对话，不只检查示例。": " conversations using this format, including those outside the preview.",
   "正在验证": "Validating…", "验证映射": "Validate mapping", "继续查看验证结果": "Continue reading validation result", "正在保存": "Saving…", "保存新版本并继续": "Save new version & continue", "保存映射并继续": "Learn mapping & continue",
   "读取结果超时，原文件和当前输入仍保留。可继续核对，没有重新提交。": "Reading the result timed out. Original files and current input are retained. Continue checking; nothing was resubmitted.",
+  "暂时无法核对原导入的结果，原文件和预览未改变。请重新读取，没有再次提交。": "The original import result could not be confirmed. Files and preview are unchanged. Read it again; nothing was resubmitted.",
+  "归档检查结果尚未确认，对话恢复尚未开始。请保留原文件，连接恢复后可重新检查；不会自动重试。": "The archive check is unconfirmed; conversation restoration has not started. Keep the original file and check it again once the connection recovers. Nothing will be retried automatically.",
   "来源结构": "Source structure", "结构分析": "Structure analysis", "个候选结构。点击诊断可定位到对应字段。": " candidate structures. Use a diagnostic to locate its field.",
   "JSON 字段映射": "JSON field mapping", "消息列表": "Message list", "角色来源": "Role source", "未设置": "Not set", "正文来源": "Content source", "标题来源": "Title source", "使用文件名": "Use filename",
   "Markdown 字段映射": "Markdown field mapping", "消息分界": "Message boundary", "H{0} 角色标题": "H{0} role headings", "角色标签行": "Role label lines", "Markdown 前置内容": "Markdown preamble",
@@ -183,7 +185,7 @@ const english: Record<string, string> = {
   "调整文件组合": "Adjust file groups", "导入格式处理状态": "Import format status", "已支持": "Supported", "可设置格式": "Can be mapped", "暂不可映射": "Cannot be mapped yet",
   "已支持 · 可直接导入": "Supported · Ready to import", "可设置格式 · 需要确认一次": "Mappable · Confirm the mapping once", "暂不可映射 · 需要先转换": "Not mappable · Convert the source first",
   "准备导入 {0} 个对话、{1} 条消息。": "Ready to import {0} conversations and {1} messages.", "还有 {0} 个对话需要设置或修复。已完成的处理会保留。": "{0} conversations still need mapping or repair. Completed work is retained.",
-  "正在整理导入计划。": "Preparing the import plan…", "正在导入": "Importing…", "导入 {0} 个对话": "Import {0} conversations", "个对话 ·": " conversations · ",
+  "正在整理导入计划。": "Preparing the import plan…", "正在导入": "Importing…", "进度待核对": "Progress unconfirmed", "导入 {0} 个对话": "Import {0} conversations", "个对话 ·": " conversations · ",
   "检测到来源结构变化，需要保存一个新版本。": "The source structure has changed. Save a new format version to continue.", "使用": "Use ", "修复格式": "Repair format", "设置格式": "Map format",
   "需要处理的输入": "Input requiring attention", "使用 Conversation Rescue": "Use Conversation Rescue", "保留": "Keep", "确认不导入": "Confirm exclusion", "最后一项不能排除，请替换文件或重新选择。": "The last item cannot be excluded. Replace it or choose different files.",
   "从本次导入中排除这一项": "Exclude this item from the import", "不导入此项": "Exclude this item",
@@ -321,6 +323,8 @@ export function importFailureMessage(
 
 const importCodeCopy: Record<string, string> = {
   IMPORT_OPERATION_UNCONFIRMED: "操作结果尚未确认。请在任务中心查看原任务，不要重复提交或重新上传。",
+  IMPORT_RESULT_UNCONFIRMED: "暂时无法核对原导入的结果，原文件和预览未改变。请重新读取，没有再次提交。",
+  IMPORT_PREVIEW_UNCONFIRMED: "归档检查结果尚未确认，对话恢复尚未开始。请保留原文件，连接恢复后可重新检查；不会自动重试。",
   IMPORT_RESOURCE_WAIT_EXPIRED: "累计等待资源已达 30 分钟，任务已暂停。请在任务中心继续原任务，无需重新上传。",
   IMPORT_MESSAGE_TOO_LARGE: "单条消息超过 1 MiB 处理上限，未拆分或截断；请检查来源。",
   IMPORT_STORAGE_FULL: "服务器存储空间不足，源文件仍保留。处理已停止，请释放空间后在任务中心继续。",

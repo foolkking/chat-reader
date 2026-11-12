@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.attachment import Attachment, AssetDerivative, AssetObject, AssetObjectLease, MessageVersionAttachment
 from app.services.assets.asset_store import get_asset_store
+from app.services.worker_maintenance import bound_worker_transaction
 
 
 @dataclass(frozen=True)
@@ -59,12 +60,10 @@ def release_import_assets(db: Session, import_id: uuid.UUID) -> list[str]:
 
     storage_keys: list[str] = []
     for asset_id in asset_ids:
-        asset = db.get(AssetObject, asset_id)
+        asset = db.query(AssetObject).filter_by(id=asset_id).with_for_update().one_or_none()
         if asset is None:
             continue
-        if db.query(Attachment.id).filter(Attachment.asset_object_id == asset.id).first() is not None:
-            continue
-        if db.query(AssetObjectLease.id).filter(AssetObjectLease.asset_object_id == asset.id).first() is not None:
+        if asset_object_has_live_references(db, asset.id):
             continue
         asset.status = "deleted"
         asset.deleted_at = datetime.now(timezone.utc)
@@ -78,7 +77,9 @@ def garbage_collect_assets(
     *,
     retention_days: int = 30,
     execute: bool = False,
+    limit: int = 100,
 ) -> AssetGcResult:
+    bound_worker_transaction(db)
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(days=max(1, retention_days))
     linked = exists().where(Attachment.asset_object_id == AssetObject.id)
@@ -91,7 +92,7 @@ def garbage_collect_assets(
     candidates = (
         db.query(AssetObject)
         .filter(
-            AssetObject.status != "deleted",
+            AssetObject.status == "available",
             AssetObject.created_at < cutoff,
             ~linked,
             ~leased,
@@ -99,22 +100,60 @@ def garbage_collect_assets(
             ~derivative_object,
         )
         .order_by(AssetObject.created_at.asc())
-        .all()
+        .limit(max(1, min(limit, 100)))
     )
+    if execute:
+        candidates = candidates.with_for_update(skip_locked=True)
+    candidates = candidates.all()
     if not execute:
         return AssetGcResult(candidates=len(candidates), marked_deleted=0, deleted_files=0)
 
     storage_keys: list[str] = []
     for asset in candidates:
+        # Recheck after the row lock. Inserts of FK references wait for this
+        # transaction and all binders must still reject non-available assets.
+        if asset_object_has_live_references(db, asset.id):
+            continue
         asset.status = "deleted"
         asset.deleted_at = now
         storage_keys.append(asset.storage_key)
     db.commit()
     return AssetGcResult(
         candidates=len(candidates),
-        marked_deleted=len(candidates),
-        deleted_files=delete_asset_files(storage_keys),
+        marked_deleted=len(storage_keys),
+        deleted_files=cleanup_deleted_assets(db, limit=limit),
     )
+
+
+def cleanup_deleted_assets(db: Session, *, limit=20, should_continue=lambda: True) -> int:
+    """Retry only an already-authorized deletion, never infer abandonment by age."""
+    bound_worker_transaction(db)
+    ids = [row[0] for row in db.query(AssetObject.id).filter(
+        AssetObject.status == "deleted", AssetObject.storage_deleted_at.is_(None),
+    ).order_by(AssetObject.deleted_at, AssetObject.id).limit(max(1, min(limit, 100)))]
+    db.rollback()
+    deleted = 0
+    store = get_asset_store()
+    for asset_id in ids:
+        if not should_continue():
+            break
+        bound_worker_transaction(db)
+        asset = db.query(AssetObject).filter_by(id=asset_id).with_for_update(skip_locked=True).one_or_none()
+        if asset is None or asset.status != "deleted" or asset.storage_deleted_at is not None:
+            db.rollback()
+            continue
+        if asset_object_has_live_references(db, asset.id):
+            db.rollback()
+            continue
+        try:
+            store.delete_key(asset.storage_key)
+        except (OSError, ValueError):
+            db.rollback()
+            continue
+        asset.storage_deleted_at = datetime.now(timezone.utc)
+        db.commit()
+        deleted += 1
+    return deleted
 
 
 def delete_asset_files(storage_keys: list[str]) -> int:

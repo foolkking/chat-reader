@@ -54,3 +54,41 @@ def test_unmapped_attachment_reference_fails_closed() -> None:
     with pytest.raises(ValueError, match="cannot be mapped during merge"):
         assert_attachment_references_mapped(text, {})
 
+
+def test_markdown_rewrite_preserves_literal_bytes_and_updates_used_definition_once():
+    from app.services.editing.attachment_reference_rewriter import attachment_markdown_ids, rewrite_attachment_markdown
+    literals = f"`[example](cr-asset://{SOURCE_ID})`\r\n\r\n```md\r\ncr-asset://{SOURCE_ID}\r\n```\r\n\r\n"
+    source = literals + f"[图][shared] and ![图][shared]\r\n\r\n[shared]: <CR-ASSET://{str(SOURCE_ID).upper()}?x=1#view> \"标题\"\r\n"
+    assert attachment_markdown_ids(source) == {SOURCE_ID}
+    assert rewrite_attachment_markdown(source, {SOURCE_ID: TARGET_ID}) == (
+        literals + f"[图][shared] and ![图][shared]\r\n\r\n[shared]: <cr-asset://{TARGET_ID}?x=1#view> \"标题\"\r\n"
+    )
+
+
+def test_html_projection_only_remaps_real_attributes_not_escaped_examples():
+    from app.services.editing.attachment_reference_rewriter import attachment_html_ids, rewrite_attachment_html
+    unknown = uuid.uuid4()
+    literal = f"<pre>&lt;a href=\"cr-asset://{unknown}\"&gt;</pre><code>cr-asset://{SOURCE_ID}</code>"
+    source = literal + f'<a href="cr-asset://{SOURCE_ID}?a=1&amp;b=2">File</a><img src=\'cr-asset://{SOURCE_ID}\'/>'
+    assert attachment_html_ids(source) == {SOURCE_ID}
+    assert rewrite_attachment_html(source, {SOURCE_ID: TARGET_ID}) == (
+        literal + f'<a href="cr-asset://{TARGET_ID}?a=1&amp;b=2">File</a><img src=\'cr-asset://{TARGET_ID}\'/>'
+    )
+
+
+def test_projection_uses_canonical_definition_context_and_keeps_code_payload_literal():
+    from app.services.editing.attachment_reference_rewriter import (
+        attachment_blocks_ids, markdown_reference_context, rewrite_attachment_block,
+    )
+    source = f"[File][x]\n\n[x]: cr-asset://{SOURCE_ID}"
+    context = markdown_reference_context(source)
+    blocks = [
+        {"block_type": "paragraph", "plain_text": "[File][x]", "data": {"text": "[File][x]"}},
+        {"block_type": "paragraph", "plain_text": f"[x]: cr-asset://{SOURCE_ID}", "data": {"text": f"[x]: cr-asset://{SOURCE_ID}"}},
+        {"block_type": "code", "plain_text": f"[x]: cr-asset://{SOURCE_ID}", "data": {"code": source}},
+    ]
+    assert attachment_blocks_ids(blocks, context) == {SOURCE_ID}
+    rewritten = [rewrite_attachment_block(block, {SOURCE_ID: TARGET_ID}, context) for block in blocks]
+    assert rewritten[0] == blocks[0]
+    assert rewritten[1]["data"]["text"] == f"[x]: cr-asset://{TARGET_ID}"
+    assert rewritten[2] == blocks[2]

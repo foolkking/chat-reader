@@ -12,7 +12,7 @@ from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.services.canonical.block_builder import build_basic_render_blocks
-from app.services.editing.attachment_reference_rewriter import ASSET_REFERENCE_RE, rewrite_attachment_text
+from app.services.editing.attachment_reference_rewriter import attachment_markdown_ids, rewrite_attachment_markdown
 from app.services.editing.message_edit_service import create_system_message_version, refresh_conversation_stats
 from app.services.search.search_indexer import rebuild_search_and_toc_for_conversation
 
@@ -86,7 +86,7 @@ def plan_unique_attachment_reference_repair(
         version = versions.get(message.current_version_id)
         if version is None:
             continue
-        stale_ids = _attachment_reference_ids_outside_code(version.display_text) - current_attachment_ids
+        stale_ids = attachment_markdown_ids(version.display_text) - current_attachment_ids
         for stale_id in sorted(stale_ids, key=str):
             candidates = provenance.get(stale_id, [])
             if len(candidates) == 1:
@@ -180,10 +180,10 @@ def apply_unique_attachment_reference_repair(
         current = db.get(MessageVersion, message.current_version_id)
         if current is None:
             continue
-        stale_ids = _attachment_reference_ids_outside_code(current.display_text) - current_attachment_ids
+        stale_ids = attachment_markdown_ids(current.display_text) - current_attachment_ids
         if not stale_ids:
             continue
-        mapped_text = rewrite_attachment_text(current.display_text, {
+        mapped_text = rewrite_attachment_markdown(current.display_text, {
             stale_id: attachment_id_map[stale_id]
             for stale_id in stale_ids
         })
@@ -204,23 +204,3 @@ def apply_unique_attachment_reference_repair(
         rebuild_search_and_toc_for_conversation(db, conversation_id)
     db.flush()
     return repaired
-
-
-def _attachment_reference_ids_outside_code(source_text: str) -> set[uuid.UUID]:
-    found: set[uuid.UUID] = set()
-    in_code = False
-    fence_character = ""
-    fence_length = 0
-    for raw_line in source_text.splitlines():
-        line = raw_line.strip()
-        if in_code:
-            if line.startswith(fence_character * fence_length) and not line[fence_length:].strip(fence_character).strip():
-                in_code = False
-            continue
-        if line.startswith("```") or line.startswith("~~~"):
-            fence_character = line[0]
-            fence_length = len(line) - len(line.lstrip(fence_character))
-            in_code = True
-            continue
-        found.update(uuid.UUID(match.group("id")) for match in ASSET_REFERENCE_RE.finditer(raw_line))
-    return found

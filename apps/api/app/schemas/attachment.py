@@ -74,6 +74,7 @@ class MessageVersionAttachmentRead(BaseModel):
 
 
 class AttachmentUploadSessionCreate(BaseModel):
+    request_id: UUID | None = None
     target_message_id: UUID | None = None
     base_message_version_id: UUID | None = None
 

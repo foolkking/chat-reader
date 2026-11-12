@@ -38,6 +38,9 @@ class TaskCancellationRequest(BaseModel):
 
 
 class BackgroundTaskRead(BaseModel):
+    execution_state: Literal["running", "stopping"] | None = None
+    business_progress_at: datetime | None = None
+    stop_requested_at: datetime | None = None
     job_id: UUID
     job_type: str
     status: str

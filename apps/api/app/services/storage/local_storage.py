@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import re
 import uuid
@@ -7,6 +8,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 from app.core.config import get_settings
+from app.core.observability import structured_event
 
 
 @dataclass(frozen=True)
@@ -78,7 +80,11 @@ def save_import_file_stream(
             release_file_cache(source)
         os.replace(temporary, destination)
     except Exception:
-        temporary.unlink(missing_ok=True)
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError as exc:
+            structured_event(logging.getLogger(__name__), logging.WARNING,
+                             "import_source_temporary_cleanup_failed", error_class=type(exc).__name__)
         raise
 
     return (

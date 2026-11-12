@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import uuid
 from collections.abc import Iterable
@@ -11,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from app.core.config import get_settings
+from app.core.observability import structured_event
 from app.models.import_record import ImportRecord
 from app.services.import_pipeline.canonical_draft import (
     CanonicalDraftConversation,
@@ -74,7 +76,14 @@ def write_import_draft(
             os.fsync(handle.fileno())
         temporary.replace(destination)
     finally:
-        temporary.unlink(missing_ok=True)
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError as exc:
+            # Publication is atomic. Failure to remove a private temporary
+            # file must not replace the parser/limit/write exception or claim
+            # that the previous published draft was successfully replaced.
+            structured_event(logging.getLogger(__name__), logging.WARNING,
+                             "import_draft_temporary_cleanup_failed", error_class=type(exc).__name__)
     expires_at = datetime.now(timezone.utc) + timedelta(hours=get_settings().import_draft_ttl_hours)
     summary = {"conversation_count": conversation_count, "message_count": message_count}
     return str(destination.relative_to(root)), digest.hexdigest(), summary, expires_at

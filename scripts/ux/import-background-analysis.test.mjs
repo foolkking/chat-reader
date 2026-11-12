@@ -65,7 +65,7 @@ function load(path, mocks, window) {
   }, module.exports, window);
   return module.exports;
 }
-function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, laneWidth = 720, cache = new Map(), initialMode = "adaptive" } = {}) {
+function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, laneWidth = 720, cache = new Map(), initialMode = "adaptive", storageFailure = null } = {}) {
   const runtime = hooksRuntime(), calls = [], mutations = [], queries = new Map(), storage = new Map(), events = new EventTarget();
   if (storedId) storage.set("chat-reader:adaptive-import-session", storedId);
   let generation = 1, read = initialRead ?? (async () => session()), upload = async () => session(), receipt = async () => ({ receipt: null }), tree, mutationCursor = 0;
@@ -74,7 +74,16 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
   let exclude = async () => ({ ...session(), analysis_task_id: "exclusion-analysis" });
   let commit = async id => ({ ...completion, import_id: id, status: "queued" });
   let status = async () => completion;
-  const window = { sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
+  const storageGuard = operation => {
+    if (storageFailure === operation) throw new DOMException("Synthetic optional storage rejection",
+      operation === "setItem" ? "QuotaExceededError" : "SecurityError");
+  };
+  const optionalStorage = {
+    getItem: key => { storageGuard("getItem"); return storage.get(key) ?? null; },
+    setItem: (key, value) => { storageGuard("setItem"); storage.set(key, value); },
+    removeItem: key => { storageGuard("removeItem"); storage.delete(key); },
+  };
+  const window = { get sessionStorage() { storageGuard("getter"); return optionalStorage; },
     addEventListener: (...args) => events.addEventListener(...args),
     removeEventListener: (...args) => events.removeEventListener(...args),
     dispatchEvent: event => { calls.push(["event", event.type]); return events.dispatchEvent(event); } };
@@ -99,7 +108,7 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
       calls.push(["exclude", id, artifact, updatedAt]); return exclude(id, artifact, updatedAt);
     },
     retryTask: async id => { calls.push(["retry", id]); return { job_id: id, status: "queued" }; },
-    getImportStatus: async id => { calls.push(["result", id]); return status(); },
+    getImportStatus: async (id, signal) => { calls.push(["result", id, signal]); return status(); },
     previewImport: async () => ({ import_id: "synthetic-archive", can_commit: true }),
     commitImport: (id, options) => { calls.push(["commit", id, options]); return commit(id, options); },
   };
@@ -173,6 +182,7 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
   const render = () => { runtime.reset(); mutationCursor = 0; return tree = ImportPanel(props); };
   render(); runtime.flush();
   return { calls, storage, mutations, queries, render, ...runtime,
+    setStorageFailure: value => { storageFailure = value; },
     setRead: fn => { read = fn; }, setUpload: fn => { upload = fn; }, changeAccount: () => { generation++; window.dispatchEvent(new Event("synthetic-auth-change")); },
     setReceipt: fn => { receipt = fn; }, uploadOptions, api,
     submitUpload: files => actualUpload.submit({ files }),
@@ -1007,6 +1017,187 @@ test("canonical commit failure is not mislabelled as initial analysis failure", 
   } finally { f.dispose(); }
 });
 
+for (const terminal of ["failed", "cancelled"]) test(`${terminal}: a confirmed canonical retry cannot reuse a fresh old terminal cache`, async () => {
+  const ready = session("READY", "ready");
+  const f = fixture({ resumeImportId: ready.import_id, initialRead: async () => ready });
+  const client = new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: false } } });
+  const pending = deferred();
+  let observer, unsubscribe;
+  const workspace = () => find(f.tree(), node => node.type === "AdaptiveImportWorkspace");
+  try {
+    await f.settle();
+    workspace().props.onImport(); await f.settle();
+    const oldOptions = f.queries.get("import-status").options;
+    const old = { ...completion, import_id: ready.import_id, status: terminal };
+    client.setQueryData(oldOptions.queryKey, old);
+    f.queries.get("import-status").result = { data: old };
+    f.render(); f.flush(); await f.settle();
+    assert.equal(workspace().props.importing, false);
+    assert.ok(workspace().props.onRetryImport);
+    observer = new QueryObserver(client, { ...oldOptions, enabled: false });
+    unsubscribe = observer.subscribe(noop);
+    f.setStatus(() => pending.promise);
+    workspace().props.onRetryImport(); await f.settle();
+    const next = f.queries.get("import-status").options;
+    assert.notDeepEqual(next.queryKey, oldOptions.queryKey, "The same server import needs a fresh acknowledgement/read identity.");
+    assert.equal(next.enabled, true);
+    observer.setOptions(next);
+    assert.equal(observer.getCurrentResult().data, undefined, "Do not publish a previous attempt before the first current GET.");
+    pending.resolve({ ...old, status: "processing", phase: "parsing" });
+    await f.settle();
+    const current = observer.getCurrentResult();
+    assert.equal(current.data.status, "processing");
+    assert.ok(f.calls.find(call => call[0] === "result")[2] instanceof AbortSignal);
+    f.queries.get("import-status").result = current;
+    f.render(); f.flush(); await f.settle();
+    assert.equal(workspace().props.importing, true);
+    assert.equal(workspace().props.error, null);
+    client.setQueryData(oldOptions.queryKey, { ...old, status: "committed" });
+    assert.equal(observer.getCurrentResult().data.status, "processing", "A late previous read must stay in its old cache.");
+    assert.equal(f.calls.filter(call => call[0] === "commit").length, 1);
+    assert.deepEqual(f.calls.filter(call => call[0] === "retry"), [["retry", ready.import_id]]);
+    assert.equal(f.calls.filter(call => call[0] === "upload").length, 0);
+  } finally { pending.resolve(completion); unsubscribe?.(); observer?.destroy(); client.clear(); f.dispose(); }
+});
+
+for (const locale of ["zh-CN", "en-US"]) test(`${locale}: an acknowledged archive restore is disabled and is not called format recognition`, async () => {
+  const f = fixture({ initialMode: "archive", locale });
+  try {
+    await f.mutations[1].run([]); await f.settle();
+    find(f.tree(), node => node.props?.["data-testid"] === "commit-import-button").props.onClick();
+    await f.settle();
+    const restore = find(f.tree(), node => node.props?.["data-testid"] === "commit-import-button");
+    assert.equal(restore.props.disabled, true);
+    assert.match(text(restore), locale === "zh-CN" ? /正在导入/ : /Importing/);
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "preview-import-button"), undefined,
+      "A queued archive has one progress action, not two disabled copies.");
+    assert.doesNotMatch(text(f.tree()), /正在识别格式|Recognizing formats/);
+    const options = f.queries.get("import-status").options;
+    const failed = Error("REQUEST_TIMEOUT");
+    f.queries.get("import-status").result = { error: failed, isFetching: false };
+    await f.settle();
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "commit-import-button").props.disabled, true);
+    assert.match(text(f.tree()), locale === "zh-CN" ? /进度待核对/ : /Progress unconfirmed/);
+    assert.doesNotMatch(text(f.tree()), /正在导入|Importing/);
+    assert.ok(find(f.tree(), node => node.type?.name === "ErrorLine" && node.props.message === failed)?.props.onRetry);
+    assert.equal(f.queries.get("import-status").options.queryKey.join(":"), options.queryKey.join(":"));
+    assert.equal(f.calls.filter(call => call[0] === "commit").length, 1);
+    f.queries.get("import-status").result = { data: { ...completion, import_id: "synthetic-archive" } };
+    await f.settle();
+    assert.ok(find(f.tree(), node => node.type?.name === "ImportCompletionSummary"));
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "preview-import-button"), undefined);
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "commit-import-button"), undefined,
+      "Confirmed completion cannot still offer another restore of the same archive.");
+  } finally { f.dispose(); }
+});
+
+for (const failure of ["getter", "getItem", "removeItem"]) test(`${failure}: unavailable optional storage cannot prevent choosing files or auto-resume an import`, async () => {
+  const f = fixture({ storageFailure: failure, storedId: "synthetic-retained" });
+  try {
+    await f.settle();
+    const file = new File(["Synthetic transcript"], "synthetic-choice.md");
+    find(f.tree(), node => node.props?.["data-testid"] === "import-file-input").props.onChange({
+      currentTarget: { files: [file], value: "synthetic" },
+    });
+    await f.settle();
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "preview-import-button").props.disabled, false);
+    assert.match(text(f.tree()), /synthetic-choice\.md/);
+    assert.equal(find(f.tree(), node => node.type === "button" && text(node) === "View the last retained import"), undefined);
+    assert.equal(f.calls.filter(call => ["upload", "read", "commit", "cancel"].includes(call[0])).length, 0);
+  } finally { f.dispose(); }
+});
+
+for (const failure of ["getter", "setItem"]) for (const state of ["READY", "ANALYZING"]) {
+  test(`${failure}/${state}: a confirmed resume remains usable when its optional pointer cannot be written`, async () => {
+    const ready = session(state, state === "READY" ? "ready" : "queued");
+    const f = fixture({ storageFailure: failure, resumeImportId: ready.import_id, initialRead: async () => ready });
+    try {
+      await f.settle();
+      assert.ok(find(f.tree(), node => state === "READY" ? node.type === "AdaptiveImportWorkspace"
+        : node.props?.["data-testid"] === "import-analysis-status"));
+      assert.equal(find(f.tree(), node => node.type?.name === "ErrorLine"), undefined);
+      assert.equal(f.calls.filter(call => call[0] === "read").length, 1);
+      assert.equal(f.calls.filter(call => ["upload", "commit", "retry"].includes(call[0])).length, 0);
+    } finally { f.dispose(); }
+  });
+}
+
+for (const failure of ["getter", "removeItem"]) for (const state of ["COMPLETED", "CANCELED"]) {
+  test(`${failure}/${state}: terminal resume clears the in-page pointer even when persistent removal is refused`, async () => {
+    const f = fixture({ storageFailure: failure, storedId: "synthetic-import", resumeImportId: "synthetic-import",
+      initialRead: async () => session(state, "finished") });
+    try {
+      await f.settle();
+      assert.equal(find(f.tree(), node => node.type?.name === "ErrorLine"), undefined);
+      assert.equal(find(f.tree(), node => node.type === "button" && text(node) === "View the last retained import"), undefined);
+      assert.equal(Boolean(find(f.tree(), node => node.type?.name === "ImportCompletionSummary")), state === "COMPLETED");
+      assert.equal(f.storage.get("chat-reader:adaptive-import-session"), "synthetic-import",
+        "A denied optional cleanup must not be reported as persistent deletion.");
+      assert.equal(f.calls.filter(call => call[0] === "result").length, state === "COMPLETED" ? 1 : 0);
+      assert.equal(f.calls.filter(call => ["upload", "commit", "cancel", "retry"].includes(call[0])).length, 0);
+    } finally { f.dispose(); }
+  });
+}
+
+for (const failure of ["getter", "removeItem"]) for (const acknowledgement of ["immediate", "poll"]) {
+  test(`${failure}/${acknowledgement}: storage cleanup cannot strand an acknowledged canonical completion`, async () => {
+    const ready = session("READY", "ready");
+    const f = fixture({ resumeImportId: ready.import_id, initialRead: async () => ready });
+    try {
+      await f.settle(); f.setStorageFailure(failure);
+      f.setCommit(async () => ({ ...completion, status: acknowledgement === "immediate" ? "committed" : "queued" }));
+      find(f.tree(), node => node.type === "AdaptiveImportWorkspace").props.onImport();
+      await f.settle();
+      if (acknowledgement === "poll") {
+        f.queries.get("import-status").result = { data: completion };
+        await f.settle();
+      }
+      assert.ok(find(f.tree(), node => node.type?.name === "ImportCompletionSummary"));
+      assert.equal(find(f.tree(), node => node.type === "AdaptiveImportWorkspace"), undefined);
+      assert.equal(f.queries.get("import-status").options.enabled, false);
+      assert.equal(f.mutations[2].isError, false, "Confirmed success is not a failed write because a navigation hint could not be deleted.");
+      assert.equal(f.calls.filter(call => call[0] === "commit").length, 1);
+      assert.equal(f.calls.filter(call => ["retry", "upload"].includes(call[0])).length, 0);
+      assert.ok(f.calls.some(call => call[0] === "invalidate" && call[1][0] === "conversations"));
+    } finally { f.dispose(); }
+  });
+}
+
+for (const failure of ["getter", "removeItem"]) test(`${failure}: acknowledged disposal releases the pane without requiring browser storage cleanup`, async () => {
+  const f = fixture();
+  try {
+    await f.submitUpload([]); await f.settle(); f.setStorageFailure(failure);
+    await f.mutations[0].run("synthetic-import"); await f.settle();
+    assert.equal(f.mutations[0].isError, false);
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "import-analysis-status"), undefined);
+    assert.equal(find(f.tree(), node => node.type === "button" && text(node) === "View the last retained import"), undefined);
+    assert.equal(f.storage.get("chat-reader:adaptive-import-session"), "synthetic-import");
+    assert.deepEqual(f.calls.filter(call => call[0] === "cancel"), [["cancel", "synthetic-import"]]);
+  } finally { f.dispose(); }
+});
+
+for (const kind of ["wrong-import", "unknown-status", "old-account"]) test(`${kind}: a canonical status read cannot publish a terminal result into this pane`, async () => {
+  const ready = session("READY", "ready");
+  const f = fixture({ resumeImportId: ready.import_id, initialRead: async () => ready });
+  const held = deferred();
+  try {
+    await f.settle();
+    find(f.tree(), node => node.type === "AdaptiveImportWorkspace").props.onImport();
+    await f.settle();
+    const query = f.queries.get("import-status").options;
+    f.setStatus(() => held.promise);
+    const promise = query.queryFn({ signal: new AbortController().signal });
+    const rejection = assert.rejects(promise, error => kind === "old-account"
+      ? error.message === "Account changed" : error.code === "IMPORT_RESULT_UNCONFIRMED");
+    if (kind === "old-account") f.changeAccount();
+    held.resolve({ ...completion, import_id: kind === "wrong-import" ? "unrelated-import" : ready.import_id,
+      status: kind === "unknown-status" ? "unexpected" : "committed" });
+    await rejection; await f.settle();
+    assert.equal(find(f.tree(), node => node.type?.name === "ImportCompletionSummary"), undefined);
+    assert.equal(f.calls.filter(call => call[0] === "commit").length, 1);
+  } finally { held.resolve(completion); f.dispose(); }
+});
+
 for (const locale of ["zh-CN", "en-US"]) test(`${locale}: reopening a memory failure offers original-task retry without reupload or corruption claims`, async () => {
   const failed = { ...session("FAILED", "analysis_failed"), failure: {
     code: "UPLOAD_MEMORY_PRESSURE", stage: "admission", retryable: true,
@@ -1151,7 +1342,8 @@ test("reopening a completed analysis reads the saved canonical result instead of
     const summary = find(f.tree(), node => node.type?.name === "ImportCompletionSummary");
     assert.ok(summary);
     assert.equal(summary.props.result, completion);
-    assert.deepEqual(f.calls.find(row => row[0] === "result"), ["result", "synthetic-import"]);
+    assert.deepEqual(f.calls.find(row => row[0] === "result").slice(0, 2), ["result", "synthetic-import"]);
+    assert.ok(f.calls.find(row => row[0] === "result")[2] instanceof AbortSignal);
     assert.equal(f.storage.size, 0);
     assert.equal(f.calls.filter(row => row[0] === "upload").length, 0);
   } finally { f.dispose(); }

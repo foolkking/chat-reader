@@ -31,7 +31,7 @@ def test_replacing_same_version_rejects_old_cleanup_preview(client, whitespace_o
     preview = client.get(url + "/preview").json()
     replacement = original + ("  \n\nRevision two." if whitespace_only else " Completely different current context.")
     changed = client.patch(message_url, json={"content_markdown": replacement,
-        "base_version_id": version["id"], "save_mode": "replace_current"})
+        "base_version_id": version["id"], "base_content_hash": version["source_content_hash"], "save_mode": "replace_current"})
     assert changed.status_code == 200
     assert client.get(message_url).json()["current_version"]["id"] == version["id"]
     if whitespace_only:

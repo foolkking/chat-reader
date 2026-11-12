@@ -1,5 +1,42 @@
 # API 参考
 
+## 源码/上传回执与执行控制 — 2026-11-12（工作区，未部署）
+
+- `MessageVersionRead.source_content_hash`：当前display_text的UTF-8 SHA256，
+  与去重用content_hash分离；可选读取字段兼容旧离线包。
+- `PATCH /api/messages/{id}`新增可选`operation_id`、`base_content_hash`、
+  `editor_revision`。同操作同请求不重复生成版本；同ID不同内容409。
+  `replace_current`无可靠基线返回409 `source_baseline_required`；版本或
+  精确内容变化返回`source_changed`。初始版本不可覆盖规则不变。
+- `GET /api/messages/{id}/save-requests/{operation_id}`：所属账户只读、
+  no-store，返回最小版本/修订/源码哈希回执；404 `save_not_confirmed`
+  不证明事务已回滚。核对按钮不得另发PATCH；重放PATCH可返回最小回执
+  而非完整message，客户端随后只读刷新正文。
+- 创建附件会话body可选`request_id`；上传item查询可选`request_id`。
+  复用既有UUID主键，同会话目标/文件指纹返回原身份，冲突409。
+  GET会话不写过期状态；abandoned条目不暴露为可用上传。
+  finalize复用原item身份，提交后响应丢失不要求重新上传。
+- 附件错误可携带`code`/`recovery_action`/`line_number`或有界引用位置。
+  `attachment_in_use`返回最多10个当前消息/version/occurrence入口；
+  `attachment_unavailable`不把外属、隔离或缺失对象伪装成可用。
+  行号指向真实引用而非同URI的代码示例。拆分的结构化错误保留原code；
+  对话文件列表不将已删除/合并吸收消息算作当前引用，历史版本仍受保全。
+- 任务读取新增可选`execution_state`、`business_progress_at`、
+  `stop_requested_at`。停止请求与canonical行锁分离，processing可能仍是
+  原状态但execution_state=stopping；这不代表已经停止。旧执行未释放时
+  重试返回409 `TASK_EXECUTION_STOPPING`。终态canonical结果优先。
+- 0061只新增独立执行控制表及`asset_objects.storage_deleted_at`；
+  上传请求身份复用原主键，无第二套队列或上传表。Share、普通Markdown、
+  `.cr`、offline v1/v2/v3和Dexie v2保持原读兼容。
+
+## 预览提交与读取收尾 — 2026-11-11（工作区）
+
+`POST /api/imports/preview`在数据库COMMIT结果不确定时返回500及
+`IMPORT_PREVIEW_UNCONFIRMED`，不删除来源/draft，也不恢复对话或自动重试。
+提交前明确拒绝时即使本请求清理又失败，仍保留原状态码与原因。
+`.cr`格式/检查与恢复重复策略不变。Web状态读取接受调用者取消，原10秒
+上限覆盖完整响应，拒绝另一导入或旧账户的迟到数据。
+
 ## 初始上传请求回执 — 2026-11-11（未部署）
 
 `POST /api/adaptive-import/sessions`可选UUID请求头`Idempotency-Key`。

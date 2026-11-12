@@ -212,6 +212,7 @@ def test_auxiliary_progress_cannot_deadlock_or_abort_canonical_commit(isolated_s
     from sqlalchemy.orm import sessionmaker
     from app.services import import_queue
     from app.services.canonical.persistence import CommitImportResult
+    from app.services.worker_liveness import WorkerHeartbeatReporter
 
     engine, migrate = isolated_schema
     migrate("head")
@@ -221,6 +222,8 @@ def test_auxiliary_progress_cannot_deadlock_or_abort_canonical_commit(isolated_s
         db.add(owner); db.flush()
         row = record(ImportRecord, owner.id); row.started_at = datetime.now(timezone.utc)
         db.add(row); db.commit(); identity = row.id
+    reporter = WorkerHeartbeatReporter(interval_seconds=30, session_factory=factory)
+    assert reporter.set_busy("import", identity)
     # Bound the unfixed self-lock reproduction, not a substitute for the
     # application's own progress-transaction deadlines.
     def bounded(connection):
@@ -242,6 +245,11 @@ def test_auxiliary_progress_cannot_deadlock_or_abort_canonical_commit(isolated_s
         # persistence, before subsequent message/headings progress callbacks.
         row.warnings = ["Synthetic image fit warning"]
         db.flush()
+        # Production incident: canonical write -> task heartbeat -> progress
+        # formed an application-level wait cycle invisible to PG deadlock detection.
+        # Both auxiliary lanes must leave this row alone without stopping liveness.
+        assert reporter.pulse()
+        assert not reporter._task_failure_active
         progress_callback("persisting", 50, 1, 2)
         row.status = "committed"; row.committed_at = datetime.now(timezone.utc)
         db.commit()
@@ -252,6 +260,7 @@ def test_auxiliary_progress_cannot_deadlock_or_abort_canonical_commit(isolated_s
     try:
         result = import_queue.process_import(identity, faulty_factory)
         assert result is not None and result.status == "committed"
+        assert reporter.set_idle()
         with factory() as db:
             row = db.get(ImportRecord, identity)
             assert row.status == "committed"

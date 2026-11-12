@@ -10,6 +10,7 @@ ARCHIVE_FAILURE_MESSAGE = (
 # These are exact public contracts, not a prefix/uppercase-code exemption:
 # an arbitrary code-looking value may itself contain private information.
 _SAFE_PERSISTED_ERROR_CODES = {
+    "TASK_STALLED", "TASK_EXECUTION_INTERRUPTED",
     "IMPORT_RESOURCE_WAIT_EXPIRED", "IMPORT_STORAGE_FULL", "IMPORT_WORKSPACE_EXCEEDED",
     "TASK_FAILED",
     "PLAIN_EXPORT_ACCOUNT_UNAVAILABLE",

@@ -59,6 +59,17 @@ test("renderer-proven HTML ranges distinguish textarea literals from a real tabl
   }
 });
 
+test("inert HTML projection remains a literal source range for automatic table editing", () => {
+  for (const prefix of ["", "> ", "- "]) {
+    const continuation = prefix === "- " ? "  " : prefix;
+    const source = prefix + "<div>\n" + ["| A | B |", "| --- | --- |", "| 1 | 2 |", "</div>"]
+      .map(line => continuation + line).join("\n");
+    const result = analyseTableSource(source), header = source.indexOf("| A");
+    assert.equal(result.complete, true);
+    assert.ok(result.literalRanges.some(range => range.start <= header && header < range.end), source);
+  }
+});
+
 test("source probe bounds UTF-8 input instead of truncating an HTML context", () => {
   for (const source of ["<" + "x".repeat(limits.bytes), "<" + "字".repeat(Math.ceil(limits.bytes / 3))]) {
     const probe = createMarkdownTableSourceProbe(source);

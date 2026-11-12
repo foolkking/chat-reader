@@ -10,7 +10,9 @@ from pathlib import Path
 
 from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Uuid, inspect
 
-from app.services.editing.attachment_reference_rewriter import attachment_data_ids
+from app.services.editing.attachment_reference_rewriter import (
+    attachment_markdown_ids, attachment_blocks_ids, markdown_reference_context,
+)
 from app.services.exporting.personal_archive import PERSONAL_ARCHIVE_FORMAT, PERSONAL_ARCHIVE_VERSION, PERSONAL_TABLE_MODELS
 from app.services.exporting.system_archive import (
     SystemArchiveError, _ArchiveRows, _decode_payload, _read_manifest,
@@ -181,8 +183,18 @@ class PersonalArchive:
                 for field in EMBEDDED_COLUMNS.get(name, ()):
                     self._embedded(row.get(field))
                 if name in {"message_versions", "annotations", "notebooks", "conversations"}:
-                    fields = {key: row.get(key) for key in ("display_text", "comment_markdown", "blocks", "description_markdown", "summary")}
-                    if attachment_data_ids(fields) - attachment_ids:
+                    found = set()
+                    for field in ("display_text", "comment_markdown", "description_markdown", "summary"):
+                        if isinstance(row.get(field), str):
+                            found.update(attachment_markdown_ids(row[field]))
+                    if name == "message_versions":
+                        context = markdown_reference_context(row.get("display_text") or "")
+                        found.update(attachment_blocks_ids(row.get("blocks") or [], context))
+                    if name == "notebooks":
+                        for block in row.get("blocks") or []:
+                            if isinstance(block, dict) and isinstance(block.get("markdown"), str):
+                                found.update(attachment_markdown_ids(block["markdown"]))
+                    if found - attachment_ids:
                         raise SystemArchiveError("Archive contains an attachment outside its restore scope.")
                 if name == "messages" and row.get("current_version_id"):
                     if self.parents["message_versions"][row["current_version_id"]] != row["id"]:

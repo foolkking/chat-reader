@@ -2,13 +2,16 @@ import re
 import logging
 import time
 import uuid
+import hashlib
+import json
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.observability import structured_event
 from app.models.conversation import Conversation
+from app.models.conversation_event import ConversationEvent
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
@@ -17,6 +20,7 @@ from app.schemas.editing import (
     MessageAttachmentOccurrenceInput,
     MessageEditRequest,
     MessageEditResponse,
+    MessageSaveReceipt,
     MessageDeleteResponse,
     MessageMergeRequest,
     MessageMergeResponse,
@@ -46,6 +50,7 @@ from app.services.editing.message_edit_service import (
 from app.services.assets.attachment_service import attachment_read
 from app.services.background_jobs import queue_conversation_derived_rebuild
 from app.services.canonical.block_builder import extract_markdown_tasks
+from app.services.editing.markdown_attachment_references import attachment_references
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/messages", tags=["messages"])
@@ -235,18 +240,56 @@ def split_message_endpoint(
     )
 
 
-@router.patch("/{message_id}", response_model=MessageEditResponse)
+@router.get("/{message_id}/save-requests/{operation_id}", response_model=MessageSaveReceipt)
+def get_message_save_receipt(
+    message_id: uuid.UUID, operation_id: uuid.UUID, request: Request, response: Response,
+    db: Session = Depends(get_db),
+) -> MessageSaveReceipt:
+    from app.services.worker_maintenance import bound_worker_transaction
+    bound_worker_transaction(db)
+    _require_owned_message(db, message_id, ownership_scope_from_request(request))
+    response.headers["Cache-Control"] = "no-store"
+    event = db.get(ConversationEvent, operation_id)
+    if event is None or event.event_type != "message_save_receipt" or event.target_message_id != message_id:
+        # Absence does not prove rollback: an in-flight transaction may commit later.
+        raise HTTPException(404, detail={"code": "save_not_confirmed", "message": "No confirmed receipt yet."})
+    return MessageSaveReceipt.model_validate(event.payload["receipt"])
+
+
+@router.patch("/{message_id}", response_model=MessageEditResponse | MessageSaveReceipt)
 def update_message(
     message_id: uuid.UUID,
     payload: MessageEditRequest,
     request: Request,
     db: Session = Depends(get_db),
-) -> MessageEditResponse:
+) -> MessageEditResponse | MessageSaveReceipt:
     request_started = time.perf_counter()
     timings: dict[str, float] = {"request_parse_ms": 0.0}
     try:
+        from sqlalchemy import text as sql_text
+        if db.get_bind().dialect.name == "postgresql":
+            db.execute(sql_text("SET LOCAL lock_timeout = '1500ms'"))
+            db.execute(sql_text("SET LOCAL statement_timeout = '30000ms'"))
         scope = ownership_scope_from_request(request)
         _require_owned_message(db, message_id, scope)
+        # Check the operation and baseline under the same source-write lock.
+        # Event PK is the request UUID: replay lookup is bounded and needs no
+        # second receipt table or unbounded JSON scan.
+        db.query(Message).filter(Message.id == message_id).with_for_update(
+            of=Message, key_share=True,
+        ).populate_existing().one()
+        request_hash = hashlib.sha256(json.dumps(
+            payload.model_dump(mode="json", exclude={"operation_id"}),
+            sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        ).encode()).hexdigest()
+        if payload.operation_id:
+            event = db.get(ConversationEvent, payload.operation_id)
+            if event is not None:
+                if (event.event_type != "message_save_receipt"
+                    or event.target_message_id != message_id
+                    or event.payload.get("request_hash") != request_hash):
+                    raise MessageEditError("This request identity belongs to a different save.", 409, code="save_identity_conflict")
+                return MessageSaveReceipt.model_validate(event.payload["receipt"])
         if payload.upload_item_ids:
             raise MessageEditError(
                 "Attachment uploads must be finalized before saving the message.",
@@ -262,7 +305,7 @@ def update_message(
             if len(set(occurrence_keys)) != len(occurrence_keys):
                 raise MessageEditError("Attachment occurrence keys must be unique.", 422)
             declared = sorted(str(item.attachment_id) for item in payload.attachment_occurrences)
-            referenced = sorted(match.group("id").lower() for match in ASSET_REFERENCE_RE.finditer(source_text))
+            referenced = sorted(ref.identifier.lower() for ref in attachment_references(source_text))
             if declared != referenced:
                 raise MessageEditError("Attachment occurrence declarations do not match the Markdown references.", 422)
         result = edit_message(
@@ -271,11 +314,29 @@ def update_message(
             new_text=source_text,
             edit_reason=payload.edit_reason,
             base_version_id=payload.base_version_id,
+            base_content_hash=payload.base_content_hash,
             save_mode=payload.save_mode,
             rebuild_derived=False,
             attachment_occurrences=payload.attachment_occurrences,
         )
         _apply_removed_attachment_actions(db, result.message, payload.removed_attachment_actions)
+        if payload.operation_id:
+            conversation = db.get(Conversation, result.message.conversation_id)
+            receipt = MessageSaveReceipt(
+                operation_id=payload.operation_id, message_id=message_id,
+                previous_version_id=result.previous_version_id,
+                current_version_id=result.current_version.id,
+                version_number=result.current_version.version_number,
+                content_hash=result.current_version.content_hash,
+                source_content_hash=hashlib.sha256(result.current_version.display_text.encode("utf-8")).hexdigest(),
+                conversation_revision=conversation.offline_revision,
+            )
+            db.add(ConversationEvent(
+                id=payload.operation_id, conversation_id=result.message.conversation_id,
+                event_type="message_save_receipt", target_message_id=message_id,
+                target_version_id=result.current_version.id, created_by="user",
+                payload={"request_hash": request_hash, "receipt": receipt.model_dump(mode="json")},
+            ))
         timings.update(result.timings)
         commit_started = time.perf_counter()
         db.commit()
@@ -386,6 +447,7 @@ def toggle_message_task(
             db=db,
             message_id=message_id,
             new_text=next_text,
+            base_content_hash=hashlib.sha256(current_version.display_text.encode("utf-8")).hexdigest(),
             edit_reason="task checklist toggled",
             base_version_id=current_version.id,
             save_mode="create_version" if current_version.version_number == 1 else "replace_current",

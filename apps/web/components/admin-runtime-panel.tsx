@@ -68,6 +68,15 @@ export function AdminRuntimePanel() {
           </span>
         </StatusRow>;
       })}</dl> : <p className="text-sm text-secondary">{unavailable}</p>}</div>
+      {data.worker.available && data.worker.execution ? <p className="text-sm text-secondary" role="status">
+        {data.worker.execution.state === "running"
+          ? (zh ? `任务最近推进：${data.worker.execution.progress_age_seconds} 秒前。` : `Last task progress: ${data.worker.execution.progress_age_seconds}s ago.`)
+          : data.worker.execution.state === "reconciling"
+            ? (zh ? "正在核对上一项执行结果，核对后继续排队任务。" : "Checking the previous execution before starting the next task.")
+            : data.worker.execution.state === "stalled"
+              ? (zh ? "任务暂未推进，等待后台核对和停止；尚未确认退出。" : "No recent task progress. Waiting for the worker to check and stop it; exit is not confirmed.")
+            : (zh ? "正在安全停止执行；确认退出并核对结果后继续队列。" : "Safely stopping execution; the queue continues after exit and outcome checks.")}
+      </p> : null}
       <div><h3 className="mb-2 text-sm font-semibold">{zh ? "存储" : "Storage"}</h3><dl className="divide-y divide-[var(--border)] border-y border-ui">{(["imports", "exports", "offline", "assets"] as const).map((key) => { const value = data.storage[key]; return <StatusRow key={key} label={({ imports: zh ? "导入资料" : "Imports", exports: zh ? "导出与归档" : "Exports & archives", offline: zh ? "离线包" : "Offline packages", assets: zh ? "附件" : "Attachments" })[key]}>{!value.available ? unavailable : <>{formatStorageBytes(value.bytes)} · {value.file_count} {value.kind === "object_records" ? (zh ? "对象（逻辑用量）" : "objects (logical size)") : (zh ? "文件" : "files")}{!value.complete ? <span className="block text-xs text-secondary">{zh ? "扫描不完整 · 仅已统计部分" : "Incomplete scan · counted portion only"}</span> : null}</>}</StatusRow>; })}</dl></div>
       {data.export_cleanup && (!data.export_cleanup.available || data.export_cleanup.pending_count > 0 || data.export_cleanup.failed_count > 0) ? <div><h3 className="mb-2 text-sm font-semibold">{zh ? "临时文件回收" : "Temporary file cleanup"}</h3><dl className="divide-y divide-[var(--border)] border-y border-ui"><StatusRow label={zh ? "等待释放" : "Pending reclamation"}>{data.export_cleanup.available ? `${data.export_cleanup.pending_count} · ${formatStorageBytes(data.export_cleanup.pending_bytes)}` : unavailable}</StatusRow>{data.export_cleanup.available && data.export_cleanup.failed_count > 0 ? <StatusRow label={zh ? "回收失败，等待重试" : "Failed, awaiting retry"}>{data.export_cleanup.failed_count}</StatusRow> : null}</dl></div> : null}
       {data.source_cleanup && (!data.source_cleanup.available || data.source_cleanup.pending_count > 0) ? <div className="text-sm">
@@ -76,6 +85,11 @@ export function AdminRuntimePanel() {
           : zh ? `${data.source_cleanup.pending_count} 个会话待清理，可由原任务重试；其中 ${data.source_cleanup.blocked_count} 个需检查存储位置。`
             : `${data.source_cleanup.pending_count} sessions need cleanup; retry from their original tasks. ${data.source_cleanup.blocked_count} need a storage-location check.`}</p>
       </div> : null}
+      {data.upload_cleanup && (!data.upload_cleanup.available || data.upload_cleanup.pending_count > 0) ? <p className="text-sm text-secondary">
+        {!data.upload_cleanup.available ? unavailable : zh
+          ? `${data.upload_cleanup.pending_count} 个已完成或已放弃上传待清理，${data.upload_cleanup.failed_count} 个等待重试。未完成来源受保护。`
+          : `${data.upload_cleanup.pending_count} completed or discarded uploads await cleanup; ${data.upload_cleanup.failed_count} will be retried. Unfinished sources remain protected.`}
+      </p> : null}
       <details className="border-t border-ui">
         <summary className="min-h-11 cursor-pointer content-center py-3 text-sm text-secondary">{zh ? "更多运行信息" : "More runtime information"}
           {[data.backup, data.restore].some(metric => !metric.available || (metric.record && ["FAILED", "UNKNOWN"].includes(metric.record.status))) ? <span className="ml-2 text-[var(--danger)]">{zh ? "归档记录需检查" : "Check archive records"}</span> : null}

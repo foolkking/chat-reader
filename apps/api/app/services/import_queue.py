@@ -160,6 +160,8 @@ def process_import(
     def report(phase: str, progress: int, processed: int, total: int) -> None:
         nonlocal progress_unavailable
         from app.services.worker_maintenance import bound_worker_transaction
+        from app.services.execution_control import business_progress
+        business_progress((phase, progress, processed, total))
         try:
             with session_factory() as progress_db:
                 bound_worker_transaction(progress_db)
@@ -221,7 +223,9 @@ def process_import(
             error_class=type(exc).__name__,
         )
         with session_factory() as db:
-            record = db.query(ImportRecord).filter(ImportRecord.id == import_id).with_for_update().populate_existing().one_or_none()
+            from app.services.worker_maintenance import bound_worker_transaction
+            bound_worker_transaction(db)
+            record = db.query(ImportRecord).filter(ImportRecord.id == import_id).with_for_update(skip_locked=True).populate_existing().one_or_none()
             if record is not None:
                 if (execution is None or record.status != "processing"
                     or record.committed_at is not None

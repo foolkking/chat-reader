@@ -110,7 +110,9 @@ def test_cached_same_id_source_cannot_overwrite_whitespace_replacement(isolated_
         expected_hash = cached_message.content_hash
         replacement = "Synthetic first line.  \n\nSynthetic next line."
         with Session(engine) as writer:
-            edit_message(writer, message_id, replacement, base_version_id=base_id, save_mode="replace_current")
+            import hashlib
+            edit_message(writer, message_id, replacement, base_version_id=base_id,
+                         base_content_hash=hashlib.sha256(source.encode()).hexdigest(), save_mode="replace_current")
             writer.commit()
             assert writer.get(Message, message_id).content_hash == expected_hash
         assert cached_version.display_text == source

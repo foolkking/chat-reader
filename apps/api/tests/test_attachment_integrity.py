@@ -113,7 +113,8 @@ def test_attachment_integrity_audits_current_and_historical_versions(client) -> 
         generator.close()
 
 
-def test_unique_attachment_reference_repair_is_versioned_and_fail_closed(client) -> None:
+@pytest.mark.parametrize("literal_examples", [False, True])
+def test_unique_attachment_reference_repair_is_versioned_and_fail_closed(client, literal_examples) -> None:
     override = app.dependency_overrides[get_db]
     generator = override()
     db = next(generator)
@@ -140,6 +141,11 @@ def test_unique_attachment_reference_repair_is_versioned_and_fail_closed(client)
             current_version_id=version_id,
         )
         original_text = f"[Recovered file](cr-asset://{stale_attachment_id})"
+        examples = (
+            f"\n\n`[example](cr-asset://{stale_attachment_id})`\n\n"
+            f"```md\n[unknown example](cr-asset://{uuid.uuid4()})\n```\n"
+        ) if literal_examples else ""
+        original_text += examples
         version = MessageVersion(
             id=version_id,
             message=message,
@@ -200,8 +206,7 @@ def test_unique_attachment_reference_repair_is_versioned_and_fail_closed(client)
         assert repaired_version.id != version_id
         assert repaired_version.based_on_version_id == version_id
         assert repaired_version.edit_type == "attachment_reference_repair"
-        assert str(stale_attachment_id) not in repaired_version.display_text
-        assert str(target_attachment_id) in repaired_version.display_text
+        assert repaired_version.display_text == f"[Recovered file](cr-asset://{target_attachment_id})" + examples
         assert db.get(MessageVersion, version_id).display_text == original_text
         occurrence = (
             db.query(MessageVersionAttachment)

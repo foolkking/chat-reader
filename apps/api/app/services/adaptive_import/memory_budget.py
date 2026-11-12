@@ -109,6 +109,8 @@ def control_checkpoints(callback):
 
 
 def checkpoint() -> None:
+    from app.services.execution_control import execution_checkpoint
+    execution_checkpoint()
     control = _control_checkpoint.get()
     if control is not None:
         control()

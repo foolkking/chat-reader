@@ -18,15 +18,22 @@ from app.services.database.bulk_insert import insert_rows
 from app.services.import_pipeline.canonical_draft import content_hash, normalize_text
 from app.services.search.search_indexer import rebuild_search_documents_for_conversation
 from app.services.editing.attachment_reference_rewriter import (
-    assert_attachment_references_mapped as _assert_attachment_references_mapped,
-    attachment_data_ids as _attachment_data_ids,
-    rewrite_attachment_data as _rewrite_attachment_data,
-    rewrite_attachment_text as _rewrite_attachment_text,
+    assert_attachment_ids_mapped,
+    attachment_markdown_ids,
+    attachment_block_ids,
+    attachment_blocks_ids,
+    markdown_reference_context,
+    rewrite_attachment_markdown,
+    rewrite_attachment_block,
 )
 
 MergeProgressCallback = Callable[[str, int, int, int], None]
 MERGE_BATCH_SIZE = 200
 VERSION_BATCH_SIZE = 50
+
+
+def _block_projection(row) -> dict:
+    return {field: getattr(row, field) for field in ("block_type", "plain_text", "data", "sanitized_html")}
 
 
 @dataclass(frozen=True)
@@ -223,6 +230,7 @@ def validate_source_attachment_integrity(
             db.query(
                 RenderBlock.message_version_id,
                 RenderBlock.block_index,
+                RenderBlock.block_type,
                 RenderBlock.plain_text,
                 RenderBlock.data,
                 RenderBlock.sanitized_html,
@@ -251,17 +259,14 @@ def validate_source_attachment_integrity(
         references_by_version: dict[uuid.UUID, set[uuid.UUID]] = {}
         block_references_by_version: dict[uuid.UUID, dict[int, set[uuid.UUID]]] = {}
         for version in versions:
+            context = markdown_reference_context(version.display_text or "")
             version_references = (
-                _attachment_data_ids(version.display_text or "")
-                | _attachment_data_ids(version.blocks or [])
+                attachment_markdown_ids(version.display_text or "")
+                | attachment_blocks_ids(version.blocks or [], context)
             )
             block_references: dict[int, set[uuid.UUID]] = {}
             for block in blocks_by_version.get(version.id, []):
-                block_references[block.block_index] = (
-                    _attachment_data_ids(block.data or {})
-                    | _attachment_data_ids(block.plain_text or "")
-                    | _attachment_data_ids(block.sanitized_html or "")
-                )
+                block_references[block.block_index] = attachment_block_ids(_block_projection(block), context)
                 version_references.update(block_references[block.block_index])
             references_by_version[version.id] = version_references
             block_references_by_version[version.id] = block_references
@@ -351,7 +356,8 @@ def _validate_attachment_copy(
         for version in versions:
             if version.message_id not in target_message_ids:
                 raise ValueError("Merged message version is outside the target conversation.")
-            referenced_ids = _attachment_data_ids(version.display_text) | _attachment_data_ids(version.blocks or [])
+            context = markdown_reference_context(version.display_text or "")
+            referenced_ids = attachment_markdown_ids(version.display_text) | attachment_blocks_ids(version.blocks or [], context)
             if not referenced_ids.issubset(target_attachment_ids):
                 raise ValueError("Merged message contains an attachment reference outside the target conversation.")
             version_links = links_by_version.get(version.id, [])
@@ -363,11 +369,7 @@ def _validate_attachment_copy(
             block_by_index = {block.block_index: block for block in version_blocks}
             block_references: dict[int, set] = {}
             for block in version_blocks:
-                block_references[block.block_index] = (
-                    _attachment_data_ids(block.data or {})
-                    | _attachment_data_ids(block.plain_text or "")
-                    | _attachment_data_ids(block.sanitized_html or "")
-                )
+                block_references[block.block_index] = attachment_block_ids(_block_projection(block), context)
                 if not block_references[block.block_index].issubset(target_attachment_ids):
                     raise ValueError("Merged render block contains an attachment reference outside the target conversation.")
             for link in version_links:
@@ -657,9 +659,12 @@ def _insert_versions(
         )
         output: list[dict] = []
         for row in rows:
-            _assert_attachment_references_mapped(row.display_text or "", attachment_id_map)
-            _assert_attachment_references_mapped(row.blocks or [], attachment_id_map)
-            rewritten_display = _rewrite_attachment_text(row.display_text, attachment_id_map)
+            context = markdown_reference_context(row.display_text or "")
+            assert_attachment_ids_mapped(
+                attachment_markdown_ids(row.display_text or "") | attachment_blocks_ids(row.blocks or [], context),
+                attachment_id_map,
+            )
+            rewritten_display = rewrite_attachment_markdown(row.display_text, attachment_id_map)
             rewritten_plain = normalize_text(rewritten_display)
             rewritten_hash = content_hash(rewritten_display, role_by_message.get(row.message_id))
             if row.id in current_versions:
@@ -672,7 +677,7 @@ def _insert_versions(
                     "version_number": row.version_number,
                     "plain_text": rewritten_plain,
                     "display_text": rewritten_display,
-                    "blocks": _rewrite_attachment_data(row.blocks or [], attachment_id_map),
+                    "blocks": [rewrite_attachment_block(block, attachment_id_map, context) for block in row.blocks or []],
                     "edit_type": row.edit_type,
                     "edit_reason": row.edit_reason,
                     "created_at": row.created_at,
@@ -718,6 +723,11 @@ def _insert_render_blocks(
 ) -> int:
     copied = 0
     for version_ids in _batches(source_version_ids, VERSION_BATCH_SIZE):
+        contexts = {
+            row.id: markdown_reference_context(row.display_text or "")
+            for row in db.query(MessageVersion.id, MessageVersion.display_text)
+            .filter(MessageVersion.id.in_(version_ids)).yield_per(1)
+        }
         rows = (
             db.query(
                 RenderBlock.id,
@@ -739,8 +749,10 @@ def _insert_render_blocks(
         )
         output: list[dict] = []
         for row in rows:
-            _assert_attachment_references_mapped(row.data or {}, attachment_id_map)
-            _assert_attachment_references_mapped(row.sanitized_html or "", attachment_id_map)
+            context = contexts[row.message_version_id]
+            projection = _block_projection(row)
+            assert_attachment_ids_mapped(attachment_block_ids(projection, context), attachment_id_map)
+            rewritten = rewrite_attachment_block(projection, attachment_id_map, context)
             target_id = uuid.uuid4()
             block_id_map[row.id] = target_id
             output.append(
@@ -749,9 +761,9 @@ def _insert_render_blocks(
                     "message_version_id": version_id_map[row.message_version_id],
                     "block_index": row.block_index,
                     "block_type": row.block_type,
-                    "plain_text": _rewrite_attachment_text(row.plain_text or "", attachment_id_map),
-                    "data": _rewrite_attachment_data(row.data or {}, attachment_id_map),
-                    "sanitized_html": _rewrite_attachment_text(row.sanitized_html or "", attachment_id_map) if row.sanitized_html is not None else None,
+                    "plain_text": rewritten["plain_text"],
+                    "data": rewritten["data"],
+                    "sanitized_html": rewritten["sanitized_html"],
                     "char_count": row.char_count,
                     "estimated_height": row.estimated_height,
                     "measured_height": row.measured_height,

@@ -1,0 +1,113 @@
+[
+  {
+    "name": "inline and neighbours",
+    "source": "保留🙂 before [附件](cr-asset://11111111-1111-4111-8111-111111111111) after",
+    "count": 1
+  },
+  {
+    "name": "duplicate token",
+    "source": "![Uploading: a](cr-upload://draft-one)\n\n![Uploading: a](cr-upload://draft-one)",
+    "scheme": "cr-upload",
+    "count": 2
+  },
+  {
+    "name": "literal inline",
+    "source": "🙂 `[file](cr-asset://11111111-1111-4111-8111-111111111111)`",
+    "count": 0
+  },
+  {
+    "name": "literal fences",
+    "source": "~~~md\n[file](cr-asset://11111111-1111-4111-8111-111111111111)\n~~~",
+    "count": 0
+  },
+  {
+    "name": "indent",
+    "source": "    [file](cr-asset://11111111-1111-4111-8111-111111111111)",
+    "count": 0
+  },
+  {
+    "name": "linked image",
+    "source": "[![图](cr-asset://11111111-1111-4111-8111-111111111111)](https://example.invalid)",
+    "count": 1
+  },
+  {
+    "name": "table CRLF",
+    "source": "| h |\r\n| --- |\r\n| [文\\]件](cr-asset://11111111-1111-4111-8111-111111111111) |",
+    "count": 1
+  },
+  {
+    "name": "references",
+    "source": "[one][文件] and ![文件][] and [文件]\n\n[文件]: cr-asset://11111111-1111-4111-8111-111111111111",
+    "count": 3
+  },
+  {
+    "name": "unused definition",
+    "source": "[unused]: cr-asset://11111111-1111-4111-8111-111111111111",
+    "count": 0
+  },
+  {
+    "name": "angle destination",
+    "source": "[file](<cr-asset://11111111-1111-4111-8111-111111111111> \"title\")",
+    "count": 1
+  },
+  {
+    "name": "escaped bracket",
+    "source": "\\[file](cr-asset://11111111-1111-4111-8111-111111111111)",
+    "count": 0
+  },
+  {
+    "name": "html literal",
+    "source": "<textarea>\n\n[file](cr-asset://11111111-1111-4111-8111-111111111111)\n</textarea>",
+    "count": 0
+  },
+  {
+    "name": "quoted fenced example",
+    "source": "> ```md\n> [example](cr-asset://11111111-1111-4111-8111-111111111111)\n> ```",
+    "count": 0
+  },
+  {
+    "name": "list indented continuation",
+    "source": "1. item\n\n    [file](cr-asset://11111111-1111-4111-8111-111111111111)",
+    "count": 1
+  },
+  {
+    "name": "list fenced example",
+    "source": "- ```md\n  [example](cr-asset://11111111-1111-4111-8111-111111111111)\n  ```",
+    "count": 0
+  },
+  {
+    "name": "quoted real reference",
+    "source": "> [file](cr-asset://11111111-1111-4111-8111-111111111111)",
+    "count": 1
+  },
+  {
+    "name": "escaped slash before link",
+    "source": "\\\\[file](cr-asset://11111111-1111-4111-8111-111111111111)",
+    "count": 1
+  },
+  {
+    "name": "quoted reference definition",
+    "source": "> [file][target]\n>\n> [target]: cr-asset://11111111-1111-4111-8111-111111111111",
+    "count": 1
+  },
+  {
+    "name": "list reference definition",
+    "source": "- [file][target]\n\n  [target]: cr-asset://11111111-1111-4111-8111-111111111111",
+    "count": 1
+  },
+  {
+    "name": "HTML block contains literal Markdown",
+    "source": "<div>\n[file](cr-asset://11111111-1111-4111-8111-111111111111)\n</div>",
+    "count": 0
+  },
+  {
+    "name": "quote fence ends at container boundary",
+    "source": "> ```md\n> example\n\n[file](cr-asset://11111111-1111-4111-8111-111111111111)",
+    "count": 1
+  },
+  {
+    "name": "list fence ends at container boundary",
+    "source": "- ```md\n  example\n\n[file](cr-asset://11111111-1111-4111-8111-111111111111)",
+    "count": 1
+  }
+]

@@ -16,6 +16,18 @@ from typing import Any, Callable, Iterable
 from app.core.observability import structured_event
 
 logger = logging.getLogger(__name__)
+
+
+def discard_owned_temporary(path: Path, *, category: str) -> bool:
+    """Only an operation-owned temporary, never a final or unknown artifact."""
+    try:
+        path.unlink(missing_ok=True)
+        return True
+    except OSError as exc:
+        structured_event(logger, logging.WARNING, "artifact_temporary_cleanup_deferred",
+                         category=category, error_class=type(exc).__name__)
+        return False
+
 _STAGING_NAME = re.compile(r"^\.(?P<base>.+)\.tmp\.[0-9a-f]{32}$")
 _OFFLINE_FINAL_NAME = re.compile(
     r"^offline-(?:all|project|conversation)-(?P<job_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.crpkg$"

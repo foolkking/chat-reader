@@ -2,12 +2,15 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
+from app.models.task_execution_control import TaskExecutionControl
+from app.services.execution_control import SLOT, request_stop
+from app.services.worker_maintenance import bound_worker_transaction
 from app.schemas.task import BackgroundTaskRead, OfflineDownloadTarget, TaskCancellationRequest
 from app.services.adaptive_import.contracts import AdaptiveImportError
 from app.services.editing.message_edit_service import MessageEditError
@@ -32,6 +35,7 @@ def list_active_tasks(
     settings: Settings = Depends(get_settings),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> list[BackgroundTaskRead]:
+    bound_worker_transaction(db)
     cutoff = terminal_result_cutoff(settings.task_terminal_result_retention_seconds)
     # A cancelled import is not active work, but its explicitly requested file
     # cleanup can remain unfinished beyond the terminal notification window.
@@ -129,6 +133,7 @@ def get_task(
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> BackgroundTaskRead:
+    bound_worker_transaction(db)
     job = get_owned(db, BackgroundJob, job_id, ownership_scope)
     if job is not None:
         if job.job_type == "support_notification":
@@ -146,6 +151,12 @@ def retry_task(
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> BackgroundTaskRead:
+    bound_worker_transaction(db)
+    owned = get_owned(db, BackgroundJob, job_id, ownership_scope) or get_owned(db, ImportRecord, job_id, ownership_scope)
+    if owned is not None:
+        control = db.get(TaskExecutionControl, SLOT)
+        if control and control.task_id == job_id and control.finished_at is None:
+            raise HTTPException(409, detail={"code": "TASK_EXECUTION_STOPPING", "message": "The previous execution has not released its slot yet."})
     job = db.query(BackgroundJob).filter(BackgroundJob.id == job_id, ownership_scope.predicate(BackgroundJob)).with_for_update().populate_existing().one_or_none()
     if job is not None:
         if job.job_type == "support_notification":
@@ -186,6 +197,14 @@ def cancel_task(
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
     payload: TaskCancellationRequest | None = None,
 ) -> BackgroundTaskRead:
+    bound_worker_transaction(db)
+    owned = get_owned(db, BackgroundJob, job_id, ownership_scope) or get_owned(db, ImportRecord, job_id, ownership_scope)
+    if owned is not None and getattr(owned, "job_type", "") != "support_notification" and owned.status in {"processing", "cancelling"}:
+        control = db.query(TaskExecutionControl).filter_by(slot=SLOT, task_id=job_id).with_for_update(skip_locked=True).one_or_none()
+        if control and control.finished_at is None and control.attempt == owned.attempt_count:
+            request_stop(db, control, disposition=payload.source_disposition if payload else "retain")
+            db.commit()
+            return _job_task(owned) if isinstance(owned, BackgroundJob) else _import_task(owned, db)
     job = db.query(BackgroundJob).filter(BackgroundJob.id == job_id, ownership_scope.predicate(BackgroundJob)).with_for_update().populate_existing().one_or_none()
     if job is None:
         record = get_owned(db, ImportRecord, job_id, ownership_scope)
@@ -234,7 +253,22 @@ def background_job_read(job: BackgroundJob) -> BackgroundTaskRead:
     return _job_task(job)
 
 
+def _execution_fields(row):
+    db = object_session(row)
+    if db is None or row.status not in {"processing", "cancelling"}:
+        return {}
+    control = db.get(TaskExecutionControl, SLOT)
+    if not control or control.task_id != row.id or control.attempt != row.attempt_count or control.finished_at:
+        return {}
+    return {
+        "execution_state": "stopping" if control.stop_requested_at else "running",
+        "business_progress_at": control.progress_at,
+        "stop_requested_at": control.stop_requested_at,
+    }
+
+
 def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
+    execution = _execution_fields(job)
     from app.services.adaptive_import.resource_wait import public_wait
     payload = job.payload or {}
     result = dict(job.result or {})
@@ -302,8 +336,11 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         updated_at=job.updated_at,
         cancellation_requested_at=payload.get("cancellation_requested_at"),
         progress_updated_at=result.get("progress_updated_at"),
-        cancellable=job.job_type in CANCELLABLE_JOB_TYPES and job.status in {"queued", "processing", "cancelling"},
+        cancellable=(job.job_type in CANCELLABLE_JOB_TYPES or bool(execution) and job.job_type in {
+            "conversation_export", "attachment_batch_download", "offline_package",
+        }) and job.status in {"queued", "processing", "cancelling"},
         attempt_count=job.attempt_count,
+        **execution,
     )
 
 
@@ -365,6 +402,7 @@ def _job_label(job_type: str) -> str:
 def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
     from app.services.adaptive_import.resource_wait import public_wait
     receipt = public_receipt(record)
+    execution = _execution_fields(record)
     conversation_ids = [] if receipt else conversation_ids_for_import(db, record)
     return BackgroundTaskRead(
         job_id=record.id,
@@ -390,6 +428,7 @@ def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
         started_at=record.started_at,
         heartbeat_at=record.heartbeat_at,
         completed_at=record.completed_at,
-        cancellable=record.status == "queued" and record.phase == "waiting_resources",
+        cancellable=bool(execution) or record.status == "queued" and record.phase == "waiting_resources",
         attempt_count=record.attempt_count,
+        **execution,
     )

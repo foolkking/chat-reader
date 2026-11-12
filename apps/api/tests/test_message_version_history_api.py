@@ -106,7 +106,7 @@ def test_select_replace_and_delete_versions_keep_initial_version_protected(
 
     replaced = client.patch(
         f"/api/messages/{message['id']}",
-        json={"display_text": "Replaced second version body", "save_mode": "replace_current", "base_version_id": second["id"]},
+        json={"display_text": "Replaced second version body", "save_mode": "replace_current", "base_version_id": second["id"], "base_content_hash": second["source_content_hash"]},
     )
     assert replaced.status_code == 200
     assert replaced.json()["version_number"] == 2

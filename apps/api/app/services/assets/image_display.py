@@ -203,7 +203,7 @@ def save_display(db: Session, attachment_id, scope: OwnershipScope, source_sha25
 def _store_derivative(db: Session, row: Attachment, percent: int, raw: bytes) -> None:
     store = get_asset_store()
     digest = hashlib.sha256(raw).hexdigest()
-    asset = db.query(AssetObject).filter_by(sha256=digest, byte_size=len(raw)).first()
+    asset = db.query(AssetObject).filter_by(sha256=digest, byte_size=len(raw)).with_for_update().first()
     missing = asset is None
     if asset is not None:
         if asset.status != "available" or asset.deleted_at or not scan_status_allows_use(asset.scan_status):
@@ -225,11 +225,9 @@ def _store_derivative(db: Session, row: Attachment, percent: int, raw: bytes) ->
             db.add(asset)
         else:
             asset.storage_key, asset.storage_backend = key, store.backend
-        try:
-            db.flush()
-        except BaseException:
-            store.delete_key(key)
-            raise
+        # The transaction hook owns rollback cleanup. Cleanup failure must not
+        # replace the primary error or delete an object after uncertain COMMIT.
+        db.flush()
     derivative = db.query(AssetDerivative).filter_by(
         source_asset_object_id=row.asset_object_id, derivative_type=TYPE, generator_version=_version(row, percent),
     ).first()

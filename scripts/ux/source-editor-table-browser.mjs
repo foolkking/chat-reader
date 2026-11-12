@@ -12,8 +12,9 @@ import { createServer } from "node:http";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const web = join(root, "apps/web");
 const appRequire = createRequire(join(web, "package.json"));
-const tempRoot = resolve(process.env.TEMP ?? "");
-assert.match(tempRoot.toLowerCase().replaceAll("\\", "/"), /^(?:c:\/users\/86182\/desktop\/wkkk|e:\/chat-reader-temp)\/[^/]+/);
+const tempRoot = resolve(process.env.RUNNER_TEMP ?? process.env.TEMP ?? "");
+if (process.platform === "win32") assert.match(tempRoot.toLowerCase().replaceAll("\\", "/"), /^(?:c:\/users\/86182\/desktop\/wkkk|e:\/chat-reader-temp)\/[^/]+/);
+else assert.ok(process.env.RUNNER_TEMP || process.env.TEMP, "Explicit task temporary directory required");
 const out = join(tempRoot, "table-browser");
 mkdirSync(out, { recursive: true });
 const resultPath = join(out, "result.json");
@@ -66,6 +67,7 @@ export const TextMessagePartProvider = ({text,children}) => React.createElement(
 export const MarkdownTextPrimitive = ({preprocess,componentsByLanguage,...props}) =>
   React.createElement(ReactMarkdown,{...props,children:preprocess(useContext(sourceContext))});
 export const usePreferences = () => ({resolvedLocale:window.gateLocale??"en-US",resolvedTheme:"light",t:key=>key});
+export const usePathname = () => "/synthetic-editor";
 export const createHighlighter = () => {throw Error("Not used by the table gate");};
 export default {};`);
 writeFileSync(join(out, "client-loader.mjs"), `
@@ -76,27 +78,43 @@ export default function dynamic(load) {
 }`);
 writeFileSync(join(out, "workspace-adapters.mjs"), `
 const outsideScope=()=>{throw Error("Unexpected API/cleanup call outside this local table gate");};
-export const getConversationAttachments=async()=>[];
+export const getConversationAttachments=async()=>window.syntheticFiles??[];
 export const editMessage=async(id,payload)=>{
   window.workspaceWrites.push({id,payload});
   const old=window.workspaceMessage;
   const version={...old.current_version,id:"synthetic-saved-version",
+    content_hash:"synthetic",source_content_hash:"source-"+payload.contentMarkdown,
     version_number:old.current_version.version_number+1,display_text:payload.contentMarkdown,plain_text:payload.contentMarkdown};
   const message={...old,current_version:version};
   window.workspaceMessage=message;
-  return {message,conversation_revision:2,attachment_occurrences:[]};
+  window.saveReceipt={status:"confirmed",operation_id:payload.operationId,current_version_id:version.id,
+    content_hash:version.content_hash,source_content_hash:version.source_content_hash,version_number:version.version_number,conversation_revision:2};
+  if(window.holdSave) await new Promise(resolve=>window.releaseSave=resolve);
+  if(window.loseSaveResponse) throw Error("CONNECTION_FAILED");
+  return {message,message_version:version,conversation_revision:2,attachment_occurrences:[]};
 };
+export const getMessage=async()=>window.workspaceMessage;
+export const getMessageSaveReceipt=async()=>{
+  window.receiptReads=(window.receiptReads??0)+1;
+  if(window.missingReceipt) throw new ApiRequestError("No receipt",404,"","save_not_confirmed");
+  return window.saveReceipt;
+};
+export const getAttachmentUploadSession=outsideScope;
 export const createAttachmentUploadSession=outsideScope,deleteAttachmentUploadItem=outsideScope,
   deleteConversationAttachment=outsideScope,finalizeConversationAttachments=outsideScope,
   getConversation=outsideScope,getConversationReaderTurn=outsideScope,uploadAttachmentItem=outsideScope;
 export const getImageDisplay=outsideScope,setImageDisplay=outsideScope,uploadMessageCopyPreview=outsideScope;
-export class ApiRequestError extends Error {}
+export class ApiRequestError extends Error {
+  constructor(message,status,path,code){super(message);this.status=status;this.path=path;this.code=code;}
+}
 export const ContentCleanupDialog=({open})=>open?outsideScope():null;`);
+writeFileSync(join(out, "unused-word.mjs"), 'export default class WordOutsideScope { constructor(){throw Error("Word extraction is outside this fixture");} }');
 // Count actual parser component entries without substituting its implementation.
 // Callback-only rerenders should update editable cells, not parse the same source.
 writeFileSync(join(out, "markdown-probe.mjs"), `
 import React from "react";
 import ActualMarkdown from ${JSON.stringify(appRequire.resolve("react-markdown").replaceAll("\\", "/"))};
+export {defaultUrlTransform} from ${JSON.stringify(appRequire.resolve("react-markdown").replaceAll("\\", "/"))};
 export default function MeasuredMarkdown(props) {
   if(window.tablePreviewHold&&String(props.children).includes(window.tablePreviewHold.marker))
     throw window.tablePreviewHold.promise;
@@ -117,6 +135,10 @@ import {markdownLanguage} from "@codemirror/lang-markdown";
 import {TableToolDialog} from ${JSON.stringify(dialogPath)};
 import {applyMarkdownTableAction} from ${JSON.stringify(toolsPath)};
 import {SourceEditorWorkspace} from ${JSON.stringify(workspacePath)};
+import {configureOfflineAccess} from ${JSON.stringify(join(web, "lib/offline-access.ts").replaceAll("\\", "/"))};
+import {offlineDb} from ${JSON.stringify(join(web, "lib/offline-db.ts").replaceAll("\\", "/"))};
+configureOfflineAccess(false);
+window.receiptDb=offlineDb;
 import {AssistantMarkdownPart,MarkdownRenderer,MarkdownTablePreview,MermaidDiagram as ActualMermaidDiagram} from ${JSON.stringify(rendererPath)};
 const originalContextParse=markdownLanguage.parser.parse;
 markdownLanguage.parser.parse=function(...args) {
@@ -152,14 +174,15 @@ function Harness() {
 function WorkspaceHarness({source}) {
   const [target,setTarget]=useState(()=>({cursorOffset:Array.from(source.slice(0,source.indexOf("|"))).length,
     message:{id:"synthetic-message",conversation_id:"synthetic-conversation",role:"assistant",ordinal:1,order_key:1,
-    current_version:{id:"synthetic-version",version_number:1,display_text:source,plain_text:source}}}));
+    current_version:{id:"synthetic-version",version_number:1,display_text:source,plain_text:source,content_hash:"synthetic",source_content_hash:"source-"+source}}}));
   const [open,setOpen]=useState(true);
   const [queryClient]=useState(()=>new QueryClient({defaultOptions:{queries:{retry:false}}}));
   useEffect(()=>{
     window.workspaceMessage=target.message;
-    const view=()=>EditorView.findFromDOM(document.querySelector(".cm-editor"));
+    const view=()=>{const host=document.querySelector(".cm-editor");return host?EditorView.findFromDOM(host):null;};
     window.workspaceGate={
       source:()=>view()?.state.doc.toString(),
+      view,
       select(from,to=from){view().dispatch({selection:{anchor:from,head:to}});view().focus();},
       replace(text){const current=view();current.dispatch({changes:{from:0,to:current.state.doc.length,insert:text}});},
       insert(position,text){view().dispatch({changes:{from:position,insert:text}});},
@@ -168,7 +191,7 @@ function WorkspaceHarness({source}) {
   });
   return <QueryClientProvider client={queryClient}>{open?<SourceEditorWorkspace target={target}
     onDirtyChange={value=>{window.workspaceDirty=value;}} onTargetUpdated={setTarget}
-    onMessageChanged={message=>setTarget(current=>({...current,message}))}
+    onMessageChanged={message=>{if(window.failReaderRefresh)throw Error("Synthetic refresh failure");setTarget(current=>({...current,message}));}}
     onClose={()=>setOpen(false)} onLocate={()=>{throw Error("Unexpected navigation");}}
     onDiscardAndSwitch={()=>{throw Error("Unexpected source switch");}}/>:null}</QueryClientProvider>;
 }
@@ -228,9 +251,10 @@ function PreviewProbe() {
       <span data-probe-cell data-probe-row={row} data-probe-column={column} data-probe-tick={tick}>{content}</span>}/>
   </section>;
 }
-createRoot(document.getElementById("root")).render(<React.StrictMode>
+import {InteractionDialogProvider} from ${JSON.stringify(join(web, "components/interaction-dialog-provider.tsx").replaceAll("\\", "/"))};
+createRoot(document.getElementById("root")).render(<React.StrictMode><InteractionDialogProvider>
   <React.Suspense fallback={<span data-testid="unexpected-preview-fallback">Loading</span>}><Root/></React.Suspense>
-</React.StrictMode>);`);
+</InteractionDialogProvider></React.StrictMode>);`);
 
 const webpack = appRequire("next/dist/compiled/webpack/webpack").webpack;
 await new Promise((yes, no) => webpack({
@@ -239,11 +263,13 @@ await new Promise((yes, no) => webpack({
   entry: join(out, "entry.tsx"),
   output: { path: out, filename: "bundle.js" },
   optimization: { minimize: false },
+  plugins: [new webpack.DefinePlugin({ "process.env.NEXT_PUBLIC_PWA_NEGATIVE_TESTS": JSON.stringify("0") })],
   resolve: {
     extensions: [".tsx", ".ts", ".mjs", ".js"],
     modules: ["node_modules", join(web, "node_modules"), join(root, "node_modules")],
     alias: { ...Object.fromEntries([
       "@assistant-ui/react", "@assistant-ui/react-markdown", "shiki", "../../components/preferences-provider",
+      "./preferences-provider", "next/navigation",
     ].map(name => [name + "$", join(out, "adapters.mjs")])),
       "react$": appRequire.resolve("react"),
       "react/jsx-runtime$": appRequire.resolve("react/jsx-runtime"),
@@ -251,6 +277,8 @@ await new Promise((yes, no) => webpack({
       "react-dom/client$": appRequire.resolve("react-dom/client"),
       "react-markdown$": join(out, "markdown-probe.mjs"),
       "next/dynamic$": join(out, "client-loader.mjs"),
+      "word-extractor/lib/word-ole-extractor$": join(out, "unused-word.mjs"),
+      "word-extractor/lib/buffer-reader$": join(out, "unused-word.mjs"),
       "../../lib/api$": join(out, "workspace-adapters.mjs"),
       "../conversations/content-cleanup-panel$": join(out, "workspace-adapters.mjs"),
     },
@@ -289,11 +317,11 @@ const { chromium, expect } = appRequire("@playwright/test");
 let browser;
 const results = [];
 try {
-  browser = await chromium.launch({ channel: "chrome", headless: true });
+  browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? "chromium" : "chrome", headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errors = [];
   const consoleErrors = [];
-  page.on("pageerror", error => { errors.push(error.message); console.error("BROWSER " + error.message); });
+  page.on("pageerror", error => { errors.push(error.message); console.error("BROWSER " + error.stack); });
   page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   await page.waitForFunction(() => Boolean(window.tableGate));
@@ -318,6 +346,102 @@ try {
       throw error;
     }
   };
+  for (const width of [375,800,1440]) {
+    await run("save snapshot preserves later typing and editor history at "+width, async()=>{
+      await page.setViewportSize({width,height:900});
+      await page.evaluate(()=>{window.holdSave=true;window.loseSaveResponse=false;window.failReaderRefresh=false;window.startWorkspace("Synthetic baseline");});
+      await page.waitForFunction(()=>window.workspaceGate?.source()==="Synthetic baseline");
+      await page.evaluate(()=>{
+        window.workspaceGate.replace("Submitted snapshot");
+        window.originalEditor=window.workspaceGate.view();
+      });
+      await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+      await page.getByTestId("source-editor-create-version").click();
+      await page.waitForFunction(()=>Boolean(window.releaseSave));
+      await page.evaluate(()=>{window.workspaceGate.insert(window.workspaceGate.source().length," + later typing");window.releaseSave();});
+      await expect.poll(()=>page.evaluate(()=>window.workspaceGate.source())).toBe("Submitted snapshot + later typing");
+      await expect.poll(()=>page.evaluate(()=>window.workspaceDirty)).toBe(true);
+      assert.equal(await page.evaluate(()=>window.originalEditor===window.workspaceGate.view()),true);
+      assert.equal(await page.evaluate(()=>window.workspaceWrites.length),1);
+      await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+      await page.evaluate(()=>{window.holdSave=false;window.releaseSave=null;});
+    });
+  }
+  await run("unknown save checks its receipt without another PATCH; refresh failure is separate",async()=>{
+    await page.evaluate(()=>{window.loseSaveResponse=true;window.failReaderRefresh=true;window.startWorkspace("Unknown baseline");});
+    await page.waitForFunction(()=>window.workspaceGate?.source()==="Unknown baseline");
+    await page.evaluate(()=>window.workspaceGate.replace("Unknown submitted"));
+    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+    await page.getByTestId("source-editor-create-version").click();
+    await expect(page.getByRole("button",{name:"Check result",exact:true})).toBeVisible();
+    await page.evaluate(()=>window.workspaceGate.insert(window.workspaceGate.source().length," + new input"));
+    await page.getByRole("button",{name:"Check result",exact:true}).click();
+    await expect(page.getByRole("button",{name:"Refresh reader",exact:true})).toBeVisible();
+    await page.screenshot({path:join(out,"save-confirmed-refresh-pending.png")});
+    assert.equal(await page.evaluate(()=>window.workspaceWrites.length),1);
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),"Unknown submitted + new input");
+    await page.evaluate(()=>{window.failReaderRefresh=false;window.loseSaveResponse=false;});
+    await page.getByRole("button",{name:"Refresh reader",exact:true}).click();
+    await expect(page.getByRole("button",{name:"Refresh reader",exact:true})).toHaveCount(0);
+    assert.equal(await page.evaluate(()=>window.workspaceWrites.length),1);
+  });
+  await run("reopening an editor restores the pending identity without repeating a write",async()=>{
+    await page.evaluate(()=>{window.loseSaveResponse=true;window.startWorkspace("Reopen baseline");});
+    await page.waitForFunction(()=>window.workspaceGate?.source()==="Reopen baseline");
+    await page.evaluate(()=>window.workspaceGate.replace("Reopen submitted"));
+    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+    await page.getByTestId("source-editor-create-version").click();
+    await expect(page.getByRole("button",{name:"Check result",exact:true})).toBeVisible();
+    const identity=await page.evaluate(()=>window.workspaceWrites[0].payload.operationId);
+    await page.evaluate(()=>window.startWorkspace("Reopen baseline"));
+    await expect(page.getByRole("button",{name:"Check result",exact:true})).toBeVisible();
+    assert.equal(await page.evaluate(()=>window.workspaceWrites.length),0);
+    assert.equal(await page.evaluate(async()=> (await window.receiptDb.settings.get("source-save-receipt:synthetic-message")).value.operationId),identity);
+    await page.getByRole("button",{name:"Check result",exact:true}).click();
+    await expect(page.getByRole("button",{name:"Check result",exact:true})).toHaveCount(0);
+    assert.equal(await page.evaluate(()=>window.workspaceWrites.length),0);
+    await page.evaluate(()=>{window.loseSaveResponse=false;});
+  });
+  await run("missing receipt permits explicit retry of the same snapshot, not newer typing",async()=>{
+    await page.evaluate(()=>{window.loseSaveResponse=true;window.missingReceipt=true;window.startWorkspace("Retry baseline");});
+    await page.waitForFunction(()=>window.workspaceGate?.source()==="Retry baseline");
+    await page.evaluate(()=>window.workspaceGate.replace("Retry snapshot"));
+    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+    await page.getByTestId("source-editor-create-version").click();
+    await page.getByRole("button",{name:"Check result",exact:true}).click();
+    await expect(page.getByRole("button",{name:"Retry original save",exact:true})).toBeVisible();
+    assert.equal(await page.evaluate(()=>window.workspaceWrites.length),1);
+    await page.evaluate(()=>{window.workspaceGate.insert(window.workspaceGate.source().length," later");window.loseSaveResponse=false;window.missingReceipt=false;});
+    await page.getByRole("button",{name:"Retry original save",exact:true}).click();
+    await expect.poll(()=>page.evaluate(()=>window.workspaceWrites.length)).toBe(2);
+    const writes=await page.evaluate(()=>window.workspaceWrites);
+    assert.deepEqual(writes[0].payload,writes[1].payload);
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),"Retry snapshot later");
+    await expect(page.getByRole("button",{name:"Check result",exact:true})).toHaveCount(0);
+  });
+  await run("real picker replaces one shared reference, supports explicit all, and preserves undo",async()=>{
+    const first="11111111-1111-4111-8111-111111111111",second="22222222-2222-4222-8222-222222222222";
+    const source=`前🙂 [one][x] 后 [x] 尾\n\n[x]: cr-asset://${first}`;
+    await page.evaluate(({source,second})=>{
+      window.syntheticFiles=[{id:second,display_name:"replacement.txt",original_filename:"replacement.txt",resolution_status:"resolved",status:"available",detected_mime_type:"text/plain"}];
+      window.startWorkspace(source);
+    },{source,second});
+    await page.waitForFunction(source=>window.workspaceGate?.source()===source,source);
+    await page.evaluate(()=>window.workspaceGate.select(7));
+    await page.getByRole("button",{name:"Choose conversation file",exact:true}).click();
+    await page.getByRole("button",{name:"Replace reference with replacement.txt",exact:true}).click();
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),`前🙂 [one](cr-asset://${second}) 后 [x] 尾\n\n[x]: cr-asset://${first}`);
+    await page.getByTestId("source-editor-undo").click();
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),source);
+    await page.evaluate(()=>window.workspaceGate.select(7));
+    await page.getByRole("button",{name:"Choose conversation file",exact:true}).click();
+    await page.getByRole("checkbox",{name:"Replace all references in this message"}).check();
+    await page.getByRole("button",{name:"Replace reference with replacement.txt",exact:true}).click();
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),source.replace(first,second));
+    assert.equal(await page.evaluate(()=>window.workspaceWrites.length),0);
+    await page.evaluate(()=>{window.syntheticFiles=[];});
+  });
+  await page.setViewportSize({width:1440,height:900});
   await run("fixed-source AssistantMarkdownPart parse count distinguishes host-only rerenders from content updates", async () => {
     await page.evaluate(()=>window.startAssistantPerfProbe());
     const probe=page.getByTestId("assistant-markdown-performance-probe");
@@ -415,7 +539,9 @@ try {
     await page.evaluate(text => window.startBodyProbe(text), text);
     const body = page.getByTestId("body-table-probe");
     await expect(body.locator("table")).toHaveCount(1);
-    await expect(body.locator("button,input,textarea")).toHaveCount(0);
+    // The read-only table has two export icon controls, not editable cells.
+    await expect(body.locator("input,textarea")).toHaveCount(0);
+    await expect(body.locator("button")).toHaveCount(2);
     const observations = [];
     for (const width of [1440, 768, 375]) {
       await page.setViewportSize({width,height:900});
@@ -425,14 +551,14 @@ try {
         scrollerWidth: root.querySelector(".markdown-table").clientWidth,
         tableWidth: root.querySelector("table").scrollWidth,
         maxContentWidth: Math.max(...Array.from(root.querySelectorAll(".markdown-table-cell-content"), cell => cell.getBoundingClientRect().width)),
-        sourceStart: Number(root.querySelector(".markdown-table").dataset.markdownSourceStart),
+        sourceStart: Number(root.querySelector(".reader-table-export").dataset.markdownSourceStart),
       })));
       assert.ok(observations.at(-1).pageWidth <= width, JSON.stringify(observations.at(-1)));
       assert.ok(observations.at(-1).maxContentWidth <= (width < 640 ? 288 : 448) + 1, JSON.stringify(observations.at(-1)));
       await page.screenshot({path:join(out,`body-tables-${width}.png`),fullPage:true});
     }
     writeFileSync(join(out,"body-table-observations.json"),JSON.stringify(observations,null,2));
-    await expect(body.locator(".markdown-table")).toHaveAttribute("data-markdown-source-start",String(text.indexOf("|")));
+    await expect(body.locator(".reader-table-export")).toHaveAttribute("data-markdown-source-start",String(text.indexOf("|")));
     await page.evaluate(()=>window.stopBodyProbe());
     await page.setViewportSize({width:1440,height:900});
     await page.locator("#open").waitFor();
@@ -1261,7 +1387,7 @@ try {
     ]) {
       await startWorkspace(source);
       await openWorkspaceTable(false);
-      await expect(apply()).toHaveCount(0);
+      await expect(apply(), `Automatic discovery must reject literal context ${source.slice(0, 20)}`).toHaveCount(0);
       await expect(markdown).toHaveCount(0);
       await expect(dialog.getByText("Select the complete table to try again, including code or HTML examples.")).toBeVisible();
       await expect.poll(() => page.evaluate(() => window.workspaceGate.source())).toBe(source);
@@ -1333,7 +1459,7 @@ try {
       await expect(workspace.getByTestId("source-editor-rich-preview")).toBeVisible();
       await expect(workspace.getByTestId("source-editor-rich-preview").locator("table")).toHaveCount(0);
       await openWorkspaceTable(false);
-      await expect(apply()).toHaveCount(0);
+      await expect(apply(), `Automatic discovery must reject HTML context ${before}`).toHaveCount(0);
       await expect(markdown).toHaveCount(0);
       await expect(dialog.locator("table")).toHaveCount(0);
       await expect.poll(() => page.evaluate(() => window.workspaceGate.source())).toBe(source);

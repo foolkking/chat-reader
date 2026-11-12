@@ -30,7 +30,7 @@ from app.models.source_message_ref import SourceMessageRef
 from app.models.user import User
 from app.services.assets.asset_store import LocalAssetStore, get_asset_store
 from app.services.derived_rebuild import rebuild_conversation_derived_data
-from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
+from app.services.artifact_lifecycle import publish_zip_artifact, staging_path, discard_owned_temporary
 from app.services.exporting.archive_transaction import archive_read_snapshot, track_archive_object
 from app.services.exporting.archive_accounts import (
     IDENTITY_FIELDS, ArchiveOwnershipError, remap_account_payload, restore_account_mapping,
@@ -108,7 +108,7 @@ def _prepare_restorable_zip(path: Path, *, progress_callback=None) -> None:
         if progress_callback:
             progress_callback("validating", 96, len(infos), len(infos))
     finally:
-        repacked.unlink(missing_ok=True)
+        discard_owned_temporary(repacked, category="system_archive_repack")
 
 
 def create_system_archive(
@@ -355,7 +355,7 @@ def _create_data_archive(
             required_entries=("manifest.json",),
         )
     finally:
-        temporary.unlink(missing_ok=True)
+        discard_owned_temporary(temporary, category="system_archive_export")
     artifact = ExportArtifact(
         id=artifact_id,
         job_id=job_id,
@@ -403,7 +403,6 @@ def restore_system_archive(
     from app.services.exporting.system_archive_preflight import open_system_archive
     from app.services.exporting.system_archive_configuration import CONFIGURATION_MODELS, require_configuration_restore_target, require_configuration_restore_environment, restore_system_configuration
     require_empty_system_instance(db)
-    promoted: list[str] = []
     store = get_asset_store()
     try:
         with open_system_archive(archive_path, heartbeat=heartbeat) as checked:
@@ -492,18 +491,17 @@ def restore_system_archive(
                 with archive.open(archive_entry) as source:
                     staged = store.stage(source, max_bytes=get_settings().bundle_max_object_bytes, quarantine=False)
                 if staged.byte_size != int(payload.get("byte_size", -1)):
-                    staged.path.unlink(missing_ok=True)
+                    discard_owned_temporary(staged.path, category="system_archive_restore")
                     raise SystemArchiveError("System archive attachment size mismatch.")
                 if staged.sha256 != payload.get("sha256"):
-                    staged.path.unlink(missing_ok=True)
+                    discard_owned_temporary(staged.path, category="system_archive_restore")
                     raise SystemArchiveError("System archive attachment checksum mismatch.")
                 storage_key = store.object_key()
-                promoted.append(storage_key)
                 track_archive_object(db, store, storage_key)
                 try:
                     store.promote(staged.path, storage_key)
                 finally:
-                    staged.path.unlink(missing_ok=True)
+                    discard_owned_temporary(staged.path, category="system_archive_restore")
                 decoded = _decode_payload(AssetObject, payload)
                 decoded.update({"storage_backend": store.backend, "storage_key": storage_key})
                 db.add(AssetObject(**decoded))
@@ -535,19 +533,11 @@ def restore_system_archive(
             db.flush()
             return {name: len(items) for name, items in records.items()}
     except ArchiveOwnershipError as exc:
-        for storage_key in promoted:
-            store.delete_key(storage_key)
         raise SystemArchiveError(str(exc), 409) from exc
     except (zipfile.BadZipFile, IntegrityError, KeyError, TypeError, ValueError, UnicodeError) as exc:
-        for storage_key in promoted:
-            store.delete_key(storage_key)
         if isinstance(exc, SystemArchiveError):
             raise
         raise SystemArchiveError("System archive is malformed or incomplete.") from exc
-    except Exception:
-        for storage_key in promoted:
-            store.delete_key(storage_key)
-        raise
 
 
 def _restore_rows(db: Session, model, rows: list[dict], overrides: dict[str, Any] | None = None) -> None:

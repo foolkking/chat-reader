@@ -45,11 +45,13 @@ type TaskCounts = Record<"queued" | "processing" | "cancelling" | "committed" | 
 type RuntimeArchive = RuntimeMetric<{ record: { status: string; created_at: string; completed_at: string | null } | null }>;
 export type AdminRuntimeStatus = {
   generated_at: string; complete: boolean;
-  worker: RuntimeMetric<{ status: "alive_idle" | "alive_busy" | "stale" | "unavailable"; heartbeat_at: string | null; heartbeat_age_seconds: number | null; processing_task_count: number | null; active_task_kind: "job" | "import" | null }>;
+  worker: RuntimeMetric<{ status: "alive_idle" | "alive_busy" | "stale" | "unavailable"; heartbeat_at: string | null; heartbeat_age_seconds: number | null; processing_task_count: number | null; active_task_kind: "job" | "import" | null;
+    execution?: { state: "running" | "stopping" | "stalled" | "reconciling"; progress_age_seconds?: number } | null }>;
   queue: RuntimeMetric<{ jobs: TaskCounts; imports: TaskCounts }>;
   storage: Record<"imports" | "exports" | "offline" | "assets", RuntimeMetric<{ file_count: number; bytes: number; complete: boolean }> & { kind?: "local" | "object_records" }>;
   export_cleanup?: RuntimeMetric<{ pending_count: number; pending_bytes: number; failed_count: number }>;
   source_cleanup?: RuntimeMetric<{ pending_count: number; blocked_count: number }>;
+  upload_cleanup?: RuntimeMetric<{ pending_count: number; protected_count: number; failed_count: number }>;
   backup: RuntimeArchive; restore: RuntimeArchive; mail: { configured: boolean };
 };
 

@@ -1,0 +1,1635 @@
+{
+  "sourceCommit": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+  "runId": 43025451379,
+  "verifiedAt": "2026-11-11T23:03:56.981433+08:00",
+  "jobConclusions": [
+    {
+      "id": 130538911214,
+      "name": "web-quality",
+      "conclusion": "success",
+      "failedSteps": []
+    },
+    {
+      "id": 130538911562,
+      "name": "settings-quality",
+      "conclusion": "success",
+      "failedSteps": []
+    },
+    {
+      "id": 130538911783,
+      "name": "api-quality",
+      "conclusion": "success",
+      "failedSteps": []
+    },
+    {
+      "id": 130553197986,
+      "name": "reading-performance-comparison / compare",
+      "conclusion": "success",
+      "failedSteps": []
+    },
+    {
+      "id": 130564780635,
+      "name": "build-images",
+      "conclusion": "success",
+      "failedSteps": []
+    },
+    {
+      "id": 130568161531,
+      "name": "inspect-release-artifact",
+      "conclusion": "success",
+      "failedSteps": []
+    }
+  ],
+  "firstRead": {
+    "at": "2026-11-11T21:57:38.968087+08:00",
+    "elapsedMinutes": 55.807132616666664
+  },
+  "artifactChecks": [
+    {
+      "id": 13862486467,
+      "name": "small-zip-memory-7a4d61bea542c6e8eeee35ab0e14ad408a92c639-1",
+      "sha256": "sha256:1c228b5be6c260e800cc6264d190363ed2f3a84cb32c88834c527362abe967a3",
+      "bytes": 3072,
+      "entryCount": 6
+    },
+    {
+      "id": 13862310927,
+      "name": "release-a-quality-evidence-7a4d61bea542c6e8eeee35ab0e14ad408a92c639-1",
+      "sha256": "sha256:97e113ba192bc0819e859a5793a685a48f41c7c7354e428ee47c0c37d31b4045",
+      "bytes": 34348074,
+      "entryCount": 724
+    },
+    {
+      "id": 13861281322,
+      "name": "reading-performance-comparison",
+      "sha256": "sha256:7796d48ca1756fc2c7a812ab7530d7ddce037ac2c237920cbf1a852626e752ef",
+      "bytes": 117146,
+      "entryCount": 81
+    },
+    {
+      "id": 13861229954,
+      "name": "settings-quality-evidence-7a4d61bea542c6e8eeee35ab0e14ad408a92c639-1",
+      "sha256": "sha256:fd11b1747f64dc68d5c0092369be4af346eda75160e3b68a3055327d6a6f93bd",
+      "bytes": 15677900,
+      "entryCount": 209
+    }
+  ],
+  "limitations": [
+    "Container-image archive was inspected by the CI job, not downloaded independently in this check. No deployment.",
+    "Later uncommitted M/N/O source is not covered by this CI.",
+    "One successful candidate cannot establish the cause or absence of the earlier 223/331ms cold long tasks.",
+    "Baseline is an intentionally older source, separate from candidate acceptance."
+  ],
+  "web": {
+    "schema_version": 1,
+    "source_sha": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+    "generated_at": "2026-11-11T13:52:14.257Z",
+    "overall_status": "PASS",
+    "counts": {
+      "PASS": 14,
+      "FAIL": 0,
+      "NOT_VERIFIED": 0,
+      "SKIPPED": 0
+    },
+    "gates": [
+      {
+        "gate_id": "adaptive-import-recovery",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 15,
+        "result_counts": {
+          "passed": 14,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 1,
+          "interrupted": 0
+        },
+        "duration_ms": 59876
+      },
+      {
+        "gate_id": "csp-enforcement",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 4,
+        "result_counts": {
+          "passed": 4,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 6456
+      },
+      {
+        "gate_id": "context-files",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 38,
+        "result_counts": {
+          "passed": 38,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 268063
+      },
+      {
+        "gate_id": "focused-online-security",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 45,
+        "result_counts": {
+          "passed": 45,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 121915
+      },
+      {
+        "gate_id": "share-focus",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 2,
+        "result_counts": {
+          "passed": 2,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 8728
+      },
+      {
+        "gate_id": "source-editor-mutation",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 121,
+        "result_counts": {
+          "passed": 121,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 639735
+      },
+      {
+        "gate_id": "source-editor-cleanup",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 6,
+        "result_counts": {
+          "passed": 6,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 40306
+      },
+      {
+        "gate_id": "upload-token-atomicity",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 18,
+        "result_counts": {
+          "passed": 18,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 56710
+      },
+      {
+        "gate_id": "markdown-image-viewer",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 31,
+        "result_counts": {
+          "passed": 31,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 118304
+      },
+      {
+        "gate_id": "reading-stability",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 35,
+        "result_counts": {
+          "passed": 35,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 166136
+      },
+      {
+        "gate_id": "pdfjs-maintained-line",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 13,
+        "result_counts": {
+          "passed": 13,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 60907
+      },
+      {
+        "gate_id": "default-pwa",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 1016,
+        "result_counts": {
+          "passed": 190,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 826,
+          "interrupted": 0
+        },
+        "duration_ms": 317714
+      },
+      {
+        "gate_id": "single-owner-auth",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 24,
+        "result_counts": {
+          "passed": 24,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 109717
+      },
+      {
+        "gate_id": "pwa-negative",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 28,
+        "result_counts": {
+          "passed": 28,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 88994
+      }
+    ]
+  },
+  "settings": {
+    "schema_version": 1,
+    "source_sha": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+    "generated_at": "2026-11-11T13:51:15.255Z",
+    "overall_status": "PASS",
+    "counts": {
+      "PASS": 2,
+      "FAIL": 0,
+      "NOT_VERIFIED": 0,
+      "SKIPPED": 0
+    },
+    "gates": [
+      {
+        "gate_id": "settings-stages-1-4",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 470,
+        "result_counts": {
+          "passed": 470,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 2746015
+      },
+      {
+        "gate_id": "system-archive-new-instance",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 1,
+        "result_counts": {
+          "passed": 1,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 36316
+      }
+    ]
+  },
+  "realMemoryCases": [
+    {
+      "revision": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+      "passed": true,
+      "real_sensor": true,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "case": "assets100",
+      "attachment_count": 4,
+      "block_count": 6484,
+      "conversation_count": 1,
+      "draft_format": 2,
+      "message_count": 36,
+      "reference_count": 4,
+      "verified_asset_hashes": 4,
+      "archive_bytes": 103243496,
+      "baseline_bytes": 92594176,
+      "peak_bytes": 148066304,
+      "workspace_peak_delta_bytes": 55472128,
+      "oom": 0,
+      "oom_kill": 0,
+      "failcnt_delta": 0,
+      "restarts": 0,
+      "baseline_anon_bytes": 89280512,
+      "final_anon_bytes": 103075840,
+      "baseline_file_bytes": 0,
+      "final_file_bytes": 36864
+    },
+    {
+      "revision": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+      "passed": true,
+      "real_sensor": true,
+      "memory_limit_bytes": 671088640,
+      "memory_swap_limit_bytes": 671088640,
+      "case": "assets500",
+      "attachment_count": 4,
+      "block_count": 6484,
+      "conversation_count": 1,
+      "draft_format": 2,
+      "message_count": 36,
+      "reference_count": 4,
+      "verified_asset_hashes": 4,
+      "archive_bytes": 522673896,
+      "baseline_bytes": 92762112,
+      "peak_bytes": 148570112,
+      "workspace_peak_delta_bytes": 55808000,
+      "oom": 0,
+      "oom_kill": 0,
+      "failcnt_delta": 0,
+      "restarts": 0,
+      "baseline_anon_bytes": 89296896,
+      "final_anon_bytes": 103596032,
+      "baseline_file_bytes": 0,
+      "final_file_bytes": 36864
+    },
+    {
+      "revision": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+      "passed": true,
+      "real_sensor": true,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "case": "long",
+      "attachment_count": 0,
+      "block_count": 21600,
+      "conversation_count": 1,
+      "draft_format": 2,
+      "message_count": 36,
+      "reference_count": 0,
+      "verified_asset_hashes": 0,
+      "archive_bytes": 1611994,
+      "baseline_bytes": 87617536,
+      "peak_bytes": 143888384,
+      "workspace_peak_delta_bytes": 56270848,
+      "oom": 0,
+      "oom_kill": 0,
+      "failcnt_delta": 0,
+      "restarts": 0,
+      "baseline_anon_bytes": 84480000,
+      "final_anon_bytes": 96534528,
+      "baseline_file_bytes": 0,
+      "final_file_bytes": 57344
+    },
+    {
+      "revision": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+      "passed": true,
+      "real_sensor": true,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "case": "small",
+      "attachment_count": 14,
+      "block_count": 177,
+      "conversation_count": 1,
+      "draft_format": 2,
+      "message_count": 4,
+      "reference_count": 13,
+      "verified_asset_hashes": 14,
+      "archive_bytes": 1456292,
+      "baseline_bytes": 92635136,
+      "peak_bytes": 143106048,
+      "workspace_peak_delta_bytes": 50470912,
+      "oom": 0,
+      "oom_kill": 0,
+      "failcnt_delta": 0,
+      "restarts": 0,
+      "baseline_anon_bytes": 89276416,
+      "final_anon_bytes": 97837056,
+      "baseline_file_bytes": 0,
+      "final_file_bytes": 40960
+    },
+    {
+      "revision": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+      "passed": true,
+      "real_sensor": true,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "attachment_count": 14,
+      "conversation_count": 1,
+      "message_count": 4,
+      "reference_count": 13,
+      "verified_asset_hashes": 14,
+      "archive_bytes": 1456292,
+      "baseline_bytes": 92790784,
+      "peak_bytes": 143192064,
+      "workspace_peak_delta_bytes": 50401280,
+      "oom": 0,
+      "oom_kill": 0,
+      "failcnt_delta": 0,
+      "restarts": 0,
+      "baseline_anon_bytes": 89260032,
+      "final_anon_bytes": 97636352,
+      "baseline_file_bytes": 0,
+      "final_file_bytes": 1568768,
+      "entries": 18
+    }
+  ],
+  "reader": {
+    "candidate": {
+      "schema_version": 2,
+      "gate_id": "reader-capacity-candidate",
+      "status": "passed",
+      "started_at": "2026-11-11T13:36:48.094Z",
+      "test_count": 9,
+      "completed_at": "2026-11-11T13:39:10.610Z",
+      "duration_ms": 143662,
+      "result_counts": {
+        "passed": 9,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      }
+    },
+    "baseline": {
+      "schema_version": 2,
+      "gate_id": "reader-capacity-baseline",
+      "status": "failed",
+      "started_at": "2026-11-11T13:33:02.074Z",
+      "test_count": 9,
+      "completed_at": "2026-11-11T13:35:18.525Z",
+      "duration_ms": 137820,
+      "result_counts": {
+        "passed": 8,
+        "failed": 1,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      }
+    },
+    "fixtures": [
+      {
+        "phase": "baseline",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "math",
+          "messages": 1000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.700000000000273,
+          16.700000000000273,
+          16.700000000000273
+        ],
+        "warm": {
+          "parseDelta": null,
+          "renderDelta": 343,
+          "longestTask": 0,
+          "p95FrameInterval": 16.800000000000182
+        }
+      },
+      {
+        "phase": "baseline",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "math",
+          "messages": 10000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.700000000000273,
+          16.73400000000015,
+          16.799999999999727
+        ],
+        "warm": {
+          "parseDelta": null,
+          "renderDelta": 343,
+          "longestTask": 0,
+          "p95FrameInterval": 16.800000000000182
+        }
+      },
+      {
+        "phase": "baseline",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "mixed",
+          "messages": 1000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.700000000000273,
+          16.700000000000273,
+          16.700000000000273
+        ],
+        "warm": {
+          "parseDelta": null,
+          "renderDelta": 188,
+          "longestTask": 0,
+          "p95FrameInterval": 16.700000000000728
+        }
+      },
+      {
+        "phase": "baseline",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "mixed",
+          "messages": 10000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          50,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.800000000000182,
+          16.799999999999955,
+          16.799999999999727
+        ],
+        "warm": {
+          "parseDelta": null,
+          "renderDelta": 194,
+          "longestTask": 0,
+          "p95FrameInterval": 16.799999999999272
+        }
+      },
+      {
+        "phase": "baseline",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "mixed",
+          "messages": 398
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          65,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.700000000000273,
+          16.799999999999727,
+          16.799999999999955
+        ],
+        "warm": {
+          "parseDelta": null,
+          "renderDelta": 194,
+          "longestTask": 0,
+          "p95FrameInterval": 16.700000000000728
+        }
+      },
+      {
+        "phase": "baseline",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "plain",
+          "messages": 10000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.700000000000273,
+          16.799999999999955,
+          16.700000000000273
+        ],
+        "warm": {
+          "parseDelta": null,
+          "renderDelta": 255,
+          "longestTask": 0,
+          "p95FrameInterval": 16.799999999999727
+        }
+      },
+      {
+        "phase": "baseline",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "plain",
+          "messages": 1000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.700000000000273,
+          16.700000000000273,
+          16.700000000000273
+        ],
+        "warm": {
+          "parseDelta": null,
+          "renderDelta": 207,
+          "longestTask": 0,
+          "p95FrameInterval": 16.800000000000182
+        }
+      },
+      {
+        "phase": "baseline",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "plain",
+          "messages": 398
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.700000000000273,
+          16.799999999999955,
+          16.799999999999955
+        ],
+        "warm": {
+          "parseDelta": null,
+          "renderDelta": 207,
+          "longestTask": 0,
+          "p95FrameInterval": 16.799999999999727
+        }
+      },
+      {
+        "phase": "candidate",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "math",
+          "messages": 1000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          59,
+          0,
+          53
+        ],
+        "coldFrameP95": [
+          33.299999999999955,
+          16.700000000000273,
+          16.799999999999955
+        ],
+        "warm": {
+          "parseDelta": 28,
+          "renderDelta": 42,
+          "longestTask": 0,
+          "p95FrameInterval": 16.800000000000182
+        }
+      },
+      {
+        "phase": "candidate",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "math",
+          "messages": 10000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.800000000000182,
+          16.799999999999955,
+          16.799999999999955
+        ],
+        "warm": {
+          "parseDelta": 28,
+          "renderDelta": 42,
+          "longestTask": 0,
+          "p95FrameInterval": 16.799999999999272
+        }
+      },
+      {
+        "phase": "candidate",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "math",
+          "messages": 398
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.800000000000182,
+          16.800000000000182,
+          16.799999999999955
+        ],
+        "warm": {
+          "parseDelta": 28,
+          "renderDelta": 42,
+          "longestTask": 0,
+          "p95FrameInterval": 16.799999999999727
+        }
+      },
+      {
+        "phase": "candidate",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "mixed",
+          "messages": 1000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.700000000000273,
+          16.799999999999955,
+          16.700000000000273
+        ],
+        "warm": {
+          "parseDelta": 54,
+          "renderDelta": 58,
+          "longestTask": 0,
+          "p95FrameInterval": 16.799999999999727
+        }
+      },
+      {
+        "phase": "candidate",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "mixed",
+          "messages": 10000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          73,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.799999999999955,
+          16.800000000000182,
+          16.799999999999955
+        ],
+        "warm": {
+          "parseDelta": 50,
+          "renderDelta": 54,
+          "longestTask": 0,
+          "p95FrameInterval": 16.800000000000182
+        }
+      },
+      {
+        "phase": "candidate",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "mixed",
+          "messages": 398
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.799999999999955,
+          16.700000000000273,
+          16.799999999999955
+        ],
+        "warm": {
+          "parseDelta": 52,
+          "renderDelta": 56,
+          "longestTask": 0,
+          "p95FrameInterval": 16.700000000000273
+        }
+      },
+      {
+        "phase": "candidate",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "plain",
+          "messages": 10000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.799999999999727,
+          16.799999999999955,
+          16.799999999999955
+        ],
+        "warm": {
+          "parseDelta": 12,
+          "renderDelta": 18,
+          "longestTask": 0,
+          "p95FrameInterval": 16.800000000000182
+        }
+      },
+      {
+        "phase": "candidate",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "plain",
+          "messages": 1000
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          59,
+          0
+        ],
+        "coldFrameP95": [
+          16.700000000000273,
+          16.799999999999955,
+          16.700000000000273
+        ],
+        "warm": {
+          "parseDelta": 12,
+          "renderDelta": 18,
+          "longestTask": 0,
+          "p95FrameInterval": 16.800000000000182
+        }
+      },
+      {
+        "phase": "candidate",
+        "fixture": {
+          "version": "release-d-reader-capacity-v1",
+          "seed": 20260814,
+          "profile": "plain",
+          "messages": 398
+        },
+        "measurement": {
+          "version": 3,
+          "trace": false,
+          "wheelSteps": 30,
+          "wheelDelta": 120,
+          "sampleDelayMs": 34,
+          "diagnosticOnly": false
+        },
+        "coldCount": 3,
+        "coldLongestTasks": [
+          0,
+          0,
+          0
+        ],
+        "coldFrameP95": [
+          16.799999999999727,
+          16.700000000000273,
+          16.700000000000273
+        ],
+        "warm": {
+          "parseDelta": 12,
+          "renderDelta": 18,
+          "longestTask": 0,
+          "p95FrameInterval": 16.700000000000728
+        }
+      }
+    ]
+  },
+  "readingTraces": {
+    "original64": [
+      {
+        "group": "reading-stability-1440px-n-2e3e9-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 44,
+        "sha256": "7b0765052f52d9e1c982d773f32386bedfdee9c035df314e10380b49ea175c57"
+      },
+      {
+        "group": "reading-stability-1440px-n-2e3e9-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 40,
+        "sha256": "17c4a4f55398f4fbc1aa92f2d2e4be3ef8b801af3b93fd151705f78ba4f28c48"
+      },
+      {
+        "group": "reading-stability-1440px-n-522ef-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 43,
+        "sha256": "fb227df9288cd205c1416d9ec3779a043b240a7f2bef6474a29ca6c7a838acea"
+      },
+      {
+        "group": "reading-stability-1440px-n-2e3e9-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "142366aad45a2fa8c19f380952881dfebed53ff5f1158ce3262c695240fd382d"
+      },
+      {
+        "group": "reading-stability-1440px-n-2e3e9-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 17,
+        "sha256": "5a625b681e281da2a2f7a2b0b697070a3db9f53b2b6779b903277fbf35d52e39"
+      },
+      {
+        "group": "reading-stability-1440px-n-522ef-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 41,
+        "sha256": "4a3f1bc173718717c67ddec95c20344f8034f8398ff1a12df51f366f1c3406b2"
+      },
+      {
+        "group": "reading-stability-1440px-n-522ef-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 43,
+        "sha256": "8b8355679103f8d9138693a510bd005f2b14923d0be96b53b48f7bf2f70d3e90"
+      },
+      {
+        "group": "reading-stability-1440px-n-522ef-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 16,
+        "sha256": "39aba49c9cf90ec2d0010d4880f6c2d42ffa0e87cd4e94cc05f2030e457d9635"
+      },
+      {
+        "group": "reading-stability-1440px-n-c379c-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 48,
+        "sha256": "43a65e8c6ac3adb1c2fc089bea1dce16816f8fa962a7853657daeee993d46187"
+      },
+      {
+        "group": "reading-stability-1440px-n-c379c-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "45e38d7ccfa52e519433fb70d3d5ab5c2a92629d8573aef83bdf65366ce14e22"
+      },
+      {
+        "group": "reading-stability-1440px-n-c379c-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 44,
+        "sha256": "0096a85759f90bd41e064648492d2f67e9c2d20d70b1e2151d3a4f363d42a665"
+      },
+      {
+        "group": "reading-stability-1440px-n-c379c-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 17,
+        "sha256": "8a0fcbbeb360c04aefa5ac329d76a89e43aa70174fac7cc736aa652aff1a2f93"
+      },
+      {
+        "group": "reading-stability-1440px-n-d83dd-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 44,
+        "sha256": "e038f1db56a05e584b9b5c81da8fe514f25fc6b84370b7148a9ba32e59614212"
+      },
+      {
+        "group": "reading-stability-1440px-n-d83dd-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 22,
+        "sha256": "ec58196e01a1bd2803f551279aa19d87009c8717160d7491eb9d37d5607db355"
+      },
+      {
+        "group": "reading-stability-1440px-n-d83dd-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "61b43e54bc84765346996a0d2b575cf7d71ee1bb8829fa3fb822d48f66991b32"
+      },
+      {
+        "group": "reading-stability-1440px-n-d83dd-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 17,
+        "sha256": "5488721b8b1f4995bd5075acfa249fdedc67e0a92d3831fad7f50186a7bbb3b8"
+      },
+      {
+        "group": "reading-stability-1440px-v-77cb8-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 44,
+        "sha256": "829d93e596c522e8ea795ebfc190a5297af9bd3f101a62fd82816254d9d40d32"
+      },
+      {
+        "group": "reading-stability-1440px-v-77cb8-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 51,
+        "sha256": "ea688f7479fdf717532021d36415fd61632b2914a5a49714717f618bf41cb741"
+      },
+      {
+        "group": "reading-stability-1440px-v-77cb8-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "e521e6a5c90c7b4590d493cfaba9c80396ca32044cac29c578d9baedbdc3ecd0"
+      },
+      {
+        "group": "reading-stability-1440px-v-77cb8-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 16,
+        "sha256": "5646c0715cb3464d8949ce06138d736072496efd4b0a9a22726502c529868d0b"
+      },
+      {
+        "group": "reading-stability-1440px-v-79574-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 44,
+        "sha256": "236768f2b6b321469451cd4207036b3d37a52e860956d7f44b21b8cb2a137bf9"
+      },
+      {
+        "group": "reading-stability-1440px-v-79574-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 41,
+        "sha256": "36c73bc7e27146fe833f1e5598cca29346490bc85c3826cb6a5b8b6d753b83b4"
+      },
+      {
+        "group": "reading-stability-1440px-v-79574-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "9c63488e2f1c649f2cf290176bf3969fb5393a5722e91cb1c47529b33b0e2056"
+      },
+      {
+        "group": "reading-stability-1440px-v-79574-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 16,
+        "sha256": "1982f2a8e001b02c9062ba51d1e3f0a2339eb776c3ab19e3e365d425ca82bbdc"
+      },
+      {
+        "group": "reading-stability-1440px-v-8aaf9-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 44,
+        "sha256": "25cc4ebaf689ceeb4db5a1d38d362d8bb3ac589a09c2ad823115e435dc83f707"
+      },
+      {
+        "group": "reading-stability-1440px-v-8aaf9-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 22,
+        "sha256": "1d8b1c7e5ef02d518b15dbcf720d29c304297585cb38ef104d58803bb7cd17c5"
+      },
+      {
+        "group": "reading-stability-1440px-v-8aaf9-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 16,
+        "sha256": "5fe6d258d3921efeb202f3982c9c073d21af06c8004615e3a3465042e31acaac"
+      },
+      {
+        "group": "reading-stability-1440px-v-8aaf9-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "2c33b0d8e263944cd4af83e1e1a481d3dc7fd093b13814834e367603924e3776"
+      },
+      {
+        "group": "reading-stability-1440px-v-b4670-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 43,
+        "sha256": "a5f1ab1971ec86ab56ad0228b5b0060b05dd52ccadbb5b414863d93b0b853d28"
+      },
+      {
+        "group": "reading-stability-1440px-v-b4670-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 41,
+        "sha256": "df0c0f03bf68a4fce57e99ca45f52b8812de15cb3f3143c23c21f90bbd6ed478"
+      },
+      {
+        "group": "reading-stability-1440px-v-b4670-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 42,
+        "sha256": "0e509e797b5b0c4855c06c9e86555feaf38fe74658a62e68399ec9e5b30e8485"
+      },
+      {
+        "group": "reading-stability-1440px-v-b4670-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 16,
+        "sha256": "ab6fce883b520029767b37d72bf5fdea42988eaa1a1f81d081b9d147cb14e72f"
+      },
+      {
+        "group": "reading-stability-375px-no-07299-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 44,
+        "sha256": "8f1629d76bf3dbf915e9e6d1e855f2d15d3eb6758da11463ed0a2b3fb6cb174c"
+      },
+      {
+        "group": "reading-stability-375px-no-07299-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 22,
+        "sha256": "3f5f4c55bf2de7ad44731b6644f4c3629430a3d9372e58e2d66e3b1beb64bf80"
+      },
+      {
+        "group": "reading-stability-375px-no-07299-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "dec6eea7396701110e4a4cd87f1eca0a87a9f86673eeaddff2765c7de8282890"
+      },
+      {
+        "group": "reading-stability-375px-no-07299-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 16,
+        "sha256": "5fbc86ffc4d0bbbc5f3c86dfeebdf30a60053f1c0d848fc82d8252f5dc13fba6"
+      },
+      {
+        "group": "reading-stability-375px-no-0ab02-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 43,
+        "sha256": "04e82ae41c409eed2eaa7d87640b06dac06b927579fb51db27af72688aa191e6"
+      },
+      {
+        "group": "reading-stability-375px-no-0ab02-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 42,
+        "sha256": "7ed4e52100703c8bdb5f1a831d46d254fd2583aad4dc7dbd38dc1aca9b59a11d"
+      },
+      {
+        "group": "reading-stability-375px-no-0ab02-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 43,
+        "sha256": "07b23c302be8a3c38bbe3a2694833e399c57dc370a24da4ca7d69f34096570e5"
+      },
+      {
+        "group": "reading-stability-375px-no-0ab02-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 18,
+        "sha256": "0b54201175329560f393b504c26f213ce9f800bfd34bb36c529a783834142612"
+      },
+      {
+        "group": "reading-stability-375px-no-8b358-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 45,
+        "sha256": "2a9e9b118dc345cfdff88fb344d11284e792883215987605dd1a43661698f70e"
+      },
+      {
+        "group": "reading-stability-375px-no-8b358-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 35,
+        "sha256": "136bac2f2f70df6f77e67c3329aae25246b38aec053266d43b24a53e8114ab8a"
+      },
+      {
+        "group": "reading-stability-375px-no-8b358-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "e943f59339ae843c9d4e635c938672a3690943cf189d62b8c010fdf69e2a008a"
+      },
+      {
+        "group": "reading-stability-375px-no-8b358-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 18,
+        "sha256": "22f1d88ea756f50aafa196a59dda5b4f705a1c43fe461897ebe3bb107438778f"
+      },
+      {
+        "group": "reading-stability-375px-no-d57b2-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 45,
+        "sha256": "21b56877d98d4f71b64d93ece1c2467d6627a19c6cf69736c18cdad8affdff3d"
+      },
+      {
+        "group": "reading-stability-375px-no-d57b2-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 40,
+        "sha256": "f933c60014585827f997aaafce21f74a1fabfef5084581d92bc1743d6048aa08"
+      },
+      {
+        "group": "reading-stability-375px-no-d57b2-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "f4e99a9b1273019f4b9428bf33b4d6af8cfee474dcc612165d8cf7dcae84767a"
+      },
+      {
+        "group": "reading-stability-375px-no-d57b2-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 16,
+        "sha256": "8a83e1729506864ba194f71753ba263f4383d50eacf57bf02e99b3f1719e279d"
+      },
+      {
+        "group": "reading-stability-375px-vi-7174e-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 45,
+        "sha256": "3d8e84c6409af0f5f625367e16386666a10f80f95402db50b2f1a8653d01a9e1"
+      },
+      {
+        "group": "reading-stability-375px-vi-7174e-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 22,
+        "sha256": "463bf30a5f2a55286c7cb8d4a8c9f422a1b5e92d787793b79beb2de9e0fa2a91"
+      },
+      {
+        "group": "reading-stability-375px-vi-7174e-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "b4d41c43c2e71cc41fd9d0ab78fcf355cc783c568797a49f3d6dc218712e9532"
+      },
+      {
+        "group": "reading-stability-375px-vi-7174e-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 14,
+        "sha256": "d0a1b736c9e872fde2cf029c728a41cc992abeef1e300374bd27df2a4f92acdb"
+      },
+      {
+        "group": "reading-stability-375px-vi-bff54-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 43,
+        "sha256": "b3ba07237c1eb911807e82d42b0ad9a30571e3f02bd946e50b62fa9e949902c1"
+      },
+      {
+        "group": "reading-stability-375px-vi-bff54-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 40,
+        "sha256": "6b4432315f155fe1b54364753a9a9918c3a156904ecd46f5d70b72aca44b0309"
+      },
+      {
+        "group": "reading-stability-375px-vi-bff54-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 43,
+        "sha256": "c7ca54c1b29f9a02501a4ebca1a931bcae64fddfd5770dd55cafcd775dac5242"
+      },
+      {
+        "group": "reading-stability-375px-vi-bff54-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 16,
+        "sha256": "2c17bdfbc8e8c00b8a812c436c97fc4de5a52430b2aa9b6f1949178f2869d0c6"
+      },
+      {
+        "group": "reading-stability-375px-vi-d2ae6-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 44,
+        "sha256": "b531ee65d9aba0a597c8bd1c9dd24fe60618b881ea7cb824fb7db6d54a915131"
+      },
+      {
+        "group": "reading-stability-375px-vi-d2ae6-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 38,
+        "sha256": "2a5d904b9cbda35f6a5c77a700e0aaa45d65c0a0b3f5e17e286dfec142a126aa"
+      },
+      {
+        "group": "reading-stability-375px-vi-d2ae6-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "0f92160e7fdda2ffd25c34d1076893b04ac9e62add9bc75e08800228c4ede3a0"
+      },
+      {
+        "group": "reading-stability-375px-vi-d2ae6-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 16,
+        "sha256": "42813296054d5acfcd3d877e06cde433aa12cfcadd14edc7fa99e877fd1ae0b2"
+      },
+      {
+        "group": "reading-stability-375px-vi-f0903-ng-motion-and-Viewer-return",
+        "phase": "down-frames.json",
+        "frameCount": 44,
+        "sha256": "a74f17b72b9b872635b5159cd412a442852f2db2ceef4675790018e6aca4797f"
+      },
+      {
+        "group": "reading-stability-375px-vi-f0903-ng-motion-and-Viewer-return",
+        "phase": "stopped-frames.json",
+        "frameCount": 40,
+        "sha256": "7c95398b77ac58d4a98595ece80952b769bff8ca5563ea36fd7e9181379f88a6"
+      },
+      {
+        "group": "reading-stability-375px-vi-f0903-ng-motion-and-Viewer-return",
+        "phase": "up-frames.json",
+        "frameCount": 44,
+        "sha256": "bcf34047eaf6c8b9f9a478e4869add0df5aa19f6af0b8059bd7dcf64e21ae1b9"
+      },
+      {
+        "group": "reading-stability-375px-vi-f0903-ng-motion-and-Viewer-return",
+        "phase": "viewer-frames.json",
+        "frameCount": 16,
+        "sha256": "74c5b3572e234fe8851e2e807e57d002aa97f6758f3e2e8ad87632c4f46ddeeb"
+      }
+    ],
+    "fold16": [
+      {
+        "group": "reading-stability-compare--c3863-int-and-respects-user-wheel",
+        "phase": "fold-cancelled-frames.json",
+        "frameCount": 33,
+        "sha256": "40816ab4f79b8c2659760b85a413f92f7a57fbb086701184be36bc24e1a94649"
+      },
+      {
+        "group": "reading-stability-compare--c3863-int-and-respects-user-wheel",
+        "phase": "fold-hidden-frames.json",
+        "frameCount": 27,
+        "sha256": "1c2d0175d371a2552f2927458c91d64c0dc4eec94c86d5d776f571ff3fe905cc"
+      },
+      {
+        "group": "reading-stability-compare--c3863-int-and-respects-user-wheel",
+        "phase": "fold-passive-frames.json",
+        "frameCount": 32,
+        "sha256": "33de75b5f0172758a303054ed8d76aa49907ebbce5361edf70b665a165a32158"
+      },
+      {
+        "group": "reading-stability-compare--c3863-int-and-respects-user-wheel",
+        "phase": "fold-preserved-frames.json",
+        "frameCount": 26,
+        "sha256": "f6a3c57625d9b0b8aa298d7bd59572d87688379bf356cd6bba492b6e04f44db4"
+      },
+      {
+        "group": "reading-stability-offline--7de7e-int-and-respects-user-wheel",
+        "phase": "fold-cancelled-frames.json",
+        "frameCount": 33,
+        "sha256": "efcc13ee0de659cb6e90a3fb358c50a58de6522999e99bdcf800359d2d1bb6cf"
+      },
+      {
+        "group": "reading-stability-offline--7de7e-int-and-respects-user-wheel",
+        "phase": "fold-hidden-frames.json",
+        "frameCount": 27,
+        "sha256": "707af9a4625e53b6587a0bef6b9cf50420d0e9f3a7403a2a148f1328d5d24585"
+      },
+      {
+        "group": "reading-stability-offline--7de7e-int-and-respects-user-wheel",
+        "phase": "fold-passive-frames.json",
+        "frameCount": 32,
+        "sha256": "35fa94aebe1e15ab1ccd58f0770573f8ec16cb44f224feae90a8331df6a46572"
+      },
+      {
+        "group": "reading-stability-offline--7de7e-int-and-respects-user-wheel",
+        "phase": "fold-preserved-frames.json",
+        "frameCount": 26,
+        "sha256": "58982de901821944b59804b22f5bab874c8b5c09ec8b5909cf89a0afe5dda5db"
+      },
+      {
+        "group": "reading-stability-reader-c-0f861-int-and-respects-user-wheel",
+        "phase": "fold-cancelled-frames.json",
+        "frameCount": 33,
+        "sha256": "2eda25e53202bb0b075158c466747ccd62c82cba4365ed59a05227fe0578ddfa"
+      },
+      {
+        "group": "reading-stability-reader-c-0f861-int-and-respects-user-wheel",
+        "phase": "fold-hidden-frames.json",
+        "frameCount": 27,
+        "sha256": "42f302999c2d13e8b1b5c93c844316dcfac97d01065b9c133c60c58370c26305"
+      },
+      {
+        "group": "reading-stability-reader-c-0f861-int-and-respects-user-wheel",
+        "phase": "fold-passive-frames.json",
+        "frameCount": 32,
+        "sha256": "eb22bb92ab21e6fe663ed025e61cdfae1bcaac90533a0238ea34ea4edda4eb3c"
+      },
+      {
+        "group": "reading-stability-reader-c-0f861-int-and-respects-user-wheel",
+        "phase": "fold-preserved-frames.json",
+        "frameCount": 28,
+        "sha256": "83c5f26967e1b5be3018222596e2c98629ef5e3180fbd3623456958a95c600f5"
+      },
+      {
+        "group": "reading-stability-share-co-9e41d-int-and-respects-user-wheel",
+        "phase": "fold-cancelled-frames.json",
+        "frameCount": 34,
+        "sha256": "793bc34a1747c33776257e71fdb89a890d35e41890dff1f822f8799494711507"
+      },
+      {
+        "group": "reading-stability-share-co-9e41d-int-and-respects-user-wheel",
+        "phase": "fold-hidden-frames.json",
+        "frameCount": 28,
+        "sha256": "3c26581f6c6788ef98df6015171899ef73843a1ec49705cc94d08ce3446aeb03"
+      },
+      {
+        "group": "reading-stability-share-co-9e41d-int-and-respects-user-wheel",
+        "phase": "fold-passive-frames.json",
+        "frameCount": 33,
+        "sha256": "5da10f790656354c3620efc6530fa2e751b4ce626c324f8c2968c065db89ab72"
+      },
+      {
+        "group": "reading-stability-share-co-9e41d-int-and-respects-user-wheel",
+        "phase": "fold-preserved-frames.json",
+        "frameCount": 26,
+        "sha256": "d9c534af0d28423cab7acaecc9148cb5e1190d63a64766e4d7150885c2f12e01"
+      }
+    ],
+    "boundary": "All original64 and added16 nonempty frame files retained in the official digest-verified archive. CI assertions passed; this check verifies presence/count/hashes, not a second independent replay."
+  },
+  "mountedResults": {
+    "attachment-modal-final": {
+      "count": 12,
+      "errors": [],
+      "status": "passed"
+    },
+    "image-scale-slider-browser": {
+      "count": 6,
+      "errors": [],
+      "status": "passed"
+    },
+    "reader-interaction-browser": {
+      "count": 39,
+      "errors": [],
+      "status": "passed"
+    },
+    "reading-position-browser": {
+      "count": 12,
+      "errors": [],
+      "status": "passed"
+    },
+    "import-recovery-browser": {
+      "count": 12,
+      "errors": [],
+      "status": null
+    },
+    "admin-runtime-browser": {
+      "count": 12,
+      "errors": [],
+      "status": "passed"
+    },
+    "import-source-repair-browser": {
+      "count": 12,
+      "errors": [],
+      "status": null
+    },
+    "reader-table-actions-browser": {
+      "count": 12,
+      "errors": [],
+      "status": null
+    },
+    "offline-recovery-browser": {
+      "count": 12,
+      "errors": [],
+      "status": null
+    },
+    "export-recovery-browser": {
+      "count": 12,
+      "errors": [],
+      "status": null
+    },
+    "reading-feedback-browser": {
+      "count": 12,
+      "errors": [],
+      "status": null
+    }
+  },
+  "dependencyPolicy": {
+    "advisories": 3,
+    "blocked": 0,
+    "approved_exceptions": 0,
+    "unapproved": 0,
+    "policy_errors": 0
+  }
+}

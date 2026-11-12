@@ -87,7 +87,7 @@ def test_edit_whitespace_and_replace_current_preserve_history_and_version_guard(
     current = assert_source(client, message["id"], edited_body)["current_version"]
     replacement = "\n    Synthetic original  \n"
     replaced = client.patch(f"/api/messages/{message['id']}", json={
-        "content_markdown": replacement, "base_version_id": current["id"], "save_mode": "replace_current",
+        "content_markdown": replacement, "base_version_id": current["id"], "base_content_hash": current["source_content_hash"], "save_mode": "replace_current",
     })
     assert replaced.status_code == 200, replaced.text
     assert replaced.json()["current_version_id"] == current["id"]

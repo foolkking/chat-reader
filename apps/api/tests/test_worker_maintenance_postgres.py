@@ -10,12 +10,13 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
+from app.models.import_record import ImportRecord
 from app.models.share import Share
 from app.models.share_snapshot import ShareSnapshot
 from app.models.user import User
 from app.models.worker_runtime_state import WorkerRuntimeState
 from app.services.sharing.share_service import reclaim_expired_frozen_snapshots
-from app.services.worker_liveness import WorkerHeartbeatReporter
+from app.services.worker_liveness import WorkerHeartbeatReporter, refresh_active_task_heartbeat
 from app.services.worker_maintenance import bound_worker_transaction
 from test_import_profile_postgres import isolated_schema  # noqa: F401
 
@@ -76,7 +77,8 @@ def test_worker_deadlines_are_transaction_local_and_do_not_leak(isolated_schema,
         assert tuple(db.scalar(text(f"SHOW {name}")) for name in ("statement_timeout", "lock_timeout")) == previous
 
 
-def test_task_row_lock_does_not_suppress_worker_liveness(isolated_schema):
+@pytest.mark.parametrize("task_kind,model", [("job", BackgroundJob), ("import", ImportRecord)])
+def test_task_row_lock_does_not_suppress_worker_liveness(isolated_schema, task_kind, model):
     engine, migrate = isolated_schema
     migrate("head")
     factory = sessionmaker(bind=engine, expire_on_commit=False)
@@ -85,21 +87,34 @@ def test_task_row_lock_does_not_suppress_worker_liveness(isolated_schema):
         owner = User(normalized_email="maintenance-heartbeat@example.test")
         db.add(owner)
         db.flush()
-        job = BackgroundJob(owner_user_id=owner.id, job_type="conversation_export", status="processing", heartbeat_at=now)
+        fields = ({"job_type": "conversation_export"} if task_kind == "job"
+                  else {"source_profile": "synthetic", "source_fingerprint": uuid.uuid4().hex})
+        job = model(owner_user_id=owner.id, status="processing", heartbeat_at=now, **fields)
         db.add(job)
         db.commit()
         identity = job.id
     reporter = WorkerHeartbeatReporter(interval_seconds=30, session_factory=factory)
-    assert reporter.set_busy("job", identity)
+    assert reporter.set_busy(task_kind, identity)
     with factory() as holder:
-        holder.scalar(select(BackgroundJob).where(BackgroundJob.id == identity).with_for_update())
+        task = holder.scalar(select(model).where(model.id == identity).with_for_update())
+        original_heartbeat = task.heartbeat_at
+        # A held canonical/task row is expected, not a failed heartbeat.
+        # The old UPDATE waits until lock_timeout and raises instead of skipping.
+        with factory() as pulse:
+            bound_worker_transaction(pulse)
+            assert refresh_active_task_heartbeat(
+                pulse, task_kind=task_kind, task_id=identity, now=now + timedelta(seconds=1),
+            ) is False
+            pulse.commit()
         with ThreadPoolExecutor(max_workers=1) as executor:
             assert executor.submit(reporter.pulse, now=now + timedelta(seconds=1)).result(timeout=5)
-        assert reporter._task_failure_active
+        assert not reporter._task_failure_active
         assert not reporter._worker_failure_active
         with factory() as reader:
             assert reader.get(WorkerRuntimeState, "primary").heartbeat_at == now + timedelta(seconds=1)
+            assert reader.get(model, identity).heartbeat_at == original_heartbeat
+            assert reader.get(model, identity).status == "processing"
     assert reporter.pulse(now=now + timedelta(seconds=2))
     assert not reporter._task_failure_active
     with factory() as db:
-        assert db.get(BackgroundJob, identity).heartbeat_at == now + timedelta(seconds=2)
+        assert db.get(model, identity).heartbeat_at == now + timedelta(seconds=2)

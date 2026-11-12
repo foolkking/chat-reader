@@ -1,5 +1,90 @@
 # Testing
 
+## Reliability fault matrix — worktree 2026-11-12
+
+Keep one [current ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md). New suites:
+
+- `test_attachment_save_boundaries.py`: actual API commit/response failure,
+  retained staging, missing/multi references, exact hash conflicts and receipts.
+- `test_attachment_reference_contract.py` and
+  `scripts/ux/attachment-reference-contract.test.mjs` share the same22 Markdown
+  fixtures; the API suite also verifies real occurrences, not just scanner counts.
+- `test_attachment_operation_semantics.py`: real merge/split/`.cr` round trips
+  with inline/fenced/indented examples and shared definitions, missing-file
+  compatibility and cross-conversation rejection. Personal restore and repair
+  regressions independently cover these semantics; no real user archive replay.
+- `test_supervised_execution_postgres.py`: disposable PostgreSQL locks, independent
+  stop requests, no fake progress, terminated process/released lease, actual
+  supervisor loop, lost COMMIT acknowledgement, migration roundtrip and late fences.
+- `test_asset_cleanup_receipts.py`: bounded GC/protected leases, retry remaining
+  bytes, cleanup errors preserving the original failure, rotating maintenance lanes.
+- `scripts/ux/attachment-recovery-browser.mjs`: actual files component/API/XHR/
+  Dexie, synthetic HTTP; ordered independent files, lost upload/finalize responses,
+  reopen/check without resubmit, rejected-source replacement and storage refusal.
+- `scripts/ux/source-editor-table-browser.mjs`: actual editor/history; save during
+  typing, pending receipt reopen, original snapshot retry, refresh failure, one/all
+  reference replacement. It retains the full existing table/browser cases.
+- Offline completion must return focus when its row disappears; actual Dexie
+  recovery browser covers12 width/locale/theme combinations. Existing Reader39
+  scenarios remain, not a replacement for original64-frame performance gates.
+
+The two new/extended browser gates are wired into release Web quality, and the
+PG suite remains in API full suite; **wiring is not dispatch**. Use task-specific
+TEMP/TMP and pytest basetemp. Browser accepts RUNNER_TEMP in CI, approved roots
+on Windows. No real user ZIP, production credentials or archive replay fixtures.
+Resource scripts already launch the real worker in a cgroup, so parent and
+child are both measured without changing baseline, memory or frame thresholds.
+Current Docker is unavailable; Linux resource/signals, original full frame
+matrix and host-backup recovery are still explicit outstanding acceptance.
+The runtime browser matrix covers stalled/stopping/reconciling/idle and upload
+cleanup visibility. It is a mounted real component with synthetic HTTP, not a
+full authenticated deployment. Final code/input hashes and all retained
+failure checkpoints are in `evidence/reliability-2026-11-12/verification.json`.
+
+## Production wait-chain regression — worktree 2026-11-12
+
+The maintenance PostgreSQL suite now covers both imports and background jobs:
+a held row must be skipped without a task-heartbeat error, with worker liveness
+still committed; release permits the next normal update. The canonical suite
+combines a real warning row lock, task heartbeat and progress callback, retaining
+its separate progress-connection fault. No user archive is replayed.
+Four selected cases failed before the heartbeat correction. The seven-file
+worker/import regression passed91 with4 Windows/POSIX-signal skips; PostgreSQL
+was explicitly enabled on the disposable local instance. Single head0060 remains.
+This is a local result, not a new release or proof of physical-device behavior.
+[Incident and scope](execution/SERVER_QUEUE_RECOVERY_2026-11-12.md).
+
+
+## Failure finalization and canonical retry — worktree 2026-11-11
+
+`test_import_preview_failure_boundaries` injects before/after actual Session
+commit errors for synthetic JSON/`.cr`, filesystem refusal and retained guard/
+exception references. Unknown commits preserve byte-identical input/drafts;
+known rejections keep their status and release admission without relying on GC.
+`test_import_temporary_cleanup` preserves original published sources/drafts and
+the primary size/parse exception when exact temporary-file unlink fails.
+No user archive, external fixture or automatic cleanup replay is involved.
+
+Canonical retry tests execute actual Panel query options with the installed
+QueryClient and its15-second freshness window. Old failed/cancelled data cannot
+publish into an acknowledged retry of the same server import. Status reads
+forward caller abort, cover hung/error bodies with the existing10-second bound
+and reject wrong-identity/old-account results. The mounted12-way source-repair
+suite extends its existing scenarios with failed/cancelled→explicit retry→
+failed current GET→GET-only recovery. Secondary workspace buttons are adapters;
+this is not proof of real worker execution or full-site recovery.
+
+Optional-storage tests execute actual Panel/Task Monitor callbacks while
+session/local storage getters and methods reject. Completion, resume, disposal
+and file selection remain usable; hiding a task does not mutate its query-owned
+server state. The mounted source-repair matrix injects getter/remove rejection
+through actual archive selection, queued restore and failed GET recovery.
+It verifies one progress action, an honest unconfirmed label, no duplicate
+restore after success and exactly one preview/commit plus two status reads.
+The mounted Task Center matrix tests getter/quota rejection while dismissing a
+confirmed cleanup result, without another task mutation. These are two12-way
+matrices, not24 full-site/real-device scenarios.
+
 ## Reader counter accuracy — 2026-11-11
 
 Capacity measurement v3 separates warm `parseDelta` (the actual remark
@@ -39,10 +124,11 @@ known-task read for health and mapping at three widths/two languages. The
 small real JSON operation runs once; its actual result is projected through
 a synthetic202/task response to isolate UI/client recovery. This does not
 prove queue/worker execution. Existing real mapping persistence, health and
-zero-canonical-import assertions stay. Latest browser execution is pending
-exact CI: after the E-drive change, local complete app-service launch was
-policy-blocked before execution and was not retried through another path.
-Do not confuse authored cases with passes.
+zero-canonical-import assertions stay. K/L exact7a4d61b CI43025451379 passed
+the Settings suite; its artifact summary has470 passes plus one independent
+archive restore. This is separate from later M/N/O local checks. Local complete
+app-service launch was policy-blocked before execution and not retried through
+another path. Do not transfer an earlier commit's passes to uncommitted source.
 
 ## Initial upload and pending receipt — 2026-11-11 (not deployed)
 

@@ -109,13 +109,15 @@ export class ApiRequestError extends Error {
   readonly status: number;
   readonly path: string;
   readonly code?: string;
+  readonly details?: Record<string, unknown>;
 
-  constructor(message: string, status: number, path: string, code?: string) {
+  constructor(message: string, status: number, path: string, code?: string, details?: Record<string, unknown>) {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
     this.path = path;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -124,7 +126,7 @@ export async function getHealth(): Promise<HealthResponse> {
 }
 
 export async function getCapabilities(): Promise<CapabilitiesRead> {
-  return fetchJson<CapabilitiesRead>("/api/capabilities");
+  return withRequestDeadline(signal => fetchJson<CapabilitiesRead>("/api/capabilities", { signal }));
 }
 
 export async function getAttachment(attachmentId: string, shareToken?: string, adminUserId?: string, signal?: AbortSignal): Promise<AttachmentRead> {
@@ -135,7 +137,7 @@ export async function getAttachment(attachmentId: string, shareToken?: string, a
 }
 
 export async function getConversationAttachments(conversationId: string): Promise<AttachmentRead[]> {
-  return (await fetchJson<AttachmentListRead>(`/api/conversations/${conversationId}/attachments`)).items;
+  return (await withRequestDeadline(signal => fetchJson<AttachmentListRead>(`/api/conversations/${conversationId}/attachments`, { signal }))).items;
 }
 
 export async function getAttachmentDirectory(
@@ -161,69 +163,64 @@ export async function getAttachmentDirectory(
 
 export async function createAttachmentUploadSession(
   conversationId: string,
-  input: { targetMessageId?: string; baseMessageVersionId?: string } = {},
+  input: { targetMessageId?: string; baseMessageVersionId?: string; requestId?: string } = {},
 ): Promise<AttachmentUploadSessionRead> {
-  return fetchJson<AttachmentUploadSessionRead>(
+  return withRequestDeadline(signal => fetchJson<AttachmentUploadSessionRead>(
     `/api/conversations/${conversationId}/attachment-upload-sessions`,
-    jsonRequest("POST", {
+    { ...jsonRequest("POST", {
       target_message_id: input.targetMessageId,
       base_message_version_id: input.baseMessageVersionId,
-    }),
-  );
+      request_id: input.requestId,
+    }), signal },
+  ));
 }
 
 export async function getAttachmentUploadSession(sessionId: string): Promise<AttachmentUploadSessionRead> {
-  return fetchJson<AttachmentUploadSessionRead>(`/api/attachment-upload-sessions/${sessionId}`);
+  return withRequestDeadline(signal => fetchJson<AttachmentUploadSessionRead>(`/api/attachment-upload-sessions/${sessionId}`, { signal }));
 }
 
 export function uploadAttachmentItem(
   sessionId: string,
   file: File,
   onProgress?: (progress: number) => void,
+  requestId?: string,
 ): { promise: Promise<AttachmentUploadItemRead>; cancel: () => void } {
   const requestGeneration = authenticationGeneration();
-  const request = new XMLHttpRequest();
-  const promise = new Promise<AttachmentUploadItemRead>((resolve, reject) => {
-    request.open("POST", `/api/attachment-upload-sessions/${sessionId}/items`);
-    request.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
-    });
-    request.addEventListener("load", () => {
-      let payload: unknown;
-      try { payload = request.responseText ? JSON.parse(request.responseText) : null; } catch { payload = null; }
-      if (request.status === 401) notifyAuthenticationFailure(requestGeneration, request.getResponseHeader("X-Chat-Reader-Auth-Reason"));
-      if (request.status >= 200 && request.status < 300) resolve(payload as AttachmentUploadItemRead);
-      else reject(new Error(readApiError(payload, request.status)));
-    });
-    request.addEventListener("error", () => reject(new Error("Attachment upload failed.")));
-    request.addEventListener("abort", () => reject(new DOMException("Upload cancelled.", "AbortError")));
-    const body = new FormData();
-    body.append("file", file, file.name);
-    request.send(body);
+  const controller = new AbortController();
+  const body = new FormData();
+  body.append("file", file, file.name);
+  const path = `/api/attachment-upload-sessions/${sessionId}/items${requestId ? `?request_id=${encodeURIComponent(requestId)}` : ""}`;
+  const promise = sendUpload(path, body, { headers: {}, signal: controller.signal,
+    onProgress: progress => { if (requestGeneration === authenticationGeneration()) onProgress?.(progress.percent ?? 0); },
+  }).then(async response => {
+    if (requestGeneration !== authenticationGeneration()) throw new Error("Account changed");
+    if (response.status === 401) notifyAuthenticationFailure(requestGeneration, response.headers.get("X-Chat-Reader-Auth-Reason"));
+    if (!response.ok) throw await getApiRequestError(response, path);
+    return response.json() as Promise<AttachmentUploadItemRead>;
   });
-  return { promise, cancel: () => request.abort() };
+  return { promise, cancel: () => controller.abort() };
 }
 
 export async function finalizeConversationAttachments(conversationId: string, uploadItemIds: string[], imageLaneWidth?: number): Promise<AttachmentRead[]> {
-  return (await fetchJson<AttachmentListRead>(
+  return (await withRequestDeadline(signal => fetchJson<AttachmentListRead>(
     `/api/conversations/${conversationId}/attachments`,
-    jsonRequest("POST", { upload_item_ids: uploadItemIds, ...(imageLaneWidth === undefined ? {} : { image_lane_width: imageLaneWidth }) }),
-  )).items;
+    { ...jsonRequest("POST", { upload_item_ids: uploadItemIds, ...(imageLaneWidth === undefined ? {} : { image_lane_width: imageLaneWidth }) }), signal },
+  ))).items;
 }
 
 export async function deleteAttachmentUploadItem(sessionId: string, itemId: string): Promise<void> {
-  await fetchJson<void>(`/api/attachment-upload-sessions/${sessionId}/items/${itemId}`, { method: "DELETE" });
+  await withRequestDeadline(signal => fetchJson<void>(`/api/attachment-upload-sessions/${sessionId}/items/${itemId}`, { method: "DELETE", signal }), undefined, 20_000);
 }
 
 export async function updateConversationAttachment(conversationId: string, attachmentId: string, displayName: string): Promise<AttachmentRead> {
-  return fetchJson<AttachmentRead>(
+  return withRequestDeadline(signal => fetchJson<AttachmentRead>(
     `/api/conversations/${conversationId}/attachments/${attachmentId}`,
-    jsonRequest("PATCH", { display_name: displayName }),
-  );
+    { ...jsonRequest("PATCH", { display_name: displayName }), signal },
+  ));
 }
 
 export async function deleteConversationAttachment(conversationId: string, attachmentId: string): Promise<void> {
-  await fetchJson<void>(`/api/conversations/${conversationId}/attachments/${attachmentId}`, { method: "DELETE" });
+  await withRequestDeadline(signal => fetchJson<void>(`/api/conversations/${conversationId}/attachments/${attachmentId}`, { method: "DELETE", signal }), undefined, 20_000);
 }
 
 export async function getPreferences(signal?: AbortSignal): Promise<UserPreferenceRead> {
@@ -784,30 +781,43 @@ export async function splitConversation(
   );
 }
 
+export type MessageSaveReceipt = {
+  status: "confirmed"; operation_id: string; message_id: string;
+  previous_version_id: string | null; current_version_id: string;
+  version_number: number; content_hash: string; conversation_revision: number;
+  source_content_hash: string;
+};
+export function getMessageSaveReceipt(messageId: string, operationId: string): Promise<MessageSaveReceipt> {
+  return withRequestDeadline(signal => fetchJson(`/api/messages/${messageId}/save-requests/${operationId}`, { signal }));
+}
 export async function editMessage(
   messageId: string,
   input: {
     contentMarkdown: string;
     editReason?: string;
     baseVersionId?: string;
+    baseContentHash?: string;
+    operationId?: string;
     saveMode?: "create_version" | "replace_current";
     editorRevision?: number;
     attachmentOccurrences?: Array<Record<string, unknown>>;
-    removedAttachmentActions?: Array<Record<string, unknown>>;
+    removedAttachmentActions?: Array<{ attachment_id: string; action: "keep_in_conversation" | "detach_from_conversation" }>;
   },
-): Promise<MessageEditResponse> {
-  return fetchJson<MessageEditResponse>(
+): Promise<MessageEditResponse | MessageSaveReceipt> {
+  return withRequestDeadline(signal => fetchJson<MessageEditResponse | MessageSaveReceipt>(
     `/api/messages/${messageId}`,
-    jsonRequest("PATCH", {
+    { ...jsonRequest("PATCH", {
       content_markdown: input.contentMarkdown,
       edit_reason: input.editReason,
       base_version_id: input.baseVersionId,
+      base_content_hash: input.baseContentHash,
+      operation_id: input.operationId,
       save_mode: input.saveMode ?? "create_version",
       editor_revision: input.editorRevision,
       attachment_occurrences: input.attachmentOccurrences ?? [],
       removed_attachment_actions: input.removedAttachmentActions ?? [],
-    }),
-  );
+    }), signal },
+  ));
 }
 
 export async function getMessage(messageId: string, signal?: AbortSignal): Promise<MessageListItem> {
@@ -931,8 +941,17 @@ export async function getActiveImports(): Promise<ImportStatusResponse[]> {
   return fetchJson<ImportStatusResponse[]>("/api/imports/active");
 }
 
-export async function getImportStatus(importId: string): Promise<ImportStatusResponse> {
-  return fetchJson<ImportStatusResponse>(`/api/imports/${importId}/status`, { signal: AbortSignal.timeout(10_000) });
+export async function getImportStatus(importId: string, signal?: AbortSignal): Promise<ImportStatusResponse> {
+  const generation = authenticationGeneration();
+  return withRequestDeadline(async deadline => {
+    const result = await fetchJson<ImportStatusResponse>(`/api/imports/${importId}/status`, { signal: deadline });
+    if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    if (!result || result.import_id !== importId || typeof result.status !== "string") {
+      throw new ApiRequestError("The original import result could not be confirmed.", 409,
+        `/api/imports/${importId}/status`, "IMPORT_RESULT_UNCONFIRMED");
+    }
+    return result;
+  }, signal, 10_000);
 }
 
 export async function getActiveTasks(signal?: AbortSignal): Promise<BackgroundTaskRead[]> {
@@ -2171,7 +2190,7 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 async function getApiRequestError(response: Response, path: string): Promise<ApiRequestError> {
-  const error = (message: string, code?: string) => new ApiRequestError(message, response.status, path, code);
+  const error = (message: string, code?: string) => new ApiRequestError(message, response.status, path, code, detail);
   let payload: { detail?: unknown; error?: { message?: string } } | undefined;
   try {
     payload = (await response.json()) as { detail?: unknown; error?: { message?: string } };

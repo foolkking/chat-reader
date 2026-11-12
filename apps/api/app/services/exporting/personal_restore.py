@@ -19,7 +19,7 @@ from app.schemas.preferences import UserPreferenceUpdate
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import detect_mime_type, scan_attachment, scan_status_allows_use
 from app.services.derived_rebuild import rebuild_conversation_derived_data
-from app.services.editing.attachment_reference_rewriter import rewrite_attachment_data
+from app.services.editing.attachment_reference_rewriter import rewrite_attachment_markdown
 from app.services.exporting.archive_configuration_restore import restore_configurations
 from app.services.exporting.archive_preflight import EMBEDDED_COLUMNS, EMBEDDED_REFERENCES, open_personal_archive, references_for
 from app.services.exporting.archive_transaction import track_archive_object
@@ -66,7 +66,7 @@ def restore_personal_archive(db: Session, path: Path, *, owner_user_id: uuid.UUI
                     for key, name in EMBEDDED_REFERENCES.items():
                         if value.get(key) is not None: output[key] = str(target(name, value[key]))
                     return output
-                return rewrite_attachment_data(value, attachment_map)
+                return value
             assets, missing = _restore_assets(db, archive, progress_callback)
             names = {name for name, in db.query(Project.name).filter_by(owner_user_id=owner_user_id)}
             pending_current = []
@@ -87,8 +87,15 @@ def restore_personal_archive(db: Session, path: Path, *, owner_user_id: uuid.UUI
                     if "subject_key" in decoded: decoded["subject_key"] = str(owner_user_id)
                     for field in EMBEDDED_COLUMNS.get(name, ()):
                         if field in decoded: decoded[field] = embedded(decoded[field])
-                    for field in ("display_text", "plain_text", "comment_markdown", "description_markdown", "summary"):
-                        if isinstance(decoded.get(field), str): decoded[field] = rewrite_attachment_data(decoded[field], attachment_map)
+                    for field in ("display_text", "comment_markdown", "description_markdown", "summary"):
+                        if isinstance(decoded.get(field), str):
+                            decoded[field] = rewrite_attachment_markdown(decoded[field], attachment_map)
+                    # Derived plain_text/blocks are rebuilt below from canonical
+                    # Markdown. Metadata and literal code are not URI bindings.
+                    if name == "notebooks":
+                        for block in decoded.get("blocks") or []:
+                            if isinstance(block, dict) and isinstance(block.get("markdown"), str):
+                                block["markdown"] = rewrite_attachment_markdown(block["markdown"], attachment_map)
                     if name == "projects":
                         original, suffix = decoded["name"], 1
                         while decoded["name"] in names:

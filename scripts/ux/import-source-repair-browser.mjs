@@ -49,10 +49,16 @@ export const createAdaptiveImportSession=async(files,profile,project,options)=>{
 export const getAdaptiveUploadReceipt=key=>request("/api/adaptive-import/requests/"+key);
 const forbidden=()=>{throw Error("Unexpected mutation or secondary workflow")};
 export const commitImport=id=>request("/api/imports/"+id+"/commit",{method:"POST"});
-export const getImportStatus=id=>request("/api/imports/"+id+"/status");
-export const cancelAdaptiveImportSession=forbidden,cancelTask=forbidden,previewImport=forbidden,
-resumeAdaptiveImportSession=forbidden,retryTask=forbidden,updateAdaptiveImportDestination=forbidden;
-export const AdaptiveImportWorkspace=({onImport,importing})=><button data-testid="commit-import-button" disabled={importing} onClick={onImport}>Synthetic confirm</button>;
+export const getImportStatus=(id,signal)=>request("/api/imports/"+id+"/status",{signal});
+export const retryTask=id=>request("/api/tasks/"+id+"/retry",{method:"POST"});
+export const previewImport=files=>{const body=new FormData();files.forEach(file=>body.append("files",file));return request("/api/imports/preview",{method:"POST",body})};
+export const cancelAdaptiveImportSession=forbidden,cancelTask=forbidden,
+resumeAdaptiveImportSession=forbidden,updateAdaptiveImportDestination=forbidden;
+export const AdaptiveImportWorkspace=({onImport,importing,onRetryImport,retryingImport,statusError,onRetryStatus,statusRetrying})=><>
+ <button data-testid="commit-import-button" disabled={importing} onClick={onImport}>Synthetic confirm</button>
+ {onRetryImport&&<button data-testid="canonical-retry" disabled={retryingImport} onClick={onRetryImport}>Synthetic retry original task</button>}
+ {statusError&&<button data-testid="canonical-read-retry" disabled={statusRetrying} onClick={onRetryStatus}>Synthetic read original result</button>}
+</>;
 export const SupportLimitAction=()=>null,ImportPreviewCard=()=>null,
 FormatConversionGuide=()=>null,ImportNoiseReview=()=>null;
 export default ({href,children,...props})=><a href={href} {...props}>{children}</a>;
@@ -62,10 +68,11 @@ import React,{useState} from "react";
 import {createRoot} from "react-dom/client";
 import {QueryClient,QueryClientProvider} from "@tanstack/react-query";
 import {ImportPanel} from ${modulePath("features/import/import-panel.tsx")};
-const client=new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});
+const client=new QueryClient({defaultOptions:{queries:{retry:false,staleTime:15000},mutations:{retry:false}}});
 function Fixture(){const[open,setOpen]=useState(true);return <main style={{maxWidth:720,margin:"24px auto",padding:12}}>
  <button className="btn-secondary min-h-11 px-3 mb-4" onClick={()=>setOpen(!open)}>Toggle import</button>
- {open&&<ImportPanel resumeImportId={location.search.includes("selection")?undefined:"synthetic-import"}/>}
+ {open&&<ImportPanel initialMode={location.search.includes("archive")?"archive":"adaptive"}
+ resumeImportId={location.search.includes("selection")?undefined:"synthetic-import"}/>}
 </main>}
 createRoot(document.getElementById("root")).render(<QueryClientProvider client={client}><Fixture/></QueryClientProvider>);
 `);
@@ -101,6 +108,12 @@ try {
     await page.addInitScript(({ locale, theme }) => {
       window.gateLocale = locale;
       document.addEventListener("DOMContentLoaded", () => { document.documentElement.dataset.theme = theme; });
+      if (location.search.includes("storage-failure")) {
+        if (theme === "dark") Object.defineProperty(window, "sessionStorage", {
+          configurable: true, get() { throw new DOMException("Synthetic storage disabled", "SecurityError"); },
+        });
+        else Storage.prototype.removeItem = () => { throw new DOMException("Synthetic cleanup denied", "SecurityError"); };
+      }
     }, { locale, theme });
     const session = { import_id: "synthetic-import", analysis_task_id: "old-analysis", updated_at: "2026-11-10T00:00:00Z",
       state: theme === "light" ? "FAILED" : "PAUSED", phase: theme === "light" ? "analysis_failed" : "paused",
@@ -462,11 +475,93 @@ try {
       assert.equal(commitPosts,1);
       await checkCommit.click();await expect(page.getByTestId("import-completion-summary")).toBeVisible();
       assert.equal(commitReads,1);assert.equal(commitPosts,1);
+      // The real QueryClient uses the production freshness window. A failed
+      // canonical attempt must not be reused immediately after same-ID retry.
+      // Secondary workspace buttons are explicit adapters, not full-site UI.
+      await page.unroute("https://source-repair.synthetic/**");
+      let canonicalPosts=0,canonicalRetries=0,canonicalReads=0;
+      await page.route("https://source-repair.synthetic/**",route=>{
+        const path=new URL(route.request().url()).pathname;
+        const result={import_id:"synthetic-import",status:"queued",phase:"queued",conversation_ids:[],
+          conversation_count:0,message_count:0,warnings:[]};
+        if(path.endsWith("/commit")){canonicalPosts++;return route.fulfill({json:result});}
+        if(path.endsWith("/retry")){canonicalRetries++;return route.fulfill({json:{job_id:"synthetic-import",status:"queued"}});}
+        if(path.endsWith("/status")){
+          canonicalReads++;
+          if(canonicalReads===1)return route.fulfill({json:{...result,status:theme==="light"?"failed":"cancelled"}});
+          if(canonicalReads===2)return route.fulfill({status:503,json:{detail:"Synthetic current read interruption"}});
+          return route.fulfill({json:{...result,status:"committed",conversation_ids:["synthetic-result"],conversation_count:1}});
+        }
+        if(path.startsWith("/api/"))return route.fulfill({json:{...session,state:"READY",phase:"ready",can_import:true}});
+        return route.fulfill({contentType:path==="/bundle.js"?"text/javascript":path==="/style.css"?"text/css":"text/html",
+          body:path==="/bundle.js"?bundle:path==="/style.css"?styles.css:html});
+      });
+      await page.goto("https://source-repair.synthetic/");
+      await page.getByTestId("commit-import-button").click();
+      await expect(page.getByTestId("canonical-retry")).toBeVisible();
+      assert.equal(canonicalReads,1);
+      await page.getByTestId("canonical-retry").focus();await page.keyboard.press("Enter");
+      await expect(page.getByTestId("canonical-read-retry")).toBeVisible();
+      await expect(page.getByTestId("canonical-retry")).toHaveCount(0);
+      await expect(page.getByTestId("commit-import-button")).toBeDisabled();
+      assert.equal(canonicalReads,2);assert.equal(canonicalRetries,1);assert.equal(canonicalPosts,1);
+      const canonicalScreenshot=`canonical-read-recovery-${width}-${locale}-${theme}.png`;
+      await page.screenshot({path:join(out,canonicalScreenshot),fullPage:true});
+      await page.getByTestId("canonical-read-retry").focus();await page.keyboard.press("Enter");
+      await expect(page.getByTestId("import-completion-summary")).toBeVisible();
+      assert.equal(canonicalReads,3);assert.equal(canonicalRetries,1);assert.equal(canonicalPosts,1);
+      // The archive path renders the actual Panel buttons and ErrorLine, not
+      // the secondary workspace adapter, for touch/layout review.
+      await page.unroute("https://source-repair.synthetic/**");
+      let archivePreviews=0,archivePosts=0,archiveReads=0;
+      await page.route("https://source-repair.synthetic/**",route=>{
+        const path=new URL(route.request().url()).pathname;
+        if(path==="/api/imports/preview"){
+          archivePreviews++;return route.fulfill({json:{import_id:"synthetic-archive",can_commit:true}});
+        }
+        const result={import_id:"synthetic-archive",status:"queued",phase:"queued",conversation_ids:[],
+          conversation_count:0,message_count:0,warnings:[]};
+        if(path.endsWith("/commit")){archivePosts++;return route.fulfill({json:result});}
+        if(path.endsWith("/status")){
+          archiveReads++;
+          return route.fulfill(archiveReads===1?{status:503,json:{detail:"Synthetic read interruption"}}:
+            {json:{...result,status:"committed",conversation_ids:["synthetic-result"],conversation_count:1}});
+        }
+        return route.fulfill({contentType:path==="/bundle.js"?"text/javascript":path==="/style.css"?"text/css":"text/html",
+          body:path==="/bundle.js"?bundle:path==="/style.css"?styles.css:html});
+      });
+      await page.goto("https://source-repair.synthetic/?selection&archive&storage-failure");
+      await page.getByTestId("import-file-input").setInputFiles({name:"synthetic-restoration.cr",
+        mimeType:"application/octet-stream",buffer:Buffer.from("Synthetic transport only; not a valid archive.")});
+      await page.getByTestId("preview-import-button").click();
+      const archiveRestore=page.getByTestId("commit-import-button");
+      await expect(archiveRestore).toBeEnabled();await archiveRestore.click();
+      await expect(archiveRestore).toBeDisabled();
+      await expect(archiveRestore).toHaveText(locale==="zh-CN"?"进度待核对":"Progress unconfirmed");
+      await expect(page.getByTestId("preview-import-button")).toHaveCount(0);
+      await expect(page.getByRole("button",{name:locale==="zh-CN"?"进度待核对":"Progress unconfirmed",exact:true})).toHaveCount(1);
+      const archiveRetry=page.getByRole("alert").getByRole("button",{name:locale==="zh-CN"?"重试":"Retry",exact:true});
+      await expect(archiveRetry).toBeVisible();await expect(archiveRetry).toBeEnabled();
+      const archiveGeometry=await archiveRetry.evaluate(el=>{const r=el.getBoundingClientRect();return{
+        width:r.width,height:r.height,left:r.left,right:r.right,overflow:document.documentElement.scrollWidth-innerWidth}});
+      assert.ok(archiveGeometry.width>=44&&archiveGeometry.height>=44&&archiveGeometry.left>=0&&archiveGeometry.right<=width&&archiveGeometry.overflow<=1);
+      const archiveScreenshot=`archive-read-recovery-${width}-${locale}-${theme}.png`;
+      await page.screenshot({path:join(out,archiveScreenshot),fullPage:true});
+      assert.equal(archivePreviews,1);assert.equal(archivePosts,1);assert.equal(archiveReads,1);
+      await archiveRetry.focus();await page.keyboard.press("Enter");
+      await expect(page.getByTestId("import-completion-summary")).toBeVisible();
+      await expect(page.getByTestId("commit-import-button")).toHaveCount(0);
+      await expect(page.getByTestId("preview-import-button")).toHaveCount(0);
+      await expect(page.getByRole("alert")).toHaveCount(0);
+      assert.equal(archivePreviews,1);assert.equal(archivePosts,1);assert.equal(archiveReads,2);
       results.push({ width, locale, theme, state: theme === "light" ? "FAILED" : "PAUSED", writes: writes.length, reads, geometry,
         screenshot: filename, exclusionScreenshot, selectionScreenshot, selectionGeometry, selectedUploadCount: selectionWrites.length,
         unknownCommitRecovered:true,commitPosts,commitReads,uploadScreenshot,
         initialPosts,receiptReads,initialReads,uploadIdentityRetained:true,unavailableLocalRelease:true,
-        pastePosts,pasteReads,pasteScreenshot,pastedSourceRetained:true });
+        pastePosts,pasteReads,pasteScreenshot,pastedSourceRetained:true,
+        canonicalPosts,canonicalRetries,canonicalReads,canonicalScreenshot,canonicalAttemptIsolated:true,
+        archivePreviews,archivePosts,archiveReads,archiveGeometry,archiveScreenshot,
+        archiveStorageRejection:theme==="light"?"removeItem":"getter",archiveOneProgressAction:true });
     } catch (error) {
       await page.screenshot({ path: join(out, `failure-${width}-${locale}-${theme}.png`), fullPage: true }).catch(() => {});
       const chooserEvents = await page.evaluate(() => window.chooserEvents).catch(() => null);

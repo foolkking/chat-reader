@@ -1,0 +1,373 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-12T17:39:19.936947+08:00",
+  "status": "local_candidate_not_fully_accepted",
+  "baseline_commit": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+  "candidate_migration_head": "20261112_0061",
+  "counts_are_overlapping_checkpoints_not_coverage_totals": true,
+  "checks": [
+    {
+      "kind": "earlier_full_api",
+      "log_file": "api-all.log",
+      "log_sha256": "c627f95cfed12f8c0886feb2c9b4c9539d450f8e7f9afcbd802933e2e9ca0c96",
+      "observed_summary": [
+        "6 failed, 6241 passed, 257 skipped, 4 warnings in 6444.76s (1:47:24)"
+      ],
+      "boundary": "Completed on an earlier in-flight code checkpoint. Six failures preserved; not final-source full-suite acceptance."
+    },
+    {
+      "kind": "api_followup",
+      "log_file": "api-target10.log",
+      "log_sha256": "6d24656ab56bfe28243e5add86b23272b8341ee33911a1a540bfd414aaf49e20",
+      "observed_summary": [
+        "163 passed in 403.39s (0:06:43)"
+      ],
+      "boundary": "All six earlier full-suite failure files and transaction boundaries rerun after correction."
+    },
+    {
+      "kind": "api_targeted_checkpoint",
+      "log_file": "api-target11.log",
+      "log_sha256": "047394363c7a70f71a72787c03beb3a2f313dd741635c0a6814e218f270861f6",
+      "observed_summary": [
+        "242 passed, 11 skipped in 450.68s (0:07:30)"
+      ],
+      "boundary": "Image/worker/import paths, before later reference-transform additions."
+    },
+    {
+      "kind": "api_expanded_checkpoint",
+      "log_file": "api-ref-expanded.log",
+      "log_sha256": "f45f0e5290391299def893058c1c81a70c892a10c65059b9578bf02071ccab68",
+      "observed_summary": [
+        "283 passed, 1 skipped in 615.40s (0:10:15)"
+      ],
+      "boundary": "Attachment/merge/archive/canonical suites before final transform refinements. Overlaps other suites."
+    },
+    {
+      "kind": "api_final_transform",
+      "log_file": "transform-green2.log",
+      "log_sha256": "8b4aefb3a8fdd41c54a96958957ebe2c2fc1913b691ff66dd735038722723d6e",
+      "observed_summary": [
+        "85 passed in 137.35s (0:02:17)"
+      ],
+      "boundary": "Real API transforms, missing-file compatibility, foreign rejection, save boundaries, export memory and directory regressions."
+    },
+    {
+      "kind": "api_reference_checkpoint",
+      "log_file": "reference-ops-green2.log",
+      "log_sha256": "08065285bb3e2d69fdc6c44fdd25df428de98357d65be2e41f79b62e125dbe5b",
+      "observed_summary": [
+        "71 passed in 97.44s (0:01:37)"
+      ],
+      "boundary": "Merge/split/repair/personal restore plus shared grammar and HTML projections."
+    },
+    {
+      "kind": "postgresql_process_faults",
+      "log_file": "pg-final9.log",
+      "log_sha256": "b08fe69c6f55d6ecae77e3708df3be4ea1efd8458c87d166327ae34f5f30fb81",
+      "observed_summary": [
+        "32 passed, 1 warning in 179.28s (0:02:59)"
+      ],
+      "boundary": "Disposable PG17 actual supervisor/child, locks/fencing/transaction outcomes, migration, save concurrency, archive and merge admission."
+    },
+    {
+      "kind": "postgresql_restore_cleanup",
+      "log_file": "pg-restore-final.log",
+      "log_sha256": "22ef766ef1cfb067e676f364b24db18c2590787bcec9f2beb1219210ed8356d3",
+      "observed_summary": [
+        "10 passed, 1 skipped in 65.97s (0:01:05)"
+      ],
+      "boundary": "Personal restore, CR/search and cleanup. Optional POSTGRES_EXPORT_INTEGRATION not enabled on unmigrated bootstrap database. Overlaps other suites."
+    },
+    {
+      "kind": "postgresql_cr_api_roundtrip",
+      "log_file": "pg-cr-roundtrip3.log",
+      "log_sha256": "6a22a4dfabd7a481f24b39c4150b02391a3ae9951ec269866bfb3e5072b117a6",
+      "observed_summary": [
+        "1 passed, 2 deselected in 9.37s"
+      ],
+      "boundary": "Actual API upload/edit/export/preview/restore with production autoflush policy against disposable PostgreSQL."
+    },
+    {
+      "kind": "node_full_ux",
+      "log_file": "node-all-final6.log",
+      "log_sha256": "d6459b41550d40f14ad88578d02b0ab8de45b20edb34e4721bfac9d6e42b596e",
+      "observed_summary": [
+        "# tests 2502",
+        "# pass 2502",
+        "# fail 0",
+        "# skipped 0",
+        "# duration_ms 32593.9631"
+      ],
+      "boundary": "2502 Node cases, zero failures/skips; not mounted browser or full PWA acceptance."
+    },
+    {
+      "kind": "mounted_source_editor",
+      "log_file": "browser-final.log",
+      "log_sha256": "0d62e4f0419ff782ae42e541d32177d762bbb2c873af08e956760ce6f6a62382",
+      "observed_summary": [
+        "PASS 93 browser scenarios; evidence: E:\\chat-reader-temp\\reliability-20261112\\table-browser"
+      ],
+      "boundary": "Actual CodeMirror/workspace/history/table with synthetic HTTP adapters."
+    },
+    {
+      "kind": "mounted_files",
+      "log_file": "attachment-browser-final.log",
+      "log_sha256": "f1f6b7c69faceebfb61ed60403fa54f3567815ef7853f216ba271e1d193fd076",
+      "observed_summary": [
+        "{\"status\":\"passed\",\"cases\":12,\"out\":\"E:\\\\chat-reader-temp\\\\reliability-20261112\\\\attachment-recovery-browser\"}"
+      ],
+      "boundary": "375/800/1440px: lost upload/finalize response, sequential processing/reopen/read-only checks, storage refusal and rejected-source replacement."
+    },
+    {
+      "kind": "mounted_offline",
+      "log_file": "offline-browser2.log",
+      "log_sha256": "c68d92e8b1bc40900938646fe2a189de8abb0c57c4bc222aea93f8093f5d55a1",
+      "observed_summary": [
+        "{\"passed\":12,\"output\":\"E:\\\\chat-reader-temp\\\\reliability-20261112\\\\offline-recovery-browser\"}"
+      ],
+      "boundary": "Actual component/IndexedDB controlled transport, not whole-site PWA."
+    },
+    {
+      "kind": "mounted_reader",
+      "log_file": "reader-browser.log",
+      "log_sha256": "121063fef24d8271e30caa3e0a84e86ad1b490f12c0fe6a7d9409036ebd40bb6",
+      "observed_summary": [
+        "{\"status\":\"passed\",\"cases\":39,\"out\":\"E:\\\\chat-reader-temp\\\\reliability-20261112\\\\reader-interaction-browser\"}"
+      ],
+      "boundary": "39 groups; not full64-frame release matrix or physical tablet."
+    },
+    {
+      "kind": "mounted_viewer",
+      "log_file": "modal-browser1.log",
+      "log_sha256": "a02978dd83b1e6be38fad49022d4006fb901d24b08eaeaa51dc316bb266cd233",
+      "observed_summary": [],
+      "boundary": "12 mobile Viewer/drawer/focus scenarios in Chinese and English; synthetic query data.",
+      "passed_scenarios": 12
+    },
+    {
+      "kind": "mounted_admin",
+      "log_file": "admin-browser-final2.log",
+      "log_sha256": "8f84dba9a96eeda175dab3ca6bf803e95b7c4331465b2ab2dc8dab7967b0e0fa",
+      "observed_summary": [
+        "{\"status\":\"passed\",\"cases\":12,\"out\":\"E:\\\\chat-reader-temp\\\\reliability-20261112\\\\admin-runtime-browser\"}"
+      ],
+      "boundary": "Stalled/stopping/reconciling/idle, cleanup visibility, deadline/auth and responsive UI."
+    },
+    {
+      "kind": "mounted_reading_position",
+      "log_file": "reading-position-browser-final.log",
+      "log_sha256": "c87e1b939701db1e4ab0ae73f77bf201aa915d6b98ef0609610619ee2cc68d0b",
+      "observed_summary": [
+        "{\"status\":\"passed\",\"cases\":12,\"out\":\"E:\\\\chat-reader-temp\\\\reliability-20261112\\\\reading-position-browser\"}"
+      ],
+      "boundary": "Actual reading handoff UI, controlled transport."
+    },
+    {
+      "kind": "mounted_image_control",
+      "log_file": "image-scale-slider-browser-final.log",
+      "log_sha256": "f520f822e3999060b508004fead358b6f3c46ae3eb8f092a3d46c5419f5401b5",
+      "observed_summary": [
+        "{\"status\":\"passed\",\"cases\":6,\"out\":\"E:\\\\chat-reader-temp\\\\reliability-20261112\\\\image-scale-slider-browser\"}"
+      ],
+      "boundary": "Actual control/save states with API/conversion adapters."
+    },
+    {
+      "kind": "mounted_timed_feedback",
+      "log_file": "reading-feedback-browser-final.log",
+      "log_sha256": "030376d18a5c650b3e6dece5a2dae8e1479c58cc952daa666f0bd7184451034e",
+      "observed_summary": [
+        "{\"passed\":12,\"output\":\"E:\\\\chat-reader-temp\\\\reliability-20261112\\\\reading-feedback-browser\"}"
+      ],
+      "boundary": "Actual transient success/return reading presentation."
+    },
+    {
+      "kind": "web_lint",
+      "log_file": "lint-final6.log",
+      "log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "observed_summary": [],
+      "boundary": "Completed exit zero."
+    },
+    {
+      "kind": "web_types",
+      "log_file": "typecheck-final9.log",
+      "log_sha256": "231f3ed2a8636999437e24fd3abfb381918c1c7547d66db9b40fc5e154ab9209",
+      "observed_summary": [],
+      "boundary": "Completed exit zero."
+    },
+    {
+      "kind": "web_build",
+      "log_file": "build-final4.log",
+      "log_sha256": "5c328695a67c2cb9ea77431deed1ee22a5ffe956874f633e41df0a90fac8a29f",
+      "observed_summary": [],
+      "boundary": "Next16.4.1 webpack production build, task-local exact-source copy/same installed dependencies, one CPU; no product server."
+    }
+  ],
+  "failure_history": [
+    {
+      "log_file": "api-6b.log",
+      "sha256": "476c68d123bc3b2b25bc6791752bcc0dda0abdca9244be1f3113fbf8282ad768",
+      "observed_summary": "1 failed, 94 passed in 422.76s (0:07:02)"
+    },
+    {
+      "log_file": "api-all.log",
+      "sha256": "c627f95cfed12f8c0886feb2c9b4c9539d450f8e7f9afcbd802933e2e9ca0c96",
+      "observed_summary": "6 failed, 6241 passed, 257 skipped, 4 warnings in 6444.76s (1:47:24)"
+    },
+    {
+      "log_file": "api-regression-3.log",
+      "sha256": "be9811441b893c1fa5d9fbe6ded1b0db4d85cfea67d0039f6349ad2b21dd0b34",
+      "observed_summary": "2 failed, 106 passed, 11 skipped in 145.05s (0:02:25)"
+    },
+    {
+      "log_file": "cr-reference-green.log",
+      "sha256": "c61f81677605fd28d40d49df35cd60aef3c6334ce880d1e84fa5ecd22f4318fd",
+      "observed_summary": "1 failed, 103 passed in 213.54s (0:03:33)"
+    },
+    {
+      "log_file": "cr-references-red.log",
+      "sha256": "889151a990168152cff75749513cddd10a7a2186fa017fddcbd60db58555352a",
+      "observed_summary": "1 failed, 1 passed, 4 deselected in 9.23s"
+    },
+    {
+      "log_file": "merge-indent-red.log",
+      "sha256": "8bc306157b6e9afa8b0810476f0901ef92ba6abd4a6616144666b0cc5383508a",
+      "observed_summary": "1 failed, 12 deselected in 5.22s"
+    },
+    {
+      "log_file": "missing-transform-red.log",
+      "sha256": "180c7228dd09377b845a3e5a0796a235e1b6c0d091be04e0e7ca0e4e76d8521d",
+      "observed_summary": "3 failed, 6 deselected in 21.10s"
+    },
+    {
+      "log_file": "pg-copy1.log",
+      "sha256": "fe757896f5b13d66b05fa19ec0ce2a56b5c457827b5f6b673572c96ec8e4e67b",
+      "observed_summary": "1 failed, 3 passed in 20.45s"
+    },
+    {
+      "log_file": "pg-cr-roundtrip.log",
+      "sha256": "656952633c3dd8f32cd87d0224c6e266a743b206ddfedd756c82c0829ec610fa",
+      "observed_summary": "1 failed, 2 deselected in 9.75s"
+    },
+    {
+      "log_file": "pg-cr-roundtrip2.log",
+      "sha256": "095030bb9d4450bbc448cad94873a3e060a7582fc46863ecfa62e4e1690bad45",
+      "observed_summary": "1 failed, 2 deselected in 9.76s"
+    },
+    {
+      "log_file": "pg-tests-3.log",
+      "sha256": "be3f8d450e4128e7287a35953d401669aa1f69733cab1df57ccf9ce280417a5f",
+      "observed_summary": "1 failed, 12 passed in 60.82s (0:01:00)"
+    },
+    {
+      "log_file": "pg-tests-4.log",
+      "sha256": "caa7ab0c30991fb87740db977a3fb03f8ea4e35bc76831a706a5f1b94f69447b",
+      "observed_summary": "2 failed, 17 passed, 1 skipped in 112.60s (0:01:52)"
+    },
+    {
+      "log_file": "postgres-tests-1.log",
+      "sha256": "95b192b296750cb3b8faa134c61ecae5ca7b64aa47ec1b8d600d04d8a5f1b448",
+      "observed_summary": "4 failed, 5 passed in 31.54s"
+    },
+    {
+      "log_file": "ref-expanded-red-api.log",
+      "sha256": "975d76216dcd636ede2f538e382de420c3ff4b40a8346772d4b6f5509c367030",
+      "observed_summary": "2 failed, 15 passed in 0.42s"
+    },
+    {
+      "log_file": "reference-line-red.log",
+      "sha256": "ec6412945c5d526340581ad16955a174aa3eb77f1f09f21a74b39d75429d9c4a",
+      "observed_summary": "1 failed, 31 deselected in 5.51s"
+    },
+    {
+      "log_file": "reference-ops-green1.log",
+      "sha256": "9085acd777461f177cc40e48a105ff39bf25ee93effb72c81d68de39e999c6c4",
+      "observed_summary": "3 failed, 50 passed in 64.59s (0:01:04)"
+    },
+    {
+      "log_file": "reference-ops-red.log",
+      "sha256": "c6f264bcd36c129797ac382261d0ae36382400c689b40b7f73d94bc32aa4c5c0",
+      "observed_summary": "5 failed, 2 passed in 17.72s"
+    },
+    {
+      "log_file": "refs-red2.log",
+      "sha256": "fe4b5f0637175c1be628062a6bbf211c5b30aac2a77ca471bd07a17f1efd7ff2",
+      "observed_summary": "4 failed, 18 passed in 0.71s"
+    },
+    {
+      "log_file": "restore-semantics-red.log",
+      "sha256": "d875a89b332dd86a0783a2da9053f2e28db571f97e7d231f87b6c7200d5d0b65",
+      "observed_summary": "1 failed, 1 passed, 9 deselected in 6.39s"
+    },
+    {
+      "log_file": "transform-final.log",
+      "sha256": "4d9fde2bc9e7e9a789181fb37430476bf8331bf49632add90a70dfaa1350605a",
+      "observed_summary": "3 failed, 90 passed in 216.29s (0:03:36)"
+    }
+  ],
+  "test_wrapper_failures": [
+    "Initial PowerShell wildcard Node invocation and cross-drive Next build attempts retained and corrected, not counted as passing.",
+    "An Alembic command from repository root lacked script_location; correct apps/api invocation returned single0061 head.",
+    "PG round-trip fixture initially re-seeded the migration-owned user, then used default autoflush unlike production. Both fixture failures retained; production-policy rerun passed.",
+    "Initial Python file-list decode used GBK; explicit UTF-8 rerun parsed all670 Python files.",
+    "Initial evidence collector expected cases instead of passed for the offline result; corrected against the actual raw log without changing any test."
+  ],
+  "source_manifest": {
+    "path": "source-manifest.json",
+    "files": 1381,
+    "sha256": "adcd3fc45eef16738f17c83684beb59a76d861960dd147bdf9cec0854ac9a12a"
+  },
+  "build_inputs": {
+    "path": "build-inputs.json",
+    "files": 546,
+    "sha256": "2bb24f694ecac703c7f700a39eed262428b31a9d358936918fd8493233908803",
+    "drift": []
+  },
+  "python_ast": {
+    "files": 670,
+    "status": "passed"
+  },
+  "screenshots": [
+    {
+      "path": "files-replace-rejected-375.png",
+      "sha256": "63e4f310751475e132878a763db8d767d3eecb7513156ba84805e340f57f3ab8",
+      "data": "synthetic actual mounted component; HTTP adapter"
+    },
+    {
+      "path": "editor-saved-refresh-pending.png",
+      "sha256": "6c50eb135e87f9c7cc0f4789e859d1cf408ff9111ffd3e35cda59443c08b75f9",
+      "data": "synthetic actual mounted component; HTTP adapter"
+    },
+    {
+      "path": "runtime-stopping-375-zh-CN.png",
+      "sha256": "8be0280ec6b3a7e316a0c7a9368eb5aaf0fff55ae7f8acc4e7204fce39466497",
+      "data": "synthetic actual mounted component; HTTP adapter"
+    }
+  ],
+  "remaining_acceptance": [
+    "Linux supervisor+child combined320/640MiB/no-swap/OOM and parent-death path: Docker daemon unavailable.",
+    "Original complete64-frame release matrix and all job/external-side-effect combinations not rerun as one chain.",
+    "Physical tablet and historical223/331ms cold long tasks lack root-cause acceptance.",
+    "Unique host backup restore not exercised; synthetic .cr restore is not host disaster recovery.",
+    "Administrator cross-account exception resolution remains an unclosed end-to-end flow; read-only summary is not complete global management.",
+    "Unknown/historical unreceipted files protected; no blanket reconciliation or cleanup.",
+    "Final exact-source full API/PWA/CI artifact acceptance not run. Earlier full-suite failure record not replaced with a false all-green claim."
+  ],
+  "boundaries": {
+    "web_search_used": false,
+    "production_accessed": false,
+    "production_cleanup": false,
+    "commit": false,
+    "push": false,
+    "ci_dispatched": false,
+    "deployment": false,
+    "automation_created": false,
+    "prior_dirty_work_preserved": true,
+    "user_import_sources_touched": false
+  },
+  "temporary_runtime": {
+    "root": "E:\\chat-reader-temp\\reliability-20261112",
+    "isolated_postgresql_stopped": true,
+    "stop_log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb",
+    "evidence_and_disposable_files_retained": true
+  }
+}

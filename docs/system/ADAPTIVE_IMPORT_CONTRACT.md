@@ -1,5 +1,55 @@
 # Adaptive Import Contract
 
+## Auxiliary heartbeat must not wait for canonical work — worktree 2026-11-12
+
+Task heartbeat updates now lock only the matching task ID with
+`FOR UPDATE SKIP LOCKED` before the existing status/execution-fenced update.
+A busy row retains its last confirmed task heartbeat; this is not progress or a
+business failure. Worker liveness remains independently committed, and existing
+transaction-local deadlines stay in force. Canonical progress already skips
+locked import rows; neither auxiliary lane may wait for its own caller.
+The production incident was recovered by guarded statement cancellation, not
+by deploying this change. See the [receipt](../execution/SERVER_QUEUE_RECOVERY_2026-11-12.md)
+and [current goal status](SMALL_HOST_IMPROVEMENT_STATUS.md).
+
+## Admission cleanup and canonical result reads — worktree 2026-11-11
+
+Legacy preview (including `.cr`) no longer removes source/draft bytes after
+COMMIT has been attempted: a missing acknowledgement is not proof of rollback.
+The request still fails with an unconfirmed-preview error, not a fabricated
+success. Pre-COMMIT rejection retains its original status/code even if scoped
+cleanup fails; parser admission is released in an independent finally.
+Adaptive initial-admission rollback and private source/draft temporary unlink
+follow the same primary-error preservation. Sanitized warning events contain
+only the failure class. Leftovers are not claimed removed or automatically
+enrolled in a purge; explicit disposal/retention boundaries are unchanged.
+
+After canonical queue/retry acknowledgement, the Panel uses a new local read
+identity alongside the original import and authentication generation. A fresh
+failed/cancelled cache from an earlier attempt cannot stop the new read.
+Observer retirement aborts that GET and its inactive cache is not retained.
+Status GET keeps its existing10-second limit, now covering the whole response;
+caller cancellation, identity and authentication checks fence late data.
+Read-only recovery does not resubmit commit/retry. Queued archive restoration
+disables its restore action and is labelled as importing, not format analysis.
+No archive format, migration, duplicate policy or worker concurrency change.
+
+The last-import session-storage value is only an optional navigation hint.
+Getter/get/set/remove rejection cannot fail a confirmed upload, resume, commit
+or explicit disposal. Current-page state still updates; a full reload relies
+on the existing owned unfinished list/Tasks, not promised local persistence.
+Confirmed completion releases pending/workspace even if pointer removal fails.
+Selecting another file clears only this hint, never server input or a task.
+Task-prompt dismissal also works in-page when local persistence is unavailable;
+stored IDs are type-checked and limited to100 in memory and on disk.
+This hides a prompt, not a task or cleanup obligation.
+
+Archive submission uses one progress action, rather than two disabled copies.
+A failed status GET says “Progress unconfirmed” with the existing read retry;
+it does not claim the job is still running. Confirmed completion removes the
+old check/restore actions while retaining result/preview and allowing a new
+explicit file selection. No new normal-path warning or persistence store.
+
 Release status: `3564cbf`, exact CI `42828329240`, deployed **2026-11-11**.
 See the [release and cleanup receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
 Earlier dated checkpoints below are historical, not pending release work.

@@ -5,6 +5,7 @@ from app.models.support_request import SupportRequest, SupportMessage, UserLimit
 from app.models.archive_restore import ArchiveRestoreAccount, ArchiveRestoreReceipt
 from app.models.auth import AuthLoginThrottle, AuthPrincipal, AuthRateLimit, AuthSession
 from app.models.annotation import AnnotationSyncReceipt, ConversationAnnotation, ConversationNotebook
+from app.models.task_execution_control import TaskExecutionControl
 from app.models.attachment import (
     AssetDerivative,
     AssetObject,
@@ -123,6 +124,7 @@ __all__ = [
     "UserPreference",
     "UserFeatureEntry",
     "WorkerRuntimeState",
+    "TaskExecutionControl",
     "UserSkill",
     "UserSkillSelection",
     "User",

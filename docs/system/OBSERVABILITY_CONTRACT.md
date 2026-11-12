@@ -1,5 +1,41 @@
 # Observability Contract
 
+## Supervised single execution — worktree 2026-11-12
+
+One worker service now runs a lightweight supervisor and at most one fresh
+execution child. The child receives only kind/ID/token, opens its own DB
+connections and calls existing handlers. Dedicated PostgreSQL supervisor and
+execution advisory leases prevent overlap; a slot record in0061 stores the
+attempt, business checkpoint and independent stop request. Canonical task rows
+may stay locked without blocking stop. Every auxiliary write uses250ms lock /
+1500ms statement bounds and execution fencing. A commit verifies its fence.
+
+Heartbeat proves liveness only. Positive byte reads, changed unit/cursor/phase
+checkpoints advance business progress; identical percentages and heartbeat do
+not. After300 seconds with no checkpoint, request stop, give30 seconds for
+cooperative unwind, then terminate/kill within bounded waits. No uniform total
+duration cap applies to a steadily advancing task.
+
+After exit, first verify the DB lease is released and reconcile canonical
+outcome before claiming again. Terminal business state wins over late control
+state. A legacy active row with no control also blocks admission until existing
+bounded stale recovery verifies it. DB outage pauses scheduling. A stopped task
+does not immediately auto-requeue; its input remains protected. Existing safe
+automatic recovery retains the three-attempt limit; unknown mail sends are not
+repeated.
+
+Task reads expose optional execution_state/business_progress_at/stop_requested_at.
+Root status distinguishes running/stalled/stopping/reconciling and progress-age
+summary, plus pending upload cleanup/protected inputs. No payload or source
+content is logged. Routine success is brief; pending/error status stays.
+“Stalled” is an observation, not proof that stopping was requested or that the
+old executor has exited. The panel stays read-only; it does not reset task rows.
+Maintenance is the same single-slot child lane: four bounded categories rotate,
+including between long sequences of jobs, with no concurrent executor.
+
+The real process/PG local tests pass; Linux combined-process resource gates and
+full release acceptance remain pending. See the single status ledger.
+
 ## In-app help and administrator runtime status (deployed 2026-10-02)
 
 Personal settings and Offline Library share **Help & diagnostics**. It shows

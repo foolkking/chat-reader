@@ -20,7 +20,9 @@ test("saved import-session restore has an independent finite state and retry gen
   assert.match(source, /phase: "idle" \| "loading" \| "error"/);
   assert.match(source, /const \[sessionRestore, setSessionRestore\]/);
   assert.match(source, /const \[sessionRestoreRetry, setSessionRestoreRetry\] = useState\(0\)/);
-  assert.match(source, /\[activeSessionKey, current, initialProjectId, resumeImportId, session, sessionRestoreRetry\]/);
+  assert.match(source, /\[current, initialProjectId, rememberImport, resumeImportId, session, sessionRestoreRetry\]/);
+  const remember = between("  const rememberImport = useCallback", "  useEffect(() => {\n    setStopUnconfirmed");
+  assert.match(remember, /\[activeSessionKey, current\]/);
   assert.match(source, /sessionRestore\.phase === "loading"/);
 });
 
@@ -29,7 +31,8 @@ test("transient restore failure retains the local pointer and publishes a retrya
   assert.match(restoreEffect, /setSessionRestore\(\{ phase: "loading", error: null \}\)/);
   assert.match(restoreEffect, /\.catch\(\(error: unknown\) => \{/);
   assert.match(restoreEffect, /setSessionRestore\(\{ phase: "error", error \}\)/);
-  assert.doesNotMatch(restoreEffect, /\.catch\(\(\) => window\.sessionStorage\.removeItem/);
+  assert.doesNotMatch(restoreEffect.split(".catch((error: unknown) => {")[1]?.split("return () =>")[0] ?? "",
+    /rememberImport\(null\)|sessionStorage\.removeItem/);
   assert.match(source, /onRetry=\{\(\) => \{ setSessionRestore\(\{ phase: "loading", error: null \}\); setSessionRestoreRetry/);
 });
 
@@ -37,10 +40,15 @@ test("only completed/cancelled state or explicit new-file selection clears the p
   const restoreEffect = between("useEffect(() => {\n    let active = true;", "  const finishCommittedImport");
   assert.match(restoreEffect, /if \(\["COMPLETED", "CANCELED"\]\.includes\(restored\.state\)\)/);
   assert.doesNotMatch(restoreEffect, /"FAILED"/);
-  assert.match(restoreEffect, /window\.sessionStorage\.removeItem\(activeSessionKey\)/);
+  assert.match(restoreEffect, /rememberImport\(null\)/);
   const chooseFiles = between("  function chooseFiles", "  function handleDrop");
-  assert.match(chooseFiles, /window\.sessionStorage\.removeItem\(activeSessionKey\)/);
+  assert.match(chooseFiles, /rememberImport\(null\)/);
   assert.match(chooseFiles, /reset\(nextMode\)/);
+  const remember = between("  const rememberImport = useCallback", "  useEffect(() => {\n    setStopUnconfirmed");
+  assert.match(remember, /if \(!current\(\)\) return/);
+  assert.match(remember, /setSavedImportId\(importId\)/);
+  assert.match(remember, /else window\.sessionStorage\.removeItem\(activeSessionKey\)/);
+  assert.match(remember, /catch \{/);
 });
 
 test("restore feedback is status-only and blocks competing import submission while loading", () => {

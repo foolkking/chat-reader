@@ -176,9 +176,10 @@ def test_concurrent_choice_base_and_changed_source_reject_without_overwriting(cl
     assert save(client, scan_id, item, None).status_code == 409
     current = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences/{item['id']}").json()
     assert current["reviewed_ranges"] == ranges
-    version = client.get(f"/api/messages/{messages[0]}").json()["current_version"]["id"]
+    version = client.get(f"/api/messages/{messages[0]}").json()["current_version"]
     assert client.patch(f"/api/messages/{messages[0]}", json={
-        "content_markdown": "Later " + source, "base_version_id": version, "save_mode": save_mode,
+        "content_markdown": "Later " + source, "base_version_id": version["id"], "save_mode": save_mode,
+        "base_content_hash": version["source_content_hash"],
     }).status_code == 200
     assert save(client, scan_id, current, None).status_code == 409
     after = client.get(f"/api/messages/{messages[0]}").json()["current_version"]["display_text"]

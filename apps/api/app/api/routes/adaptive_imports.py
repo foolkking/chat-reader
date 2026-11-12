@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 from contextlib import nullcontext
 from datetime import datetime, timezone
@@ -13,6 +14,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.observability import structured_event
 from app.models.background_job import BackgroundJob
 from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfileAlias, ImportProfilePublication, ImportProfileRevision, ImportStructureFamily
 from app.models.import_record import ImportRecord
@@ -299,7 +301,14 @@ def create_adaptive_import_session(
 
 
 def _remove_failed_session(import_id: uuid.UUID) -> None:
-    remove_session_files(import_id)
+    try:
+        remove_session_files(import_id)
+    except (OSError, RuntimeError, ValueError) as exc:
+        # This is only pre-COMMIT admission rollback. A failed filesystem
+        # cleanup must not turn a definite 413/422 into an unknown submission.
+        # Durable explicit-disposal receipts use their separate cleanup path.
+        structured_event(logging.getLogger(__name__), logging.WARNING,
+                         "import_admission_cleanup_failed", error_class=type(exc).__name__)
 
 
 @router.get("/api/adaptive-import/sessions/{import_id}")
@@ -368,11 +377,25 @@ def cancel_adaptive_import_session(
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> None:
+    from app.services.worker_maintenance import bound_worker_transaction
+    from app.services.execution_control import SLOT, request_stop
+    from app.models.task_execution_control import TaskExecutionControl
+    bound_worker_transaction(db)
     # Keep analysis cancellation job-first; the worker owns the record lock
     # while parsing and must still be able to observe this cancellation.
     record = _record(import_id, db, ownership_scope, lock=False)
     try:
         task_id = (record.analysis_summary or {}).get("analysis_task_id")
+        # A stop request must not queue behind the executor's canonical row
+        # locks. Explicit session deletion requests discard only after the
+        # supervised analysis has actually exited and its outcome is known.
+        control = db.query(TaskExecutionControl).filter_by(slot=SLOT).with_for_update(skip_locked=True).one_or_none()
+        if control and control.finished_at is None and control.task_kind == "job" and str(control.task_id) == str(task_id):
+            owned_job = get_owned(db, BackgroundJob, control.task_id, ownership_scope)
+            if owned_job and owned_job.job_type == "adaptive_import_analysis" and owned_job.attempt_count == control.attempt:
+                request_stop(db, control, disposition="discard")
+                db.commit()
+                return
         job = None
         if task_id:
             try:

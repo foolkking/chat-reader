@@ -26,6 +26,8 @@ class MessageEditRequest(BaseModel):
     display_text: str | None = None
     edit_reason: str | None = None
     base_version_id: UUID | None = None
+    base_content_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    operation_id: UUID | None = None
     save_mode: Literal["create_version", "replace_current"] = "create_version"
     upload_item_ids: list[UUID] = Field(default_factory=list)
     attachment_occurrences: list[MessageAttachmentOccurrenceInput] = Field(default_factory=list)
@@ -55,6 +57,18 @@ class MessageEditResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     derived_status: Literal["ready", "queued"] = "ready"
     derived_job_id: UUID | None = None
+
+
+class MessageSaveReceipt(BaseModel):
+    status: Literal["confirmed"] = "confirmed"
+    operation_id: UUID
+    message_id: UUID
+    previous_version_id: UUID | None
+    current_version_id: UUID
+    version_number: int
+    content_hash: str
+    source_content_hash: str
+    conversation_revision: int
 
 
 class MessageDeleteResponse(BaseModel):

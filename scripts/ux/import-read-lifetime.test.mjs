@@ -33,13 +33,15 @@ function fixture({ status = 200, hungHeaders = false } = {}) {
 const reads = {
   catalog: (api, signal) => api.getAdaptiveImportArchive("synthetic-import", "synthetic-source", 500, 500, signal),
   operation: (api, signal) => api.readAdaptiveOperationResult("synthetic-task", { signal }),
+  status: (api, signal) => api.getImportStatus("synthetic-import", signal),
 };
 const result = (name, taskId = "synthetic-task") => name === "catalog" ? { offset: 500, limit: 500, members: [], classification_version: 2 }
+  : name === "status" ? { import_id: "synthetic-import", status: "processing", phase: "parsing" }
   : { job_id: taskId, status: "committed", result: { operation_result: { valid: true, groups: [] } } };
 for (const [name, read] of Object.entries(reads)) {
   for (const hungHeaders of [true, false]) test(`${name}: hung ${hungHeaders ? "headers" : "body"} has a complete-response deadline`, async () => {
     const f = fixture({ hungHeaders }), pending = read(f.api);
-    assert.deepEqual([...f.timers.values()], [20_000]);
+    assert.deepEqual([...f.timers.values()], [name === "status" ? 10_000 : 20_000]);
     const rejected = assert.rejects(pending, /REQUEST_TIMEOUT/);
     f.expire(); await rejected;
     assert.equal(f.calls[0].signal.aborted, true);
@@ -100,6 +102,15 @@ test("a missing known task is not reported as a missing import or offered for re
   const f = fixture({ status: 404 }), pending = f.api.readAdaptiveOperationResult("synthetic-task");
   f.resolve({ detail: "Task not found" });
   await assert.rejects(pending, error => error.code === "IMPORT_OPERATION_UNCONFIRMED");
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.timers.size, 0);
+});
+
+for (const value of [null, {}, { import_id: "another-import", status: "committed" },
+  { import_id: "synthetic-import", status: null }]) test(`canonical status rejects an unrelated or malformed receipt: ${JSON.stringify(value)}`, async () => {
+  const f = fixture(), pending = f.api.getImportStatus("synthetic-import");
+  f.resolve(value);
+  await assert.rejects(pending, error => error.code === "IMPORT_RESULT_UNCONFIRMED");
   assert.equal(f.calls.length, 1);
   assert.equal(f.timers.size, 0);
 });

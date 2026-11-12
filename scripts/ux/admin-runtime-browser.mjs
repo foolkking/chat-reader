@@ -121,7 +121,32 @@ try {
     await expect(panel).toContainText(zh ? "已暂停 3" : "Paused 3");
     await expect(panel).toContainText(zh ? "仅已统计部分" : "counted portion only");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.evaluate(() => {
+      window.snapshot.worker.status = "alive_busy";
+      window.snapshot.queue.jobs.processing = 1;
+      window.snapshot.worker.execution = { state: "stalled", progress_age_seconds: 320 };
+      window.snapshot.upload_cleanup = { available: true, pending_count: 2, failed_count: 1, protected_count: 3 };
+    });
+    await refresh.click();
+    await expect(panel.getByRole("status")).toContainText(zh ? "尚未确认退出" : "exit is not confirmed");
+    await page.evaluate(() => { window.snapshot.worker.execution.state = "stopping"; });
+    await refresh.click();
+    await expect(panel.getByRole("status")).toContainText(zh ? "确认退出并核对结果后继续队列" : "after exit and outcome checks");
+    await expect(panel).toContainText(zh ? "未完成来源受保护" : "Unfinished sources remain protected");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({ path: join(out, `runtime-attention-${width}-${locale}-${theme}.png`) });
+    await page.evaluate(() => { window.snapshot.worker.execution.state = "reconciling"; });
+    await refresh.click();
+    await expect(panel.getByRole("status")).toContainText(zh ? "核对上一项执行结果" : "Checking the previous execution");
+    await page.evaluate(() => {
+      window.snapshot.worker.execution = null;
+      window.snapshot.worker.status = "alive_idle";
+      window.snapshot.queue.jobs.processing = 0;
+      window.snapshot.upload_cleanup.pending_count = 0; window.snapshot.upload_cleanup.failed_count = 0;
+    });
+    await refresh.click();
+    await expect(panel.getByRole("status")).toHaveCount(0);
+    await expect(panel).not.toContainText(zh ? "未完成来源受保护" : "Unfinished sources remain protected");
     await page.evaluate(() => { window.runtimeMode = "denied"; });
     await refresh.click(); await expect(refresh).toBeEnabled(); await expect(panel.getByRole("alert")).toBeVisible(); await expect(queue).toHaveCount(0);
     await page.evaluate(() => { window.runtimeMode = "error"; });

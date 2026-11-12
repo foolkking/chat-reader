@@ -1,4 +1,6 @@
 import uuid
+import hashlib
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
@@ -40,13 +42,16 @@ from app.services.editing.conversation_merge_service import (
 )
 from app.services.editing.attachment_reference_rewriter import (
     ASSET_REFERENCE_RE,
-    assert_attachment_references_mapped,
-    attachment_reference_ids,
-    rewrite_attachment_text,
+    assert_attachment_ids_mapped,
+    attachment_markdown_ids,
+    attachment_blocks_ids,
+    markdown_reference_context,
+    rewrite_attachment_markdown,
 )
 from app.services.assets.scanner import scan_status_allows_use
 from app.services.database.bulk_insert import insert_rows
 from app.services.editing.transient_upload_references import find_transient_upload_references
+from app.services.editing.markdown_attachment_references import attachment_references
 
 MAX_EDIT_TEXT_LENGTH = 200_000
 MESSAGE_ORDER_SCALE = Decimal("1000000")
@@ -156,6 +161,7 @@ def edit_message(
     save_mode: str = "create_version",
     rebuild_derived: bool = True,
     attachment_occurrences=None,
+    base_content_hash: str | None = None,
 ) -> MessageEditResult:
     import time
 
@@ -170,12 +176,16 @@ def edit_message(
 
     if base_version_id is not None and current_version.id != base_version_id:
         raise MessageEditError("Base version does not match current version.", HTTPStatus.CONFLICT)
+    if base_content_hash is not None and hashlib.sha256(current_version.display_text.encode("utf-8")).hexdigest() != base_content_hash:
+        raise MessageEditError("Source changed. Compare the latest version before saving.", 409, code="source_changed")
     if clean_text == current_version.display_text:
         raise MessageEditError("No changes to save.")
 
     if save_mode not in {"create_version", "replace_current"}:
         raise MessageEditError("Unsupported save mode.")
     if save_mode == "replace_current":
+        if base_content_hash is None:
+            raise MessageEditError("Reload and compare the source before replacing this version.", 409, code="source_baseline_required")
         if current_version.version_number == 1:
             raise MessageEditError("The initial version cannot be replaced.")
         previous_hash = current_version.content_hash
@@ -315,6 +325,7 @@ def split_message(
     first_text = _validate_text(text[:split_offset])
     second_text = _validate_text(text[split_offset:])
     reason = edit_reason or "split message"
+    retained_counts = _verified_transform_reference_counts(db, [message], [current_version])
 
     original_version = _create_version(
         db=db,
@@ -324,6 +335,7 @@ def split_message(
         edit_reason=reason,
         created_by="user",
         based_on_version_id=current_version.id,
+        retained_missing_counts=retained_counts,
     )
     new_message, new_version = _create_message_with_version(
         db=db,
@@ -338,6 +350,7 @@ def split_message(
         created_by="user",
         source_type="split",
         based_on_version_id=current_version.id,
+        retained_missing_counts=retained_counts,
     )
     _renumber_conversation(db, message.conversation_id)
     _refresh_conversation_stats(db, message.conversation_id)
@@ -409,7 +422,7 @@ def merge_messages(
             code="attachment_integrity_invalid",
         ) from exc
     reason = edit_reason or "merge messages"
-    merged_text = separator.join(version.display_text.strip() for version in versions if version.display_text.strip())
+    merged_text = separator.join(version.display_text for version in versions if version.display_text.strip())
     attachment_declarations = [
         link
         for version in versions
@@ -427,6 +440,7 @@ def merge_messages(
         created_by="user",
         based_on_version_id=versions[0].id,
         attachment_occurrences=attachment_declarations or None,
+        retained_missing_counts=Counter(link.attachment_id for link in attachment_declarations),
     )
 
     deleted_at = utc_now()
@@ -989,6 +1003,7 @@ def _create_version(
     plain_text: str | None = None,
     timings: dict[str, float] | None = None,
     attachment_occurrences=None,
+    retained_missing_counts: dict[uuid.UUID, int] | None = None,
 ) -> MessageVersion:
     import time
     _lock_unchanged_message(db, message)
@@ -1044,6 +1059,7 @@ def _create_version(
         replace_existing=False,
         timings=timings,
         occurrence_declarations=attachment_occurrences,
+        retained_missing_counts=retained_missing_counts,
     )
     if timings is not None:
         timings["occurrence_insert_ms"] = round((time.perf_counter() - occurrence_started) * 1000, 3)
@@ -1091,34 +1107,51 @@ def _sync_version_attachment_links(
     replace_existing: bool,
     timings: dict[str, float] | None = None,
     occurrence_declarations=None,
+    retained_missing_counts: dict[uuid.UUID, int] | None = None,
 ) -> None:
     import time
+    version = db.get(MessageVersion, version_id)
+    message = db.get(Message, version.message_id)
+    previous_links = db.query(MessageVersionAttachment).filter(
+        MessageVersionAttachment.message_version_id == message.current_version_id,
+    ).order_by(MessageVersionAttachment.display_order).all()
+    previous_counts = Counter(link.attachment_id for link in previous_links)
     if replace_existing:
         db.query(MessageVersionAttachment).filter(
             MessageVersionAttachment.message_version_id == version_id
         ).delete(synchronize_session=False)
     references: list[tuple[int, uuid.UUID, object]] = []
+    source_references = attachment_references(source_text)
     for index, block in enumerate(block_drafts):
         # Attachment URLs may be standalone image/file blocks or inline inside
         # a paragraph. Keep one row per URL occurrence, including repeated URLs
         # in a single block; code blocks are intentionally treated as code.
         ids: list[uuid.UUID] = []
-        if block.block_type in {"image", "attachment"} and isinstance(block.data, dict):
+        if block.source_start is not None and block.source_end is not None:
+            for ref in source_references:
+                if block.source_start <= ref.start < block.source_end:
+                    try:
+                        ids.append(uuid.UUID(ref.identifier))
+                    except ValueError as exc:
+                        raise MessageEditError("Invalid attachment identity.", 422, code="attachment_reference_invalid", line_number=ref.line_number) from exc
+        elif block.block_type in {"image", "attachment"} and isinstance(block.data, dict):
             raw_id = str(block.data.get("attachmentId") or "")
             try:
                 ids.append(uuid.UUID(raw_id))
             except ValueError as exc:
                 line_number = _attachment_reference_line(source_text, raw_id)
                 raise MessageEditError(f"Line {line_number} contains an invalid attachment reference.", 422) from exc
-        if block.block_type != "code" and isinstance(block.plain_text, str):
-            ids.extend(uuid.UUID(match.group("id")) for match in ASSET_REFERENCE_RE.finditer(block.plain_text))
+        elif block.block_type != "code" and isinstance(block.plain_text, str):
+            ids.extend(uuid.UUID(ref.identifier) for ref in attachment_references(block.plain_text)
+                       if ASSET_REFERENCE_RE.fullmatch(f"cr-asset://{ref.identifier}"))
         for attachment_id in ids:
             references.append((index, attachment_id, block))
     # Every attachment URL in canonical source must be represented by a
     # rendered attachment block/occurrence.  Previously inline or malformed
     # references could be silently dropped during merge, leaving the files in
     # storage but unusable from Reader/Files. Fail closed instead.
-    text_attachment_ids = _attachment_reference_ids_outside_code(source_text)
+    text_attachment_ids = {uuid.UUID(ref.identifier) for ref in source_references
+                           if ASSET_REFERENCE_RE.fullmatch(f"cr-asset://{ref.identifier}")}
     block_attachment_ids = {attachment_id for _index, attachment_id, _block in references}
     missing_block_ids = text_attachment_ids - block_attachment_ids
     if missing_block_ids:
@@ -1149,6 +1182,8 @@ def _sync_version_attachment_links(
             Attachment.status.in_(("available", "detached")),
             AssetObject.status == "available",
         )
+        .order_by(Attachment.id)
+        .with_for_update(of=Attachment, key_share=True)
         .all()
     )
     available = {
@@ -1156,12 +1191,32 @@ def _sync_version_attachment_links(
         for attachment, asset in available_rows
         if scan_status_allows_use(asset.scan_status)
     }
+    # Retaining an already-owned missing reference is not granting file access.
+    # Do not allow new missing references, additional copies, foreign owners,
+    # deleted metadata or quarantined objects through this compatibility path.
+    requested_counts = Counter(item[1] for item in references)
+    retained_missing = {
+        row.id for row in db.query(Attachment).filter(
+            Attachment.id.in_(attachment_ids - available),
+            Attachment.conversation_id == message.conversation_id,
+            Attachment.deleted_at.is_(None),
+            Attachment.resolution_status == "missing",
+            Attachment.status == "missing",
+            Attachment.asset_object_id.is_(None),
+        )
+        if requested_counts[row.id] <= (
+            retained_missing_counts.get(row.id, 0) if retained_missing_counts is not None else previous_counts[row.id]
+        )
+    }
+    available |= retained_missing
     if available != attachment_ids:
         unavailable_id = next(iter(attachment_ids - available))
         line_number = _attachment_reference_line(source_text, str(unavailable_id))
         raise MessageEditError(
             f"Line {line_number} references an unavailable attachment or an attachment from another conversation.",
             422,
+            code="attachment_unavailable",
+            line_number=line_number,
         )
     for attachment, _asset in available_rows:
         attachment.status = "available"
@@ -1169,11 +1224,15 @@ def _sync_version_attachment_links(
         timings["attachment_validation_ms"] = round((time.perf_counter() - validation_started) * 1000, 3)
     rows: list[dict] = []
     declaration_queues: dict[uuid.UUID, list] = {}
+    previous_keys: dict[uuid.UUID, list[str]] = {}
+    for link in previous_links:
+        previous_keys.setdefault(link.attachment_id, []).append(link.occurrence_key)
     for declaration in occurrence_declarations or []:
         declaration_queues.setdefault(declaration.attachment_id, []).append(declaration)
     for ordinal, (block_index, attachment_id, block) in enumerate(references):
         data = block.data
         declaration = declaration_queues.get(attachment_id, []).pop(0) if declaration_queues.get(attachment_id) else None
+        previous_key = previous_keys[attachment_id].pop(0) if previous_keys.get(attachment_id) else None
         display_order = declaration.display_order if declaration is not None else ordinal
         rows.append({
             "id": uuid.uuid4(),
@@ -1182,7 +1241,7 @@ def _sync_version_attachment_links(
             "occurrence_key": str(
                 declaration.occurrence_key
                 if declaration is not None
-                else data.get("occurrenceKey") or f"block-{block_index}-{uuid.uuid4().hex[:8]}"
+                else data.get("occurrenceKey") or previous_key or f"block-{block_index}-{uuid.uuid4().hex[:8]}"
             )[:255],
             "placement": str(declaration.placement if declaration is not None else data.get("placement") or "inline")[:50],
             "relation_type": str(data.get("relationType") or ("inline" if block.block_type == "image" else "file")),
@@ -1217,32 +1276,16 @@ def _render_block_rows(version_id: uuid.UUID, block_drafts) -> list[dict]:
 
 
 def _attachment_reference_line(source_text: str, attachment_id: str) -> int:
-    needle = f"cr-asset://{attachment_id}"
     return next(
-        (line_number for line_number, line in enumerate(source_text.splitlines(), 1) if needle in line),
+        (ref.line_number for ref in attachment_references(source_text)
+         if ref.identifier.lower() == attachment_id.lower()),
         1,
     )
 
 
 def _attachment_reference_ids_outside_code(source_text: str) -> set[uuid.UUID]:
-    """Collect attachment URLs from prose while ignoring fenced code samples."""
-    found: set[uuid.UUID] = set()
-    in_code = False
-    fence_char = ""
-    fence_length = 0
-    for raw_line in source_text.splitlines():
-        line = raw_line.strip()
-        if in_code:
-            if line.startswith(fence_char * fence_length) and not line[fence_length:].strip(fence_char).strip():
-                in_code = False
-            continue
-        if line.startswith("```") or line.startswith("~~~"):
-            fence_char = line[0]
-            fence_length = len(line) - len(line.lstrip(fence_char))
-            in_code = True
-            continue
-        found.update(uuid.UUID(match.group("id")) for match in ASSET_REFERENCE_RE.finditer(raw_line))
-    return found
+    """Compatibility helper; use the same semantics as editing and copying."""
+    return attachment_markdown_ids(source_text)
 
 
 def _create_message_with_version(
@@ -1258,6 +1301,7 @@ def _create_message_with_version(
     created_by: str,
     source_type: str,
     based_on_version_id: uuid.UUID | None,
+    retained_missing_counts: dict[uuid.UUID, int] | None = None,
 ) -> tuple[Message, MessageVersion]:
     clean_text = _validate_text(text)
     new_hash = content_hash(clean_text, role)
@@ -1282,6 +1326,7 @@ def _create_message_with_version(
         edit_reason=edit_reason,
         created_by=created_by,
         based_on_version_id=based_on_version_id,
+        retained_missing_counts=retained_missing_counts,
     )
     return message, version
 
@@ -1666,6 +1711,7 @@ def _copy_messages_to_conversation(
     progress_callback: MergeProgressCallback | None = None,
 ) -> int:
     source_versions = [_get_current_version(db, message) for message in source_messages]
+    _verified_transform_reference_counts(db, source_messages, source_versions)
     attachment_id_map = _clone_split_attachments(
         db,
         target=target,
@@ -1674,13 +1720,21 @@ def _copy_messages_to_conversation(
     )
     count = 0
     for index, (source_message, version) in enumerate(zip(source_messages, source_versions, strict=True), start=1):
-        assert_attachment_references_mapped(version.display_text or "", attachment_id_map)
-        assert_attachment_references_mapped(version.blocks or [], attachment_id_map)
+        context = markdown_reference_context(version.display_text or "")
+        assert_attachment_ids_mapped(
+            attachment_markdown_ids(version.display_text or "") | attachment_blocks_ids(version.blocks or [], context),
+            attachment_id_map,
+        )
+        retained_counts = Counter(
+            attachment_id_map[identity]
+            for identity, in db.query(MessageVersionAttachment.attachment_id)
+            .filter(MessageVersionAttachment.message_version_id == version.id)
+        )
         copied_message, copied_version = _create_message_with_version(
             db=db,
             conversation_id=target.id,
             role=source_message.role,
-            text=rewrite_attachment_text(version.display_text, attachment_id_map),
+            text=rewrite_attachment_markdown(version.display_text, attachment_id_map),
             order_key=f"{index:06d}",
             turn_index=source_message.turn_index,
             created_at=source_message.created_at,
@@ -1689,6 +1743,7 @@ def _copy_messages_to_conversation(
             created_by="user",
             source_type=source_operation,
             based_on_version_id=version.id,
+            retained_missing_counts=retained_counts,
         )
         _copy_split_attachment_occurrences(
             db,
@@ -1717,6 +1772,28 @@ def _copy_messages_to_conversation(
             _report_merge(progress_callback, "copying", progress, count, len(source_messages))
     _renumber_conversation(db, target.id)
     return count
+
+
+def _verified_transform_reference_counts(db: Session, messages, versions) -> dict[uuid.UUID, int]:
+    """Server-only copy allowance, never inferred from client declarations.
+
+    A transform may retain known missing references in its new version/message,
+    but cannot manufacture a new missing binding or borrow another conversation.
+    """
+    try:
+        validate_source_attachment_integrity(
+            db, {message.id: message.conversation_id for message in messages}, [version.id for version in versions],
+        )
+    except ValueError as exc:
+        raise MessageEditError(str(exc), 422, code="attachment_integrity_invalid") from exc
+    counts = Counter()
+    for offset in range(0, len(versions), 50):
+        counts.update(
+            identity for identity, in db.query(MessageVersionAttachment.attachment_id)
+            .filter(MessageVersionAttachment.message_version_id.in_([version.id for version in versions[offset:offset + 50]]))
+            .yield_per(200)
+        )
+    return counts
 
 
 def _clone_split_attachments(

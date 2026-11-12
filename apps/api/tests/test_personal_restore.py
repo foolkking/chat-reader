@@ -221,3 +221,37 @@ def test_personal_restore_rejects_invalid_graph_and_changed_preview(archive_db, 
     archive_db.rollback()
     assert archive_db.query(Conversation).filter_by(owner_user_id=owner).count() == 0
     assert archive_db.query(ArchiveRestoreReceipt).count() == 0
+
+
+@pytest.mark.parametrize("literal", [True, False])
+def test_personal_restore_distinguishes_code_examples_from_live_out_of_scope_links(archive_db, tmp_path, literal):
+    path, owner, _, attachment_id = restore_fixture(archive_db)
+    unknown = uuid.uuid4()
+    examples = f"`[example](cr-asset://{attachment_id})`\n\n```md\n[example](cr-asset://{unknown})\n```"
+    source = examples if literal else f"[out of scope](cr-asset://{unknown})"
+    source += f"\n\n[file](cr-asset://{attachment_id})"
+
+    def replace_source(files, _):
+        rows = [json.loads(line) for line in files["data/message_versions.jsonl"].splitlines()]
+        for row in rows:
+            row["display_text"] = source
+            row["blocks"] = []
+        files["data/message_versions.jsonl"] = b"".join((json.dumps(row) + "\n").encode() for row in rows)
+        rows = [json.loads(line) for line in files["data/notebooks.jsonl"].splitlines()]
+        rows[0]["blocks"] = [{"id": str(uuid.uuid4()), "type": "markdown", "markdown": source}]
+        files["data/notebooks.jsonl"] = b"".join((json.dumps(row) + "\n").encode() for row in rows)
+
+    archive = repack(path, tmp_path / "references.cr", replace_source)
+    if not literal:
+        with pytest.raises(SystemArchiveError, match="attachment outside"):
+            inspect_personal_archive(archive)
+        return
+    preview = inspect_personal_archive(archive)
+    result = restore_personal_archive(archive_db, archive, owner_user_id=owner, expected_digest=preview["content_digest"])
+    archive_db.commit()
+    conversation_id = uuid.UUID(result["conversation_ids"][0])
+    attachment = archive_db.query(Attachment).filter_by(conversation_id=conversation_id).one()
+    message = archive_db.query(Message).filter_by(conversation_id=conversation_id).one()
+    expected = examples + f"\n\n[file](cr-asset://{attachment.id})"
+    assert archive_db.get(MessageVersion, message.current_version_id).display_text == expected
+    assert archive_db.query(ConversationNotebook).filter_by(conversation_id=conversation_id).one().blocks[0]["markdown"] == expected

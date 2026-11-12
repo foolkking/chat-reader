@@ -20,6 +20,8 @@ const compiled = ts.transpileModule(`
   const activeUpload = { current: null }, mounted = { current: true };
   const finalizeLanes = { current: new Map() };
   const readerWidthMode = "comfortable", sectionTocMode = "collapsed";
+  const receiptsReady = true;
+  const rememberUpload = async () => {};
   const measureImportImageLane = () => 720;
   const setUploadQueue = value => { uploadQueue = typeof value === "function" ? value(uploadQueue) : value; };
   const setActionBusy = value => { actionBusy = value; }, setUploading = value => { uploading = value; };
@@ -39,6 +41,7 @@ function fixture() {
   let sequence = 0, generation = 1, finalize = async () => {}, upload, files = [], refreshError = false;
   let session = { id: "synthetic-session", status: "open", expires_at: "2098-01-01T00:00:00Z", items: [] };
   const bindings = {
+    ApiRequestError: class extends Error { constructor(message, status){super(message);this.status=status;} },
     conversationId: "synthetic-a", zh: false, crypto: { randomUUID: () => `synthetic-entry-${++sequence}` },
     authenticationGeneration: () => generation,
     createAttachmentUploadSession: async () => { calls.sessions++; return { ...session, id: `synthetic-session-${calls.sessions}` }; },
@@ -48,7 +51,7 @@ function fixture() {
       return { promise: Promise.resolve({ id: `synthetic-receipt-${calls.uploaded.length}`, validation_status: "ready" }), cancel() {} };
     },
     finalizeConversationAttachments: async (_conversation, ids) => { calls.finalized.push(ids); await finalize(ids); },
-    getAttachmentUploadSession: async id => { calls.checked.push(id); return session; },
+    getAttachmentUploadSession: async id => { calls.checked.push(id); return {...session,id}; },
     filesQuery: { refetch: async () => ({ isError: refreshError, error: Error("synthetic refresh failed"), data: files }) },
   };
   new Function("exports", ...Object.keys(bindings), compiled)(api, ...Object.values(bindings));
@@ -65,16 +68,18 @@ test("a third-file failure retains the first receipts and retry uploads only tha
   await f.api.uploadFiles(files);
   const entries = f.api.snapshot().queue;
   assert.equal(new Set(entries.map(entry => entry.id)).size, 3);
-  assert.deepEqual(entries.map(entry => entry.status), ["committed", "committed", "failed"]);
-  assert.deepEqual(f.calls.finalized, [["receipt-1", "receipt-2"]]);
-  f.upload(); f.api.retryUpload(entries[2]); await setImmediate();
+  assert.deepEqual(entries.map(entry => entry.status), ["committed", "committed", "unknown"]);
+  assert.deepEqual(f.calls.finalized, [["receipt-1"], ["receipt-2"]]);
+  f.upload(); await f.api.refreshAttachmentList();
+  assert.equal(f.calls.uploaded.length, 3, "checking must not resend");
+  f.api.retryUpload(f.api.snapshot().queue[2]); await setImmediate();
   assert.equal(f.calls.uploaded.length, 4);
   assert.equal(f.calls.uploaded.at(-1).file, files[2]);
   assert.equal(f.api.snapshot().queue[2].id, entries[2].id);
   assert.equal(f.api.snapshot().queue[2].status, "committed");
 });
 
-test("cancel aborts the current item without finalizing earlier receipts, which remain explicitly actionable", async () => {
+test("cancel preserves earlier completed files and leaves the active upload unconfirmed", async () => {
   const f = fixture(), waiting = deferred(), files = [file("accepted.txt"), file("pending.txt"), file("queued.txt")];
   let cancelled = 0;
   f.upload((_id, selected) => selected === files[0]
@@ -82,8 +87,8 @@ test("cancel aborts the current item without finalizing earlier receipts, which 
     : { promise: waiting.promise, cancel() { cancelled++; waiting.reject(new DOMException("Cancelled", "AbortError")); } });
   const work = f.api.uploadFiles(files);
   await setImmediate(); f.api.cancelUpload(); await work;
-  assert.equal(cancelled, 1); assert.equal(f.calls.finalized.length, 0);
-  assert.deepEqual(f.api.snapshot().queue.map(entry => entry.status), ["uploaded", "cancelled", "cancelled"]);
+  assert.equal(cancelled, 1); assert.equal(f.calls.finalized.length, 1);
+  assert.deepEqual(f.api.snapshot().queue.map(entry => entry.status), ["committed", "unknown", "cancelled"]);
   assert.equal(f.api.snapshot().actionBusy, false);
   await f.api.finishPendingUploads();
   assert.deepEqual(f.calls.finalized, [["synthetic-accepted"]]);

@@ -1,0 +1,73 @@
+{
+  "recorded_at": "2026-11-12T01:17:22.941457+08:00",
+  "production_revision": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+  "local_base_revision": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+  "schema_head": "20261108_0060",
+  "scope": "authorized single production wait-chain recovery plus local regression; no deploy/commit/CI",
+  "recovery": {
+    "at": "2026-11-12T00:56:46+08:00",
+    "operation": "cancel one verified auxiliary progress statement, guarded by backend identity/age/query and complete blocking chain",
+    "direct_task_row_updates": 0,
+    "restarted_services": 0,
+    "deleted_files": 0,
+    "automatic_source_replays": 0,
+    "import_outcome": "failed safely after canonical rollback; sources retained",
+    "waiting_export_outcomes": [
+      "committed",
+      "committed"
+    ],
+    "later_read_only_check": {
+      "active_imports": 0,
+      "active_jobs": 0,
+      "worker": {
+        "state": "idle",
+        "heartbeat_age_seconds": 4
+      },
+      "lock_waits": 0,
+      "retained_sources_verified": 2,
+      "retained_source_bytes": 21410219,
+      "changed_files": 0,
+      "service_restarts": 0
+    }
+  },
+  "code_changes": {
+    "apps/api/app/services/worker_liveness.py": "f167b23daa87d5cb07610d347477000e65a5b41bf7cfe4b37c53fd22ede95280",
+    "apps/api/tests/test_worker_maintenance_postgres.py": "a7d473c3a320084ec75ae840343d5db46ee12441217d2eb4fe9259eb07a61d3d",
+    "apps/api/tests/test_stale_recovery_bounds.py": "e7ac2f1e42074c56017d0b2d64012d022c9a6299b78e47e97dc352f54b41ff4e"
+  },
+  "validation": {
+    "before": {
+      "failed": 4,
+      "deselected": 12,
+      "log_sha256": "bb97e3c35da0c5f1a7be3bf04101c65f3b92162959fdddce0da636bd80d342de",
+      "note": "Includes injected connection fault reached in failure publication after the earlier heartbeat assertion; not four distinct production defects."
+    },
+    "after": {
+      "passed": 91,
+      "skipped": 4,
+      "skip_reason": "Windows does not implement tested POSIX SIGTERM/SIGINT semantics",
+      "postgres_integration_enabled": true,
+      "local_postgresql_major": 17,
+      "production_postgresql_major": 16,
+      "log_sha256": "9bd893b30fed36c64fb1d8058eecebcfb9569bffe9b22424b1c41a54f2113651",
+      "files": [
+        "test_worker_maintenance_postgres.py",
+        "test_stale_recovery_bounds.py",
+        "test_worker_liveness.py",
+        "test_worker_requeue_postgres.py",
+        "test_worker_maintenance_isolation.py",
+        "test_import_queue.py",
+        "test_worker_shutdown.py"
+      ]
+    },
+    "disposable_pg_stopped": true,
+    "data_and_logs_retained": true,
+    "exact_ci_for_this_change": "not run"
+  },
+  "limitations": [
+    "Production source unchanged; same defect can recur until a verified release.",
+    "No authenticated production UI or full user import retry.",
+    "No backup restore drill or production stress test.",
+    "Export download retention remains unchanged."
+  ]
+}

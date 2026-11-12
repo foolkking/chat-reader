@@ -144,6 +144,7 @@ services:
         BUILD_REVISION: ${BUILD_REVISION:-}
     restart: unless-stopped
     command: ["python", "-m", "app.workers.import_worker"]
+    stop_grace_period: 45s
     mem_limit: ${IMPORT_WORKER_MEMORY_LIMIT:-640m}
     environment: *api-environment
     volumes:

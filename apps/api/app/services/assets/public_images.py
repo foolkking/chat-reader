@@ -17,7 +17,8 @@ from app.models.message_version import MessageVersion
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.attachment_service import AttachmentAccessError, attachment_content, get_owner_attachment
 from app.services.assets.scanner import scan_status_allows_use
-from app.services.editing.attachment_reference_rewriter import attachment_reference_ids
+from app.services.exporting.archive_transaction import track_archive_object
+from app.services.editing.markdown_attachment_references import attachment_references
 from app.services.ownership import OwnershipScope
 
 RASTER_TYPES = frozenset({
@@ -48,7 +49,12 @@ def message_copy_source(db: Session, message_id: uuid.UUID, scope: OwnershipScop
         raise AttachmentAccessError("Message version not found.")
     if len(version.display_text.encode("utf-8")) > MAX_COPY_BYTES:
         raise AttachmentAccessError("Message exceeds the 4 MiB copy limit. Use export instead.", 413)
-    ids = attachment_reference_ids(version.display_text)
+    ids = set()
+    for reference in attachment_references(version.display_text):
+        try:
+            ids.add(uuid.UUID(reference.identifier))
+        except ValueError:
+            pass
     ids.update(row[0] for row in db.query(MessageVersionAttachment.attachment_id).filter(
         MessageVersionAttachment.message_version_id == version.id,
     ))
@@ -182,7 +188,7 @@ def save_svg_preview(db: Session, attachment_id: uuid.UUID, scope: OwnershipScop
     if len(clean) > MAX_PREVIEW_BYTES:
         raise AttachmentAccessError("PNG preview exceeds the 4 MiB limit.", 413)
     digest = hashlib.sha256(clean).hexdigest()
-    asset = db.query(AssetObject).filter_by(sha256=digest, byte_size=len(clean)).first()
+    asset = db.query(AssetObject).filter_by(sha256=digest, byte_size=len(clean)).with_for_update().first()
     store = get_asset_store()
     needs_storage = asset is None
     if asset is not None:
@@ -195,6 +201,7 @@ def save_svg_preview(db: Session, attachment_id: uuid.UUID, scope: OwnershipScop
     if needs_storage:
         staged = store.stage(io.BytesIO(clean), max_bytes=MAX_PREVIEW_BYTES, quarantine=False)
         key = store.object_key()
+        track_archive_object(db, store, key)
         store.promote(staged.path, key)
         if asset is None:
             asset = AssetObject(
@@ -205,12 +212,7 @@ def save_svg_preview(db: Session, attachment_id: uuid.UUID, scope: OwnershipScop
             db.add(asset)
         else:
             asset.storage_backend, asset.storage_key = store.backend, key
-        try:
-            db.flush()
-        except BaseException:
-            # Only the object promoted by this operation; never another asset.
-            store.delete_key(key)
-            raise
+        db.flush()
     derivative = db.query(AssetDerivative).filter_by(
         source_asset_object_id=source.id, derivative_type=PREVIEW_TYPE, generator_version=_preview_version(attachment.id),
     ).first()

@@ -102,12 +102,13 @@ def create_attachment_upload_session(
             conversation_id=conversation_id,
             target_message_id=payload.target_message_id,
             base_message_version_id=payload.base_message_version_id,
+            request_id=payload.request_id,
         )
         db.commit()
         return _upload_session_read(session)
     except AttachmentUploadError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.post(
@@ -119,6 +120,7 @@ def upload_attachment_item(
     session_id: uuid.UUID,
     request: Request,
     file: UploadFile = File(...),
+    request_id: uuid.UUID | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> AttachmentUploadItemRead:
     try:
@@ -130,6 +132,7 @@ def upload_attachment_item(
                 filename=file.filename or "attachment.bin",
                 declared_mime_type=file.content_type,
                 source=file.file,
+                request_id=request_id,
             )
         db.commit()
         return _upload_item_read(item)
@@ -142,7 +145,7 @@ def upload_attachment_item(
         ) from exc
     except AttachmentUploadError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.get(
@@ -161,7 +164,7 @@ def read_attachment_upload_session(
         return _upload_session_read(session)
     except AttachmentUploadError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.delete(
@@ -181,7 +184,7 @@ def remove_attachment_upload_item(
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except AttachmentUploadError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.post(
@@ -195,7 +198,6 @@ def create_conversation_attachments(
     request: Request,
     db: Session = Depends(get_db),
 ) -> AttachmentListRead:
-    promoted: list[str] = []
     try:
         ownership_scope = ownership_scope_from_request(request)
         _owned_conversation(db, conversation_id, ownership_scope)
@@ -211,18 +213,13 @@ def create_conversation_attachments(
             image_lane_width=payload.image_lane_width,
             ownership_scope=ownership_scope,
         )
-        promoted = result.promoted_storage_keys
         db.commit()
         return AttachmentListRead(items=[attachment_read(item) for item in result.attachments])
     except AttachmentUploadError as exc:
         db.rollback()
-        for storage_key in promoted:
-            get_asset_store().delete_key(storage_key)
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except Exception:
         db.rollback()
-        for storage_key in promoted:
-            get_asset_store().delete_key(storage_key)
         raise
 
 
@@ -286,7 +283,7 @@ def list_conversation_attachments(
             (RenderBlock.message_version_id == MessageVersionAttachment.message_version_id)
             & (RenderBlock.block_index == MessageVersionAttachment.block_index),
         )
-        .filter(MessageVersionAttachment.attachment_id.in_(attachment_ids))
+        .filter(MessageVersionAttachment.attachment_id.in_(attachment_ids), Message.is_deleted.is_(False))
         .all()
         if attachment_ids
         else []
@@ -515,7 +512,7 @@ def delete_conversation_attachment(
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except AttachmentUploadError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.post("/api/attachments/{attachment_id}/derivatives/{derivative_type}", response_model=BackgroundTaskRead, status_code=status.HTTP_202_ACCEPTED)
@@ -824,13 +821,15 @@ def _upload_item_read(item: AttachmentUploadItem) -> AttachmentUploadItemRead:
 
 
 def _upload_session_read(session) -> AttachmentUploadSessionRead:
+    from datetime import datetime, timezone
+    expiry = session.expires_at if session.expires_at.tzinfo else session.expires_at.replace(tzinfo=timezone.utc)
     return AttachmentUploadSessionRead(
         id=session.id,
         conversation_id=session.conversation_id,
         target_message_id=session.target_message_id,
         base_message_version_id=session.base_message_version_id,
-        status=session.status,
+        status="expired" if session.status == "open" and expiry <= datetime.now(timezone.utc) else session.status,
         expires_at=session.expires_at,
         created_at=session.created_at,
-        items=[_upload_item_read(item) for item in session.items],
+        items=[_upload_item_read(item) for item in session.items if item.validation_status != "abandoned"],
     )

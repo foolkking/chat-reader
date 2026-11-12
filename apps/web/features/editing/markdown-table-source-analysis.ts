@@ -107,7 +107,7 @@ export function createMarkdownTableSourceProbe(source: string) {
         if (++count > TABLE_SOURCE_ANALYSIS_LIMITS.nodes) { complete = false; break; }
         const node = pending.pop()!;
         hasFootnotes ||= node.type === "footnoteDefinition";
-        const target = node.type === "html" || node.type === "code" || node.type === "math" || node.type === "inlineCode"
+        const target = node.type === "html" || node.type === "safeHtml" || node.type === "code" || node.type === "math" || node.type === "inlineCode"
           ? literalRanges : node.type === "definition" ? definitionRanges : null;
         if (target) {
           const from = node.position?.start?.offset, to = node.position?.end?.offset;

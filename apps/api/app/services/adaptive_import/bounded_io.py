@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 from app.services.adaptive_import.contracts import AdaptiveImportError
+from app.services.execution_control import business_progress
 
 CHUNK_BYTES = 64 * 1024
 MESSAGE_BYTES = 1024 * 1024
@@ -39,6 +40,7 @@ def copy_stream(source, target, *, maximum: int) -> tuple[int, str]:
             if size > maximum:
                 raise AdaptiveImportError("ZIP_MEMBER_TOO_LARGE", "A ZIP member exceeds its size limit.", layer="archive")
             target.write(chunk)
+            business_progress(byte_count=len(chunk))
             digest.update(chunk)
             if size % (4 * MESSAGE_BYTES) < CHUNK_BYTES:
                 release_file_cache(target, written=True)
@@ -58,6 +60,7 @@ def file_hash(path: Path) -> str:
     with path.open("rb") as source:
         since_release = 0
         while chunk := source.read(CHUNK_BYTES):
+            business_progress(byte_count=len(chunk))
             result.update(chunk)
             since_release += len(chunk)
             if since_release >= MESSAGE_BYTES:
@@ -79,6 +82,7 @@ def text_lines(path: Path):
                 if size > MESSAGE_BYTES:
                     raise unit_too_large()
                 yield line
+                business_progress(byte_count=size)
                 since_release += size
                 if since_release >= MESSAGE_BYTES:
                     release_file_cache(source)
@@ -129,6 +133,7 @@ class CacheBoundedReader:
         if size < 0:
             raise ValueError("Unbounded scanner reads are not supported.")
         raw = self.source.read(min(size, CHUNK_BYTES))
+        business_progress(byte_count=len(raw))
         self.since_release += len(raw)
         if self.since_release >= MESSAGE_BYTES or not raw:
             release_file_cache(self.source)

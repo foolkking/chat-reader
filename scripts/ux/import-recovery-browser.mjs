@@ -295,6 +295,17 @@ try {
       await expect(cleanupRow.getByRole("button", { name: /重试文件清理|Retry file cleanup/ })).toHaveCount(0);
       await expect(cleanupRow.getByRole("button", { name: /关闭任务提示|Dismiss task/ })).toBeVisible();
       assert.equal(writes.filter(item => item.path.endsWith("/source-cleanup/retry")).length, 1);
+      const beforeHide = writes.length;
+      await page.evaluate(theme => {
+        if (theme === "dark") Object.defineProperty(window, "localStorage", {
+          configurable: true, get() { throw new DOMException("Synthetic storage disabled", "SecurityError"); },
+        });
+        else Storage.prototype.setItem = () => { throw new DOMException("Synthetic quota", "QuotaExceededError"); };
+      }, theme);
+      await cleanupRow.getByRole("button", { name: /关闭任务提示|Dismiss task/ }).focus();
+      await page.keyboard.press("Enter");
+      await expect(cleanupRow).toHaveCount(0);
+      assert.equal(writes.length, beforeHide, "Hiding a prompt cannot cancel, retry or delete its task.");
       const transientRow = page.locator("#task-row-context-transient");
       await transientRow.getByRole("button", { name: /^重试$|^Retry$/ }).click();
       await expect(transientRow.getByRole("button", { name: /^重试$|^Retry$/ })).toHaveCount(0);
@@ -418,6 +429,7 @@ try {
       await expect(recovery).toHaveCount(0);
       assert.equal(packageAttempts.length, 2); assert.deepEqual(packageAttempts[1], packageAttempts[0]);
       results.push({ width, locale, theme, writes: writes.length, taskReads, geometry, screenshot: filename,
+        taskDismissStorageRejection:theme==="light"?"setItem":"getter",
         sourceCleanup: "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
         contextRecovery: "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
         contextRead: "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",

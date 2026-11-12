@@ -11,7 +11,7 @@ def main() -> None:
             previous[signum] = signal.signal(signum, shutdown.request)
         # Install handlers before importing the ORM/services so a stop received
         # during startup is remembered rather than ignored by Linux PID 1.
-        from app.services.task_worker import run_task_worker_forever
+        from app.services.worker_supervisor import run_task_worker_forever
 
         run_task_worker_forever(shutdown=shutdown)
     finally:

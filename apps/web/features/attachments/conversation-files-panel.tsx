@@ -34,7 +34,9 @@ import { useInteractionDialog } from "../../components/interaction-dialog-provid
 import { usePreferences } from "../../components/preferences-provider";
 import { measureImportImageLane } from "../import/image-import-lane";
 import {
+  ApiRequestError,
   createAttachmentUploadSession,
+  deleteAttachmentUploadItem,
   deleteConversationAttachment,
   finalizeConversationAttachments,
   getAttachmentUploadSession,
@@ -54,13 +56,22 @@ import { useDialogFocus } from "../../components/use-dialog-focus";
 import { attachmentOccurrenceTarget } from "./attachment-location";
 import { useAttachmentSearchActivation, useAttachmentSearchTarget } from "./use-attachment-search-target";
 import { ExportArtifactDelivery } from "../exporting/export-artifact-delivery";
+import { keepUploadReceipt, readUploadReceipts } from "./upload-receipts";
 
 type Placement = "inline" | "after_message";
 type FileFilter = "all" | "used" | "unused" | "missing";
 type FileSort = "recent" | "name" | "type" | "size" | "usage";
 type UploadEntry = {
   id: string;
-  file: File;
+  sessionRequestId: string;
+  itemRequestId?: string;
+  sessionAttempted?: boolean;
+  uploadAttempted?: boolean;
+  file?: File;
+  filename: string;
+  byteSize: number;
+  mimeType: string;
+  lastModified: number;
   status: "queued" | "uploading" | "uploaded" | "finalizing" | "unknown" | "failed" | "cancelled" | "committed";
   progress: number;
   uploadItemId?: string;
@@ -97,7 +108,15 @@ function ConversationFilesWorkspace({
   const actionLock = useRef(false);
   const renameDrafts = useRef<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const reselectRef = useRef<string | null>(null);
+  const [receiptsReady, setReceiptsReady] = useState(false);
+  const [receiptWarning, setReceiptWarning] = useState(false);
   const finalizeLanes = useRef(new Map<string, number>());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FileFilter>("all");
@@ -122,6 +141,22 @@ function ConversationFilesWorkspace({
   const mounted = useRef(false);
   const activeUpload = useRef<{ generation: number; cancel: () => void } | null>(null);
   const searchActivation = useAttachmentSearchActivation(conversationId, initialAttachmentId, searchReplayKey);
+  const receiptScope = `${conversationId}:files`;
+  async function rememberUpload(entry: UploadEntry) {
+    const { file, ...receipt } = entry;
+    const saved = await keepUploadReceipt(receiptScope, receipt, file);
+    if (mounted.current && !saved) setReceiptWarning(true);
+  }
+  useEffect(() => {
+    let active = true;
+    const generation = authenticationGeneration();
+    void readUploadReceipts(receiptScope).then(rows => {
+      if (!active || generation !== authenticationGeneration()) return;
+      setUploadQueue(rows.map(({ receipt, file }) => ({ ...receipt, file, status: "unknown" as const })));
+      setReceiptsReady(true);
+    });
+    return () => { active = false; };
+  }, [receiptScope]);
 
   useEffect(() => {
     mounted.current = true;
@@ -181,7 +216,7 @@ function ConversationFilesWorkspace({
   });
   const capabilityPending = capabilitiesQuery.isPending && !capabilitiesQuery.data;
   const capabilityUnavailable = capabilitiesQuery.isError && !capabilitiesQuery.data;
-  const uploadDisabled = capabilityPending || capabilityUnavailable || capabilitiesQuery.data?.attachments.upload_enabled === false;
+  const uploadDisabled = !receiptsReady || capabilityPending || capabilityUnavailable || capabilitiesQuery.data?.attachments.upload_enabled === false;
   const renameMutation = useMutation({
     mutationFn: ({ attachmentId, displayName }: { attachmentId: string; displayName: string }) =>
       updateConversationAttachment(conversationId, attachmentId, displayName),
@@ -200,7 +235,8 @@ function ConversationFilesWorkspace({
         next.delete(attachmentId);
         return next;
       });
-      return queryClient.invalidateQueries({ queryKey: ["conversation-attachments", conversationId] });
+      void queryClient.invalidateQueries({ queryKey: ["conversation-attachments", conversationId] })
+        .catch(() => setError(zh ? "文件已移除，列表待刷新。" : "File detached. Refresh the list."));
     },
   });
 
@@ -233,108 +269,91 @@ function ConversationFilesWorkspace({
     : [{ id: "all", title: zh ? "全部文件" : "All files", items: files }];
 
   async function uploadFiles(selectedFiles: File[], retryEntryId?: string) {
-    if (!selectedFiles.length || actionLock.current) return;
-    if (!retryEntryId && uploadQueue.filter((entry) => entry.status !== "committed").length + selectedFiles.length > 100) {
-      setError(zh ? "本次队列最多保留 100 个文件，请先处理或移除已有条目，再分批选择。" : "This queue holds up to 100 files. Finish or remove existing entries, then select a smaller batch.");
+    if (!selectedFiles.length || actionLock.current || !receiptsReady) return;
+    if (!retryEntryId && uploadQueue.filter(entry => entry.status !== "committed").length + selectedFiles.length > 100) {
+      setError(zh ? "队列最多保留 100 个文件，请先处理已有条目。" : "This queue holds up to 100 files. Finish existing entries first.");
       return;
     }
-    actionLock.current = true;
+    const previous = retryEntryId ? uploadQueue.find(entry => entry.id === retryEntryId) : undefined;
+    const entries: UploadEntry[] = previous ? [{ ...previous, file: selectedFiles[0] }] : selectedFiles.map(file => ({
+      id: crypto.randomUUID(), sessionRequestId: crypto.randomUUID(), file,
+      filename: file.name, byteSize: file.size, mimeType: file.type, lastModified: file.lastModified,
+      status: "queued", progress: 0,
+    }));
+    // Unknown outcomes never get a new identity. Explicit source replacement
+    // after a confirmed rejection is a new upload, not a retry of the old one.
+    if (previous?.error === "expired" || previous?.error === "rejected") Object.assign(entries[0], {
+      sessionRequestId: crypto.randomUUID(), sessionId: undefined, uploadItemId: undefined,
+      itemRequestId: crypto.randomUUID(), sessionAttempted: false, uploadAttempted: false,
+      filename: selectedFiles[0].name, byteSize: selectedFiles[0].size, mimeType: selectedFiles[0].type,
+      lastModified: selectedFiles[0].lastModified, error: undefined,
+    });
+    if (previous?.error === "rejected" && previous.sessionId && previous.uploadItemId) {
+      // This explicit replacement authorizes abandoning the rejected input.
+      // Cleanup is independent; its server receipt remains if cleanup fails.
+      void deleteAttachmentUploadItem(previous.sessionId, previous.uploadItemId).catch(() => undefined);
+    }
+    setUploadQueue(queue => previous ? queue.map(item => item.id === previous.id ? entries[0] : item)
+      : [...queue.filter(item => item.status !== "committed"), ...entries]);
+    actionLock.current = true; setActionBusy(true); setUploading(true); setError(null); setNotice(null);
     const generation = ++uploadGeneration.current;
-    uploadCancellable.current = true;
     const access = authenticationGeneration();
     const current = () => mounted.current && access === authenticationGeneration();
-    const entries = selectedFiles.map((file, index) => ({
-      id: retryEntryId && index === 0 ? retryEntryId : crypto.randomUUID(),
-      file,
-      status: "queued" as const,
-      progress: 0,
-    }));
-    setUploadQueue((current) => retryEntryId
-      ? current.map((entry) => entry.id === retryEntryId ? entries[0] : entry)
-      : [...current.filter((entry) => entry.status !== "committed"), ...entries]);
-    setActionBusy(true);
-    setUploading(true);
-    setError(null);
-    setNotice(null);
-    let phase: "session" | "items" = "session";
+    uploadCancellable.current = true;
+    const publish = (entry: UploadEntry) => {
+      if (current()) setUploadQueue(queue => queue.map(item => item.id === entry.id ? { ...entry } : item));
+    };
     try {
-      const session = await createAttachmentUploadSession(conversationId);
-      if (!current()) return;
-      const receipts: UploadEntry[] = [];
-      phase = "items";
+      // One complete file at a time. Failure retains that entry and releases
+      // the lane for the next independent selection, in its original order.
       for (const entry of entries) {
-        if (!current()) return;
-        if (generation !== uploadGeneration.current) break;
-        setUploadQueue((current) => current.map((item) => item.id === entry.id ? { ...item, status: "uploading", progress: 0 } : item));
-        const upload = uploadAttachmentItem(session.id, entry.file, (value) => {
-          if (!current() || generation !== uploadGeneration.current) return;
-          setUploadQueue((current) => current.map((item) => item.id === entry.id ? { ...item, progress: value } : item));
-        });
-        activeUpload.current = { generation, cancel: upload.cancel };
+        if (!current() || generation !== uploadGeneration.current) break;
         try {
-          const receipt = await upload.promise;
-          if (!current()) return;
-          const ready: UploadEntry = { ...entry, status: "uploaded", progress: 100,
-            sessionId: session.id, expiresAt: session.expires_at, uploadItemId: receipt.id };
-          if (receipt.validation_status !== "ready") {
-            setUploadQueue((current) => current.map((item) => item.id === entry.id ? { ...ready, status: "failed", error: "rejected" } : item));
-            continue;
+          if (!entry.file) throw new Error("Reselect the original file");
+          entry.status = "uploading"; publish(entry);
+          if (!entry.sessionId) {
+            if (entry.sessionAttempted) throw new Error("CHECK_RECEIPT_FIRST");
+            entry.sessionAttempted = true; publish(entry); await rememberUpload(entry);
+            if (!current()) return;
+            const session = await createAttachmentUploadSession(conversationId, { requestId: entry.sessionRequestId });
+            if (!current()) return;
+            entry.sessionId = session.id; entry.expiresAt = session.expires_at; publish(entry);
           }
-          receipts.push(ready);
-          setUploadQueue((current) => current.map((item) => item.id === entry.id ? ready : item));
+          if (generation !== uploadGeneration.current) break;
+          if (!entry.uploadItemId) {
+            if (entry.uploadAttempted) throw new Error("CHECK_RECEIPT_FIRST");
+            entry.uploadAttempted = true; publish(entry); await rememberUpload(entry);
+            if (!current()) return;
+            const upload = uploadAttachmentItem(entry.sessionId, entry.file, progress => {
+              if (current() && generation === uploadGeneration.current) { entry.progress = progress; publish(entry); }
+            }, entry.itemRequestId ?? entry.id);
+            activeUpload.current = { generation, cancel: upload.cancel };
+            const receipt = await upload.promise;
+            if (!current()) return;
+            entry.uploadItemId = receipt.id;
+            if (receipt.validation_status !== "ready" && receipt.validation_status !== "committed") {
+              entry.status = "failed"; entry.error = "rejected"; publish(entry); continue;
+            }
+          }
+          entry.status = "uploaded"; entry.progress = 100; publish(entry);
+          if (generation !== uploadGeneration.current) break;
+          await finalizeUploadedEntries([entry], current);
         } catch (failure) {
           if (!current()) return;
-          if (failure instanceof DOMException && failure.name === "AbortError") {
-            // Any aborted batch keeps receipts for explicit confirmation,
-            // including aborts not initiated through the visible button.
-            if (generation === uploadGeneration.current) uploadGeneration.current += 1;
-            setUploadQueue((current) => current.map((item) => item.id === entry.id ? { ...item, status: "cancelled", error: "cancelled" } : item));
-            break;
-          }
-          setUploadQueue((current) => current.map((item) => item.id === entry.id ? { ...item, status: "failed", error: "upload" } : item));
+          // A lost response or interrupted transfer is not proof of rollback.
+          // The check button reads this exact session/item before retrying.
+          entry.status = "unknown";
+          entry.error = failure instanceof DOMException && failure.name === "AbortError" ? "cancelled" : "unconfirmed";
+          publish(entry);
+          void rememberUpload(entry);
         } finally {
           if (activeUpload.current?.generation === generation) activeUpload.current = null;
         }
       }
-      if (!current()) return;
-      setUploadQueue((current) => current.map((item) => entries.some((entry) => entry.id === item.id) && item.status === "queued"
-        ? { ...item, status: "cancelled", error: "cancelled" } : item));
-      if (generation !== uploadGeneration.current) {
-        setError(zh ? "上传已取消，未自动提交。已上传项可单独确认加入，未完成项可重试。" : "Upload cancelled; nothing was automatically finalized. You can add the uploaded items explicitly or retry unfinished files.");
-        return;
-      }
-      if (!receipts.length) {
-        setError(zh ? "没有文件上传成功，请重试失败项。" : "No files were uploaded. Retry the failed items.");
-        return;
-      }
-      setUploading(false);
-      uploadCancellable.current = false;
-      await finalizeUploadedEntries(receipts, current);
-    } catch {
-      if (!current()) return;
-      setUploadQueue((current) => current.map((item) => entries.some((entry) => entry.id === item.id) && ["queued", "uploading"].includes(item.status)
-        ? { ...item, status: "failed", error: "upload" } : item));
-      if (phase === "items") {
-        setError(
-          zh
-            ? "部分附件上传失败；成功项已保留，失败项可单独重试。"
-            : "Some attachments failed to upload. Successful items are retained; retry the failed items individually.",
-        );
-      } else {
-        setError(
-          zh
-            ? "无法开始附件上传。请检查网络连接后重试。"
-            : "Could not start the attachment upload. Check your connection and try again.",
-        );
-      }
+      if (current()) setUploadQueue(queue => queue.map(item => entries.some(entry => entry.id === item.id) && item.status === "queued"
+        ? { ...item, status: "cancelled" } : item));
     } finally {
-      if (current()) {
-        uploadCancellable.current = false;
-        setUploading(false);
-        setActionBusy(false);
-        actionLock.current = false;
-      }
-      if (activeUpload.current?.generation === generation) activeUpload.current = null;
+      if (current()) { uploadCancellable.current = false; setUploading(false); setActionBusy(false); actionLock.current = false; }
     }
   }
 
@@ -345,6 +364,8 @@ function ConversationFilesWorkspace({
     const ids = new Set(entries.map((entry) => entry.id));
     setUploadQueue((queue) => queue.map((entry) => ids.has(entry.id) ? { ...entry, status: "finalizing" } : entry));
     try {
+      for (const entry of entries) await rememberUpload({ ...entry, status: "finalizing" });
+      if (!current()) return;
       await finalizeConversationAttachments(conversationId, entries.map((entry) => entry.uploadItemId!), lane);
     } catch {
       if (!current()) return;
@@ -354,6 +375,7 @@ function ConversationFilesWorkspace({
     }
     if (!current()) return;
     setUploadQueue((queue) => queue.map((entry) => ids.has(entry.id) ? { ...entry, status: "committed" } : entry));
+    for (const entry of entries) void rememberUpload({ ...entry, status: "committed" });
     try {
       const refreshed = await filesQuery.refetch();
       if (refreshed.isError) throw refreshed.error;
@@ -370,7 +392,7 @@ function ConversationFilesWorkspace({
     actionLock.current = true; setActionBusy(true); setError(null);
     const access = authenticationGeneration();
     const current = () => mounted.current && access === authenticationGeneration();
-    try { await finalizeUploadedEntries(entries, current); }
+    try { for (const entry of entries) { if (!current()) return; await finalizeUploadedEntries([entry], current); } }
     finally { if (current()) { actionLock.current = false; setActionBusy(false); } }
   }
 
@@ -383,6 +405,7 @@ function ConversationFilesWorkspace({
 
   function retryUpload(entry: UploadEntry) {
     if (entry.status !== "failed" && entry.status !== "cancelled") return;
+    if (!entry.file || entry.error === "rejected") { reselectRef.current = entry.id; inputRef.current?.click(); return; }
     void uploadFiles([entry.file], entry.id);
   }
 
@@ -399,26 +422,31 @@ function ConversationFilesWorkspace({
       if (result.isError) throw result.error;
       if (!current()) return;
       const accepted = new Set(result.data?.map((item) => item.source_attachment_id).filter(Boolean));
-      const sessions = new Map<string, AttachmentUploadSessionRead>();
-      for (const entry of uploadQueue.filter((entry) => entry.status === "unknown" && entry.sessionId
-        && !accepted.has(entry.uploadItemId))) {
-        if (!sessions.has(entry.sessionId!)) sessions.set(entry.sessionId!, await getAttachmentUploadSession(entry.sessionId!));
+      const checked = new Map<string, Partial<UploadEntry>>();
+      for (const entry of uploadQueue.filter(item => item.status === "unknown")) {
+        if (entry.uploadItemId && accepted.has(entry.uploadItemId)) {
+          checked.set(entry.id, { status: "committed" }); continue;
+        }
+        let session: AttachmentUploadSessionRead;
+        try { session = await getAttachmentUploadSession(entry.sessionId ?? entry.sessionRequestId); }
+        catch (failure) {
+          if (failure instanceof ApiRequestError && failure.status === 404) {
+            checked.set(entry.id, { status: "failed", error: "absent", sessionAttempted: false }); continue;
+          }
+          throw failure;
+        }
         if (!current()) return;
+        const receipt = session.items.find(item => item.id === (entry.uploadItemId ?? entry.itemRequestId ?? entry.id));
+        if (receipt?.validation_status === "committed") checked.set(entry.id, { status: "committed" });
+        else if (session.status === "expired" || Date.parse(session.expires_at) <= Date.now())
+          checked.set(entry.id, { status: "failed", error: "expired" });
+        else if (receipt?.validation_status === "ready" && session.status === "open")
+          checked.set(entry.id, { status: "uploaded", uploadItemId: receipt.id, sessionId: session.id, progress: 100 });
+        else checked.set(entry.id, { status: "failed", error: receipt ? "rejected" : "absent",
+          sessionId: session.id, uploadAttempted: Boolean(receipt) });
       }
-      setUploadQueue((queue) => queue.map((entry) => {
-        if (entry.uploadItemId && accepted.has(entry.uploadItemId)) return { ...entry, status: "committed" };
-        if (entry.status !== "unknown") return entry;
-        const session = entry.sessionId ? sessions.get(entry.sessionId) : undefined;
-        const receipt = session?.items.find((item) => item.id === entry.uploadItemId);
-        // The attachment may have been detached since acceptance. Its receipt
-        // is still authoritative: do not offer a duplicate upload.
-        if (receipt?.validation_status === "committed") return { ...entry, status: "committed" };
-        if (session && receipt?.validation_status === "ready" && session.status === "open" && Date.parse(session.expires_at) > Date.now())
-          return { ...entry, status: "uploaded" };
-        if (session && (session.status === "expired" || Date.parse(session.expires_at) <= Date.now()))
-          return { ...entry, status: "failed", error: "expired" };
-        return entry;
-      }));
+      setUploadQueue(queue => queue.map(entry => ({ ...entry, ...checked.get(entry.id) })));
+      for (const entry of uploadQueue) if (checked.has(entry.id)) void rememberUpload({ ...entry, ...checked.get(entry.id) });
       setNotice(zh ? "文件列表已刷新" : "File list refreshed");
     } catch {
       if (current()) setError(zh ? "文件或上传状态核对失败，未确认项仍保留；请稍后重试。" : "Could not check the file or upload status. Unconfirmed entries are retained; try again.");
@@ -497,11 +525,18 @@ function ConversationFilesWorkspace({
       if (!await dialog.confirm({ title, confirmLabel: zh ? "移除" : "Detach", danger: true })) return;
       setActionBusy(true); setError(null); setNotice(null);
       let failed = 0;
+      let referenced = false;
       for (const attachment of removable) {
         try { await detachMutation.mutateAsync(attachment.id); }
-        catch { failed++; setSelected((current) => new Set([...current, attachment.id])); }
+        catch (failure) {
+          failed++; setSelected(current => new Set([...current, attachment.id]));
+          if (failure instanceof ApiRequestError && failure.code === "attachment_in_use") {
+            referenced = true; setDetailsId(attachment.id);
+          }
+        }
       }
-      if (failed) setError(zh ? `已移除 ${removable.length - failed} 项，${failed} 项失败；失败项已保留选择，可重试。` : `${removable.length - failed} detached, ${failed} failed. Failed items remain selected; retry.`);
+      if (referenced) setError(zh ? "文件仍在正文中使用，请从引用列表定位并移除引用。" : "This file is still used. Locate and remove its references from the usage list first.");
+      else if (failed) setError(zh ? `已移除 ${removable.length - failed} 项，${failed} 项失败；失败项已保留选择，可重试。` : `${removable.length - failed} detached, ${failed} failed. Failed items remain selected; retry.`);
       else setNotice(zh ? `已移除 ${removable.length} 个文件` : `${removable.length} files detached`);
     } finally { actionLock.current = false; setActionBusy(false); }
   }
@@ -537,13 +572,20 @@ function ConversationFilesWorkspace({
             onChange={(event) => {
               const nextFiles = Array.from(event.currentTarget.files ?? []);
               event.currentTarget.value = "";
-              void uploadFiles(nextFiles);
+              const retryId = reselectRef.current;
+              reselectRef.current = null;
+              const previous = retryId ? uploadQueue.find(entry => entry.id === retryId) : undefined;
+              if (previous && (nextFiles.length !== 1 || previous.error !== "rejected" && (nextFiles[0].name !== previous.filename || nextFiles[0].size !== previous.byteSize))) {
+                setError(zh ? "请选择原文件；名称或大小不符，未发起上传。" : "Select the original file. Its name or size differs; nothing was uploaded.");
+                return;
+              }
+              void uploadFiles(nextFiles, retryId ?? undefined);
             }}
           />
           <button
             type="button"
             disabled={uploadDisabled}
-            onClick={() => inputRef.current?.click()}
+            onClick={() => { reselectRef.current = null; inputRef.current?.click(); }}
             className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--text)] px-2.5 text-xs font-medium text-[var(--surface)] disabled:opacity-40"
           >
             <Upload className="h-3.5 w-3.5" />
@@ -604,23 +646,27 @@ function ConversationFilesWorkspace({
         ) : null}
         {uploadQueue.filter((entry) => entry.status !== "committed").map((entry) => (
           <div key={entry.id} className="rounded border border-ui bg-surface p-2">
-            <UploadProgress name={entry.file.name} value={entry.progress} />
+            <UploadProgress name={entry.filename} value={entry.progress} />
             <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-secondary">
               <span>{entry.status === "uploading" ? (zh ? "上传中" : "Uploading")
                 : entry.status === "uploaded" ? (zh ? "已上传，尚未加入对话" : "Uploaded, not yet added")
                 : entry.status === "finalizing" ? (zh ? "正在加入对话…" : "Adding to conversation…")
-                : entry.status === "unknown" ? (zh ? "提交结果未确认，请先核对" : "Finalization unconfirmed; check first")
+                : entry.status === "unknown" ? (zh ? "操作结果待确认，请先核对" : "Result unconfirmed; check first")
                 : entry.status === "failed" ? (entry.error === "expired" ? (zh ? "上传会话已过期，重试会建立新会话" : "Upload session expired; retry starts a new session")
                   : entry.error === "rejected" ? (zh ? "文件校验未通过" : "File validation failed") : (zh ? "上传失败" : "Upload failed"))
                 : entry.status === "cancelled" ? (zh ? "已取消" : "Cancelled") : (zh ? "排队中" : "Queued")}</span>
               {entry.status === "failed" || entry.status === "cancelled" ? <div className="flex shrink-0 gap-1">
-                <button type="button" disabled={actionBusy} onClick={() => retryUpload(entry)} className="min-h-11 rounded px-2 font-medium text-accent underline">{zh ? "重试此文件" : "Retry this file"}</button>
-                <button type="button" disabled={actionBusy} onClick={() => setUploadQueue((queue) => queue.filter((item) => item.id !== entry.id))} className="min-h-11 rounded px-2 underline">{zh ? "移出队列" : "Remove"}</button>
+                <button type="button" disabled={actionBusy} onClick={() => retryUpload(entry)} className="min-h-11 rounded px-2 font-medium text-accent underline">{entry.error === "rejected" ? (zh ? "替换源文件" : "Replace source file") : entry.file ? (zh ? "重试此文件" : "Retry this file") : (zh ? "重新选择原文件" : "Reselect original file")}</button>
+                <button type="button" disabled={actionBusy} onClick={() => {
+                  void rememberUpload({ ...entry, status: "removed" as UploadEntry["status"] });
+                  setUploadQueue(queue => queue.filter(item => item.id !== entry.id));
+                }} className="min-h-11 rounded px-2 underline">{zh ? "移出队列" : "Remove"}</button>
               </div> : null}
               {entry.status === "unknown" ? <button type="button" disabled={actionBusy} onClick={() => void refreshAttachmentList()} className="min-h-11 shrink-0 rounded px-2 underline">{zh ? "核对提交结果" : "Check result"}</button> : null}
             </div>
           </div>
         ))}
+        {receiptWarning && uploadQueue.some(entry => entry.status === "unknown") ? <p role="status" className="text-xs text-secondary">{zh ? "本机回执未能保存；核对完成前请保留此页面。" : "Local receipts could not be stored. Keep this page open until checking is complete."}</p> : null}
         {uploadQueue.some((entry) => entry.status === "uploaded") ? <button type="button" disabled={actionBusy} onClick={() => void finishPendingUploads()} className="min-h-11 w-full rounded border border-ui bg-surface px-3 text-sm font-medium text-primary">{zh ? `将已上传的 ${uploadQueue.filter((entry) => entry.status === "uploaded").length} 个文件加入对话` : `Add ${uploadQueue.filter((entry) => entry.status === "uploaded").length} uploaded files`}</button> : null}
         {error ? (
           <div role="alert" className="rounded bg-[var(--danger-soft)] p-2 text-xs text-[var(--danger)]">

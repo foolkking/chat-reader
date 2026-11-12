@@ -7,12 +7,16 @@ import { FloatingWorkspacePanel } from "../../components/floating-workspace-pane
 import { usePreferences } from "../../components/preferences-provider";
 import { measureImportImageLane } from "../import/image-import-lane";
 import { useDialogFocus } from "../../components/use-dialog-focus";
-import { createAttachmentUploadSession, deleteAttachmentUploadItem, deleteConversationAttachment, editMessage, finalizeConversationAttachments, getConversation, getConversationAttachments, getConversationReaderTurn, uploadAttachmentItem } from "../../lib/api";
+import { ApiRequestError, createAttachmentUploadSession, deleteAttachmentUploadItem, deleteConversationAttachment, editMessage, finalizeConversationAttachments, getAttachmentUploadSession, getMessage, getMessageSaveReceipt, getConversation, getConversationAttachments, getConversationReaderTurn, uploadAttachmentItem } from "../../lib/api";
+import { authenticationGeneration } from "../../lib/offline-access";
 import type { AttachmentRead, MessageEditResponse, MessageListItem, NavigateTarget } from "../../lib/types";
 import { ContentCleanupDialog, type CleanupSourceSelection } from "../conversations/content-cleanup-panel";
 import { sourceEditorNavigationTarget } from "../conversations/reader-locator-target";
-import { EditMessageForm, type SourceTextSelection } from "./edit-message-form";
-import type { AttachmentDraft, AttachmentDraftCallbacks } from "./source-attachment-drop";
+import { EditMessageForm, type SourceSaveResult, type SourceTextSelection } from "./edit-message-form";
+import type { AttachmentDraft, AttachmentDraftCallbacks, AttachmentReferenceTarget, SourceAttachmentInsertion } from "./source-attachment-drop";
+import { findMarkdownAttachmentReferences } from "./source-attachment-drop";
+import { forgetSourceSave, readSourceSave, rememberSourceSave, type SourceSaveAttempt } from "./source-save-receipt";
+import { keepUploadReceipt, readUploadReceipts } from "../attachments/upload-receipts";
 
 export type SourceEditorTarget = {
   message: MessageListItem;
@@ -23,7 +27,12 @@ const FORM_ID = "reader-source-editor-form";
 
 type UploadJob = {
   token: string;
-  file: File;
+  generation: number;
+  file?: File;
+  filename: string;
+  byteSize: number;
+  mimeType: string;
+  lastModified: number;
   sessionId?: string;
   itemId?: string;
   attachmentId?: string;
@@ -32,6 +41,14 @@ type UploadJob = {
   callbacks: AttachmentDraftCallbacks;
   cancelled?: boolean;
   inFlight?: boolean;
+  requestId: string;
+  sessionRequestId: string;
+  attempted?: boolean;
+  sessionAttempted?: boolean;
+  readyToRun?: boolean;
+  finalizeAttempted?: boolean;
+  baseVersionId?: string;
+  rejected?: boolean;
 };
 
 export function SourceEditorWorkspace({
@@ -67,6 +84,9 @@ export function SourceEditorWorkspace({
   const cursorOffsetRef = useRef(target.cursorOffset);
   const message = target.message;
   const uploadJobsRef = useRef(new Map<string, UploadJob>());
+  const workspaceActiveRef = useRef(true);
+  const reselectUploadRef = useRef<HTMLInputElement | null>(null);
+  const reselectTokenRef = useRef<string | null>(null);
   const [attachmentPickerOpen, setAttachmentPickerOpen] = useState(false);
   // Source editing is the primary task. Rich preview is opt-in so opening the
   // workspace never halves the editor or starts a potentially heavy render
@@ -75,8 +95,17 @@ export function SourceEditorWorkspace({
   const [editorToolsOpen, setEditorToolsOpen] = useState(false);
   const [historyCommandRequest, setHistoryCommandRequest] = useState<{ id: number; command: "undo" | "redo" } | null>(null);
   const editorToolsButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [localAttachmentInsertion, setLocalAttachmentInsertion] = useState<{ referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null>(null);
-  const [saveBaseVersionId, setSaveBaseVersionId] = useState(message.current_version?.id);
+  const [localAttachmentInsertion, setLocalAttachmentInsertion] = useState<SourceAttachmentInsertion | null>(null);
+  const [focusedAttachment, setFocusedAttachment] = useState<AttachmentReferenceTarget | null>(null);
+  const [saveBase, setSaveBase] = useState(message.current_version);
+  const baselineMessageRef = useRef(message.id);
+  const comparisonMessageRef = useRef<MessageListItem | null>(null);
+  const saveAttemptRef = useRef<SourceSaveAttempt | null>(null);
+  const [recoveredSave, setRecoveredSave] = useState<SourceSaveAttempt | null>(null);
+  const [saveRecoveryReady, setSaveRecoveryReady] = useState(false);
+  const [receiptStorageUnavailable, setReceiptStorageUnavailable] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const uploadRunningRef = useRef(false);
   const [editorDirty, setEditorDirty] = useState(false);
   const [sourceSelection, setSourceSelection] = useState<SourceTextSelection | null>(null);
   const [cleanupOpen, setCleanupOpen] = useState(false);
@@ -91,33 +120,123 @@ export function SourceEditorWorkspace({
   const text = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
   const versionNumber = message.current_version?.version_number ?? 1;
   const effectiveAttachmentInsertion = localAttachmentInsertion ?? pendingAttachmentInsertion;
+  const uploadReceiptScope = `${message.conversation_id}:${message.id}`;
+  async function rememberUpload(job: UploadJob, status: string) {
+    const saved = await keepUploadReceipt(uploadReceiptScope, {
+      id: job.token, sessionRequestId: job.sessionRequestId, itemRequestId: job.requestId,
+      sessionId: job.sessionId, uploadItemId: job.itemId,
+      sessionAttempted: job.sessionAttempted, uploadAttempted: job.attempted,
+      status, progress: 0, filename: job.filename, byteSize: job.byteSize,
+      mimeType: job.mimeType, lastModified: job.lastModified,
+      baseVersionId: job.baseVersionId,
+    }, job.file);
+    if (!saved && workspaceActiveRef.current && job.generation === authenticationGeneration()) setReceiptStorageUnavailable(true);
+  }
+  async function restoreAttachmentDrafts(tokens: string[], callbacks: AttachmentDraftCallbacks): Promise<AttachmentDraft[]> {
+    const generation = authenticationGeneration();
+    const receipts = await readUploadReceipts(uploadReceiptScope);
+    if (!workspaceActiveRef.current || generation !== authenticationGeneration()) return [];
+    return receipts.filter(({ receipt }) => tokens.includes(receipt.id)).map(({ receipt, file }) => {
+      if (!uploadJobsRef.current.has(receipt.id)) uploadJobsRef.current.set(receipt.id, {
+        token: receipt.id, generation, file, filename: receipt.filename, byteSize: receipt.byteSize,
+        mimeType: receipt.mimeType, lastModified: receipt.lastModified,
+        callbacks, sessionRequestId: receipt.sessionRequestId, requestId: receipt.itemRequestId ?? receipt.id,
+        baseVersionId: receipt.baseVersionId,
+        sessionId: receipt.sessionId, itemId: receipt.uploadItemId,
+        sessionAttempted: receipt.sessionAttempted, attempted: receipt.uploadAttempted,
+        finalizeAttempted: ["finalizing", "resolved"].includes(receipt.status),
+        rejected: receipt.status === "rejected",
+      });
+      return { token: receipt.id, displayName: receipt.filename, image: receipt.mimeType.startsWith("image/") };
+    });
+  }
+
+  useEffect(() => {
+    let active = true;
+    const generation = authenticationGeneration();
+    setSaveRecoveryReady(false);
+    void readSourceSave(message.id).then(attempt => {
+      if (!active || generation !== authenticationGeneration()) return;
+      saveAttemptRef.current = attempt;
+      setRecoveredSave(attempt);
+      setSaveRecoveryReady(true);
+    });
+    return () => { active = false; };
+  }, [message.id]);
 
   async function startUploadJob(job: UploadJob): Promise<void> {
-    if (job.inFlight || job.cancelled) return;
+    if (job.inFlight || job.cancelled || job.generation !== authenticationGeneration() || !workspaceActiveRef.current) return;
     job.inFlight = true;
+    job.callbacks.onProgress(job.token, 0);
+    const generation = job.generation;
+    const check = () => { if (!workspaceActiveRef.current || generation !== authenticationGeneration() || job.cancelled) throw new Error("Account or editor changed"); };
     try {
       if (!job.sessionId) {
-        const session = await createAttachmentUploadSession(message.conversation_id, {
-          targetMessageId: message.id,
-          baseMessageVersionId: message.current_version?.id,
-        });
+        const session = job.sessionAttempted
+          ? await getAttachmentUploadSession(job.sessionRequestId)
+          : await (async () => {
+            job.sessionAttempted = true;
+            await rememberUpload(job, "session");
+            check();
+            return createAttachmentUploadSession(message.conversation_id, {
+              targetMessageId: message.id, baseMessageVersionId: job.baseVersionId, requestId: job.sessionRequestId,
+            });
+          })();
+        check();
         job.sessionId = session.id;
       }
       if (job.cancelled) return;
       if (!job.itemId) {
-        const request = uploadAttachmentItem(job.sessionId, job.file, (progress) => job.callbacks.onProgress(job.token, progress));
-        job.cancel = request.cancel;
-        const item = await request.promise;
+        const item = job.attempted
+          ? (await getAttachmentUploadSession(job.sessionId)).items.find(item => item.id === job.requestId)
+          : await (async () => {
+            if (!job.file) throw new Error(zh ? "请重试并重新选择原文件。" : "Retry and reselect the original file.");
+            job.attempted = true;
+            await rememberUpload(job, "uploading");
+            check();
+            const request = uploadAttachmentItem(job.sessionId!, job.file, progress => job.callbacks.onProgress(job.token, progress), job.requestId);
+            job.cancel = request.cancel;
+            return request.promise;
+          })();
+        check();
+        if (!item) {
+          job.attempted = false;
+          throw new Error(zh ? "未找到上传回执。再次重试将使用原请求身份上传同一文件。" : "No upload receipt found. Retry again to upload the same file with its original request identity.");
+        }
         job.itemId = item.id;
+        if (item.validation_status !== "ready" && item.validation_status !== "committed") {
+          job.rejected = true;
+          void rememberUpload(job, "rejected");
+          throw new Error(zh ? "附件未通过检查，请替换源文件。" : "Attachment checks did not pass. Replace the source file.");
+        }
       }
       if (job.cancelled) return;
       job.imageLaneWidth ??= measureImportImageLane({ readerWidthMode, sectionTocMode });
+      if (job.finalizeAttempted) {
+        const attachments = await getConversationAttachments(message.conversation_id);
+        check();
+        const accepted = attachments.find(item => item.source_attachment_id === job.itemId);
+        if (accepted) {
+          job.attachmentId = accepted.id;
+          void rememberUpload(job, "resolved");
+          job.callbacks.onComplete(job.token, { id: job.itemId, attachmentId: accepted.id });
+          return;
+        }
+        const receipt = (await getAttachmentUploadSession(job.sessionId)).items.find(item => item.id === job.itemId);
+        check();
+        if (receipt?.validation_status === "ready") job.finalizeAttempted = false;
+        throw new Error(zh ? "尚未确认附件加入结果。原上传已保留，可再次核对或重试原条目。" : "Attachment acceptance is not confirmed. The original upload is retained; check again or retry this item.");
+      }
+      job.finalizeAttempted = true;
+      await rememberUpload(job, "finalizing");
+      check();
       const finalized = await finalizeConversationAttachments(message.conversation_id, [job.itemId], job.imageLaneWidth);
+      check();
       const attachment = finalized[0];
       if (!attachment) throw new Error("Uploaded attachment could not be finalized.");
       job.attachmentId = attachment.id;
+      void rememberUpload(job, "resolved");
       if (job.cancelled) {
-        await deleteConversationAttachment(message.conversation_id, attachment.id).catch(() => undefined);
         return;
       }
       queryClient.setQueryData<AttachmentRead[]>(
@@ -126,16 +245,30 @@ export function SourceEditorWorkspace({
       );
       job.callbacks.onComplete(job.token, { id: job.itemId, attachmentId: attachment.id });
     } catch (error) {
+      if (generation !== authenticationGeneration()) return;
       if (job.cancelled || (error instanceof DOMException && error.name === "AbortError")) return;
+      if (!job.sessionId && error instanceof ApiRequestError && error.status === 404) job.sessionAttempted = false;
       // Publish the retryable state only after the job is no longer in flight.
       // Otherwise the Retry control can render while this guard is still true,
       // making an immediate user retry a no-op.
       job.inFlight = false;
-      job.callbacks.onError(job.token, error instanceof Error ? error.message : "Attachment upload failed.");
+      job.callbacks.onError(job.token, error instanceof Error ? error.message : "Attachment upload failed.", job.rejected ? "replace_source" : undefined);
     } finally {
       job.inFlight = false;
       job.cancel = undefined;
     }
+  }
+
+  async function drainUploads(): Promise<void> {
+    if (uploadRunningRef.current) return;
+    uploadRunningRef.current = true;
+    try {
+      for (const job of uploadJobsRef.current.values()) {
+        if (!job.readyToRun || job.cancelled) continue;
+        job.readyToRun = false;
+        await startUploadJob(job);
+      }
+    } finally { uploadRunningRef.current = false; }
   }
 
   function handleAttachmentFiles(files: File[], _position: number, callbacks: AttachmentDraftCallbacks): AttachmentDraft[] {
@@ -145,51 +278,27 @@ export function SourceEditorWorkspace({
       image: (file.type || "").startsWith("image/"),
     }));
     drafts.forEach((draft, index) => {
-      const job: UploadJob = { token: draft.token, file: files[index], callbacks };
+      const job: UploadJob = { token: draft.token, generation: authenticationGeneration(), file: files[index], callbacks,
+        filename: files[index].name, byteSize: files[index].size, mimeType: files[index].type, lastModified: files[index].lastModified,
+        requestId: crypto.randomUUID(), sessionRequestId: crypto.randomUUID(), baseVersionId: saveBase?.id, readyToRun: true };
       uploadJobsRef.current.set(job.token, job);
     });
     // Insert transient markers into the authoritative document before even an
     // immediate upload can complete and attempt canonicalization.
     queueMicrotask(() => {
-      for (const draft of drafts) {
-        const job = uploadJobsRef.current.get(draft.token);
-        if (job && !job.cancelled) void startUploadJob(job);
-      }
+      void drainUploads();
     });
     return drafts;
   }
 
   async function retryAttachment(token: string): Promise<void> {
-    const previousJob = uploadJobsRef.current.get(token);
-    if (!previousJob || previousJob.inFlight) return;
-    previousJob.cancelled = true;
-    const job: UploadJob = {
-      token,
-      file: previousJob.file,
-      callbacks: previousJob.callbacks,
-      inFlight: true,
-    };
-    // Replace the failed job object so late callbacks from the failed attempt
-    // cannot overwrite the retry's ready/error state.
-    uploadJobsRef.current.set(token, job);
-    // Claim the retry synchronously before the cleanup await. This prevents
-    // two immediate clicks from racing and starting duplicate finalization.
-    job.inFlight = true;
-    // A failed finalize may leave its staging item ready but unusable (for
-    // example after a transient 5xx). Start a fresh idempotent upload attempt
-    // instead of reusing that item, while retaining the same editor marker.
-    const previousSessionId = previousJob.sessionId;
-    const previousItemId = previousJob.itemId;
-    if (previousSessionId && previousItemId && !job.attachmentId) {
-      job.sessionId = undefined;
-      job.itemId = undefined;
-      // Cleanup is best-effort and must not hold the user-facing retry path.
-      // The upload session/item has already failed finalization; retry with a
-      // fresh item while the server reclaims the stale staging row.
-      void deleteAttachmentUploadItem(previousSessionId, previousItemId).catch(() => undefined);
+    const job = uploadJobsRef.current.get(token);
+    if (!job || job.inFlight || job.readyToRun) return;
+    if (job.rejected || !job.file && !job.itemId && !job.attempted) {
+      reselectTokenRef.current = token; reselectUploadRef.current?.click(); return;
     }
-    job.inFlight = false;
-    await startUploadJob(job);
+    job.readyToRun = true;
+    await drainUploads();
   }
 
   function removeAttachment(token: string): void {
@@ -197,14 +306,7 @@ export function SourceEditorWorkspace({
     if (!job) return;
     job.cancelled = true;
     job.cancel?.();
-    if (job.attachmentId) {
-      void deleteConversationAttachment(message.conversation_id, job.attachmentId)
-        .then(() => queryClient.invalidateQueries({ queryKey: ["conversation-attachments", message.conversation_id] }))
-        .catch(() => undefined);
-    } else if (job.itemId && job.sessionId) {
-      void deleteAttachmentUploadItem(job.sessionId, job.itemId).catch(() => undefined);
-    }
-    uploadJobsRef.current.delete(token);
+    // Removing a reference is not permission to delete a conversation file.
   }
 
   async function handleAttachmentCancel(preserve: boolean, _itemIds: string[]): Promise<void> {
@@ -219,12 +321,12 @@ export function SourceEditorWorkspace({
       job.cancel?.();
       if (!preserve && job.attachmentId) {
         cleanup.push(deleteConversationAttachment(message.conversation_id, job.attachmentId).catch(() => undefined));
-      } else if (job.itemId && job.sessionId && !job.attachmentId) {
+      } else if (!preserve && job.itemId && job.sessionId && !job.attachmentId) {
         cleanup.push(deleteAttachmentUploadItem(job.sessionId, job.itemId).catch(() => undefined));
       }
     }
     await Promise.all(cleanup);
-    await queryClient.invalidateQueries({ queryKey: ["conversation-attachments", message.conversation_id] });
+    void queryClient.invalidateQueries({ queryKey: ["conversation-attachments", message.conversation_id] }).catch(() => undefined);
     uploadJobsRef.current.clear();
   }
 
@@ -251,7 +353,10 @@ export function SourceEditorWorkspace({
   }, [target.cursorOffset, target.message.id]);
 
   useEffect(() => {
-    setSaveBaseVersionId(message.current_version?.id);
+    if (baselineMessageRef.current === message.id) return;
+    baselineMessageRef.current = message.id;
+    setSaveBase(message.current_version);
+    saveAttemptRef.current = null;
     setSourceSelection(null);
     setCleanupOpen(false);
     setEditorToolsOpen(false);
@@ -261,17 +366,16 @@ export function SourceEditorWorkspace({
     setDiscardSwitchError(null);
   }, [pendingTarget?.message.id, pendingTarget?.cursorOffset]);
 
-  useEffect(() => () => {
+  useEffect(() => {
+    workspaceActiveRef.current = true;
+    return () => {
+    workspaceActiveRef.current = false;
     for (const job of uploadJobsRef.current.values()) {
       job.cancelled = true;
       job.cancel?.();
-      if (job.attachmentId) {
-        void deleteConversationAttachment(message.conversation_id, job.attachmentId).catch(() => undefined);
-      } else if (job.itemId && job.sessionId) {
-        void deleteAttachmentUploadItem(job.sessionId, job.itemId).catch(() => undefined);
-      }
     }
     uploadJobsRef.current.clear();
+    };
   }, [message.conversation_id]);
 
   useEffect(() => {
@@ -316,11 +420,104 @@ export function SourceEditorWorkspace({
     if (!latestMessage?.current_version?.id) {
       throw new Error(zh ? "无法加载最新消息状态。" : "Unable to load the latest message state.");
     }
-    setSaveBaseVersionId(latestMessage.current_version.id);
+    setSaveBase(latestMessage.current_version);
     onConversationRevision?.(conversation.offline_revision);
     await onMessageChanged(latestMessage);
     onTargetUpdated({ message: latestMessage, cursorOffset: cursorOffsetRef.current });
     return latestMessage;
+  }
+
+  function savedSource(value: NonNullable<MessageListItem["current_version"]>): SourceSaveResult {
+    if (!value.source_content_hash) throw new Error("Source receipt is missing its source hash");
+    return { canonicalText: value.display_text ?? value.plain_text ?? "", versionId: value.id,
+      contentHash: value.source_content_hash, versionNumber: value.version_number };
+  }
+
+  async function refreshReader(savedMessage?: MessageListItem): Promise<void> {
+    const generation = authenticationGeneration();
+    try {
+      const latest = savedMessage ?? await getMessage(message.id);
+      if (generation !== authenticationGeneration()) return;
+      await onMessageChanged(latest);
+      if (generation !== authenticationGeneration()) return;
+      onTargetUpdated({ message: latest, cursorOffset: cursorOffsetRef.current });
+      setRefreshFailed(false);
+    } catch {
+      if (generation === authenticationGeneration()) setRefreshFailed(true);
+    }
+  }
+
+  async function verifySave(): Promise<SourceSaveResult> {
+    const attempt = saveAttemptRef.current;
+    if (!attempt || attempt.generation !== authenticationGeneration()) throw new Error("No pending save in this account");
+    const receipt = await getMessageSaveReceipt(message.id, attempt.operationId);
+    if (attempt.generation !== authenticationGeneration()) throw new Error("Account changed");
+    const confirmed = { ...saveBase!, id: receipt.current_version_id, version_number: receipt.version_number,
+      content_hash: receipt.content_hash, source_content_hash: receipt.source_content_hash, display_text: attempt.text, plain_text: attempt.text };
+    setSaveBase(confirmed);
+    saveAttemptRef.current = null;
+    setRecoveredSave(null);
+    void forgetSourceSave(message.id, attempt.operationId);
+    releaseSavedUploadReceipts(attempt.text);
+    onConversationRevision?.(receipt.conversation_revision);
+    void refreshReader();
+    return savedSource(confirmed);
+  }
+
+  function releaseSavedUploadReceipts(source: string) {
+    const referenced = new Set(findMarkdownAttachmentReferences(source, "cr-asset").map(ref => ref.identifier));
+    for (const job of uploadJobsRef.current.values()) {
+      if (job.attachmentId && referenced.has(job.attachmentId)) void rememberUpload(job, "committed");
+    }
+  }
+
+  async function performSave(attempt: SourceSaveAttempt): Promise<SourceSaveResult> {
+    const clickedAt = window.performance.now();
+    const generation = attempt.generation;
+    let response;
+    try {
+      response = await editMessage(message.id, attempt.payload);
+    } catch (error) {
+      if (generation !== authenticationGeneration()) throw new Error("Account changed");
+      if (error instanceof ApiRequestError && error.status >= 400 && error.status < 500 && error.status !== 408) {
+        saveAttemptRef.current = null;
+        setRecoveredSave(null);
+        void forgetSourceSave(message.id, attempt.operationId);
+        throw error;
+      }
+      throw new ApiRequestError("Save result unknown", 0, "", "save_result_unknown");
+    }
+    if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    if ("status" in response) return verifySave();
+    const networkCompletedAt = window.performance.now();
+    const confirmed = response.message_version;
+    setSaveBase(confirmed);
+    saveAttemptRef.current = null;
+    setRecoveredSave(null);
+    void forgetSourceSave(message.id, attempt.operationId);
+    releaseSavedUploadReceipts(attempt.text);
+    // Refresh/cache publication cannot undo the confirmed write.
+    try {
+      queryClient.setQueryData(
+        ["conversation-attachments", message.conversation_id],
+        (current: AttachmentRead[] | undefined) => patchConversationAttachmentCache(
+          current, response, message.id, attempt.payload.saveMode ?? "create_version",
+          attempt.payload.removedAttachmentActions ?? [],
+        ),
+      );
+      onConversationRevision?.(response.conversation_revision);
+      const cacheCompletedAt = window.performance.now();
+      void queryClient.invalidateQueries({ queryKey: ["message-versions", message.id] }).catch(() => setRefreshFailed(true));
+      void refreshReader(response.message).then(nextPaint).then(() => {
+        if (generation !== authenticationGeneration()) return;
+        window.dispatchEvent(new CustomEvent("chat-reader:message-save-performance", { detail: {
+          save_click_to_request_ms: 0, network_ms: networkCompletedAt - clickedAt,
+          cache_update_ms: cacheCompletedAt - networkCompletedAt,
+          reader_render_ms: window.performance.now() - cacheCompletedAt,
+        } }));
+      });
+    } catch { setRefreshFailed(true); }
+    return savedSource(confirmed);
   }
 
   const cleanupSelection: CleanupSourceSelection | null = sourceSelection ? {
@@ -362,6 +559,25 @@ export function SourceEditorWorkspace({
       banner={pendingBanner}
     >
       <div className="flex h-full min-h-0 flex-col" data-source-editor-shell="true" data-source-selection-state={selectionState}>
+        <input ref={reselectUploadRef} type="file" className="hidden" data-testid="source-editor-reselect-upload"
+          onChange={event => {
+            const file = event.currentTarget.files?.[0]; event.currentTarget.value = "";
+            const token = reselectTokenRef.current; reselectTokenRef.current = null;
+            const job = token ? uploadJobsRef.current.get(token) : undefined;
+            if (!file || !job || job.generation !== authenticationGeneration()) return;
+            if (!job.rejected && (file.name !== job.filename || file.size !== job.byteSize)) {
+              job.callbacks.onError(job.token, zh ? "名称或大小不符，请重新选择原文件。" : "Name or size differs. Reselect the original file.");
+              return;
+            }
+            if (job.rejected) {
+              if (job.sessionId && job.itemId) void deleteAttachmentUploadItem(job.sessionId, job.itemId).catch(() => undefined);
+              Object.assign(job, { rejected: false, sessionId: undefined, itemId: undefined,
+                sessionRequestId: crypto.randomUUID(), requestId: crypto.randomUUID(),
+                sessionAttempted: false, attempted: false, finalizeAttempted: false,
+                filename: file.name, byteSize: file.size, mimeType: file.type, lastModified: file.lastModified });
+            }
+            job.file = file; job.readyToRun = true; void drainUploads();
+          }} />
         <div className="flex min-h-10 shrink-0 items-center justify-between border-b border-ui bg-surface px-2">
           <div className="flex min-w-0 items-center gap-1">
             <label htmlFor={`${FORM_ID}-attachment-input`} className="inline-flex h-10 w-10 cursor-pointer items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" aria-label={zh ? "添加附件" : "Add attachment"} title={zh ? "添加附件" : "Add attachment"}><Upload className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "添加附件" : "Add attachment"}</span></label>
@@ -379,7 +595,7 @@ export function SourceEditorWorkspace({
         </div>
         <div className="relative min-h-0 flex-1">
           <EditMessageForm
-            key={`${message.id}:${message.current_version?.id ?? "initial"}`}
+            key={message.id}
             formId={FORM_ID}
             initialText={text}
             initialCursorOffset={target.cursorOffset}
@@ -389,15 +605,22 @@ export function SourceEditorWorkspace({
             onOpenAttachmentPicker={() => { setEditorToolsOpen(false); setAttachmentPickerOpen(true); }}
             messageId={message.id}
             conversationId={message.conversation_id}
-            versionNumber={versionNumber}
-            versionId={message.current_version?.id}
-            contentHash={message.current_version?.content_hash}
+            versionNumber={saveBase?.version_number ?? versionNumber}
+            versionId={saveBase?.id}
+            contentHash={saveBase?.source_content_hash}
+            saveRecoveryReady={saveRecoveryReady}
+            pendingSave={recoveredSave}
+            readerRefreshPending={refreshFailed}
+            onRefreshReader={() => void refreshReader()}
+            receiptStorageUnavailable={receiptStorageUnavailable}
             onCursorOffsetChange={(offset) => { cursorOffsetRef.current = offset; }}
             onSelectionChange={setSourceSelection}
+            onAttachmentFocus={setFocusedAttachment}
             onDirtyChange={(dirty) => { setEditorDirty(dirty); onDirtyChange(dirty); }}
             onCancel={() => onClose()}
             onAttachmentFiles={handleAttachmentFiles}
             onAttachmentRetry={retryAttachment}
+            onRestoreAttachmentDrafts={restoreAttachmentDrafts}
             onAttachmentRemove={removeAttachment}
             onAttachmentCancel={handleAttachmentCancel}
             conversationAttachments={conversationAttachmentsQuery.data ?? []}
@@ -406,45 +629,40 @@ export function SourceEditorWorkspace({
             editorToolsOpen={editorToolsOpen}
             onEditorToolsOpenChange={setEditorToolsOpen}
             historyCommandRequest={historyCommandRequest}
-            onReloadLatest={async () => { await loadLatestMessage(); }}
+            onReloadLatest={async () => {
+              const generation = authenticationGeneration();
+              const latest = await getMessage(message.id);
+              if (generation !== authenticationGeneration() || !latest.current_version) throw new Error("Source unavailable");
+              comparisonMessageRef.current = latest;
+              return savedSource(latest.current_version);
+            }}
+            onAcceptLatest={() => {
+              const latest = comparisonMessageRef.current;
+              if (latest?.current_version) setSaveBase(latest.current_version);
+              comparisonMessageRef.current = null;
+            }}
+            onVerifySave={verifySave}
+            onRetrySave={async () => {
+              const attempt = saveAttemptRef.current;
+              if (!attempt || attempt.generation !== authenticationGeneration()) throw new Error("No pending save");
+              return performSave(attempt);
+            }}
             onSave={async (nextText, reason, saveMode, removedActions, editorRevision) => {
-              const clickedAt = window.performance.now();
-              const requestStartedAt = window.performance.now();
-              const response = await editMessage(message.id, {
-                contentMarkdown: nextText,
-                editReason: reason,
-                baseVersionId: saveBaseVersionId,
-                saveMode,
-                editorRevision,
-                removedAttachmentActions: removedActions,
-              });
-              const networkCompletedAt = window.performance.now();
-              queryClient.setQueryData(
-                ["conversation-attachments", message.conversation_id],
-                (current: AttachmentRead[] | undefined) => patchConversationAttachmentCache(
-                  current,
-                  response,
-                  message.id,
-                  saveMode,
-                  removedActions,
-                ),
-              );
-              const cacheCompletedAt = window.performance.now();
-              onConversationRevision?.(response.conversation_revision);
-              await onMessageChanged(response.message);
-              await nextPaint();
-              const renderCompletedAt = window.performance.now();
-              window.dispatchEvent(new CustomEvent("chat-reader:message-save-performance", { detail: {
-                save_click_to_request_ms: requestStartedAt - clickedAt,
-                network_ms: networkCompletedAt - requestStartedAt,
-                cache_update_ms: cacheCompletedAt - networkCompletedAt,
-                reader_render_ms: renderCompletedAt - cacheCompletedAt,
-              } }));
-              void queryClient.invalidateQueries({ queryKey: ["message-versions", message.id] });
-              onTargetUpdated({ message: response.message, cursorOffset: cursorOffsetRef.current });
-              setSaveBaseVersionId(response.message.current_version?.id);
-              uploadJobsRef.current.clear();
-              return { canonicalText: response.message.current_version?.display_text ?? response.message.current_version?.plain_text ?? nextText };
+              if (saveAttemptRef.current) throw new ApiRequestError("Save result unknown", 0, "", "save_result_unknown");
+              const generation = authenticationGeneration();
+              const operationId = crypto.randomUUID();
+              const attempt: SourceSaveAttempt = {
+                operationId, text: nextText, generation, payload: {
+                  contentMarkdown: nextText, editReason: reason, baseVersionId: saveBase?.id,
+                  baseContentHash: saveBase?.source_content_hash, operationId, saveMode, editorRevision,
+                  removedAttachmentActions: removedActions,
+                },
+              };
+              saveAttemptRef.current = attempt;
+              const persisted = await rememberSourceSave(message.id, attempt);
+              if (generation !== authenticationGeneration()) throw new Error("Account changed");
+              setReceiptStorageUnavailable(!persisted);
+              return performSave(attempt);
             }}
           />
           {sourceSelection && selectedCharacterCount > 0 ? <div className="source-editor-selection-badge" data-testid="source-editor-selection-status" role="status" aria-live="polite">{zh ? `已选择 ${selectedCharacterCount} 个字符` : `${selectedCharacterCount} chars selected`}</div> : null}
@@ -453,14 +671,24 @@ export function SourceEditorWorkspace({
           <ConversationAttachmentPicker
             conversationId={message.conversation_id}
             zh={zh}
+            replaceTarget={focusedAttachment}
+            onRemove={() => {
+              if (focusedAttachment) setLocalAttachmentInsertion({
+                referenceUri: "", displayName: "", image: false, placement: "inline",
+                replace: { ...focusedAttachment, scope: "one", remove: true },
+              });
+              setAttachmentPickerOpen(false);
+            }}
             onClose={() => setAttachmentPickerOpen(false)}
-            onChoose={(attachment, placement) => {
+            onChoose={(attachment, placement, replaceAll) => {
               const mime = attachment.detected_mime_type ?? attachment.asset_object?.detected_mime_type ?? attachment.declared_mime_type ?? "";
               setLocalAttachmentInsertion({
                 referenceUri: `cr-asset://${attachment.id}`,
                 displayName: attachment.display_name,
                 image: mime.startsWith("image/"),
                 placement,
+                ...(focusedAttachment && placement === "inline"
+                  ? { replace: { ...focusedAttachment, scope: replaceAll ? "all" as const : "one" as const } } : {}),
               });
               setAttachmentPickerOpen(false);
             }}
@@ -533,17 +761,18 @@ function patchConversationAttachmentCache(
 }
 
 function nextPaint(): Promise<void> {
-  return new Promise((resolve) => {
-    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
-  });
+  return new Promise(resolve => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
 }
 
-function ConversationAttachmentPicker({ conversationId, zh, onClose, onChoose }: {
+function ConversationAttachmentPicker({ conversationId, zh, onClose, onChoose, replaceTarget, onRemove }: {
   conversationId: string;
   zh: boolean;
   onClose: () => void;
-  onChoose: (attachment: AttachmentRead, placement: "inline" | "after_message") => void;
+  onChoose: (attachment: AttachmentRead, placement: "inline" | "after_message", replaceAll?: boolean) => void;
+  replaceTarget: AttachmentReferenceTarget | null;
+  onRemove: () => void;
 }) {
+  const [replaceAll, setReplaceAll] = useState(false);
   const [search, setSearch] = useState("");
   const rootRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -566,6 +795,10 @@ function ConversationAttachmentPicker({ conversationId, zh, onClose, onChoose }:
           <h2 className="min-w-0 flex-1 text-sm font-semibold text-primary">{zh ? "选择当前对话文件" : "Choose conversation file"}</h2>
           <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button>
         </header>
+        {replaceTarget ? <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ui px-4 text-xs">
+          <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={replaceAll} onChange={event => setReplaceAll(event.target.checked)} />{zh ? "替换本条消息中全部引用" : "Replace all references in this message"}</label>
+          <button type="button" className="min-h-11 text-[var(--danger)]" onClick={onRemove}>{zh ? "移除此处引用" : "Remove this reference"}</button>
+        </div> : null}
         <label className="relative m-3">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
           <input ref={searchRef} data-dialog-initial-focus value={search} onChange={(event) => setSearch(event.target.value)} className="min-h-10 w-full rounded-lg border border-ui bg-surface pl-9 pr-3 text-sm text-primary outline-none focus:border-[var(--accent)]" placeholder={zh ? "搜索文件" : "Search files"} />
@@ -585,7 +818,7 @@ function ConversationAttachmentPicker({ conversationId, zh, onClose, onChoose }:
                 <div key={attachment.id} className="flex min-h-14 items-center gap-3 rounded-lg px-2 hover:bg-subtle" data-testid="source-editor-attachment-option">
                   <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface text-secondary">{image ? <ImageIcon className="h-4 w-4" /> : <File className="h-4 w-4" />}</span>
                   <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-primary">{attachment.display_name}</span><span className="block truncate text-xs text-secondary">{mime}</span></span>
-                  <button type="button" onClick={() => onChoose(attachment, "inline")} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-surface" aria-label={zh ? `在光标处插入 ${attachment.display_name}` : `Insert ${attachment.display_name} at cursor`} title={zh ? "插入光标位置" : "Insert at cursor"}><Plus className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => onChoose(attachment, "inline", replaceAll)} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-2 text-xs text-secondary hover:bg-surface" aria-label={replaceTarget ? (zh ? `用 ${attachment.display_name} 替换引用` : `Replace reference with ${attachment.display_name}`) : zh ? `在光标处插入 ${attachment.display_name}` : `Insert ${attachment.display_name} at cursor`} title={replaceTarget ? (zh ? "替换此处引用" : "Replace this reference") : zh ? "插入光标位置" : "Insert at cursor"}>{replaceTarget ? (zh ? "替换" : "Replace") : <Plus className="h-4 w-4" />}</button>
                   <button type="button" onClick={() => onChoose(attachment, "after_message")} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-surface" aria-label={zh ? `放到消息末尾 ${attachment.display_name}` : `Place ${attachment.display_name} after message`} title={zh ? "放到消息末尾" : "Place after message"}><Link2 className="h-4 w-4" /></button>
                 </div>
               );

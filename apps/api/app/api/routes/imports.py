@@ -113,7 +113,7 @@ def preview_import(
     archive_summary: dict | None = None
     archive_artifact: SourceArtifact | None = None
     duplicate_conversation_id: uuid.UUID | None = None
-    preview_saved = False
+    commit_attempted = False
 
     analysis_guard = bounded_upload_analysis_sync(files, db=db)
     try:
@@ -296,8 +296,10 @@ def preview_import(
         db.add(import_record)
         if drafts:
             attach_import_draft(import_record, drafts)
+        # A lost COMMIT acknowledgement is not proof of a rollback. Never
+        # revoke possibly durable source/draft bytes in request cleanup.
+        commit_attempted = True
         db.commit()
-        preview_saved = True
 
     except HTTPException:
         db.rollback()
@@ -309,16 +311,31 @@ def preview_import(
             detail={"code": exc.code, "message": str(exc)},
             headers={"Retry-After": "15"} if exc.status_code == 429 else None,
         ) from exc
-    except SQLAlchemyError as exc:
+    except Exception as exc:
         db.rollback()
+        if not commit_attempted and not isinstance(exc, SQLAlchemyError):
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Import preview could not be saved.",
+            detail={
+                "code": "IMPORT_PREVIEW_UNCONFIRMED",
+                "message": "The preview submission is not confirmed. Do not automatically upload or restore it again.",
+            } if commit_attempted else "Import preview could not be saved.",
         ) from exc
     finally:
-        if not preview_saved:
-            _cleanup_import_directory(import_id)
-        analysis_guard.__exit__(None, None, None)
+        try:
+            if not commit_attempted:
+                try:
+                    _cleanup_import_directory(import_id)
+                except (OSError, RuntimeError, ValueError) as exc:
+                    # Preserve the original actionable rejection. Residue is
+                    # not reported as removed or silently queued for deletion.
+                    structured_event(logger, logging.WARNING, "import_preview_cleanup_failed",
+                                     error_class=type(exc).__name__)
+        finally:
+            # Release even when cleanup fails or an exception traceback lives
+            # beyond this request; GC is not an admission-lifetime mechanism.
+            analysis_guard.__exit__(None, None, None)
 
     can_commit = conversation_preview is not None and conversation_preview.alignment_status not in {"conflict_detected", "failed"}
     return ImportPreviewResponse(

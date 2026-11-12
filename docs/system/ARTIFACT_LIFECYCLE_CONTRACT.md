@@ -1,5 +1,45 @@
 # Artifact Lifecycle Contract
 
+## Transaction outcomes and cleanup receipts — worktree 2026-11-12
+
+Attachment finalize copies bounded staging input rather than moving its sole
+retry source. Admission includes the additional file plus16MiB free-space floor.
+Deduplicated storage is checked/locked; absent, quarantined or already-deleting
+objects cannot be silently reused. Original staging stays until canonical commit.
+
+New final objects are transaction-owned, including preview/image derivatives,
+`.cr` and system archive restore/export. A definite rollback removes only that
+attempt's output. ORM pre-commit rejection is not COMMIT uncertainty. Once the
+connection actually starts COMMIT, use a fresh bounded PostgreSQL transaction
+outcome check: committed releases input, aborted releases new output, unavailable
+verification protects both. Serialization/refresh/cleanup after commit cannot
+delete canonical files or turn confirmed business completion into failure.
+
+Staging cleanup keeps committed/explicitly abandoned upload receipts; failures
+set cleanup_pending and only retry remaining bytes. Ready/rejected/unknown inputs
+are not age-purged. Asset GC previews at most100 candidates, locks/rechecks
+references, leases and derivatives; an authorized deletion records status before
+unlink and storage_deleted_at only after successful byte removal. No current or
+historical attachment reference is aged away. A deleted object can be reused only
+after confirmed byte cleanup, under lock and with a new storage key.
+
+Temporary cleanup of owned export/archive/offline files reports its own failure,
+never replaces the original error. Unknown/unreceipted historical files remain
+protected; logs are not claimed to be a universal orphan-repair queue.
+All production deletion and the unique verified backup remain outside this
+local implementation. New backup verification must precede deleting the only
+good copy; application archive tests are not a host-backup restoration exercise.
+
+Conversation `.cr` restore remaps real Markdown destinations as well as
+attachment occurrence IDs and render-block data. Changed versions receive
+matching content hashes and rebuilt search projections; code examples and
+historical source bytes other than actual destination IDs remain unchanged.
+The compact definition-context cache is bounded to16 versions and does not
+retain their message bodies. Archive format/version, duplicate policy, file
+validation/scanning and one-transaction restore are unchanged. Personal
+restore also leaves literal examples untouched while checking real references
+against the owned restore scope.
+
 ## Private Context upload reclamation — worktree 2026-11-11
 
 Only the exact `archive_upload` / `context-return-upload` / `context_return`

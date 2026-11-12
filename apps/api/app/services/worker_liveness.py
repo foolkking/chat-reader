@@ -100,6 +100,7 @@ def refresh_active_task_heartbeat(
 ) -> bool:
     timestamp = now or datetime.now(timezone.utc)
     if task_kind == "job":
+        model = BackgroundJob
         query = db.query(BackgroundJob).filter(
             BackgroundJob.id == task_id, BackgroundJob.status.in_(ACTIVE_JOB_STATUSES),
         )
@@ -109,18 +110,21 @@ def refresh_active_task_heartbeat(
                 BackgroundJob.started_at == execution[1],
                 BackgroundJob.payload["execution_token"].as_string() == execution[2],
             )
-        updated = (
-            query
-            .update({BackgroundJob.heartbeat_at: timestamp}, synchronize_session=False)
-        )
     elif task_kind == "import":
-        updated = (
-            db.query(ImportRecord)
-            .filter(ImportRecord.id == task_id, ImportRecord.status == "processing")
-            .update({ImportRecord.heartbeat_at: timestamp}, synchronize_session=False)
+        model = ImportRecord
+        query = db.query(ImportRecord).filter(
+            ImportRecord.id == task_id, ImportRecord.status == "processing",
         )
+        if execution is not None:
+            query = query.filter(ImportRecord.attempt_count == execution[0], ImportRecord.started_at == execution[1])
     else:
         raise ValueError(f"Unsupported worker task kind: {task_kind}")
+    # Canonical work may hold this row while calling an auxiliary progress
+    # writer. Do not join that lock queue or stall the worker's liveness lane.
+    # Lock only the ID; keep the status/execution predicates on the write too.
+    if query.with_entities(model.id).with_for_update(skip_locked=True).first() is None:
+        return False
+    updated = query.update({model.heartbeat_at: timestamp}, synchronize_session=False)
     db.flush()
     return updated == 1
 

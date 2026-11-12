@@ -45,7 +45,7 @@ new Function("require", "exports", copyCode)(name => name === "../../components/
 // Actual monitor, installed query cache/result lifecycle. Hook scheduling,
 // transport, timers, DOM and unrelated children are controlled doubles; no
 // browser interaction, polling-timing or backend execution claim.
-function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {}) {
+function fixture({ rows = [task()], locale = "en-US", placement = "center", storageFailure = null, storedDismissals = "[]" } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
   client.setQueryData(["active-tasks"], rows); client.setQueryData(["content-cleanup-pending"], []);
   const hooks = [], effects = new Map(), observers = new Map(), reads = [], writes = [], timers = [], events = [];
@@ -100,7 +100,15 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {
     "../../components/settings-focused-dialog": { SettingsFocusedDialog: "SettingsFocusedDialog" },
     "next/link": { default: "a" },
   };
-  const window = { localStorage: { getItem: () => "[]", setItem: noop }, dispatchEvent: event => { events.push(event); },
+  const persisted = [];
+  const storage = { getItem: () => storedDismissals, setItem: (_key, value) => {
+    if (storageFailure === "setItem") throw new DOMException("Synthetic quota", "QuotaExceededError");
+    persisted.push(JSON.parse(value));
+  } };
+  const window = { get localStorage() {
+    if (storageFailure === "getter") throw new DOMException("Synthetic storage disabled", "SecurityError");
+    return storage;
+  }, dispatchEvent: event => { events.push(event); },
     setTimeout: fn => { timers.push(fn); return timers.length; } };
   const module = { exports: {} };
   new Function("require", "exports", "window", "document", compiled)(name => {
@@ -115,7 +123,7 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {
     assert.ok(button, "Missing read-only Retry"); button.props.onClick();
   };
   render(); flush();
-  return { client, reads, writes, timers, events, observers, render, flush, retry,
+  return { client, reads, writes, timers, events, observers, render, flush, retry, persisted,
     taskProps: id => find(render(), n => n.type?.name === "TaskContent" && n.props.task.job_id === id)?.props,
     setControlWrite: fn => { controlWrite = fn; },
     failureText: value => module.exports.taskFailureMessage(value, locale === "zh-CN"),
@@ -126,6 +134,32 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {
     writesAfterDispose: () => writesAfterDispose,
   };
 }
+
+for (const failure of ["getter", "setItem"]) test(`${failure}: hiding a terminal task is independent of optional local storage`, () => {
+  const row = task("synthetic-dismiss", "failed");
+  const f = fixture({ rows: [row], storageFailure: failure });
+  try {
+    f.taskProps(row.job_id).onDismiss(); f.render(); f.flush();
+    assert.equal(f.taskProps(row.job_id), undefined);
+    assert.deepEqual(f.client.getQueryData(["active-tasks"]), [row], "Hide only the prompt, not the server task cache.");
+    assert.deepEqual(f.writes, []); assert.deepEqual(f.reads, []);
+    assert.deepEqual(f.persisted, []);
+  } finally { f.dispose(); }
+});
+
+test("dismissal preferences are type-checked and bounded in memory as well as on disk", () => {
+  const oldIds = Array.from({ length: 130 }, (_, index) => `synthetic-old-${index}`);
+  const rows = [task(oldIds[0], "failed"), task("synthetic-new", "failed")];
+  const f = fixture({ rows, storedDismissals: JSON.stringify([null, {}, ...oldIds]) });
+  try {
+    assert.ok(f.taskProps(oldIds[0]), "Older entries outside the last 100 cannot permanently accumulate in memory.");
+    f.taskProps("synthetic-new").onDismiss(); f.render(); f.flush();
+    assert.equal(f.persisted.at(-1).length, 100);
+    assert.equal(f.persisted.at(-1).at(-1), "synthetic-new");
+    assert.ok(f.persisted.at(-1).every(value => typeof value === "string"));
+    assert.deepEqual(f.writes, []);
+  } finally { f.dispose(); }
+});
 
 for (const locale of ["en-US", "zh-CN"]) for (const jobType of ["adaptive_import_analysis", "import"]) {
   test(`${locale}: ${jobType} preserves structured memory failure without leaking legacy details`, () => {

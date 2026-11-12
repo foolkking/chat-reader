@@ -72,6 +72,7 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
   const rootRef = useRef<HTMLElement>(null);
   const entryNavigation = useRef(Boolean(initialJobId));
   const entryFocus = useRef<{ id: string; owner: Element | null } | null>(null);
+  const actionFocus = useRef<{ id: string; owner: HTMLElement } | null>(null);
   const [entryResolved, setEntryResolved] = useState(!initialJobId);
   const [entryDownloadId, setEntryDownloadId] = useState<string | null>(null);
   const [copies, setCopies] = useState<Copy[]>([]);
@@ -261,6 +262,18 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
     }
   }, [downloads, page, tab, loading, entryDownloadId]);
 
+  useLayoutEffect(() => {
+    // Completion may remove a row after the action promise has returned.
+    // Retain its actual focus owner, without stealing focus from another tool.
+    const previous = actionFocus.current;
+    if (!previous || previous.owner.isConnected) return;
+    actionFocus.current = null;
+    if (document.activeElement !== document.body) return;
+    const next = rootRef.current?.querySelector<HTMLElement>(`[data-offline-download-id="${CSS.escape(previous.id)}"]`)
+      ?? rootRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    next?.focus({ preventScroll: true });
+  }, [downloads, page, tab, loading]);
+
   const action = useCallback(async (work: () => Promise<unknown>) => {
     const owner = document.activeElement as HTMLElement | null;
     const downloadId = owner?.closest<HTMLElement>("[data-offline-download-id]")?.dataset.offlineDownloadId;
@@ -358,7 +371,12 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
   }} />;
   return <section ref={rootRef} className="space-y-4" aria-label={zh ? "离线与同步中心" : "Offline and sync center"}
     onPointerDownCapture={() => { entryNavigation.current = false; entryFocus.current = null; }}
-    onKeyDownCapture={() => { entryNavigation.current = false; entryFocus.current = null; }}>
+    onKeyDownCapture={() => { entryNavigation.current = false; entryFocus.current = null; }}
+    onFocusCapture={(event) => {
+      const owner = event.target as HTMLElement;
+      const id = owner.closest<HTMLElement>("[data-offline-download-id]")?.dataset.offlineDownloadId;
+      actionFocus.current = id ? { id, owner } : null;
+    }}>
     <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-secondary">
       <p>{online ? (zh ? "已联网" : "Online") : (zh ? "离线" : "Offline")}{Number.isFinite(expiry) ? ` · ${zh ? "离线授权至" : "Offline access until"} ${new Date(expiry).toLocaleString(resolvedLocale)}` : ""}</p>
       <button className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3" disabled={busy} onClick={() => { setError(""); setRefresh((value) => value + 1); if (online) void catalog.refetch(); }}><RefreshCw className="h-3.5 w-3.5" />{zh ? "刷新" : "Refresh"}</button>

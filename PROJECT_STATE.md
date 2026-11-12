@@ -1,40 +1,45 @@
 # Project State
 
-## Ongoing small-host improvements — 2026-11-11 (not deployed)
+## Reliability implementation — 2026-11-12 (local, not released)
 
-Implemented A–L: bounded single-flight maintenance, durable cleanup receipts,
-protected complete-turn retention, recoverable private reads/writes and initial
-uploads. Existing source checks, canonical writer leases and single user-job
-concurrency remain. Earlier exact E/F and G CI passed; they were not deployed.
+The user has now authorized implementation of the four-block reliability plan.
+The earlier pause below remains historical; it does not prohibit this local work.
+The [single current ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns
+implementation, regression evidence and outstanding acceptance items.
 
-The current K/L batch adds upload identity/read-only receipts, progress vs
-inactivity, retained selections/paste, explicit local-only release, and bounded
-known-task/catalog reads. Unknown writes are never automatically resubmitted.
-File references are page-session scoped, not persistent across a full reload.
-Latest local checks: UX2434, lint/typecheck, mounted12, upload API/real-PG25,
-expanded API112 (overlapping), CI-source harness23 and an isolated production
-build with544 byte-verified inputs. Dependency policy found3 nonblocking
-advisories, zero blocked/unapproved exceptions. Full-site tests remain pending:
-local application-service launch was policy-blocked and not worked around.
+- Source snapshots/exact content baselines, original-request receipts, multiple
+  references and missing-file editing are implemented locally.
+- The worker now supervises one fresh execution process with an independent stop
+  record, bounded auxiliary writes, business checkpoints and outcome reconciliation.
+- Candidate schema head is **`20261112_0061`**; production remains **`3564cbf /
+  20261108_0060`**. This work does not inherit any earlier CI result.
+- Local synthetic/API/PostgreSQL/browser checks are recorded in the ledger.
+  Linux combined-process320/640MiB, full original frame matrix, physical tablet
+  and host-backup restoration are **not accepted**.
+- Preserve earlier M/N/O edits and evidence. The November 12 follow-up authorizes
+  one local checkpoint commit and continuation of the next batch, without waiting
+  for CI. No push, CI dispatch, deployment, production cleanup or real-user-source
+  replay is authorized by this checkpoint.
 
-Previous exact J CI42974972859 failed three outdated Web conflict-copy assertions
-and two Reader cold long tasks (223/331ms >150ms). Copy assertions are corrected
-without weakening retained-draft/generation checks. Diagnostic42987330765 did
-not reproduce the Reader tasks; their cause remains unproven. The warm harness
-now reports actual parser and render counters separately (measurement v3);
-an older baseline without parser evidence reports null, not a fabricated zero.
-No budget, cold run, wait or performance gate was weakened.
+## Small-host goal closeout — 2026-11-12
 
-User-authorized process-local temporary root:
-`E:\chat-reader-temp\chat-reader-small-host-20261111`. This task has not moved
-or deleted old C-drive data; both disposable local PostgreSQL instances are
-stopped with no task-owned data deletion. K/L is being prepared as one batch,
-not a sequence of small commits. Fresh full CI must validate the exact candidate.
-[Plan](docs/planning/SMALL_HOST_OPERATIONS_2026-11-11.md) /
-[execution and limits](docs/execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
-The latest user instruction allows major-block commits/CI without waiting;
-inspect the preceding CI before each dispatch. No new deployment, schedule
-or production deletion is authorized. Production remains3564cbf below.
+**Paused for the user's next decision, not declared complete.** One current
+[status / completed areas / remaining route](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md)
+replaces the repeated running summaries. Historical sections below are provenance.
+
+- Production remains `3564cbf`; schema `20261108_0060`.
+- Committed candidate `7a4d61b` (A–L): exact CI `43025451379` passed all six jobs,
+  not deployed. Later work does not inherit that result.
+- M/N/O and the latest heartbeat skip-lock correction remain uncommitted.
+  Their local results and limitations are in the overview; exact CI is pending.
+- The November12 authorized queue recovery finished: one blocked import safely
+  failed with its two source files hash-verified, two waiting exports completed,
+  no active tasks or lock waits, worker heartbeat resumed. No restart/deployment,
+  direct task-row rewrite, user-file deletion or automatic import replay.
+  [Incident receipt](docs/execution/SERVER_QUEUE_RECOVERY_2026-11-12.md).
+- Stop new exploration, commits, CI, deployments and cleanup after this closeout;
+  preserve the user's work and evidence. The old continuous-work instructions
+  below do not override the latest request to stop and summarize.
 
 ## Current release — recoverable operations — 2026-11-11
 
@@ -186,10 +191,10 @@ own snapshots. Only API/worker/Web were recreated from verified CI images.
 | --- | --- |
 | Source / branch | Existing `master`; deployed application source `897ba788fd89e18c9634ca2271ba6146339939a0`; subsequent documentation-only receipts are not new application releases |
 | Accepted / deployed-source CI | `42371615326`, attempt 1; six jobs and all five artifact contents passed after the 50-minute first-read gate |
-| Production / retained rollback images | `897ba78` / `9cf235f`; older `67e6336` also retained; accepted **2026-11-07 13:38:56Z**, independently rechecked **13:39:40Z** |
+| Production / retained rollback images | `897ba78` only after separately authorized November 8 cleanup; four current role tags and verified current archive retained; no direct local rollback |
 | Runtime recheck | API, Web and PostgreSQL healthy; worker `alive_idle`; canonical HTTPS health and login return 200 |
 | Database | Production single head/current `20261105_0059`, unchanged this release; prior private-search backfill remains committed, 52/52 |
-| Verification / delivery | New stopped-writer five-component backup `chat-reader-20261107T133202Z` independently verified; attachment audit 390/390 hashes, zero issues. No local application tests, production build, raw ZIP replay or cleanup |
+| Verification / delivery | Stopped-writer five-component backup `chat-reader-20261107T133202Z` independently reverified after November 8 cleanup; original release attachment audit 390/390 hashes, zero issues. No local application tests, production build or raw ZIP replay |
 
 The deployed release adds natural image sizing, explicit pixel/column feedback,
 offline geometry snapshots and unified reading compensation, retaining the
@@ -202,14 +207,25 @@ artifact hashes, OCI/config identity, stopped-writer backup, deployment and pres
 evidence. [Adaptive ZIP contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)
 owns qualification and compatibility details.
 
-This deployment retains all **three** backup points (November 7, 6 and 5) and
-all **twelve** role tags for `897ba78`, `9cf235f` and `67e6336`. No cleanup was
-authorized or performed. The separately authorized November 6 cleanup remains
-historical in its [receipt](docs/execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md#subsequent-authorized-cleanup).
-Direct rollback `9cf235f`
-supports the same 0059 schema, but still needs stopped-writer/job/data checks.
-Never automatically downgrade. Post-deployment disk check: **92% used,
-3,457,056 KiB free** at **2026-11-07 13:40:37Z**; capacity is tight.
+The deployment initially retained three backups and three image generations.
+On **2026-11-08**, the user separately approved latest-only retention and all
+items in the reviewed cleanup table. Only `chat-reader-20261107T133202Z`,
+the four current `897ba78` role tags and its verified image archive remain for
+Chat Reader. Two older backups, eight old role tags, twelve old transfer
+archives, four inactive VS Code Server versions and bounded caches were removed.
+Mixed-transfer receipts/helpers were preserved and hashed; logs, business data,
+volumes, unrelated images and the live VS Code launcher were not removed.
+The old rollback pointer was archived, not falsely replaced with the current
+revision. **No direct local rollback remains**; restoring an older application
+requires reacquiring verified exact images and fresh stopped-writer/job/data
+checks. Never automatically downgrade.
+Independent check **2026-11-08 01:42:13 +08:00**: **66% used,
+13,680,388 KiB available**, an observed increase of **9.78 GiB** from the
+pre-cleanup snapshot. All eleven container identities/start times/restart counts,
+mount sets, runtime configurations and volumes were unchanged. Retained backup
+SHA/tar/PG TOC and current image-archive verification passed; this is not a
+restore drill or redundant/off-site protection.
+[Cleanup receipt](docs/execution/KING_STORAGE_CLEANUP_2026-11-08.md).
 Future releases need fresh capacity admission, not automatic cleanup or reduced budgets.
 Capacity and aggregate data counts are time-point
 observations, not invariants. Writers resumed after deployment; do not claim all
@@ -305,8 +321,8 @@ commit/push on existing master. Each submitted run obeyed its fresh minimum
 Exact `897ba78` is fully green. The subsequent explicit “成功，部署” request
 authorized the accepted release above; deployment and independent recheck are complete.
 The CI recheck remains paused; no schedule was created or resumed.
-This deployment did not authorize cleanup. November 6's earlier bounded cleanup
-authorization does not authorize a new deletion or replaying the user's source ZIP.
+The later November 8 cleanup was separately authorized and is complete; it does
+not authorize future deletion, automatic retention changes or replaying the user's source ZIP.
 The unrelated `apps/web/tsconfig.tsbuildinfo` modification and release/test
 evidence remain preserved.
 [Closeout receipt](docs/execution/KNOWLEDGE_CLOSEOUT_2026-11-04.md) records checks,

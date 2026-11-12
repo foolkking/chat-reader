@@ -137,7 +137,8 @@ for (const locale of ["zh-CN", "en-US"]) test(`${locale}: stalled reads explain 
 
 for (const locale of ["zh-CN", "en-US"]) test(`${locale}: bounded import errors never expose internals or claim success`, () => {
   const format = formatter(locale);
-  for (const code of ["IMPORT_OPERATION_UNCONFIRMED", "IMPORT_RESOURCE_WAIT_EXPIRED",
+  for (const code of ["IMPORT_OPERATION_UNCONFIRMED", "IMPORT_RESULT_UNCONFIRMED",
+    "IMPORT_PREVIEW_UNCONFIRMED", "IMPORT_RESOURCE_WAIT_EXPIRED",
     "IMPORT_STORAGE_FULL", "IMPORT_WORKSPACE_EXCEEDED", "IMPORT_MESSAGE_TOO_LARGE"]) {
     const result = format({ name: "ApiRequestError", status: 409, code, message: "/private/synthetic-source" });
     assert.doesNotMatch(result, /private|synthetic-source/);

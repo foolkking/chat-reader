@@ -12,6 +12,8 @@ class RenderBlockDraft:
     char_count: int
     collapsed_by_default: bool = False
     render_priority: int = 0
+    source_start: int | None = None
+    source_end: int | None = None
 
 
 @dataclass(frozen=True)
@@ -26,7 +28,7 @@ class MarkdownTaskDraft:
 FENCE_OPEN_RE = re.compile(r"^(?P<marker>`{3,}|~{3,})(?P<info>.*)$")
 HEADING_RE = re.compile(r"^(#{1,4})\s+(.+?)\s*$")
 ASSET_LINE_RE = re.compile(
-    r'^\s*(?P<image>!)?\[(?P<label>[^\]]*)\]\(cr-asset://(?P<attachment_id>[A-Za-z0-9._:-]+)(?:\s+["\'][^"\']*["\'])?\)\s*$'
+    r'^ {0,3}(?P<image>!)?\[(?P<label>[^\]]*)\]\(cr-asset://(?P<attachment_id>[A-Za-z0-9._:-]+)(?:\s+["\'][^"\']*["\'])?\)\s*$'
 )
 TASK_LINE_RE = re.compile(r"^(?P<prefix>\s*[-+*]\s+)\[(?P<checked>[ xX])\](?P<label>(?:\s+.*)?)$")
 
@@ -71,7 +73,10 @@ def iter_basic_render_blocks(display_text: str):
             return
         paragraph_start = paragraph_lines[0][1]
         paragraph_end = paragraph_lines[-1][1] + len(paragraph_lines[-1][0])
-        text = "\n".join(line for line, _ in paragraph_lines).strip()
+        text = "\n".join(line for line, _ in paragraph_lines)
+        # Indentation is Markdown syntax, not decoration. Stripping it turns a
+        # literal code example into a live attachment in the block projection.
+        text = text.rstrip() if text.startswith(("    ", "\t")) else text.strip()
         paragraph_lines.clear()
         if text:
             data: dict = {"text": text}
@@ -94,6 +99,8 @@ def iter_basic_render_blocks(display_text: str):
                     data=data,
                     char_count=len(text),
                     collapsed_by_default=bool(thinking and paragraph_end <= thinking.end_offset),
+                    source_start=paragraph_start,
+                    source_end=paragraph_end,
                 )
             )
 
@@ -159,6 +166,8 @@ def iter_basic_render_blocks(display_text: str):
                     },
                     char_count=len(label),
                     render_priority=2 if is_image else 1,
+                    source_start=line_start,
+                    source_end=line_start + len(line),
                 )
             )
             continue
@@ -174,6 +183,8 @@ def iter_basic_render_blocks(display_text: str):
                     data={"level": len(heading.group(1)), "title": title},
                     char_count=len(title),
                     render_priority=2,
+                    source_start=line_start,
+                    source_end=line_start + len(line),
                 )
             )
             continue

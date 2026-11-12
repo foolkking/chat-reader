@@ -5,6 +5,7 @@ import zipfile
 from collections.abc import Callable, Iterable
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -35,7 +36,11 @@ from app.services.ownership import OwnershipScope, get_owned
 from app.services.search.search_indexer import _refresh_postgres_tsv
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import AssetScanError, scan_attachment, scan_status_allows_use
-from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
+from app.services.artifact_lifecycle import publish_zip_artifact, staging_path, discard_owned_temporary
+from app.services.editing.attachment_reference_rewriter import (
+    markdown_reference_context, rewrite_attachment_block, rewrite_attachment_markdown,
+)
+from app.services.import_pipeline.canonical_draft import content_hash, normalize_text
 
 ARCHIVE_FORMAT = "chat-reader-archive"
 ARCHIVE_VERSION = 3
@@ -254,7 +259,7 @@ def create_cr_archive(
             required_entries=("manifest.json", "conversation.json"),
         )
     finally:
-        temporary.unlink(missing_ok=True)
+        discard_owned_temporary(temporary, category="cr_archive_export")
     artifact = ExportArtifact(
         id=artifact_id,
         job_id=job_id,
@@ -387,14 +392,23 @@ def import_cr_archive(
             insert_rows(db, Message, message_rows)
             processed += len(message_rows)
 
-        processed = _import_versions(db, archive, target_id, processed, total, progress_callback)
         attachment_id_map = _import_attachments(db, archive, manifest, import_record, target_id)
+        processed = _import_versions(db, archive, target_id, processed, total, progress_callback, attachment_id_map)
+        if attachment_id_map:
+            db.query(Message).filter(Message.conversation_id == target_id, Message.current_version_id.is_not(None)).update({
+                Message.content_hash: select(MessageVersion.content_hash)
+                .where(MessageVersion.id == Message.current_version_id).scalar_subquery(),
+            }, synchronize_session=False)
         processed = _import_blocks(db, archive, target_id, processed, total, progress_callback, attachment_id_map)
         _import_attachment_refs(db, archive, target_id, attachment_id_map)
         _import_headings(db, archive, target_id)
         _report(progress_callback, "headings", 82, processed, total)
-        _import_search_documents(db, archive, target_id)
-        _refresh_postgres_tsv(db, target_id)
+        if attachment_id_map:
+            from app.services.search.search_indexer import rebuild_search_documents_for_conversation
+            rebuild_search_documents_for_conversation(db, target_id)
+        else:
+            _import_search_documents(db, archive, target_id)
+            _refresh_postgres_tsv(db, target_id)
         _report(progress_callback, "search", 96, total, total)
         _import_source_refs(db, archive, target_id)
         _import_events(db, archive, target_id)
@@ -403,6 +417,7 @@ def import_cr_archive(
             archive,
             target_id,
             subject_key=(str(import_record.owner_user_id) if import_record.owner_user_id else "local:default"),
+            attachment_id_map=attachment_id_map,
         )
         _restore_placement(
             db,
@@ -418,26 +433,36 @@ def import_cr_archive(
     return conversation, conversation.message_count
 
 
-def _import_versions(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID, processed: int, total: int, callback: ProgressCallback | None) -> int:
+def _import_versions(
+    db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID, processed: int, total: int,
+    callback: ProgressCallback | None, attachment_id_map: dict[uuid.UUID, uuid.UUID] | None = None,
+) -> int:
     rows: list[dict[str, Any]] = []
     batch_bytes = 0
+    @lru_cache(maxsize=16)
+    def role(message_id):
+        return db.query(Message.role).filter(Message.id == message_id).scalar()
     for row, raw_size in _read_sized_jsonl(archive, "versions.jsonl"):
         source_id = uuid.UUID(row["id"])
         based_on = row.get("based_on_version_id")
+        message_id = _mapped_id(target_id, "message", uuid.UUID(row["message_id"]))
+        original = row.get("display_text") or ""
+        display = rewrite_attachment_markdown(original, attachment_id_map or {})
+        changed = display != original
         rows.append(
             {
                 "id": _mapped_id(target_id, "version", source_id),
-                "message_id": _mapped_id(target_id, "message", uuid.UUID(row["message_id"])),
+                "message_id": message_id,
                 "version_number": int(row["version_number"]),
-                "plain_text": row.get("plain_text") or "",
-                "display_text": row.get("display_text") or "",
+                "plain_text": normalize_text(display) if changed else row.get("plain_text") or "",
+                "display_text": display,
                 "blocks": [],
                 "edit_type": row.get("edit_type") or "imported",
                 "edit_reason": row.get("edit_reason"),
                 "created_at": _parse_dt(row.get("created_at")) or datetime.now(timezone.utc),
                 "created_by": row.get("created_by") or "import",
                 "based_on_version_id": _mapped_id(target_id, "version", uuid.UUID(based_on)) if based_on else None,
-                "content_hash": row["content_hash"],
+                "content_hash": content_hash(display, role(message_id)) if changed else row["content_hash"],
                 "normalizer_version": row.get("normalizer_version") or "legacy-v1",
                 "markdown_parser_version": row.get("markdown_parser_version") or "legacy-v1",
                 "block_builder_version": row.get("block_builder_version") or "legacy-v1",
@@ -468,15 +493,27 @@ def _import_blocks(
 ) -> int:
     rows: list[dict[str, Any]] = []
     batch_bytes = 0
+    reverse_map = {target: source for source, target in (attachment_id_map or {}).items()}
+    @lru_cache(maxsize=16)
+    def source_context(source_version_id):
+        target_version_id = _mapped_id(target_id, "version", uuid.UUID(source_version_id))
+        display = db.query(MessageVersion.display_text).filter(MessageVersion.id == target_version_id).scalar() or ""
+        # Retain only compact definitions, not complete historical message bodies.
+        return markdown_reference_context(rewrite_attachment_markdown(display, reverse_map))
     for row, raw_size in _read_sized_jsonl(archive, "blocks.jsonl"):
+        projection = rewrite_attachment_block(
+            {key: row.get(key) for key in ("block_type", "data", "plain_text")},
+            attachment_id_map or {},
+            source_context(row["message_version_id"]) if attachment_id_map else None,
+        )
         rows.append(
             {
                 "id": _mapped_id(target_id, "block", uuid.UUID(row["id"])),
                 "message_version_id": _mapped_id(target_id, "version", uuid.UUID(row["message_version_id"])),
                 "block_index": int(row["block_index"]),
                 "block_type": row["block_type"],
-                "plain_text": row.get("plain_text"),
-                "data": _rewrite_attachment_data(row.get("data") or {}, attachment_id_map or {}),
+                "plain_text": projection["plain_text"],
+                "data": _rewrite_attachment_data(projection["data"] or {}, {}),
                 "sanitized_html": None,
                 "char_count": int(row.get("char_count") or 0),
                 "estimated_height": row.get("estimated_height"),
@@ -523,26 +560,31 @@ def _import_attachments(
         with archive.open(path) as source:
             staged = store.stage(source, max_bytes=get_settings().bundle_max_object_bytes, quarantine=True)
         if staged.byte_size != int(row.get("byte_size") or -1):
-            staged.path.unlink(missing_ok=True)
+            discard_owned_temporary(staged.path, category="cr_archive_restore")
             raise CrArchiveError("Archive asset object size validation failed.")
         try:
             scan = scan_attachment(staged.path)
         except AssetScanError as exc:
-            staged.path.unlink(missing_ok=True)
+            discard_owned_temporary(staged.path, category="cr_archive_restore")
             raise CrArchiveError(str(exc)) from exc
         if not scan.allowed_by_policy:
-            staged.path.unlink(missing_ok=True)
+            discard_owned_temporary(staged.path, category="cr_archive_restore")
             raise CrArchiveError("Archive asset object was rejected by the scanner.")
         existing = db.query(AssetObject).filter(
             AssetObject.sha256 == staged.sha256,
             AssetObject.byte_size == staged.byte_size,
-        ).one_or_none()
+        ).with_for_update().one_or_none()
         if existing is not None:
-            staged.path.unlink(missing_ok=True)
+            discard_owned_temporary(staged.path, category="cr_archive_restore")
+            if existing.status != "available" or not scan_status_allows_use(existing.scan_status):
+                raise CrArchiveError("Matching archive asset is unavailable; retain the archive and resolve its file state first.")
+            store.resolve_key(existing.storage_key)
             object_map[source_id] = existing.id
             continue
         key = store.object_key()
         store.promote(staged.path, key)
+        from app.services.exporting.archive_transaction import track_archive_object
+        track_archive_object(db, store, key)
         detected_mime = str(row.get("detected_mime_type") or "application/octet-stream")
         asset = AssetObject(
             id=uuid.uuid4(),
@@ -839,6 +881,7 @@ def _import_optional_reader_metadata(
     target_id: uuid.UUID,
     *,
     subject_key: str,
+    attachment_id_map: dict[uuid.UUID, uuid.UUID] | None = None,
 ) -> None:
     names = set(archive.namelist())
     annotation_map: dict[uuid.UUID, uuid.UUID] = {}
@@ -864,7 +907,7 @@ def _import_optional_reader_metadata(
                     quote=row.get("quote"),
                     prefix=row.get("prefix"),
                     suffix=row.get("suffix"),
-                    comment_markdown=row.get("comment_markdown") or "",
+                    comment_markdown=rewrite_attachment_markdown(row.get("comment_markdown") or "", attachment_id_map or {}),
                     anchor_status={"active": "valid", "relocated": "remapped", "stale": "needs_review"}.get(
                         row.get("anchor_status") or "valid", row.get("anchor_status") or "valid"
                     ),
@@ -887,6 +930,8 @@ def _import_optional_reader_metadata(
             if value.get("annotation_id"):
                 source_annotation_id = uuid.UUID(str(value["annotation_id"]))
                 value["annotation_id"] = str(annotation_map.get(source_annotation_id) or _mapped_id(target_id, "annotation", source_annotation_id))
+            if isinstance(value.get("markdown"), str):
+                value["markdown"] = rewrite_attachment_markdown(value["markdown"], attachment_id_map or {})
             blocks.append(value)
         db.add(
             ConversationNotebook(
@@ -1242,7 +1287,7 @@ def _staged_archive(path: Path):
         with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
             yield archive
     except BaseException:
-        path.unlink(missing_ok=True)
+        discard_owned_temporary(path, category="cr_archive_write")
         raise
 
 

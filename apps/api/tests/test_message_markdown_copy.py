@@ -321,3 +321,21 @@ def test_preview_single_conversion_slot_and_integrity_retry_release(client, monk
         patch.setattr(public_images, "save_svg_preview", conflict)
         assert upload_svg(client, case).status_code == 503
     assert upload_svg(client, case).status_code == 204
+
+
+def test_preview_late_transaction_failure_removes_only_its_new_object(client, monkeypatch, tmp_path):
+    from app.services.assets import public_images
+    case = seed(monkeypatch, tmp_path)
+    store = get_asset_store()
+    before = {path for path in store.root.rglob("*") if path.is_file()}
+    original = public_images.save_svg_preview
+    with monkeypatch.context() as patch:
+        def fail_after_prepare(*args, **kwargs):
+            original(*args, **kwargs)
+            raise RuntimeError("synthetic failure before canonical commit")
+        patch.setattr(public_images, "save_svg_preview", fail_after_prepare)
+        assert upload_svg(client, case).status_code == 500
+    assert {path for path in store.root.rglob("*") if path.is_file()} == before
+    with database() as db:
+        assert db.query(AssetDerivative).count() == 0
+    assert upload_svg(client, case).status_code == 204

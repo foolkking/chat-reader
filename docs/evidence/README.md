@@ -1,5 +1,33 @@
 # 事实证据索引
 
+## 本地可靠性故障治理 — 2026-11-12
+
+[机器回执](reliability-2026-11-12/verification.json)记录合成API、PG/真实
+进程、组件浏览器、静态与隔离构建检查点、源码哈希和未验收边界。
+仅合成内容；无真实对话、Cookie、凭据或生产文件。
+不是提交、CI或上线回执；唯一状态台账在
+[系统总览](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+## 生产队列恢复及代码补防护 — 2026-11-12
+
+[脱敏恢复/回归回执](small-host-2026-11-11/server-queue-recovery-2026-11-12.json)：
+只取消核验后的辅助进度语句，导入回滚保留两个原文件且实际SHA一致，
+两个导出完成；活动任务/锁等待清零，心跳恢复。未重启、部署或清理资料。
+新增心跳跳锁本地专项91通过/4 Windows信号跳过，不属于旧K/L CI。
+[总览与后续边界](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+
+## 收尾失败 / 原任务重试 / 可选本机记录 — 2026-11-11（未部署）
+
+[M/N/O本地验证](small-host-2026-11-11/import-mno-verification.json)：
+未知COMMIT保全、清理不覆盖主错误、准入释放、canonical重试读取隔离及
+浏览器存储拒绝时继续正确收尾。API229通过/2可选外部资料跳过、Node2472、
+静态、mounted12+12及544输入构建；包含失败复现及测试包装错误，未删失败记录。
+两张375中文/1440英文截图是实际Panel的归档读取恢复，明确保留合成夹具边界。
+[K/L精确CI核验](small-host-2026-11-11/ci-kl-acceptance.json)记录六job成功、
+四份质量制品哈希和实际摘要、64+16非空帧文件；旧baseline失败及各门禁skip
+保留，不冒称零跳过。镜像仅CI检查，未独立下载；此CI不覆盖之后M/N/O源码。
+
 ## 首次上传恢复 / 阅读诊断 — 2026-11-11（未部署）
 
 [K源码及分层验证](small-host-2026-11-11/import-upload-verification.json)：
@@ -9,11 +37,11 @@
 含粘贴恢复通过，375中文/1440英文合成截图已检查；
 [精确隔离构建及扩展验证](small-host-2026-11-11/import-kl-build-final.json)
 记录544输入、API112（含重复）、来源测试23及新PG正常停止。
-本地整站服务启动策略拒绝未绕过，整站/精确CI仍待验。
+本地整站服务启动策略拒绝未绕过；随后K/L精确CI结果见上方独立回执。
 [J精确CPU诊断](small-host-2026-11-11/reader-diagnostic-j.json)保留原CI失败
 及诊断九组原始指标摘要；未复现不等于已修，不替代不带Profiler的发布门禁。
 [L已知任务/目录读取](small-host-2026-11-11/import-read-verification.json)记录
-有限等待、原任务恢复、畸形结果保护与真实TSX回调验证；Settings整站仍单独待验。
+有限等待、原任务恢复、畸形结果保护与真实TSX回调验证；后续Settings精确结果另列。
 [整批提交前核验](small-host-2026-11-11/import-kl-submission-audit.json)补充
 Node2434、静态、544输入精确构建、依赖策略与前轮CI失败核对。
 warm解析计数不再冒用渲染次数；这不证明Reader长任务已修复。
@@ -68,7 +96,15 @@ warm解析计数不再冒用渲染次数；这不证明Reader长任务已修复�
 随后用户仅授权一次本地提交，不改变上述验收边界。
 修正前的审查证据保留，不用旧版本绿色结果代替本候选验收。
 
-## 当前发布 — 图片展示与阅读稳定性 — 2026-11-06
+## 独立授权存储清理 — 2026-11-08
+
+[脱敏清理汇总](storage-cleanup-2026-11-08/summary.json)与
+[回执](../execution/KING_STORAGE_CLEANUP_2026-11-08.md)记录精确授权范围、
+92%→66% 容量变化、最新备份/镜像包复验、63 份元数据保全及运行态不变。
+当前应用仍为 `897ba78`，但只留最新备份与镜像，不保留直接本地回退。
+原部署/CI 证据不变；系统日志、业务资料和卷未删除。
+
+## 历史发布 — 图片展示与阅读稳定性 — 2026-11-06
 
 [脱敏汇总](release-2026-11-06/image-reading-deployment-summary.json)与
 [发布回执](../execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md)

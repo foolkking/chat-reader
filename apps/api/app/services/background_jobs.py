@@ -8,6 +8,9 @@ from pathlib import Path
 
 from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session, object_session, sessionmaker
+from sqlalchemy.exc import SQLAlchemyError
+from app.services.worker_maintenance import bound_worker_transaction
+from app.services.execution_control import business_progress
 
 from app.core.database import SessionLocal
 from app.core.config import get_settings
@@ -837,11 +840,9 @@ def process_background_job(
         )
 
     def progress_result(job, phase, progress, processed, total, result):
-        if job.job_type != "adaptive_import_analysis":
-            return result if result is not None else job.result
         meaningful = (job.phase, job.progress, job.processed_items, job.total_items) != (phase, progress, processed, total)
         value = dict(result if result is not None else job.result or {})
-        if meaningful or result is not None:
+        if meaningful:
             value["progress_updated_at"] = datetime.now(timezone.utc).isoformat()
         elif (job.result or {}).get("progress_updated_at"):
             value["progress_updated_at"] = job.result["progress_updated_at"]
@@ -855,9 +856,10 @@ def process_background_job(
         result: dict[str, object] | None = None,
     ) -> None:
         with session_factory() as progress_db:
-            job = progress_db.get(BackgroundJob, job_id)
+            bound_worker_transaction(progress_db)
+            job = progress_db.query(BackgroundJob).filter_by(id=job_id).with_for_update(skip_locked=True).one_or_none()
             if job is None:
-                raise BackgroundJobCancelled("Background job no longer exists.")
+                return
             if not owns_execution(job):
                 raise BackgroundJobCancelled("Background execution was superseded.")
             if job.status in {"cancelling", "cancelled"}:
@@ -942,8 +944,13 @@ def process_background_job(
                 result: dict[str, object] | None = None,
             ) -> None:
                 track_offline_phase(phase)
+                business_progress((phase, progress, processed, total))
                 if not is_sqlite:
-                    persist_report(phase, progress, processed, total, result)
+                    try:
+                        persist_report(phase, progress, processed, total, result)
+                    except SQLAlchemyError:
+                        # Optional publication is not the canonical outcome.
+                        logger.warning("background_progress_unavailable")
                     return
                 if job.status in {"cancelling", "cancelled"}:
                     raise BackgroundJobCancelled("Background job cancellation requested.")
@@ -1587,7 +1594,8 @@ def process_background_job(
     except BackgroundJobCancelled:
         structured_event(logger, logging.INFO, "background_job_cancelled", job_id=str(job_id))
         with session_factory() as db:
-            job = db.query(BackgroundJob).filter_by(id=job_id).with_for_update().one_or_none()
+            bound_worker_transaction(db)
+            job = db.query(BackgroundJob).filter_by(id=job_id).with_for_update(skip_locked=True).one_or_none()
             if job is not None and owns_execution(job) and job.status in {"processing", "cancelling"}:
                 now = datetime.now(timezone.utc)
                 job.status = "cancelled"
@@ -1608,7 +1616,8 @@ def process_background_job(
             error_class=type(exc).__name__,
         )
         with session_factory() as db:
-            job = db.query(BackgroundJob).filter_by(id=job_id).with_for_update().one_or_none()
+            bound_worker_transaction(db)
+            job = db.query(BackgroundJob).filter_by(id=job_id).with_for_update(skip_locked=True).one_or_none()
             if job is not None and owns_execution(job):
                 if job.status == "committed":
                     return

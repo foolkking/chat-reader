@@ -241,6 +241,18 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/export-recovery-browser.mjs
 
+      - name: Attachment ordered uploads and original-request recovery
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/attachment-recovery-browser.mjs
+
+      - name: Source save snapshots, receipts and real editor transactions
+        timeout-minutes: 10
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/source-editor-table-browser.mjs
+
       - name: Reading success feedback and explicit copy recovery
         timeout-minutes: 5
         env:
@@ -505,6 +517,11 @@ jobs:
             ${{ runner.temp }}/offline-recovery-browser/result.json
             ${{ runner.temp }}/offline-recovery-browser/failure.json
             ${{ runner.temp }}/offline-recovery-browser/*.png
+            ${{ runner.temp }}/attachment-recovery-browser/result.json
+            ${{ runner.temp }}/attachment-recovery-browser/failure.json
+            ${{ runner.temp }}/attachment-recovery-browser/*.png
+            ${{ runner.temp }}/table-browser/result.json
+            ${{ runner.temp }}/table-browser/*.png
             ${{ runner.temp }}/export-recovery-browser/result.json
             ${{ runner.temp }}/export-recovery-browser/failure.json
             ${{ runner.temp }}/export-recovery-browser/*.png

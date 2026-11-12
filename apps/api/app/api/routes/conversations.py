@@ -637,7 +637,7 @@ def split_conversation_endpoint(
         db.commit()
     except MessageEditError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return ConversationTransformResponse(
         conversation_id=result.conversation.id,
         title=result.conversation.title,
@@ -665,7 +665,7 @@ def preview_split_workspace(
             message_ids=payload.message_ids,
         )
     except MessageEditError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     return ConversationSplitWorkspacePreview(
         mode=payload.mode,
         groups=[ConversationSplitGroupPreview(

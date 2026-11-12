@@ -2,7 +2,8 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
+import hashlib
 
 
 class RenderBlockRead(BaseModel):
@@ -30,6 +31,13 @@ class MessageVersionRead(BaseModel):
     markdown_parser_version: str = "legacy-v1"
     block_builder_version: str = "legacy-v1"
     search_document_version: str = "legacy-v1"
+
+    @computed_field
+    @property
+    def source_content_hash(self) -> str:
+        # Canonical content_hash intentionally normalizes whitespace for other
+        # contracts. Editing must also detect whitespace-only source changes.
+        return hashlib.sha256(self.display_text.encode("utf-8")).hexdigest()
 
 
 class MessageListItem(BaseModel):

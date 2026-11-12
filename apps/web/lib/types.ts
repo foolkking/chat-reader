@@ -471,6 +471,7 @@ export type CapabilitiesRead = {
 };
 
 export type MessageVersionRead = {
+  source_content_hash?: string;
   id: string;
   version_number: number;
   plain_text?: string;
@@ -903,6 +904,9 @@ export type BackgroundTaskRead = {
   updated_at?: string | null;
   cancellation_requested_at?: string | null;
   progress_updated_at?: string | null;
+  execution_state?: "running" | "stopping" | null;
+  business_progress_at?: string | null;
+  stop_requested_at?: string | null;
   cancellable: boolean;
   attempt_count: number;
 };

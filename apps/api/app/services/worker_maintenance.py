@@ -25,20 +25,31 @@ def run_worker_maintenance(
     should_continue: Callable[[], bool],
     monotonic: Callable[[], float] = time.monotonic,
     exports_first: bool = True,
+    start_lane: int = 0,
 ) -> None:
     from app.services.export_retention import reclaim_exports
     from app.services.sharing.share_service import reclaim_expired_frozen_snapshots
+    from app.services.assets.upload_service import cleanup_finished_uploads
+    from app.services.assets.lifecycle import cleanup_deleted_assets
 
     deadline = monotonic() + 2.0
 
     def permitted() -> bool:
         return should_continue() and monotonic() < deadline
 
+    def cleanup_assets():
+        with session_factory() as db:
+            cleanup_deleted_assets(db, limit=20, should_continue=permitted)
+
     operations = (
         ("export", lambda: reclaim_exports(session_factory, export_root, limit=20, should_continue=permitted)),
         ("expired_share", lambda: reclaim_expired_frozen_snapshots(session_factory, limit=20, should_continue=permitted)),
+        ("upload_staging", lambda: cleanup_finished_uploads(session_factory, limit=20, should_continue=permitted)),
+        ("deleted_assets", cleanup_assets),
     )
-    for category, operation in operations if exports_first else reversed(operations):
+    ordered = operations if exports_first else tuple(reversed(operations))
+    start = start_lane % len(ordered)
+    for category, operation in ordered[start:] + ordered[:start]:
         if not permitted():
             return
         try:

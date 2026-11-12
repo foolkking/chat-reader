@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.services import task_worker
+from app.services import task_worker, worker_supervisor
 from app.workers import import_worker
 from app.workers import shutdown as shutdown_module
 
@@ -63,7 +63,7 @@ def test_entrypoint_handles_real_python_stop_signal_and_restores_handlers(monkey
         signal.raise_signal(signum)
         assert shutdown.requested
 
-    monkeypatch.setattr(task_worker, "run_task_worker_forever", fake_loop)
+    monkeypatch.setattr(worker_supervisor, "run_task_worker_forever", fake_loop)
     import_worker.main()
     assert requests == [True]
     assert {sig: signal.getsignal(sig) for sig in previous} == previous
@@ -75,7 +75,7 @@ def test_entrypoint_restores_handlers_when_worker_fails(monkeypatch) -> None:
     def fail_loop(*, shutdown) -> None:
         raise RuntimeError("synthetic worker failure")
 
-    monkeypatch.setattr(task_worker, "run_task_worker_forever", fail_loop)
+    monkeypatch.setattr(worker_supervisor, "run_task_worker_forever", fail_loop)
     with pytest.raises(RuntimeError, match="synthetic worker failure"):
         import_worker.main()
     assert {sig: signal.getsignal(sig) for sig in previous} == previous
@@ -113,7 +113,7 @@ def test_stop_during_service_import_is_remembered_before_any_worker_registration
     imports: list[bool] = []
 
     def controlled_import(name, *args, **kwargs):
-        if name == "app.services.task_worker":
+        if name == "app.services.worker_supervisor":
             imports.append(True)
             signal.raise_signal(signal.SIGTERM)
         return original_import(name, *args, **kwargs)

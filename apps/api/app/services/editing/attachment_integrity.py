@@ -14,7 +14,9 @@ from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
-from app.services.editing.attachment_reference_rewriter import attachment_data_ids, attachment_reference_ids
+from app.services.editing.attachment_reference_rewriter import (
+    attachment_block_ids, attachment_markdown_ids, markdown_reference_context,
+)
 
 
 @dataclass(frozen=True)
@@ -97,11 +99,13 @@ def audit_conversation_attachment_integrity(
             version_blocks = blocks_by_version.get(version.id, [])
             version_links = links_by_version.get(version.id, [])
             block_ids = set()
+            context = markdown_reference_context(version.display_text)
             for block in version_blocks:
-                block_ids.update(attachment_data_ids(block.data))
-                block_ids.update(attachment_reference_ids(block.plain_text or ""))
-                block_ids.update(attachment_reference_ids(block.sanitized_html or ""))
-            text_ids = attachment_reference_ids(version.display_text)
+                block_ids.update(attachment_block_ids({
+                    "block_type": block.block_type, "data": block.data,
+                    "plain_text": block.plain_text, "sanitized_html": block.sanitized_html,
+                }, context))
+            text_ids = attachment_markdown_ids(version.display_text)
             all_text_ids = text_ids | block_ids
             linked_ids = {link.attachment_id for link in version_links}
             for attachment_id in sorted(all_text_ids - conversation_attachments, key=str):

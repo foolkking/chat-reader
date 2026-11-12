@@ -1,5 +1,21 @@
 # 已知风险与不确定性
 
+## Reliability worktree boundaries — 2026-11-12
+
+Local fixes and detailed evidence are in the
+[single current ledger](SMALL_HOST_IMPROVEMENT_STATUS.md), not a production pass.
+Candidate schema0061 is not deployed; no previous SHA's CI applies.
+The first full API checkpoint had6 failures; subsequent targeted163 passed
+after fixes. This does not rewrite that full-run result.
+
+Docker daemon is unavailable: unchanged320/640MiB/no-swap combined supervisor/
+child gates and Linux parent-death path have not been verified. The64-frame
+release matrix, physical tablet/223–331ms cold long tasks, all external-side-
+effect failure combinations and restoration of the sole host backup remain
+unaccepted. Synthetic archive restore is not host recovery.
+Historical unreceipted/unknown files remain protected, not silently removed.
+No web search, production mutation, automatic commit/CI/deployment was performed.
+
 ## Current verification boundaries — 2026-11-11
 
 Exact **3564cbf**, CI **42828329240**, five official artifacts and initial
@@ -64,14 +80,15 @@ single-backup counts and pending-CI statements describe historical checkpoints o
 
 
 <a id="current-verification-boundaries--2026-11-06"></a>
+<a id="current-verification-boundaries--2026-11-07"></a>
 
-## Current verification boundaries — 2026-11-07
+## Current verification boundaries — 2026-11-08
 
 Use [Project State](../../PROJECT_STATE.md) and the
 [current release record](../execution/IMAGE_NATURAL_FLOW_RELEASE_2026-11-07.md)
-for exact source/CI/artifact/backup and production acceptance. This deployment
-did no cleanup; November 6's separately authorized cleanup is historical.
-Runtime/direct rollback images are `897ba78`/`9cf235f`, schema
+for exact source/CI/artifact/backup and production acceptance. The later,
+separately authorized [November 8 cleanup](../execution/KING_STORAGE_CLEANUP_2026-11-08.md)
+is complete. Runtime images are `897ba78` only, with no direct local rollback; schema
 `20261105_0059`; all six exact-source CI jobs, independent artifact acceptance
 and the deployment/runtime recheck passed. Earlier uncommitted/no-deployment
 statements below describe their own checkpoints, not the current runtime.
@@ -85,18 +102,18 @@ statements below describe their own checkpoints, not the current runtime.
 - Noise protection remains bounded recognition with the limitations below;
   a passing corpus is not exhaustive Markdown/AI-adapter parity or an
   unmeasured performance guarantee.
-- Three five-component points (November 7, 6 and 5) remain. The new stopped-writer
-  backup was independently reverified, not restore-drill accepted; previous
-  points were not re-created or pruned.
-  Server-local points may share hardlinks; independent off-site recovery and
-  scheduled backups remain unconfigured. Post-deployment check: **92% disk used,
-  3,457,056 KiB available**. Future releases need fresh capacity; no cleanup
-  or reduced headroom is authorized by this receipt.
-- Current/direct rollback images are retained, not unconditional 0059 rollback
-  approval. Stop writers and check new job/data compatibility; never automatically
-  downgrade. Superseded `be58b12`/`3b839dc` tags were removed; the direct
-  `9cf235f` rollback already supports 0059 but still requires fresh job/data checks.
-  Older `67e6336` images also remain; retaining them does not select them as direct rollback.
+- Only the November 7 five-component backup remains after explicit latest-only
+  authorization. Its five hashes, four tar streams and PostgreSQL TOC were
+  reverified, not restore-drill accepted. One server-local point is not redundant
+  or off-site protection; scheduled/off-site backups remain unconfigured.
+  November 8 independent check: **66% disk used, 13,680,388 KiB available**.
+  Future releases still require fresh capacity and authorization; this does not
+  establish automatic cleanup or a changed long-term retention policy.
+- Current four role tags and the verified image archive remain. Old `9cf235f`
+  and `67e6336` images/archives were removed; the previous rollback pointer is
+  preserved only as historical evidence, not an executable recovery promise.
+  Older recovery requires reacquiring exact verified images, stopping writers
+  and checking schema/job/data compatibility. Never automatically downgrade.
 - The 35/35 synthetic reading gate and original 64 plus 12+4/cold traces passed;
   bounded drift in that matrix is not universal real-device or real-library proof.
   Search full-rebuild costs were measured, not eliminated or incrementally optimized.
@@ -104,7 +121,7 @@ statements below describe their own checkpoints, not the current runtime.
 <a id="current-verification-boundaries--2026-10-29"></a>
 
 The former 2026-10-29 boundary anchor is retained for old incoming links;
-use the 2026-11-07 scope above for current release acceptance and remaining debt.
+use the 2026-11-08 scope above for current release acceptance and remaining debt.
 
 ## Historical local verification checkpoint — 2026-10-14
 

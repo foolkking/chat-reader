@@ -25,6 +25,8 @@ export function useSourceDraft(conversationId: string | undefined, messageId: st
   const base = useRef<Pick<SourceDraft, "base_version" | "base_version_id" | "base_content_hash"> | null>(null);
   const pending = useRef<(() => void) | null>(null);
   const active = useRef(true);
+  const latestText = useRef(text);
+  latestText.current = text;
   const queue = useCallback((write: () => Promise<void>) => {
     const next = tail.current.catch(() => undefined).then(write);
     tail.current = next;
@@ -101,13 +103,24 @@ export function useSourceDraft(conversationId: string | undefined, messageId: st
     }));
     if (entryKey === candidate?.key) setCandidate(null);
   }, [candidate?.key, key, queue]);
-  const acknowledge = useCallback(async (savedText: string) => {
-    retiredRevision.current = revision.current;
-    pending.current = null;
-    base.current = null;
-    await remove();
+  const acknowledge = useCallback(async (savedText: string, confirmedBase?: Pick<SourceDraft, "base_version" | "base_version_id" | "base_content_hash">) => {
+    if (latestText.current === savedText) {
+      retiredRevision.current = revision.current;
+      pending.current = null;
+      base.current = null;
+      // Capture the revision before the asynchronous queue: new typing must
+      // not be deleted by an old acknowledgement.
+      const acknowledgedRevision = revision.current;
+      const access = captureOfflineAccess();
+      await queue(async () => {
+        assertOfflineAccess(access);
+        if (key && revision.current === acknowledgedRevision) await offlineDb.settings.delete(key);
+      });
+    } else if (confirmedBase) {
+      base.current = confirmedBase;
+    }
     if (candidate?.value.text === savedText) await remove(candidate.key, candidate.value.revision);
-  }, [candidate, remove]);
+  }, [candidate, key, queue, remove]);
   const restoreBase = useCallback((value: SourceDraft) => {
     base.current = { base_version: value.base_version, base_version_id: value.base_version_id,
       base_content_hash: value.base_content_hash };

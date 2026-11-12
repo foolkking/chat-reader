@@ -1,0 +1,3401 @@
+{
+  "recordedAt": "2026-11-11T23:23:13.069633+08:00",
+  "baseCommit": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+  "status": "local-verified; exact new-source CI pending; not deployed",
+  "scope": [
+    "M uncertain preview COMMIT input preservation; original cleanup error and explicit admission release",
+    "N canonical retry read identity, full-response status lifetime and archive busy state",
+    "O optional browser storage cannot fail confirmed operations; bounded task prompt dismissal; single honest archive progress action"
+  ],
+  "sourceSha256": {
+    "apps/api/app/api/routes/imports.py": "34f06862db21b014e9ca8c70a8021b97e19d953e19c7fd830b1fc8cb213f9e47",
+    "apps/api/app/api/routes/adaptive_imports.py": "fec69e9b3cab8cd6d28b4efda81baae091f161bbbb4e82984d83c17d51ab51c0",
+    "apps/api/app/services/import_pipeline/draft_store.py": "81349ea214ca095b2a232eaae13a2336a6b023e7154e048f4a2b88ea01bf3a61",
+    "apps/api/app/services/storage/local_storage.py": "ce6bce19fc0ebba57c4485a5f3a871667c7d9a463fc49a0208479f33d09c23e5",
+    "apps/api/tests/test_import_preview_failure_boundaries.py": "0a818a35873f991fd76fffba16f49a63ede7d98ee409c9c10ab3cb455df388ee",
+    "apps/api/tests/test_import_temporary_cleanup.py": "3ef1fc6926ac0205bec792cf3290489dd30a72264cc11c254920afb37e1d93f5",
+    "apps/web/features/import/import-panel.tsx": "72291b3b3401c95020f96ffdb825915fd64a55e15e73634a4500d4f14176a9da",
+    "apps/web/features/import/import-task-monitor.tsx": "25cb81096aea146a5afe0ab56ba443e8d318ba349492dec545ce3e90c95cb839",
+    "apps/web/features/import/import-workspace-copy.ts": "e368c68c0c946d0b8173b6a2b59e55e16e118d1b916e831934121e2b32096b1a",
+    "apps/web/lib/api.ts": "5b822d734d3db73a8e4868979fe93f61749aaca47ef169ac7c5e255d0122cdab",
+    "scripts/ux/import-acknowledgement-copy.test.mjs": "477504b49ebf301b08b333301c3bfccb216833fc647f9531d513b19a0bd723ef",
+    "scripts/ux/import-background-analysis.test.mjs": "1e3f86207a9ea969c0328644d2b1dae9e0f57a822ec4fa846a8c48919b58ed3e",
+    "scripts/ux/import-read-lifetime.test.mjs": "bdcb7db69aac6b9ece8129dc3986e4ff7376d85a5ba7a6c58961fa5779a2a500",
+    "scripts/ux/import-session-restore-recovery.test.mjs": "7749462c80860bd16cd0e5e2a94ab61a953db1b261cf3bcea440164b78795428",
+    "scripts/ux/import-source-repair-browser.mjs": "e52808a6c2f63df8726c9887c6831a754e42e76f3295967ce4c666f4f234fd62",
+    "scripts/ux/import-recovery-browser.mjs": "39d86f1b8e9613bdd6c5e6c058a197f1c489ccd73f61887d7f4367fa145726ac",
+    "scripts/ux/task-status-recovery.test.mjs": "aac135035739e3c47742eb243e47721f0662c3a162436516e9202cd43f91a8d1"
+  },
+  "api": {
+    "startedAt": "2026-11-11T23:12:50.064257+08:00",
+    "finishedAt": "2026-11-11T23:18:40.080639+08:00",
+    "exitCode": 0,
+    "files": [
+      "test_import_preview_failure_boundaries.py",
+      "test_import_temporary_cleanup.py",
+      "test_import_preview_api.py",
+      "test_import_preview_exporter_combo.py",
+      "test_import_preview_official.py",
+      "test_cr_archive.py",
+      "test_import_draft_streaming.py",
+      "test_import_analysis_queue.py",
+      "test_import_upload_receipts.py",
+      "test_import_responsiveness.py",
+      "test_canjson_memory_bounds.py",
+      "test_adaptive_import_api.py"
+    ],
+    "logSha256": "3fd72c249dc5aaa6ff13d96e6cf6199c5cdbc5e849716b8074da529fa85ac195",
+    "tail": ".............................................ss......................... [ 31%]\r\n........................................................................ [ 62%]\r\n........................................................................ [ 93%]\r\n...............                                                          [100%]\r\n=========================== short test summary info ===========================\r\nSKIPPED [1] tests\\test_import_preview_exporter_combo.py:312: CHAT_READER_E2E_FIXTURE_DIR is not configured\r\nSKIPPED [1] tests\\test_import_preview_exporter_combo.py:343: CHAT_READER_IMPORT_PAIR_JSON and CHAT_READER_IMPORT_PAIR_MARKDOWN are not configured\r\n229 passed, 2 skipped in 338.89s (0:05:38)\r\n",
+    "passed": 229,
+    "skipped": 2,
+    "skipReason": "Optional external E2E directory and JSON/Markdown pair not configured; no user source replay."
+  },
+  "node": {
+    "startedAt": "2026-11-11T23:16:46.911604+08:00",
+    "finishedAt": "2026-11-11T23:17:21.759847+08:00",
+    "exitCode": 0,
+    "testFiles": 149,
+    "logSha256": "7c67eaee555c99d53b106246cbf42456c3dab9261dc12551fc4fcb36c9a50b4c",
+    "tail": " table data export reads nested text, preserves empty cells, and escapes TSV/CSV\n  ---\n  duration_ms: 1.6641\n  ...\n# Subtest: formula-like cells default to safe text while ordinary negative numbers remain intact\nok 2466 - formula-like cells default to safe text while ordinary negative numbers remain intact\n  ---\n  duration_ms: 0.5873\n  ...\n# Subtest: table export refuses oversized table data without silently truncating\nok 2467 - table export refuses oversized table data without silently truncating\n  ---\n  duration_ms: 49.5689\n  ...\n# Subtest: table math exports its TeX once rather than MathML, annotation and visual text concatenated\nok 2468 - table math exports its TeX once rather than MathML, annotation and visual text concatenated\n  ---\n  duration_ms: 0.9365\n  ...\n# Subtest: pasted transcript becomes a named UTF-8 Markdown file only when explicitly requested\nok 2469 - pasted transcript becomes a named UTF-8 Markdown file only when explicitly requested\n  ---\n  duration_ms: 2.4991\n  ...\n# Subtest: citation uses a private message target and escapes source labels\nok 2470 - citation uses a private message target and escapes source labels\n  ---\n  duration_ms: 2.6138\n  ...\n# Subtest: read-only version difference preserves Unicode and orders insertions/deletions\nok 2471 - read-only version difference preserves Unicode and orders insertions/deletions\n  ---\n  duration_ms: 1.2704\n  ...\n# Subtest: version comparison discloses text, line and quadratic-work bounds\nok 2472 - version comparison discloses text, line and quadratic-work bounds\n  ---\n  duration_ms: 4.8947\n  ...\n1..2472\n# tests 2472\n# suites 0\n# pass 2472\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 34746.4121\n",
+    "passed": 2472,
+    "failed": 0,
+    "skipped": 0
+  },
+  "static": [
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T23:11:29.158338+08:00",
+      "finishedAt": "2026-11-11T23:11:49.626890+08:00",
+      "logSha256": "12318e1458c77defc58b71801a46646387fd5cfc66f98359491f30888decd8f2",
+      "tail": "\n> chat-reader@0.0.0 lint E:\\1project\\chat-reader\n> corepack pnpm --filter web lint\n\n\n> web@0.0.0 lint E:\\1project\\chat-reader\\apps\\web\n> eslint . --max-warnings=0\n\n"
+    },
+    {
+      "name": "typecheck",
+      "exitCode": 0,
+      "startedAt": "2026-11-11T23:11:49.627889+08:00",
+      "finishedAt": "2026-11-11T23:12:23.074671+08:00",
+      "logSha256": "47d1d43aa0ed101f57d22b06271e36e7f7a9a308d330b63bcf771a904b770165",
+      "tail": "\n> chat-reader@0.0.0 typecheck E:\\1project\\chat-reader\n> corepack pnpm --filter web typecheck \"--incremental\" \"false\"\n\n\n> web@0.0.0 typecheck E:\\1project\\chat-reader\\apps\\web\n> tsc --noEmit \"--incremental\" \"false\"\n\n"
+    }
+  ],
+  "build": {
+    "startedAt": "2026-11-11T23:10:58.974872+08:00",
+    "finishedAt": "2026-11-11T23:12:17.291697+08:00",
+    "exitCode": 0,
+    "inputCount": 544,
+    "modifiedInputs": [],
+    "logSha256": "592fe45a47939599e6c1d66957a0062411c1b80812587ef01c100d749c81e7f6",
+    "snapshotSha256": "a1904772fcd1d3f0224fd20a845d9f9d6ba142946354d9486431c451f765786d",
+    "buildCPUs": 1,
+    "command": [
+      "node",
+      "E:\\chat-reader-temp\\chat-reader-small-host-20261111\\build-workspace-kl-v2\\apps\\web\\node_modules\\next\\dist\\bin\\next",
+      "build",
+      "--webpack"
+    ],
+    "boundary": "Same installed Next binary and exact package build arguments, isolated byte-verified copy; no new dependencies or env files."
+  },
+  "sourceBrowser": {
+    "scope": "Production ImportPanel/React Query; synthetic transport/account/secondary surfaces, no real import",
+    "results": [
+      {
+        "width": 375,
+        "locale": "zh-CN",
+        "theme": "light",
+        "state": "FAILED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 82,
+              "height": 44,
+              "left": 209.609375,
+              "right": 291.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 299.609375,
+              "right": 363
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 209.609375,
+              "right": 291.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 299.609375,
+              "right": 363
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 26,
+              "right": 108
+            },
+            {
+              "width": 116,
+              "height": 44,
+              "left": 12,
+              "right": 128
+            },
+            {
+              "width": 90,
+              "height": 44,
+              "left": 136,
+              "right": 226
+            },
+            {
+              "width": 118,
+              "height": 44,
+              "left": 234,
+              "right": 352
+            },
+            {
+              "width": 119.390625,
+              "height": 44,
+              "left": 12,
+              "right": 131.390625
+            }
+          ]
+        },
+        "screenshot": "source-repair-375-zh-CN-light.png",
+        "exclusionScreenshot": "source-exclusion-375-zh-CN-light.png",
+        "selectionScreenshot": "source-selection-375-zh-CN-light.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 44,
+              "height": 44,
+              "left": 267,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 267,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 267,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-375-zh-CN-light.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-375-zh-CN-light.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-375-zh-CN-light.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 50,
+          "height": 44,
+          "left": 301,
+          "right": 351,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-375-zh-CN-light.png",
+        "archiveStorageRejection": "removeItem",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 375,
+        "locale": "zh-CN",
+        "theme": "dark",
+        "state": "PAUSED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 82,
+              "height": 44,
+              "left": 209.609375,
+              "right": 291.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 299.609375,
+              "right": 363
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 209.609375,
+              "right": 291.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 299.609375,
+              "right": 363
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 26,
+              "right": 108
+            },
+            {
+              "width": 116,
+              "height": 44,
+              "left": 12,
+              "right": 128
+            },
+            {
+              "width": 90,
+              "height": 44,
+              "left": 136,
+              "right": 226
+            },
+            {
+              "width": 118,
+              "height": 44,
+              "left": 234,
+              "right": 352
+            },
+            {
+              "width": 119.390625,
+              "height": 44,
+              "left": 12,
+              "right": 131.390625
+            }
+          ]
+        },
+        "screenshot": "source-repair-375-zh-CN-dark.png",
+        "exclusionScreenshot": "source-exclusion-375-zh-CN-dark.png",
+        "selectionScreenshot": "source-selection-375-zh-CN-dark.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 44,
+              "height": 44,
+              "left": 267,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 267,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 267,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-375-zh-CN-dark.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-375-zh-CN-dark.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-375-zh-CN-dark.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 50,
+          "height": 44,
+          "left": 301,
+          "right": 351,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-375-zh-CN-dark.png",
+        "archiveStorageRejection": "getter",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 375,
+        "locale": "en-US",
+        "theme": "light",
+        "state": "FAILED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 142.359375,
+              "right": 268.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 276.65625,
+              "right": 363
+            },
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 142.359375,
+              "right": 268.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 276.65625,
+              "right": 363
+            },
+            {
+              "width": 110.484375,
+              "height": 44,
+              "left": 26,
+              "right": 136.484375
+            },
+            {
+              "width": 186.0625,
+              "height": 44,
+              "left": 12,
+              "right": 198.0625
+            },
+            {
+              "width": 125.3125,
+              "height": 44,
+              "left": 206.0625,
+              "right": 331.375
+            },
+            {
+              "width": 171.4375,
+              "height": 44,
+              "left": 12,
+              "right": 183.4375
+            },
+            {
+              "width": 163.140625,
+              "height": 44,
+              "left": 191.4375,
+              "right": 354.578125
+            }
+          ]
+        },
+        "screenshot": "source-repair-375-en-US-light.png",
+        "exclusionScreenshot": "source-exclusion-375-en-US-light.png",
+        "selectionScreenshot": "source-selection-375-en-US-light.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 242.96875,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 242.96875,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 242.96875,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-375-en-US-light.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-375-en-US-light.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-375-en-US-light.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 56.21875,
+          "height": 44,
+          "left": 26,
+          "right": 82.21875,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-375-en-US-light.png",
+        "archiveStorageRejection": "removeItem",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 375,
+        "locale": "en-US",
+        "theme": "dark",
+        "state": "PAUSED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 142.359375,
+              "right": 268.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 276.65625,
+              "right": 363
+            },
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 142.359375,
+              "right": 268.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 276.65625,
+              "right": 363
+            },
+            {
+              "width": 110.484375,
+              "height": 44,
+              "left": 26,
+              "right": 136.484375
+            },
+            {
+              "width": 186.0625,
+              "height": 44,
+              "left": 12,
+              "right": 198.0625
+            },
+            {
+              "width": 151.109375,
+              "height": 44,
+              "left": 206.0625,
+              "right": 357.171875
+            },
+            {
+              "width": 171.4375,
+              "height": 44,
+              "left": 12,
+              "right": 183.4375
+            },
+            {
+              "width": 163.140625,
+              "height": 44,
+              "left": 191.4375,
+              "right": 354.578125
+            }
+          ]
+        },
+        "screenshot": "source-repair-375-en-US-dark.png",
+        "exclusionScreenshot": "source-exclusion-375-en-US-dark.png",
+        "selectionScreenshot": "source-selection-375-en-US-dark.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 242.96875,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 242.96875,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 242.96875,
+              "right": 311
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 319,
+              "right": 363
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-375-en-US-dark.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-375-en-US-dark.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-375-en-US-dark.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 56.21875,
+          "height": 44,
+          "left": 26,
+          "right": 82.21875,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-375-en-US-dark.png",
+        "archiveStorageRejection": "getter",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 800,
+        "locale": "zh-CN",
+        "theme": "light",
+        "state": "FAILED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 82,
+              "height": 44,
+              "left": 594.609375,
+              "right": 676.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 684.609375,
+              "right": 748
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 594.609375,
+              "right": 676.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 684.609375,
+              "right": 748
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 66,
+              "right": 148
+            },
+            {
+              "width": 116,
+              "height": 44,
+              "left": 52,
+              "right": 168
+            },
+            {
+              "width": 90,
+              "height": 44,
+              "left": 176,
+              "right": 266
+            },
+            {
+              "width": 118,
+              "height": 44,
+              "left": 274,
+              "right": 392
+            },
+            {
+              "width": 119.390625,
+              "height": 44,
+              "left": 400,
+              "right": 519.390625
+            }
+          ]
+        },
+        "screenshot": "source-repair-800-zh-CN-light.png",
+        "exclusionScreenshot": "source-exclusion-800-zh-CN-light.png",
+        "selectionScreenshot": "source-selection-800-zh-CN-light.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 44,
+              "height": 44,
+              "left": 652,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 652,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 652,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-800-zh-CN-light.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-800-zh-CN-light.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-800-zh-CN-light.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 50,
+          "height": 44,
+          "left": 686,
+          "right": 736,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-800-zh-CN-light.png",
+        "archiveStorageRejection": "removeItem",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 800,
+        "locale": "zh-CN",
+        "theme": "dark",
+        "state": "PAUSED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 82,
+              "height": 44,
+              "left": 594.609375,
+              "right": 676.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 684.609375,
+              "right": 748
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 594.609375,
+              "right": 676.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 684.609375,
+              "right": 748
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 66,
+              "right": 148
+            },
+            {
+              "width": 116,
+              "height": 44,
+              "left": 52,
+              "right": 168
+            },
+            {
+              "width": 90,
+              "height": 44,
+              "left": 176,
+              "right": 266
+            },
+            {
+              "width": 118,
+              "height": 44,
+              "left": 274,
+              "right": 392
+            },
+            {
+              "width": 119.390625,
+              "height": 44,
+              "left": 400,
+              "right": 519.390625
+            }
+          ]
+        },
+        "screenshot": "source-repair-800-zh-CN-dark.png",
+        "exclusionScreenshot": "source-exclusion-800-zh-CN-dark.png",
+        "selectionScreenshot": "source-selection-800-zh-CN-dark.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 44,
+              "height": 44,
+              "left": 652,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 652,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 652,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-800-zh-CN-dark.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-800-zh-CN-dark.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-800-zh-CN-dark.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 50,
+          "height": 44,
+          "left": 686,
+          "right": 736,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-800-zh-CN-dark.png",
+        "archiveStorageRejection": "getter",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 800,
+        "locale": "en-US",
+        "theme": "light",
+        "state": "FAILED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 527.359375,
+              "right": 653.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 661.65625,
+              "right": 748
+            },
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 527.359375,
+              "right": 653.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 661.65625,
+              "right": 748
+            },
+            {
+              "width": 110.484375,
+              "height": 44,
+              "left": 66,
+              "right": 176.484375
+            },
+            {
+              "width": 186.0625,
+              "height": 44,
+              "left": 52,
+              "right": 238.0625
+            },
+            {
+              "width": 125.3125,
+              "height": 44,
+              "left": 246.0625,
+              "right": 371.375
+            },
+            {
+              "width": 171.4375,
+              "height": 44,
+              "left": 379.375,
+              "right": 550.8125
+            },
+            {
+              "width": 163.140625,
+              "height": 44,
+              "left": 558.8125,
+              "right": 721.953125
+            }
+          ]
+        },
+        "screenshot": "source-repair-800-en-US-light.png",
+        "exclusionScreenshot": "source-exclusion-800-en-US-light.png",
+        "selectionScreenshot": "source-selection-800-en-US-light.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 627.96875,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 627.96875,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 627.96875,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-800-en-US-light.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-800-en-US-light.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-800-en-US-light.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 56.21875,
+          "height": 44,
+          "left": 679.78125,
+          "right": 736,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-800-en-US-light.png",
+        "archiveStorageRejection": "removeItem",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 800,
+        "locale": "en-US",
+        "theme": "dark",
+        "state": "PAUSED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 527.359375,
+              "right": 653.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 661.65625,
+              "right": 748
+            },
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 527.359375,
+              "right": 653.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 661.65625,
+              "right": 748
+            },
+            {
+              "width": 110.484375,
+              "height": 44,
+              "left": 66,
+              "right": 176.484375
+            },
+            {
+              "width": 186.0625,
+              "height": 44,
+              "left": 52,
+              "right": 238.0625
+            },
+            {
+              "width": 151.109375,
+              "height": 44,
+              "left": 246.0625,
+              "right": 397.171875
+            },
+            {
+              "width": 171.4375,
+              "height": 44,
+              "left": 405.171875,
+              "right": 576.609375
+            },
+            {
+              "width": 163.140625,
+              "height": 44,
+              "left": 584.609375,
+              "right": 747.75
+            }
+          ]
+        },
+        "screenshot": "source-repair-800-en-US-dark.png",
+        "exclusionScreenshot": "source-exclusion-800-en-US-dark.png",
+        "selectionScreenshot": "source-selection-800-en-US-dark.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 627.96875,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 627.96875,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 627.96875,
+              "right": 696
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 704,
+              "right": 748
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-800-en-US-dark.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-800-en-US-dark.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-800-en-US-dark.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 56.21875,
+          "height": 44,
+          "left": 679.78125,
+          "right": 736,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-800-en-US-dark.png",
+        "archiveStorageRejection": "getter",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 1440,
+        "locale": "zh-CN",
+        "theme": "light",
+        "state": "FAILED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 82,
+              "height": 44,
+              "left": 914.609375,
+              "right": 996.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 1004.609375,
+              "right": 1068
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 914.609375,
+              "right": 996.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 1004.609375,
+              "right": 1068
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 386,
+              "right": 468
+            },
+            {
+              "width": 116,
+              "height": 44,
+              "left": 372,
+              "right": 488
+            },
+            {
+              "width": 90,
+              "height": 44,
+              "left": 496,
+              "right": 586
+            },
+            {
+              "width": 118,
+              "height": 44,
+              "left": 594,
+              "right": 712
+            },
+            {
+              "width": 119.390625,
+              "height": 44,
+              "left": 720,
+              "right": 839.390625
+            }
+          ]
+        },
+        "screenshot": "source-repair-1440-zh-CN-light.png",
+        "exclusionScreenshot": "source-exclusion-1440-zh-CN-light.png",
+        "selectionScreenshot": "source-selection-1440-zh-CN-light.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 44,
+              "height": 44,
+              "left": 972,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 972,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 972,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-1440-zh-CN-light.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-1440-zh-CN-light.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-1440-zh-CN-light.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 50,
+          "height": 44,
+          "left": 1006,
+          "right": 1056,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-1440-zh-CN-light.png",
+        "archiveStorageRejection": "removeItem",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 1440,
+        "locale": "zh-CN",
+        "theme": "dark",
+        "state": "PAUSED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 82,
+              "height": 44,
+              "left": 914.609375,
+              "right": 996.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 1004.609375,
+              "right": 1068
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 914.609375,
+              "right": 996.609375
+            },
+            {
+              "width": 63.390625,
+              "height": 44,
+              "left": 1004.609375,
+              "right": 1068
+            },
+            {
+              "width": 82,
+              "height": 44,
+              "left": 386,
+              "right": 468
+            },
+            {
+              "width": 116,
+              "height": 44,
+              "left": 372,
+              "right": 488
+            },
+            {
+              "width": 90,
+              "height": 44,
+              "left": 496,
+              "right": 586
+            },
+            {
+              "width": 118,
+              "height": 44,
+              "left": 594,
+              "right": 712
+            },
+            {
+              "width": 119.390625,
+              "height": 44,
+              "left": 720,
+              "right": 839.390625
+            }
+          ]
+        },
+        "screenshot": "source-repair-1440-zh-CN-dark.png",
+        "exclusionScreenshot": "source-exclusion-1440-zh-CN-dark.png",
+        "selectionScreenshot": "source-selection-1440-zh-CN-dark.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 44,
+              "height": 44,
+              "left": 972,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 972,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 972,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-1440-zh-CN-dark.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-1440-zh-CN-dark.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-1440-zh-CN-dark.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 50,
+          "height": 44,
+          "left": 1006,
+          "right": 1056,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-1440-zh-CN-dark.png",
+        "archiveStorageRejection": "getter",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 1440,
+        "locale": "en-US",
+        "theme": "light",
+        "state": "FAILED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 847.359375,
+              "right": 973.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 981.65625,
+              "right": 1068
+            },
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 847.359375,
+              "right": 973.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 981.65625,
+              "right": 1068
+            },
+            {
+              "width": 110.484375,
+              "height": 44,
+              "left": 386,
+              "right": 496.484375
+            },
+            {
+              "width": 186.0625,
+              "height": 44,
+              "left": 372,
+              "right": 558.0625
+            },
+            {
+              "width": 125.3125,
+              "height": 44,
+              "left": 566.0625,
+              "right": 691.375
+            },
+            {
+              "width": 171.4375,
+              "height": 44,
+              "left": 699.375,
+              "right": 870.8125
+            },
+            {
+              "width": 163.140625,
+              "height": 44,
+              "left": 878.8125,
+              "right": 1041.953125
+            }
+          ]
+        },
+        "screenshot": "source-repair-1440-en-US-light.png",
+        "exclusionScreenshot": "source-exclusion-1440-en-US-light.png",
+        "selectionScreenshot": "source-selection-1440-en-US-light.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 947.96875,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 947.96875,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 947.96875,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-1440-en-US-light.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-1440-en-US-light.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-1440-en-US-light.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 56.21875,
+          "height": 44,
+          "left": 999.78125,
+          "right": 1056,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-1440-en-US-light.png",
+        "archiveStorageRejection": "removeItem",
+        "archiveOneProgressAction": true
+      },
+      {
+        "width": 1440,
+        "locale": "en-US",
+        "theme": "dark",
+        "state": "PAUSED",
+        "writes": 4,
+        "reads": 11,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 847.359375,
+              "right": 973.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 981.65625,
+              "right": 1068
+            },
+            {
+              "width": 126.296875,
+              "height": 44,
+              "left": 847.359375,
+              "right": 973.65625
+            },
+            {
+              "width": 86.34375,
+              "height": 44,
+              "left": 981.65625,
+              "right": 1068
+            },
+            {
+              "width": 110.484375,
+              "height": 44,
+              "left": 386,
+              "right": 496.484375
+            },
+            {
+              "width": 186.0625,
+              "height": 44,
+              "left": 372,
+              "right": 558.0625
+            },
+            {
+              "width": 151.109375,
+              "height": 44,
+              "left": 566.0625,
+              "right": 717.171875
+            },
+            {
+              "width": 171.4375,
+              "height": 44,
+              "left": 725.171875,
+              "right": 896.609375
+            },
+            {
+              "width": 163.140625,
+              "height": 44,
+              "left": 904.609375,
+              "right": 1067.75
+            }
+          ]
+        },
+        "screenshot": "source-repair-1440-en-US-dark.png",
+        "exclusionScreenshot": "source-exclusion-1440-en-US-dark.png",
+        "selectionScreenshot": "source-selection-1440-en-US-dark.png",
+        "selectionGeometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 947.96875,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 947.96875,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            },
+            {
+              "width": 68.03125,
+              "height": 44,
+              "left": 947.96875,
+              "right": 1016
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1024,
+              "right": 1068
+            }
+          ]
+        },
+        "selectedUploadCount": 1,
+        "unknownCommitRecovered": true,
+        "commitPosts": 1,
+        "commitReads": 1,
+        "uploadScreenshot": "upload-recovery-1440-en-US-dark.png",
+        "initialPosts": 3,
+        "receiptReads": 3,
+        "initialReads": 4,
+        "uploadIdentityRetained": true,
+        "unavailableLocalRelease": true,
+        "pastePosts": 3,
+        "pasteReads": 1,
+        "pasteScreenshot": "paste-recovery-1440-en-US-dark.png",
+        "pastedSourceRetained": true,
+        "canonicalPosts": 1,
+        "canonicalRetries": 1,
+        "canonicalReads": 3,
+        "canonicalScreenshot": "canonical-read-recovery-1440-en-US-dark.png",
+        "canonicalAttemptIsolated": true,
+        "archivePreviews": 1,
+        "archivePosts": 1,
+        "archiveReads": 2,
+        "archiveGeometry": {
+          "width": 56.21875,
+          "height": 44,
+          "left": 999.78125,
+          "right": 1056,
+          "overflow": 0
+        },
+        "archiveScreenshot": "archive-read-recovery-1440-en-US-dark.png",
+        "archiveStorageRejection": "getter",
+        "archiveOneProgressAction": true
+      }
+    ],
+    "errors": []
+  },
+  "taskBrowser": {
+    "scope": "Production Task Center + ContinuationPanel/editor/history/recovery hook + React Query; synthetic network/account/Reader route, Markdown-paint and local-draft-storage adapters; actual persisted draft guards are separate tests",
+    "results": [
+      {
+        "width": 375,
+        "locale": "zh-CN",
+        "theme": "light",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 48,
+              "height": 44,
+              "left": 29,
+              "right": 77
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 29,
+              "right": 73
+            },
+            {
+              "width": 48,
+              "height": 44,
+              "left": 43,
+              "right": 91
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 96,
+              "height": 44,
+              "left": 29,
+              "right": 125
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 29,
+              "right": 73
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            }
+          ]
+        },
+        "screenshot": "tasks-375-zh-CN-light.png",
+        "taskDismissStorageRejection": "setItem",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-375-zh-CN-light.png",
+        "writeScreenshot": "context-write-375-zh-CN-light.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 375,
+        "locale": "zh-CN",
+        "theme": "dark",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 48,
+              "height": 44,
+              "left": 29,
+              "right": 77
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 29,
+              "right": 73
+            },
+            {
+              "width": 48,
+              "height": 44,
+              "left": 43,
+              "right": 91
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 96,
+              "height": 44,
+              "left": 29,
+              "right": 125
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 29,
+              "right": 73
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 29,
+              "right": 101
+            }
+          ]
+        },
+        "screenshot": "tasks-375-zh-CN-dark.png",
+        "taskDismissStorageRejection": "getter",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-375-zh-CN-dark.png",
+        "writeScreenshot": "context-write-375-zh-CN-dark.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 375,
+        "locale": "en-US",
+        "theme": "light",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 29,
+              "right": 101.40625
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 29,
+              "right": 147.359375
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 29,
+              "right": 77.21875
+            },
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 43,
+              "right": 115.40625
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 248.234375,
+              "height": 44,
+              "left": 29,
+              "right": 277.234375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 29,
+              "right": 147.359375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 29,
+              "right": 163.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 29,
+              "right": 163.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 136.375,
+              "height": 44,
+              "left": 29,
+              "right": 165.375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 29,
+              "right": 77.21875
+            },
+            {
+              "width": 99.78125,
+              "height": 44,
+              "left": 29,
+              "right": 128.78125
+            }
+          ]
+        },
+        "screenshot": "tasks-375-en-US-light.png",
+        "taskDismissStorageRejection": "setItem",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-375-en-US-light.png",
+        "writeScreenshot": "context-write-375-en-US-light.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 375,
+        "locale": "en-US",
+        "theme": "dark",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 29,
+              "right": 101.40625
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 29,
+              "right": 147.359375
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 29,
+              "right": 77.21875
+            },
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 43,
+              "right": 115.40625
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 248.234375,
+              "height": 44,
+              "left": 29,
+              "right": 277.234375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 29,
+              "right": 147.359375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 29,
+              "right": 163.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 29,
+              "right": 163.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 136.375,
+              "height": 44,
+              "left": 29,
+              "right": 165.375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 302,
+              "right": 346
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 29,
+              "right": 77.21875
+            },
+            {
+              "width": 99.78125,
+              "height": 44,
+              "left": 29,
+              "right": 128.78125
+            }
+          ]
+        },
+        "screenshot": "tasks-375-en-US-dark.png",
+        "taskDismissStorageRejection": "getter",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-375-en-US-dark.png",
+        "writeScreenshot": "context-write-375-en-US-dark.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 800,
+        "locale": "zh-CN",
+        "theme": "light",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 48,
+              "height": 44,
+              "left": 69,
+              "right": 117
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 69,
+              "right": 113
+            },
+            {
+              "width": 48,
+              "height": 44,
+              "left": 83,
+              "right": 131
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 96,
+              "height": 44,
+              "left": 69,
+              "right": 165
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 69,
+              "right": 113
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            }
+          ]
+        },
+        "screenshot": "tasks-800-zh-CN-light.png",
+        "taskDismissStorageRejection": "setItem",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-800-zh-CN-light.png",
+        "writeScreenshot": "context-write-800-zh-CN-light.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 800,
+        "locale": "zh-CN",
+        "theme": "dark",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 48,
+              "height": 44,
+              "left": 69,
+              "right": 117
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 69,
+              "right": 113
+            },
+            {
+              "width": 48,
+              "height": 44,
+              "left": 83,
+              "right": 131
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 96,
+              "height": 44,
+              "left": 69,
+              "right": 165
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 69,
+              "right": 113
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 69,
+              "right": 141
+            }
+          ]
+        },
+        "screenshot": "tasks-800-zh-CN-dark.png",
+        "taskDismissStorageRejection": "getter",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-800-zh-CN-dark.png",
+        "writeScreenshot": "context-write-800-zh-CN-dark.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 800,
+        "locale": "en-US",
+        "theme": "light",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 69,
+              "right": 141.40625
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 69,
+              "right": 187.359375
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 69,
+              "right": 117.21875
+            },
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 83,
+              "right": 155.40625
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 248.234375,
+              "height": 44,
+              "left": 69,
+              "right": 317.234375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 69,
+              "right": 187.359375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 69,
+              "right": 203.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 69,
+              "right": 203.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 136.375,
+              "height": 44,
+              "left": 69,
+              "right": 205.375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 69,
+              "right": 117.21875
+            },
+            {
+              "width": 99.78125,
+              "height": 44,
+              "left": 69,
+              "right": 168.78125
+            }
+          ]
+        },
+        "screenshot": "tasks-800-en-US-light.png",
+        "taskDismissStorageRejection": "setItem",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-800-en-US-light.png",
+        "writeScreenshot": "context-write-800-en-US-light.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 800,
+        "locale": "en-US",
+        "theme": "dark",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 69,
+              "right": 141.40625
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 69,
+              "right": 187.359375
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 69,
+              "right": 117.21875
+            },
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 83,
+              "right": 155.40625
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 248.234375,
+              "height": 44,
+              "left": 69,
+              "right": 317.234375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 69,
+              "right": 187.359375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 69,
+              "right": 203.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 69,
+              "right": 203.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 136.375,
+              "height": 44,
+              "left": 69,
+              "right": 205.375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 687,
+              "right": 731
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 69,
+              "right": 117.21875
+            },
+            {
+              "width": 99.78125,
+              "height": 44,
+              "left": 69,
+              "right": 168.78125
+            }
+          ]
+        },
+        "screenshot": "tasks-800-en-US-dark.png",
+        "taskDismissStorageRejection": "getter",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-800-en-US-dark.png",
+        "writeScreenshot": "context-write-800-en-US-dark.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 1440,
+        "locale": "zh-CN",
+        "theme": "light",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 48,
+              "height": 44,
+              "left": 389,
+              "right": 437
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 389,
+              "right": 433
+            },
+            {
+              "width": 48,
+              "height": 44,
+              "left": 403,
+              "right": 451
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 96,
+              "height": 44,
+              "left": 389,
+              "right": 485
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 389,
+              "right": 433
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            }
+          ]
+        },
+        "screenshot": "tasks-1440-zh-CN-light.png",
+        "taskDismissStorageRejection": "setItem",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-1440-zh-CN-light.png",
+        "writeScreenshot": "context-write-1440-zh-CN-light.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 1440,
+        "locale": "zh-CN",
+        "theme": "dark",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 48,
+              "height": 44,
+              "left": 389,
+              "right": 437
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 389,
+              "right": 433
+            },
+            {
+              "width": 48,
+              "height": 44,
+              "left": 403,
+              "right": 451
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 96,
+              "height": 44,
+              "left": 389,
+              "right": 485
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 389,
+              "right": 433
+            },
+            {
+              "width": 72,
+              "height": 44,
+              "left": 389,
+              "right": 461
+            }
+          ]
+        },
+        "screenshot": "tasks-1440-zh-CN-dark.png",
+        "taskDismissStorageRejection": "getter",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-1440-zh-CN-dark.png",
+        "writeScreenshot": "context-write-1440-zh-CN-dark.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 1440,
+        "locale": "en-US",
+        "theme": "light",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 389,
+              "right": 461.40625
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 389,
+              "right": 507.359375
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 389,
+              "right": 437.21875
+            },
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 403,
+              "right": 475.40625
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 248.234375,
+              "height": 44,
+              "left": 389,
+              "right": 637.234375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 389,
+              "right": 507.359375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 389,
+              "right": 523.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 389,
+              "right": 523.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 136.375,
+              "height": 44,
+              "left": 389,
+              "right": 525.375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 389,
+              "right": 437.21875
+            },
+            {
+              "width": 99.78125,
+              "height": 44,
+              "left": 389,
+              "right": 488.78125
+            }
+          ]
+        },
+        "screenshot": "tasks-1440-en-US-light.png",
+        "taskDismissStorageRejection": "setItem",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-1440-en-US-light.png",
+        "writeScreenshot": "context-write-1440-en-US-light.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      },
+      {
+        "width": 1440,
+        "locale": "en-US",
+        "theme": "dark",
+        "writes": 10,
+        "taskReads": 3,
+        "geometry": {
+          "overflow": 0,
+          "actions": [
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 389,
+              "right": 461.40625
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 389,
+              "right": 507.359375
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 389,
+              "right": 437.21875
+            },
+            {
+              "width": 72.40625,
+              "height": 44,
+              "left": 403,
+              "right": 475.40625
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 248.234375,
+              "height": 44,
+              "left": 389,
+              "right": 637.234375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 118.359375,
+              "height": 44,
+              "left": 389,
+              "right": 507.359375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 389,
+              "right": 523.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 134.484375,
+              "height": 44,
+              "left": 389,
+              "right": 523.484375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 136.375,
+              "height": 44,
+              "left": 389,
+              "right": 525.375
+            },
+            {
+              "width": 44,
+              "height": 44,
+              "left": 1007,
+              "right": 1051
+            },
+            {
+              "width": 48.21875,
+              "height": 44,
+              "left": 389,
+              "right": 437.21875
+            },
+            {
+              "width": 99.78125,
+              "height": 44,
+              "left": 389,
+              "right": 488.78125
+            }
+          ]
+        },
+        "screenshot": "tasks-1440-en-US-dark.png",
+        "taskDismissStorageRejection": "getter",
+        "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+        "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+        "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+        "contextScreenshot": "context-1440-en-US-dark.png",
+        "writeScreenshot": "context-write-1440-en-US-dark.png",
+        "continuationWrites": "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry"
+      }
+    ],
+    "errors": []
+  },
+  "screenshots": [
+    {
+      "file": "mno-archive-read-recovery-375-zh-CN-light.png",
+      "sha256": "2beb25b2f5ee7855f4c407858805f12b6f3e67348e9e2f330492ea008fabd303",
+      "reviewed": true,
+      "scope": "Actual Panel, synthetic transport/archive preview, outer Toggle fixture; no full-site or physical-device acceptance."
+    },
+    {
+      "file": "mno-archive-read-recovery-1440-en-US-dark.png",
+      "sha256": "1dfc5be384f18702c22972a518c49db381d67849733a156be29cbdc99996d5dd",
+      "reviewed": true,
+      "scope": "Actual Panel, synthetic transport/archive preview, outer Toggle fixture; no full-site or physical-device acceptance."
+    }
+  ],
+  "failedCheckpoints": [
+    {
+      "log": "m-preview-before.log",
+      "sha256": "512cabfa62d8e4f356ff1627a30e707221e115e53172487547a62a2bdc6972c6",
+      "failingNodeCases": [],
+      "summary": "t_import_preview_failure_boundaries.py::test_preview_cleanup_failure_keeps_original_rejection_and_releases_admission[limit]\nFAILED tests/test_import_preview_failure_boundaries.py::test_adaptive_cleanup_failure_does_not_replace_the_original_admission_error[error0-413-SESSION_TOO_LARGE]\nFAILED tests/test_import_preview_failure_boundaries.py::test_adaptive_cleanup_failure_does_not_replace_the_original_admission_error[error1-422-SOURCE_UNSUPPORTED]\nFAILED tests/test_import_preview_failure_boundaries.py::test_adaptive_cleanup_failure_does_not_replace_the_original_admission_error[error2-500-SESSION_PERSISTENCE_FAILED]\n13 failed, 1 passed in 26.38s\n"
+    },
+    {
+      "log": "m-temporary-before.log",
+      "sha256": "913eed44de78da13b295a80b95c0a4c38bb4c7ef78523c9a4bbd96b81cdcf80c",
+      "failingNodeCases": [],
+      "summary": "p\\services\\import_pipeline\\draft_store.py:77: in write_import_draft\n    temporary.unlink(missing_ok=True)\ntests\\test_import_temporary_cleanup.py:25: in unlink\n    raise PermissionError(\"Synthetic cleanup /srv/private-staging/part\")\nE   PermissionError: Synthetic cleanup /srv/private-staging/part\n=========================== short test summary info ===========================\nFAILED tests/test_import_temporary_cleanup.py::test_stream_upload_keeps_size_rejection_when_temporary_cleanup_fails[True]\nFAILED tests/test_import_temporary_cleanup.py::test_draft_rejection_preserves_previous_publication_and_primary_error[True]\n2 failed, 2 passed in 1.71s\n"
+    },
+    {
+      "log": "n-canonical-before.log",
+      "sha256": "ae7ddf35c3c2ede72d0a4361a04be8961852298d6d3d1b1d251bf4b16d020fe9",
+      "failingNodeCases": [
+        "failed: a confirmed canonical retry cannot reuse a fresh old terminal cache",
+        "cancelled: a confirmed canonical retry cannot reuse a fresh old terminal cache",
+        "zh-CN: an acknowledged archive restore is disabled and is not called format recognition",
+        "en-US: an acknowledged archive restore is disabled and is not called format recognition",
+        "reopening a completed analysis reads the saved canonical result instead of showing an empty file picker",
+        "status: hung headers has a complete-response deadline",
+        "status: hung body has a complete-response deadline",
+        "status: account changes reject late successful data",
+        "status: caller abort retires the read and a successful explicit read clears its deadline",
+        "status: stalled 401 error body cannot keep the panel busy forever",
+        "status: stalled 403 error body cannot keep the panel busy forever",
+        "status: stalled 503 error body cannot keep the panel busy forever",
+        "a timed-out known-task health read resumes the same task using GET only",
+        "catalog read preserves paging parameters, and unrelated writes are not assigned a twenty-second upload deadline",
+        "a missing known task is not reported as a missing import or offered for resubmission"
+      ],
+      "summary": "it (node:events:519:28)\n  ...\n# Subtest: a missing known task is not reported as a missing import or offered for resubmission\nnot ok 92 - a missing known task is not reported as a missing import or offered for resubmission\n  ---\n  duration_ms: 0\n  location: 'file:///E:/1project/chat-reader/scripts/ux/import-read-lifetime.test.mjs:101:1'\n  failureType: 'cancelledByParent'\n  error: 'Promise resolution is still pending but the event loop has already resolved'\n  code: 'ERR_TEST_FAILURE'\n  stack: |-\n    process.emit (node:events:519:28)\n  ...\n1..92\n# tests 92\n# suites 0\n# pass 77\n# fail 8\n# cancelled 7\n# skipped 0\n# todo 0\n# duration_ms 6477.5492\n"
+    },
+    {
+      "log": "o-before.log",
+      "sha256": "c16dca1752f49bc01a601ce757e9e19b748303930db63eb7c93ba9be141aab04",
+      "failingNodeCases": [
+        "zh-CN: an acknowledged archive restore is disabled and is not called format recognition",
+        "en-US: an acknowledged archive restore is disabled and is not called format recognition",
+        "getter: unavailable optional storage cannot prevent choosing files or auto-resume an import",
+        "getItem: unavailable optional storage cannot prevent choosing files or auto-resume an import",
+        "removeItem: unavailable optional storage cannot prevent choosing files or auto-resume an import",
+        "getter/READY: a confirmed resume remains usable when its optional pointer cannot be written",
+        "getter/ANALYZING: a confirmed resume remains usable when its optional pointer cannot be written",
+        "setItem/READY: a confirmed resume remains usable when its optional pointer cannot be written",
+        "setItem/ANALYZING: a confirmed resume remains usable when its optional pointer cannot be written",
+        "getter/COMPLETED: terminal resume clears the in-page pointer even when persistent removal is refused",
+        "getter/CANCELED: terminal resume clears the in-page pointer even when persistent removal is refused",
+        "removeItem/COMPLETED: terminal resume clears the in-page pointer even when persistent removal is refused",
+        "removeItem/CANCELED: terminal resume clears the in-page pointer even when persistent removal is refused",
+        "getter/immediate: storage cleanup cannot strand an acknowledged canonical completion",
+        "getter/poll: storage cleanup cannot strand an acknowledged canonical completion",
+        "removeItem/immediate: storage cleanup cannot strand an acknowledged canonical completion",
+        "removeItem/poll: storage cleanup cannot strand an acknowledged canonical completion",
+        "getter: acknowledged disposal releases the pane without requiring browser storage cleanup",
+        "removeItem: acknowledged disposal releases the pane without requiring browser storage cleanup",
+        "getter: hiding a terminal task is independent of optional local storage",
+        "setItem: hiding a terminal task is independent of optional local storage",
+        "dismissal preferences are type-checked and bounded in memory as well as on disk"
+      ],
+      "summary": "ater GET error\nok 123 - confirmed package cancelled remains visible through a later GET error\n  ---\n  duration_ms: 1.5147\n  ...\n# Subtest: en-US: expired package explains reselection while leaving saved files alone\nok 124 - en-US: expired package explains reselection while leaving saved files alone\n  ---\n  duration_ms: 1.5539\n  ...\n# Subtest: zh-CN: expired package explains reselection while leaving saved files alone\nok 125 - zh-CN: expired package explains reselection while leaving saved files alone\n  ---\n  duration_ms: 1.1395\n  ...\n1..125\n# tests 125\n# suites 0\n# pass 103\n# fail 22\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 8288.5795\n"
+    },
+    {
+      "log": "mno-ux.log",
+      "sha256": "fec2a8660c740252f4aa23616be4e583d42db7d3db872dce6838191cc6d49ed3",
+      "failingNodeCases": [
+        "saved import-session restore has an independent finite state and retry generation",
+        "only completed/cancelled state or explicit new-file selection clears the pointer; failed analysis stays recoverable"
+      ],
+      "summary": null
+    },
+    {
+      "log": "mno-final-ux.log",
+      "sha256": "cd2af0cde22ffd656ff247d864543693c73298a3030825d9b66c9c09e273dfe7",
+      "failingNodeCases": [
+        "NX-PERF-01: actual worker full rebuild baseline at fixed corpus sizes within its existing deadline"
+      ],
+      "summary": null
+    },
+    {
+      "log": "mno-build.log",
+      "sha256": "453d9c78277c6eed538876a52986c3dc7804f518bffbd5d40e0a22a5cc0a88ad",
+      "failingNodeCases": [],
+      "summary": null
+    }
+  ],
+  "limitations": [
+    "The CI for base7a4d61b does not cover this worktree; see separate ci-kl-acceptance.json.",
+    "No local full application service, full PWA or physical tablet run; policy-blocked service launch was not worked around.",
+    "Browser transport/account/adjacent surfaces are synthetic. The archive payload is explicitly not a real CR archive; API tests separately use a real synthetic valid CR.",
+    "Failed optional storage cleanup does not imply persistent deletion; server tasks and sources are unchanged.",
+    "No deployment, backup deletion, user archive replay, migration, dependency update or automation.",
+    "Old Reader cold-long-task root cause and low-severity KaTeX advisory remain open."
+  ]
+}

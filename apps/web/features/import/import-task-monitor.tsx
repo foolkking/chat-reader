@@ -117,17 +117,17 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   }, [tracking]);
   useEffect(() => {
     try {
-      const stored = JSON.parse(window.localStorage.getItem("chat-reader-dismissed-task-ids") ?? "[]") as string[];
-      setDismissedTaskIds(new Set(stored));
+      const stored: unknown = JSON.parse(window.localStorage.getItem("chat-reader-dismissed-task-ids") ?? "[]");
+      setDismissedTaskIds(new Set(Array.isArray(stored) ? stored.filter((id): id is string => typeof id === "string").slice(-100) : []));
     } catch {
       setDismissedTaskIds(new Set());
     }
   }, []);
   const dismissTask = (taskId: string) => {
     setDismissedTaskIds((current) => {
-      const next = new Set(current);
-      next.add(taskId);
-      window.localStorage.setItem("chat-reader-dismissed-task-ids", JSON.stringify([...next].slice(-100)));
+      const next = new Set([...current, taskId].slice(-100));
+      try { window.localStorage.setItem("chat-reader-dismissed-task-ids", JSON.stringify([...next])); }
+      catch { /* Optional persistence cannot prevent hiding this page's prompt. */ }
       return next;
     });
   };
@@ -456,12 +456,13 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
   const [stopUnconfirmed, setStopUnconfirmed] = useState(false);
   useEffect(() => {
     setStopUnconfirmed(false);
-    if (task.status !== "cancelling") return;
-    const requested = task.cancellation_requested_at ? Date.parse(task.cancellation_requested_at) : Date.now();
+    if (task.status !== "cancelling" && task.execution_state !== "stopping") return;
+    const stopTime = task.stop_requested_at ?? task.cancellation_requested_at;
+    const requested = stopTime ? Date.parse(stopTime) : Date.now();
     const elapsed = Number.isFinite(requested) ? Math.max(0, Date.now() - requested) : 0;
     const timer = window.setTimeout(() => setStopUnconfirmed(true), Math.max(0, 30_000 - elapsed));
     return () => window.clearTimeout(timer);
-  }, [task.job_id, task.status, task.cancellation_requested_at]);
+  }, [task.job_id, task.status, task.cancellation_requested_at, task.execution_state, task.stop_requested_at]);
   const offlineTrigger = useRef<HTMLButtonElement>(null);
   const userTrigger = useRef<HTMLButtonElement>(null);
   const accountDelete = task.job_type === "user_account_delete";
@@ -499,7 +500,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
       </div>
       {source ? <p className="mt-1 break-words text-sm text-primary">{source}</p> : null}
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className={failed ? "text-[var(--danger)]" : partial || cleanupPending || sourceCleanupPending ? "text-[var(--warning)]" : ""}>{partial ? (zh ? "部分完成" : "Partially completed") : phaseLabel(task, zh)}</span>
+        <span className={failed ? "text-[var(--danger)]" : partial || cleanupPending || sourceCleanupPending ? "text-[var(--warning)]" : ""}>{task.execution_state === "stopping" ? (zh ? "正在停止并核对结果" : "Stopping and checking outcome") : partial ? (zh ? "部分完成" : "Partially completed") : phaseLabel(task, zh)}</span>
         {validTimestamp ? <time dateTime={timestamp} title={fullActivityTime(timestamp, resolvedLocale)} aria-label={`${zh ? "提交于" : "Submitted"} ${fullActivityTime(timestamp, resolvedLocale)}`} className="tabular-nums">{new Intl.DateTimeFormat(resolvedLocale, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(timestamp))}</time> : null}
         {task.total_items > 0 && (active || task.total_items > 1) ? <span className="tabular-nums">{task.processed_items} / {task.total_items}</span> : null}
       </div>
@@ -559,7 +560,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
           : (zh ? (task.job_type === "conversation_batch_delete" ? "正在完成当前删除，随后停止后续项目…" : "正在等待安全停止…") : "Waiting for a safe stop…")}</p>
         {stopUnconfirmed && onCheck && !control ? <button type="button" onClick={onCheck} className="min-h-11 font-medium underline">{zh ? "核对状态" : "Check status"}</button> : null}
       </div> : null}
-      {task.cancellable && task.status !== "cancelling" && onCancel ? (
+      {task.cancellable && task.status !== "cancelling" && task.execution_state !== "stopping" && onCancel ? (
         <button type="button" disabled={busy} onClick={onCancel} className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">
           <Ban className="h-3.5 w-3.5" />{task.job_type === "adaptive_import_analysis" ? (zh ? "停止并保留" : "Stop and retain") : (task.job_type.startsWith("personal_archive_") || task.job_type.startsWith("system_archive_")) ? (zh ? "取消归档任务" : "Cancel archive task") : task.job_type === "conversation_batch_delete" ? (zh ? "停止后续删除" : "Stop remaining deletions") : task.job_type === "conversation_merge" ? (zh ? "取消合并" : "Cancel merge") : task.job_type === "offline_package" ? (zh ? "取消服务器生成" : "Cancel server generation") : (zh ? "取消任务" : "Cancel task")}
         </button>
@@ -584,6 +585,8 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
 
 function taskFailureMessage(task: BackgroundTaskRead, zh: boolean): string {
   const raw = task.error_message ?? "";
+  if (raw === "TASK_STALLED") return zh ? "处理长时间未推进，已停止并保留来源。可调整输入后重试。" : "Processing stopped after making no progress. Sources are retained; adjust the input and retry.";
+  if (raw === "TASK_EXECUTION_INTERRUPTED") return zh ? "执行被中断，已核对服务端结果。未完成的任务可重试。" : "Execution was interrupted and the server outcome checked. Unfinished work can be retried.";
   if (task.job_type === "adaptive_import_analysis" || task.job_type === "import") {
     const importFailure = importFailureMessage(
       task.failure ?? task.result.failure, raw,
