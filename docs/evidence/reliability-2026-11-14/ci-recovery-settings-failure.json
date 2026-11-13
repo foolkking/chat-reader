@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T20:13:50.315872+00:00",
+  "source_revision": "7f8a6425a1d3b9f5c255925ce55340a406a3e063",
+  "workflow_run_id": 43483733253,
+  "attempt": 1,
+  "supplements_not_rewrites": "ci-recovery-failure.json",
+  "settings_job_conclusion": "cancelled",
+  "pre_cancellation_observed_failures": 1,
+  "failed_test": "admin account inspection, real search and confirmed deletion 768",
+  "failed_source_line": 71,
+  "assertion": {
+    "expected_unique_ids": 21,
+    "observed_unique_ids": 20
+  },
+  "official_trace_available": false,
+  "trace_reason": "This existing settings file explicitly disables tracing",
+  "official_error_context_sha256": "9f6647a7840d57aac5cb074ef13abda605e7f20691faff69bdd346f12a64fad3",
+  "official_artifact": {
+    "id": 14069484164,
+    "name": "settings-quality-evidence-7f8a6425a1d3b9f5c255925ce55340a406a3e063-1",
+    "official_zip_sha256": "ff1f77a41897362ef4a684e7712d92444898f820b74a5d312d3967c317998d32",
+    "bytes": 9376792
+  },
+  "local_real_postgres_and_http_reproduction": {
+    "passed": 1,
+    "actual_auth_api_and_original_insert_followup": true,
+    "original_pending_followup_changes_sorting_between_pages": true,
+    "same_twenty_plus_one_counts_before_and_after": true,
+    "cross_snapshot_old_assertion_rejected": true,
+    "conversation_scoped_materialization_event_zero_then_one": true,
+    "four_messages_and_original_offline_revision_retained": true,
+    "stable_read_after_original_followup_has_21_unique_ids": true,
+    "log_sha256": "4e4f9727cea3455d025326843b170e8365c65d40fb9b0edeea5832350f9a1114"
+  },
+  "repair": "Wait within the original 20-second action boundary for the fresh conversation's existing derived_data_rebuilt event; keep all pagination/search/read-only/deletion assertions",
+  "observed_completed_test_results_before_cancellation": 312,
+  "unexecuted_settings_cases_not_claimed_passed": true,
+  "timing_profile_not_full_ci_acceptance": true,
+  "timing_profile_sha256": "08527e69f7ed4264e5bed36e3944fd26f53f44b78c203c68242c0e340bf78519",
+  "application_workflow_migration_changes": false,
+  "production_changed": false,
+  "cancellation_repeated": false,
+  "automation_created": false
+}

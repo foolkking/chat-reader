@@ -1,0 +1,222 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T20:33:02.348085+00:00",
+  "base_revision": "7f8a6425a1d3b9f5c255925ce55340a406a3e063",
+  "status": "selected_probe_landmark_pagination_regressions_passed_fresh_full_ci_required_not_deployed",
+  "previous_failed_ci_receipts": {
+    "ci-recovery-failure.json": "389e14a42210c9c3ae5d090c79c3b44c8d8518a651fb2ab68ac6c9c6b226179f",
+    "ci-recovery-settings-failure.json": "0021a0cbb566350872825ad2d0cb89c2b25d86f73538eb33d38941b896314840"
+  },
+  "scope": {
+    "verified_at": "2026-11-13T20:33:01.916014+00:00",
+    "head": "7f8a6425a1d3b9f5c255925ce55340a406a3e063",
+    "source_input_count": 1391,
+    "changed_existing_inputs": [
+      "apps/api/tests/test_cleanup_scan_retention.py",
+      "apps/api/tests/test_import_draft_streaming.py",
+      "apps/api/tests/test_import_unit_admission.py",
+      "apps/web/e2e/release-mutation-lifecycle.spec.ts",
+      "apps/web/e2e/settings-admin-users.spec.ts",
+      "scripts/ux/source-editor-table-browser.mjs"
+    ],
+    "added_inputs": [
+      "apps/api/tests/test_admin_pagination_materialization_postgres.py"
+    ],
+    "protected_count": 13,
+    "protected_drift": [],
+    "index_empty": true,
+    "application_workflow_migration_deployment_code_changed": false,
+    "input_manifest": "ci-probe-pagination-inputs.json",
+    "fresh_build_manifest": "ci-probe-pagination-build-inputs.json",
+    "old_build_not_inherited": true,
+    "build_input_count": 548
+  },
+  "tests": {
+    "final_selected_api_postgresql": {
+      "passed": 39,
+      "failed": 0,
+      "skipped": 0,
+      "modules": [
+        "test_admin_pagination_materialization_postgres.py",
+        "test_admin_reader.py",
+        "test_admin_users.py",
+        "test_admin_system.py",
+        "test_import_draft_streaming.py",
+        "test_cleanup_scan_retention.py",
+        "test_import_unit_admission.py"
+      ],
+      "log": {
+        "sha256": "dec124e0872437f62ef917a1b26b757615d5cd62c78f7ddaef8ae639a0768dc6",
+        "bytes": 2060,
+        "task_relative_path": "api-final-selected1.log"
+      },
+      "cache_and_basetemp_task_local": true,
+      "boundary": "Selected seven modules. The new pagination case uses actual auth/API/PostgreSQL and original follow-up services; no running site or full-suite claim."
+    },
+    "retention_probe_controls": {
+      "original_three_modules_passed": 24,
+      "included_in_final_selected_not_additive": true,
+      "initial_controls": {
+        "failed": 2,
+        "passed": 1,
+        "log": {
+          "sha256": "6480ed8f9123fc7a79667ced01d22b7d5ae091689984d1261547ba3e4a1fa958",
+          "bytes": 3520,
+          "task_relative_path": "retention-controls-red.log"
+        }
+      },
+      "released_references_require_no_full_collection": true,
+      "first_unreachable_cycle_requires_one_collection": true,
+      "retaining_writer_rejected_at_second_unit_by_original_assertion": true,
+      "per_unit_final_refs_titles_and_summary_checks_retained": true,
+      "controlled_cost_before": {
+        "label": "before",
+        "test_source_sha256": "187eefab2c688adefbc0a83ba1e0414cbba01165eaeee115c5edf8b8816a22a1",
+        "actual_writer_and_generator": true,
+        "all_twenty_original_checks_titles_summary_and_final_refs": "passed",
+        "controlled_acyclic_tracked_lists": 200000,
+        "full_collection_calls": 20,
+        "full_collection_seconds": 2.130345799960196,
+        "elapsed_seconds": 2.1547210999997333,
+        "not_full_suite_or_memory_acceptance": true
+      },
+      "controlled_cost_after": {
+        "label": "after",
+        "test_source_sha256": "5e36e57491dd0a4e6e22375563e5f22dcdd8e4c94b3f489c9706d4bfe66c90e1",
+        "actual_writer_and_generator": true,
+        "all_twenty_original_checks_titles_summary_and_final_refs": "passed",
+        "controlled_acyclic_tracked_lists": 200000,
+        "full_collection_calls": 0,
+        "full_collection_seconds": 0,
+        "elapsed_seconds": 0.01910079992376268,
+        "not_full_suite_or_memory_acceptance": true
+      },
+      "production_memory_or_full_suite_acceptance_claimed": false
+    },
+    "mounted_source_editor": {
+      "passed": 102,
+      "original_scenarios_retained": true,
+      "result": {
+        "sha256": "695da13f0695d41855558f0ce4154a6e061fcdbed4234389b31902c6e7f9e071",
+        "bytes": 9610,
+        "task_relative_path": "mounted-editor-final1/table-browser/result.json"
+      },
+      "production_main_ancestry_and_zero_contentinfo_asserted": true,
+      "native_footer_unique": true,
+      "legacy_locator_red": {
+        "sha256": "eead59062bcce2e19d5df5ce39d4d36647fe8243d1ae46e641b312fdb993d5fb",
+        "bytes": 217,
+        "task_relative_path": "mounted-root-red/table-browser/result.json"
+      },
+      "legacy_locator_probe_inputs": {
+        "sha256": "0671b485ed87814fbdccb0f096d34ed9b8c1f2a3edaa3a0f54fa9162cfcee93a",
+        "bytes": 734,
+        "task_relative_path": "source-editor-main-root-red-inputs.json"
+      },
+      "boundary": "Actual mounted workspace/form/CodeMirror with explicit HTTP adapters; not real API-network, physical-device or original frame acceptance."
+    },
+    "settings_pagination": {
+      "official_pre_cancel_failure_supplement": "ci-recovery-settings-failure.json",
+      "original_pending_followup_cross_snapshot_assertion_rejected": true,
+      "original_owner_materialization_event_zero_then_one": true,
+      "stable_pages_have_21_unique_ids": true,
+      "four_canonical_messages_and_original_revision_retained": true,
+      "original_20_second_action_boundary_retained": true,
+      "pagination_search_read_only_attachment_and_deletion_assertions_retained": true,
+      "full_authenticated_settings_matrix_claimed": false,
+      "cancelled_run_not_mislabelled_as_60_minute_timeout": true,
+      "timing_profile": {
+        "sha256": "08527e69f7ed4264e5bed36e3944fd26f53f44b78c203c68242c0e340bf78519",
+        "bytes": 240919,
+        "task_relative_path": "settings-ci-timing-profile.json"
+      }
+    },
+    "node_ux": {
+      "passed": 2510,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "sha256": "7b7766a5ba1ee869ee6b3b2c48753fcdec901bba3c4d4b0efacf2727f5cd9637",
+        "bytes": 540159,
+        "task_relative_path": "node-ux-final1.log"
+      }
+    },
+    "node_ci": {
+      "passed": 62,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "sha256": "021a295d4ef9454446ea96c016d554da8b4ae5ada3f47f5b4b3d6ba1b9e46a8d",
+        "bytes": 14225,
+        "task_relative_path": "node-ci-final1.log"
+      }
+    },
+    "node_security_pwa": {
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "sha256": "d1f1695819048c00d9db6c39ad9f005d264075014f00651b2bc361cc3543bee1",
+        "bytes": 4394,
+        "task_relative_path": "node-security-pwa-final1.log"
+      }
+    },
+    "lint": {
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "bytes": 173,
+      "task_relative_path": "web-lint-final1.log"
+    },
+    "typecheck": {
+      "sha256": "2ec7050f6a3d7d917e337ec5acb4d8b769c0aec4f634a7b1c517db0070a32712",
+      "bytes": 433,
+      "task_relative_path": "web-typecheck-final1.log"
+    },
+    "fresh_isolated_build": {
+      "verified_at": "2026-11-13T20:33:01.374868+00:00",
+      "exit_code": 0,
+      "input_count": 548,
+      "source_input_drift": [],
+      "copy_input_mutations": [],
+      "same_installed_dependency_realpaths": true,
+      "env_files_copied": false,
+      "node": "v20.13.1",
+      "next": "16.4.1",
+      "build_cpus": 1,
+      "full_ci_or_production_image_claimed": false,
+      "no_local_site_started": true
+    },
+    "build_log": {
+      "sha256": "83e42a431327ee59525938bf96565de1350c7cd9055caaac20e9e3a2304ee795",
+      "bytes": 1482,
+      "task_relative_path": "fresh-build.log"
+    },
+    "migration_head": "20261112_0061"
+  },
+  "preservation": {
+    "unrelated_files": 13,
+    "unrelated_drift": [],
+    "index_empty": true,
+    "original_build_info_unchanged": true,
+    "task_postgres_stopped_data_retained": true,
+    "postgres_stop_receipt": {
+      "sha256": "9229dc1fac1e309164be2390af5c579789196c294d92f3d9871dd8261746bf5d",
+      "bytes": 275,
+      "task_relative_path": "postgres-stop-receipt.json"
+    },
+    "no_full_local_api_worker_service_started": true,
+    "no_prior_startup_policy_bypassed": true,
+    "production_actions_during_repair": false,
+    "user_input_replayed": false,
+    "production_cleanup_performed": false,
+    "new_scheduler_created": false,
+    "previous_cancellations_and_production_recovery_not_repeated": true
+  },
+  "remaining": {
+    "fresh_full_exact_source_ci": true,
+    "five_exact_release_artifacts": true,
+    "fresh_capacity_backup_migration_and_deployment": true,
+    "product_device_host_backup_acceptance_owner": "user",
+    "local_linux_total_memory_or_original_frame_acceptance_claimed": false
+  },
+  "privacy": "Only synthetic test categories, source-code paths and evidence hashes; no real business IDs, source content or credentials"
+}

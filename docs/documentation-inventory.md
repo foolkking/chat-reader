@@ -51,6 +51,27 @@ refetch；既有mounted门禁保留全部原场景并追加三个宽度组，工
 同步Testing、唯一台账及必要入口；新增`ci-recovery-verification.json`、
 `ci-recovery-inputs.json`和`ci-recovery-build-inputs.json`记录本地结果/失败方法。
 三e2e属于548构建输入，重新隔离构建而非继承旧输出；不冒称新完整CI或部署。
+修复7f8a642已选择性提交/推送十九个任务文件；同步唯一台账、Project State、
+导航及证据索引为完整CI43483733253等待中。新增独立`ci-recovery-dispatch.json`
+绑定02:33:11.802991确认派发和03:23:11.802991首次读取边界，不覆盖旧回执、
+不创建安排，不继承旧成功项。十三个无关文件继续保全；生产未变，
+两次定点终止授权已经执行，不将00:44:39历史空闲快照当作当前状态。
+43483733253在03:23:11首次读取满足50分钟；API原45分钟full-suite超时，
+Web比较定位超时；03:26:36单次取消并独立确认，两发布job均零step、未部署。
+新增`ci-recovery-failure.json`保留三份既有job日志/两份官方诊断ZIP摘要、
+真实trace最后动作、实际main红测及GC成本观测；同步唯一台账与必要入口为
+修复中。零step日志请求失败和初版耗时归属错误另存，不当作应用根因；
+原门槛/源码/生产事件回执及十三个保护文件保持，不重复取消或创建安排。
+补查Settings原日志发现取消前另有一项真实分页失败；新增独立
+`ci-recovery-settings-failure.json`，原文件trace关闭，不冒称存在trace。
+同步Testing、唯一台账及必要入口：严格弱引用探针仅在仍活着时全堆GC、
+真实main下唯一footer而非contentinfo、原插入materialization后再建立分页基线。
+新PG回归通过真实认证/API及原follow-up复现跨快照20/21差异；原断言和
+45/60分钟、90/20秒等边界不放宽，不改变应用/API/migration或部署配置。
+新增`ci-probe-pagination-verification.json`及源码/构建输入清单，登记最终
+API/PG39、mounted102、Node2510/CI62/PWA20、静态检查及新548输入隔离构建。
+1391项最终输入/十三个保护文件无漂移，自建PG核验后停止、资料保留；
+本机运行时不冒充CI，不新增另一套状态页或宣称完整CI/部署通过。
 
 ## 用户任务中断恢复 — 2026-11-13（本地，未发布）
 

@@ -80,7 +80,8 @@ def test_source_objects_and_invalid_tracebacks_do_not_overlap_next_unit(client, 
     analyzed = 0
 
     def read(record, group):
-        gc.collect()
+        if any(ref() is not None for ref in previous):
+            gc.collect()
         assert all(ref() is None for ref in previous), "Previous source retained across unit boundary"
         documents = original_read(record, group)
         previous[:] = [weakref.ref(document) for document in documents]
@@ -108,7 +109,8 @@ def test_validation_and_draft_release_previous_successful_unit(client, monkeypat
     original = service._group_documents
 
     def read(record, group):
-        gc.collect()
+        if any(ref() is not None for ref in previous):
+            gc.collect()
         assert all(ref() is None for ref in previous), "Previous source body overlaps current read"
         documents = original(record, group)
         previous[:] = [weakref.ref(document) for document in documents]

@@ -1,6 +1,26 @@
 # 事实证据索引
 
-## 精确CI失败及生产导入定点恢复 — 2026-11-14
+## 修复CI失败、前次失败及生产导入定点恢复 — 2026-11-14
+
+[当前修复派发回执](reliability-2026-11-14/ci-recovery-dispatch.json)绑定
+7f8a642及43483733253，02:33:11.802991 +08:00确认派发；
+首次状态读取边界03:23:11.802991 +08:00。十九个任务文件选择性提交、
+十三个无关文件保全；只证明一次派发，不证明结果或部署，不继承旧成功项。
+[独立失败回执](reliability-2026-11-14/ci-recovery-failure.json)记录03:23:11首次
+读取满足50分钟、API原45分钟上限、Web 409恢复等待错误footer landmark的
+官方trace及实际main红测。03:26:36单次取消并独立确认；Settings未完整执行，
+两发布job均零step。三份既有日志和两份官方诊断ZIP摘要已核验；取证方法错误
+单独保留，未重复取消/部署，不覆盖原派发或事件回执。
+[独立分页补充回执](reliability-2026-11-14/ci-recovery-settings-failure.json)
+记录Settings取消前一项真实20/21 unique IDs失败；原文件关闭trace，因此只有
+官方error-context，不能冒称有trace。真实PG/认证API复现原插入follow-up在
+两页间改变排序，materialization后21项恢复；仍保留原搜索/只读/删除和20秒边界。
+[探针/定位/分页修复回执](reliability-2026-11-14/ci-probe-pagination-verification.json)
+保留controls红2失败/1通过、最终API/PG39、mounted102、Node2510/CI62/PWA20、
+静态检查及新548输入隔离构建；1391项输入和十三个保护文件无漂移。
+[源码输入](reliability-2026-11-14/ci-probe-pagination-inputs.json)和
+[构建输入](reliability-2026-11-14/ci-probe-pagination-build-inputs.json)只做溯源；
+旧构建不继承、自建PG已停止且资料保留，不是完整CI、制品或部署通过。
 
 [完整CI派发回执](reliability-2026-11-14/ci-port-dispatch.json)绑定
 5fcb835及43459604614，保留00:57:59.560391 +08:00首次读取边界；

@@ -38,6 +38,14 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       ] } });
       expect(inserted.status()).toBe(201);
       const target = (await inserted.json()).messages[0].id;
+      // The insertion commits before its real derived/index follow-up.
+      // That follow-up can change sorting between page requests; establish
+      // this fresh conversation's materialized baseline before pagination.
+      await expect.poll(async () => {
+        const response = await owner.get(`/api/conversations/${cid}/events?event_type=derived_data_rebuilt&limit=1`);
+        expect(response.status()).toBe(200);
+        return (await response.json()).total;
+      }, { timeout: 20_000, message: "Original insertion must finish materialization before a stable page snapshot" }).toBe(1);
       for (let i = 0; i < 20; i++) expect((await owner.post("/api/conversations", { data: { title: `Synthetic list item ${i + 1}`, messages: [
         { role: "user", content_markdown: "Synthetic pagination question" }, { role: "assistant", content_markdown: "Synthetic pagination answer" },
       ] } })).status()).toBe(201);

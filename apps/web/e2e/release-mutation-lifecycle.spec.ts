@@ -245,7 +245,10 @@ test("revision conflict preserves the source draft until the latest base is comp
     await expect.poll(async () => (await readCaret()).offset).toBe(draftCaret.offset);
     const acceptLatest = page.getByRole("button", { name: /Reviewed — keep editing this draft against the latest version|\u5df2\u6838\u5bf9\uff0c\u4ee5\u6700\u65b0\u7248\u672c\u4e3a\u57fa\u7ebf\u7ee7\u7eed\u7f16\u8f91\u8349\u7a3f/ });
     await expect(acceptLatest).toBeVisible();
-    const comparison = page.getByTestId("floating-source-workspace").getByRole("contentinfo");
+    // This footer is inside the production main: it has no implicit
+    // contentinfo landmark, unlike the former detached component fixture.
+    const comparison = page.getByTestId("floating-source-workspace").locator("footer");
+    await expect(comparison).toHaveCount(1);
     await comparison.getByText(/Compare current source and local draft|\u6bd4\u8f83\u5f53\u524d\u6b63\u6587\u4e0e\u672c\u673a\u8349\u7a3f/, { exact: true }).click();
     await expect(comparison.getByText(/Comparing does not save changes|\u6bd4\u8f83\u4e0d\u4f1a\u63d0\u4ea4\u4fee\u6539/)).toBeVisible();
     expect(saves).toHaveLength(1);

@@ -6,6 +6,34 @@ fixtures retain **5432**. `postgres-service.sh` still fences ownership by
 run/attempt/job; no seeder admission, timeout, memory or test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
+## Retention probes, nested landmarks and stable pagination — 2026-11-14
+
+Draft/unit/scan retention tests keep every original weak-reference, ordering
+and final-release assertion. An already dead reference proves release without
+another full-heap collection; a still-live prior reference requires collection
+before the same strict check. The scan load callback excludes its necessarily
+live current row from that decision. Controls exercise released references,
+an unreachable first-conversation cycle and a deliberately retaining writer:
+the latter must still fail at the second unit. This reduces test-probe cost,
+not production memory limits or the original 45-minute full-suite boundary.
+
+The source-editor mounted fixture retains the production `main` ancestry.
+Its nested native footer has no implicit `contentinfo` role; tests assert that
+absence and select the workspace's unique `footer`. The real-network conflict
+test retains its original 90-second limit, concurrent writer, drained routes,
+read-only comparison/acceptance, draft/caret and exact final-save checks.
+
+The administrator pagination fixture waits, within the existing 20-second
+action boundary, for its fresh conversation's `derived_data_rebuilt` event
+before creating the other twenty conversations. Insertion acknowledgement
+alone is not derived/index completion. The actual authenticated TestClient/
+PostgreSQL regression deliberately runs that original follow-up between page
+reads to reject the old cross-snapshot assertion, then verifies all 21 unique
+IDs after materialization, four canonical messages and the unchanged revision.
+It uses existing APIs/services and does not start a site or alter pagination.
+The browser's search, read-only access, attachment and deletion assertions
+remain in place; the existing 60-minute Settings boundary is not increased.
+
 ## Synthetic task closeout and reviewed source recovery — 2026-11-14
 
 `test_settings_action_task_fixture.py` and

@@ -370,7 +370,9 @@ const server = createServer((request, response) => {
     ? ({ ".js": "text/javascript", ".css": "text/css", ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf" }[extname(path)] ?? "application/octet-stream")
     : "text/html; charset=utf-8");
   try {
-    response.end(path ? readFileSync(path) : '<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><body style="background:var(--page);font-family:system-ui"><div id="root"></div><script src="/bundle.js"></script></body></html>');
+    // Preserve the real main ancestry. A nested footer is not contentinfo;
+    // a top-level div incorrectly made that landmark available to this gate.
+    response.end(path ? readFileSync(path) : '<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><body style="background:var(--page);font-family:system-ui"><main id="root"></main><script src="/bundle.js"></script></body></html>');
   } catch { response.statusCode = 404; response.end(); }
 });
 await new Promise(yes => server.listen(0, "127.0.0.1", yes));
@@ -1488,7 +1490,9 @@ try {
         await compareLatest.click();
         const accept = workspace.getByRole("button", { name: /^(Reviewed — keep editing this draft against the latest version|已核对，以最新版本为基线继续编辑草稿)$/ });
         await expect(accept).toBeVisible();
-        const comparison = workspace.getByRole("contentinfo");
+        assert.equal(await workspace.getByRole("contentinfo").count(), 0, "The fixture must retain production main ancestry");
+        const comparison = workspace.locator("footer");
+        await expect(comparison).toHaveCount(1);
         await comparison.getByText(/^(Compare current source and local draft|比较当前正文与本机草稿)$/).click();
         await expect(comparison.getByText(/Comparing does not save changes|比较不会提交修改/)).toBeVisible();
         assert.equal(await page.evaluate(() => window.workspaceReads), 1);

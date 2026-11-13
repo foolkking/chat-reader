@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T19:53:30.897563+00:00",
+  "source_revision": "7f8a6425a1d3b9f5c255925ce55340a406a3e063",
+  "workflow_run_id": 43483733253,
+  "attempt": 1,
+  "first_status_read_at": "2026-11-13T19:23:11.814857+00:00",
+  "fifty_minute_boundary_respected": true,
+  "single_cancellation_requested_at": "2026-11-13T19:26:36.093662+00:00",
+  "independently_confirmed_at": "2026-11-13T19:27:03.210582+00:00",
+  "final_status": "completed",
+  "final_conclusion": "cancelled",
+  "jobs": [
+    {
+      "name": "api-quality",
+      "id": 132086595784,
+      "conclusion": "failure",
+      "executed_steps": 13
+    },
+    {
+      "name": "web-quality",
+      "id": 132086596381,
+      "conclusion": "failure",
+      "executed_steps": 58
+    },
+    {
+      "name": "settings-quality",
+      "id": 132086596451,
+      "conclusion": "cancelled",
+      "executed_steps": 17
+    },
+    {
+      "name": "reading-performance-comparison",
+      "id": 132111989460,
+      "conclusion": "skipped",
+      "executed_steps": 0
+    },
+    {
+      "name": "build-images",
+      "id": 132116323747,
+      "conclusion": "cancelled",
+      "executed_steps": 0
+    },
+    {
+      "name": "inspect-release-artifact",
+      "id": 132116325337,
+      "conclusion": "cancelled",
+      "executed_steps": 0
+    }
+  ],
+  "api": {
+    "failure": "Original 45-minute full-suite bound, not an observed failed assertion",
+    "original_timeout_minutes": 45,
+    "original_faulthandler_seconds": 120,
+    "observed_failed_assertion_lines": 0,
+    "remaining_tests_not_claimed_passed": true,
+    "last_parsed_completed_test": "tests/test_task_execution_recovery.py::test_supervised_owner_stop_keeps_existing_non_cancellable_boundary[sqlite-conversation_auto_clean]",
+    "draft_gc_gap_seconds_approximate": 141.267982,
+    "faulthandler": "Actual generator line 54 gc.collect(), twenty conversations/messages",
+    "previous_full_suite": "6628 passed / 3 skipped / 5 warnings in 2251.53s; different SHA/run",
+    "log_profile": "Completion-to-completion intervals only, not exact pytest durations"
+  },
+  "web": {
+    "original_test_timeout_ms": 90000,
+    "primary_failing_line": 249,
+    "primary_selector": "internal:testid=[data-testid=\"floating-source-workspace\"s] >> internal:role=contentinfo >> internal:text=/Compare current source and local draft|\\u6bd4\\u8f83\\u5f53\\u524d\\u6b63\\u6587\\u4e0e\\u672c\\u673a\\u8349\\u7a3f/",
+    "pending_click_ms": 88284.627,
+    "cleanup_error_line": 270,
+    "cleanup_error": "unrouteAll after timeout closed the browser; secondary, not root cause",
+    "all_intercepted_route_continuations_completed_without_error": true,
+    "confirmed_root": "Nested production main suppresses footer's implicit contentinfo role",
+    "mounted_main_negative_control": "Original selector matches zero actual footer landmarks",
+    "trace_zip_sha256": "4f275df88febb5b9b7b4379b9a63dbd1e755244ee75cc354e7ebd953ac411dd8",
+    "no_application_repair_claimed_at_this_checkpoint": true
+  },
+  "official_diagnostic_artifacts": [
+    {
+      "id": 14069484164,
+      "name": "settings-quality-evidence-7f8a6425a1d3b9f5c255925ce55340a406a3e063-1",
+      "official_zip_sha256": "ff1f77a41897362ef4a684e7712d92444898f820b74a5d312d3967c317998d32",
+      "bytes": 9376792,
+      "members": 119
+    },
+    {
+      "id": 14069145923,
+      "name": "release-a-quality-evidence-7f8a6425a1d3b9f5c255925ce55340a406a3e063-1",
+      "official_zip_sha256": "f26eccc8c168e99bcd59dfe9a80b48f67afe678b39d05fce776a88aba31f393a",
+      "bytes": 36387280,
+      "members": 613
+    }
+  ],
+  "actual_executed_job_logs": 3,
+  "zero_step_release_job_logs_not_requested_again": true,
+  "prior_downloader_error": "Zero-step cancelled build job log was unavailable, not application failure",
+  "method_limitations": [
+    "Initial local timing profiler attributed completed-result intervals to the previous test; corrected profile is separately retained",
+    "Local mounted reproduction is the actual component with explicit HTTP adapters, not network/API acceptance"
+  ],
+  "evidence_sha256": {
+    "dispatch": "889979ae42ce25d41b11266e833d721e9461a0905cda5d5acd7a383829a66322",
+    "first_read": "d0e802d693b664ab8d4b1b04a2dd5226c11e1186db218e0a3a92f55b60f82b3b",
+    "cancellation": "8693966c3c02506a83041364be4c3c24ec4ef032ac4bf038d1d4cc5f8e4ea621",
+    "independent_final_state": "97027ecd8296401fa7686b8b03ea425db607fb8d9fe912cec6eb99b504f6bad5",
+    "job_log_provenance": "2a8141e4cd43e0d15dc2f923a2cfe9c0b249f30ca05c44ae79b05350f4aa0004",
+    "official_artifact_provenance": "e86040148c4ff59a7f53b563bac416bfccbd18749e0075d653aecbe791288e47",
+    "initial_timing_profile": "eaf47494d92989ce708ff23cd8f356cca0257750e64768945718e62d0496e870",
+    "corrected_timing_profile": "7e55e924d5c2ad70a1c50a114d76336dc10e7f7bec50a405469eafb4c08250a3",
+    "mounted_main_red_inputs": "0671b485ed87814fbdccb0f096d34ed9b8c1f2a3edaa3a0f54fa9162cfcee93a",
+    "mounted_main_red_log": "48551bed87022e1efbcbf5d62886e0f0bb677971298030d047bdf1d75d3adaa8",
+    "draft_retention_before": "402353c860d309ebf0ae0a3bb6c219282002584643c0bf6ae7d9416bd2b9ea0d"
+  },
+  "all_original_evidence_preserved": true,
+  "release_artifacts_downloaded": false,
+  "production_changed": false,
+  "production_snapshot_not_refreshed": true,
+  "import_cancellation_repeated": false,
+  "ci_cancellation_repeated": false,
+  "deployment_performed": false,
+  "automation_created": false
+}

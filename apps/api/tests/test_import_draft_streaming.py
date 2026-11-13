@@ -1,6 +1,7 @@
 """Batch drafts release completed conversations before loading the next one."""
 import gc
 import json
+import sys
 import uuid
 import weakref
 import hashlib
@@ -51,7 +52,11 @@ def test_draft_writer_consumes_a_generator_without_retaining_previous_conversati
 
     def conversations():
         for index in range(20):
-            gc.collect()
+            # A dead weak reference already proves release. Only collect when
+            # a live reference may be an unreachable cycle; keep the same
+            # zero-retention assertion after that collection.
+            if refs and refs[-1]() is not None:
+                gc.collect()
             assert not refs or refs[-1]() is None, "The writer retained the previous full conversation."
             item = align_exporter_sources(parse_exporter_json(source()), None).conversation
             item = replace(item, title=f"Synthetic {index}")
@@ -68,6 +73,72 @@ def test_draft_writer_consumes_a_generator_without_retaining_previous_conversati
         f"Synthetic {index}" for index in range(20)
     ]
     assert all(ref() is None for ref in refs)
+
+
+def test_draft_retention_probe_does_not_collect_already_released_conversations(tmp_path, monkeypatch):
+    collections = []
+    original_collect = gc.collect
+
+    def collect(*args, **kwargs):
+        collections.append(True)
+        return original_collect(*args, **kwargs)
+
+    monkeypatch.setattr(gc, "collect", collect)
+    test_draft_writer_consumes_a_generator_without_retaining_previous_conversations(tmp_path, monkeypatch)
+    assert collections == [], "Already dead weak references do not need another full-heap scan."
+
+
+def test_draft_retention_probe_collects_an_unreachable_cycle_before_the_same_strict_check(
+    tmp_path, monkeypatch,
+):
+    collections = []
+    original_collect, original_replace = gc.collect, replace
+    replaced = 0
+
+    def cyclic_first_conversation(*args, **kwargs):
+        nonlocal replaced
+        item = original_replace(*args, **kwargs)
+        if replaced == 0:
+            # Extra runtime-only state is not a dataclass field or draft byte.
+            object.__setattr__(item, "_synthetic_unreachable_cycle", item)
+        replaced += 1
+        return item
+
+    def collect(*args, **kwargs):
+        collections.append(True)
+        return original_collect(*args, **kwargs)
+
+    monkeypatch.setattr(gc, "collect", collect)
+    monkeypatch.setattr(sys.modules[__name__], "replace", cyclic_first_conversation)
+    enabled = gc.isenabled()
+    gc.disable()
+    try:
+        test_draft_writer_consumes_a_generator_without_retaining_previous_conversations(tmp_path, monkeypatch)
+    finally:
+        if enabled:
+            gc.enable()
+    assert collections == [True]
+    assert replaced == 20
+
+
+def test_draft_retention_probe_still_rejects_a_writer_retaining_the_previous_conversation(
+    tmp_path, monkeypatch,
+):
+    retained = []
+    original = draft_store.write_import_draft
+
+    def retaining_writer(import_id, conversations):
+        def retaining_stream():
+            for item in conversations:
+                retained.append(item)
+                yield item
+
+        return original(import_id, retaining_stream())
+
+    monkeypatch.setattr(draft_store, "write_import_draft", retaining_writer)
+    with pytest.raises(AssertionError, match="The writer retained the previous full conversation"):
+        test_draft_writer_consumes_a_generator_without_retaining_previous_conversations(tmp_path, monkeypatch)
+    assert len(retained) == 1, "The unchanged boundary assertion must reject at the second unit."
 
 
 def test_late_invalid_stream_rolls_back_all_canonical_conversations(client):

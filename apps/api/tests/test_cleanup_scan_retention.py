@@ -39,7 +39,10 @@ def test_completed_source_rows_are_released_before_next_message(client, chunk_si
     def loaded(_db, instance):
         if isinstance(instance, MessageVersion):
             source_refs.append(weakref.ref(instance))
-            gc.collect()
+            # The newly loaded row is necessarily alive in this callback.
+            # A full collection is relevant only if a prior row is still live.
+            if any(ref() is not None for ref in source_refs[:-1]):
+                gc.collect()
             live_counts.append(sum(ref() is not None for ref in source_refs))
 
     with session() as db:
@@ -54,7 +57,8 @@ def test_completed_source_rows_are_released_before_next_message(client, chunk_si
 
     assert len(source_refs) == 20
     assert max(live_counts) == 1, "A prior full source was retained while loading the next."
-    gc.collect()
+    if any(ref() is not None for ref in source_refs):
+        gc.collect()
     assert all(ref() is None for ref in source_refs)
 
 

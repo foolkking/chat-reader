@@ -80,8 +80,8 @@
    合成`.cr`/系统归档恢复不是宿主灾备演练。
 4. 旧“无回执”文件与未知提交文件受保护；本轮不自动修复/清理历史数据。
    兼容接口新增不代表旧离线副本被改写。
-5. 完整精确源码CI43389645130已失败，不能发布；修复后的完整新CI及
-   精确制品仍待通过，不得继承旧候选CI结果。
+5. 完整精确源码CI43459604614已失败；修复7f8a642的完整新CI43483733253
+   也失败并单次取消，修复中。没有可部署制品，不得继承旧候选结果。
 6. 下述后一批已补管理员当前执行的定点停止与结果核对，但不是全局异常
    任意重置工具。所有业务类型恢复出口仍未逐项完成整链验收；不能据此
    宣称A–D所有体验目标已经全部完成。
@@ -324,7 +324,7 @@ API/阅读性能通过，Web失败，Settings在原60分钟job上限取消，两
 用真实PG/实际mounted组件保留复现，不改应用、监督保护或原门槛。
 先前成功项不能继承为下一版本完整CI通过；生产仍旧版，未备份/迁移/部署。
 
-### 11月14日：比较恢复与人工动作任务收尾（本地通过，待完整新CI）
+### 11月14日：比较恢复与人工动作任务收尾（本地通过，新CI失败）
 
 - Task Center人工processing/cancelling任务在真实PG下挡住下一导出/离线任务，
   原300秒恢复和监督器保护均正确。缺disposer的原14项先红；原身份回执与
@@ -358,6 +358,72 @@ API/阅读性能通过，Web失败，Settings在原60分钟job上限取消，两
 记录实际源码/测试/构建与失败方法，不覆盖前批回执。没有新增生产操作、
 自动重放、清理或安排；Linux总内存/信号、原帧矩阵、精确五制品仍须完整新
 CI，实体设备/产品/宿主恢复验收仍由用户完成。
+
+### 11月14日：修复提交与完整新CI（已失败/单次取消，未部署）
+
+- 精确修复`7f8a6425a1d3b9f5c255925ce55340a406a3e063`选择性提交/推送
+  十九个白名单文件；本地/远端master核对一致，1390项源码/测试/配置、
+  548项新构建输入和十三个保护文件无漂移，索引空，没有force push。
+- 完整[CI43483733253](https://github.com/foolkking/chat-reader/actions/runs/43483733253)
+  于**02:33:11.802991 +08:00**确认派发；首次实际读取
+  **03:23:11.814857 +08:00**满足50分钟边界。[独立派发回执](../evidence/reliability-2026-11-14/ci-recovery-dispatch.json)
+  只证明这一次派发，不是CI成功或部署证据，不覆盖旧失败/事件回执。
+  等待器位于本任务进程内，执行wall-clock及monotonic双边界，不创建安排。
+- API/Web确认失败后，**03:26:36.093662 +08:00**单次请求取消；
+  **03:27:03.210582**独立确认整次completed/cancelled。Settings取消、性能
+  跳过；build-images/inspect-release-artifact取消且均零step，未执行或下载发布
+  制品。生产仍3564cbf/schema0060，两次定点恢复授权均已执行完，不重复恢复
+  helper或重放输入。任何新活动任务都必须重新核对安全边界。
+
+### 11月14日：API探针、Web比较定位及Settings分页（本地通过，新CI待派发）
+
+- 三个实际执行job日志已保留；旧下载器随后请求零step build日志失败，
+  属取证方法问题。仅补已下载日志的SHA/provenance，不重复取消或重新下载；
+  两份官方质量诊断ZIP精确匹配run/SHA/attempt并核验官方digest，不是发布制品。
+- API原45分钟full-suite上限仍保留，到约95%停止，未发现FAILED断言；
+  未执行余项不得算通过。真实120秒faulthandler停在20轮draft generator的
+  `gc.collect()`；该测试约141秒，相同旧CI约119秒。另两组scan及unit retention
+  探针也重复全堆GC。先保留真实writer的20次collect成本观测，再仅在先前弱
+  引用仍活着时collect；每轮零保留、最终引用/顺序/summary保持。三项controls
+  先红2失败/1通过；修后已释放引用0次collect、首个不可达自环实际collect一次，
+  故意保留前一conversation的writer仍在第二单元被原断言拒绝。原三模块24通过。
+  受控20万tracked-list诊断从20次collect/2.155秒降为0次/0.019秒，只是探针
+  成本观测，不是完整API或内存验收。
+- Web官方trace显示249行点击等待约88秒：真实并发写入、409、读取最新及
+  草稿/caret保全均已完成，两次route.continue均正常退出。实际main下的footer
+  不具隐式contentinfo角色；mounted夹具原为顶层div，未暴露该差异。
+  改为真实main祖先的原组件红测匹配0元素，保留证据；不是仅catch 270行finally
+  或去掉route等待就算修复。原90秒、比较/接受不PATCH及真实最终保存断言不变。
+  修后workspace内唯一native footer定位，mounted夹具还断言contentinfo数量0，
+  防止夹具重新脱离真实main而隐藏错误；原102项mounted组通过。
+- Settings取消前还有一项真实768宽度管理员分页失败：20+1页只有20个unique
+  IDs，不能把它当取消后的连接错误。原文件明确关闭trace；官方只有
+  error-context。真实PG/认证TestClient复现原messages/insert已提交但derived/
+  index follow-up仍queued，任务在两次分页间完成并改变排序；materialization后
+  两页合并为21，原4条messages和offline_revision保持。e2e在生成其他20项前
+  用原owner读取本对话既有derived_data_rebuilt event，原20秒action边界内等待
+  total=1；没有不存在的derived_job_id、新API或同步业务实现，分页/搜索/只读/
+  附件/删除断言均保留。最终七模块API/PG专项**39通过**，包含前三模块，不累加。
+- Settings成本对照：本次取消前312个完成结果累计约3003秒；前次458个结果
+  约3420秒（含四个约60秒失败），最大热点export-retention约578秒。这是预算
+  风险而非本次已触及60分钟上限的证明；不提高job边界、不改真实TTL或断言。
+- 最终mounted编辑器**102**、Node UX**2510**、CI脚本**62**及安全/PWA单测
+  **20**、lint/typecheck通过。Typecheck的build-info只写任务目录。两个修改的
+  e2e仍属于Web构建范围，拒绝继承旧输出；新**548输入**同安装依赖隔离Next
+  build通过，原库和副本漂移0、未复制env。最终**1391项**源码/测试/配置及
+  四个Python AST、单一head0061、十三个保护文件核对通过，索引空。
+  本机Node20.13.1/Python3.11.7/PG17不冒充CI的Node22.13.1/PG16。自建PG按
+  原PID/exe/data/loopback及零其他客户端核验停止，集群与全部失败证据保留。
+  本批只有测试/夹具与必要文档/回执变更，未改应用、工作流、migration或部署。
+
+[独立失败回执](../evidence/reliability-2026-11-14/ci-recovery-failure.json)不覆盖
+派发/生产事件或上一批修复回执；
+[Settings分页补充回执](../evidence/reliability-2026-11-14/ci-recovery-settings-failure.json)
+只补官方取消前失败及真实PG复现。十三个保护文件与1390项原输入重新核对，
+没有新生产操作、完整本地API/worker服务、清理、用户资料重放或安排。
+[本批最终回执](../evidence/reliability-2026-11-14/ci-probe-pagination-verification.json)
+及精确输入不覆盖前批。完整新CI、Linux总资源/信号、原完整帧矩阵及五份
+精确制品仍须通过，再做fresh生产准入/备份/迁移/部署；用户验收范围不代做。
 
 ### 11月14日：两次明确授权结束卡住导入（已恢复，生产仍旧版）
 

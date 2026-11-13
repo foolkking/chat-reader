@@ -1,6 +1,6 @@
 # Project State
 
-## Reliability candidate — 2026-11-14 (exact CI failed; repair verified locally)
+## Reliability candidate — 2026-11-14 (focused repair verified, fresh CI pending)
 
 The latest November13 instruction authorizes selective commit/push, the full
 exact-source CI and deployment after CI success. The user owns acceptance of
@@ -8,14 +8,42 @@ the remaining product/device/recovery scenarios. This does not waive automated
 release gates, stopped-writer backup, migration or runtime-health safeguards,
 and does not authorize cleanup or replay of user inputs.
 
-API fixture-port repair **`5fcb835b23bb76779f203519ce6346422544e14a`** is
+Repair **`7f8a6425a1d3b9f5c255925ce55340a406a3e063`** is selectively committed
+and pushed: nineteen task files, thirteen unrelated files byte-preserved and
+unstaged. Exact full CI **`43483733253`** was confirmed at
+**02:33:11.802991 +08:00**; the first read at **03:23:11.814857 +08:00**
+respected the 50-minute wall-clock/monotonic boundary. API hit its original
+45-minute full-suite limit; Web's conflict-recovery test timed out waiting for
+a nonexistent nested-footer `contentinfo` landmark. One cancellation request at
+**03:26:36.093662 +08:00** was independently confirmed **03:27:03.210582**.
+Settings is cancelled/incomplete; its retained log also contains one real
+pagination failure (20 rather than 21 unique IDs across two changing snapshots).
+Both release jobs executed zero steps.
+Three existing job logs and two official diagnostic ZIP digests are verified,
+not deployable artifacts. No repeated cancellation, scheduler or deployment.
+The [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns the focused
+repair, evidence and local test limitations; production is unchanged.
+The focused repair preserves strict retention checks while avoiding unnecessary
+full-heap GC, scopes comparison to the actual nested footer, and waits within
+the existing 20-second boundary for the original insertion's materialization
+before pagination. Final selected API/PG regression passes **39**; a fresh full
+exact-source CI is still required, not inherited from any earlier run.
+Mounted editor **102**, Node UX **2510**, CI scripts **62**, security/PWA unit
+tests **20**, lint/typecheck and a fresh **548-input** same-installed-dependency
+isolated build pass. Final **1391** inputs and thirteen protected files are
+verified; the owned test PostgreSQL is stopped with its data retained.
+[Repair provenance](docs/evidence/reliability-2026-11-14/ci-probe-pagination-verification.json)
+is selected local evidence, not release acceptance.
+
+Preceding API fixture-port repair **`5fcb835b23bb76779f203519ce6346422544e14a`** was
 selectively committed and pushed. Exact full CI **`43459604614`** was dispatched
 at **00:07:59.560391 +08:00**; the first read at
 **00:58:03.927117 +08:00** respected the 50-minute boundary. API and reading
 comparison succeeded, Web failed, and Settings reached its original 60-minute
 job limit after four failures. No cancellation request was sent for this run;
 both release jobs were skipped. Recovery-test and exact synthetic-task closeout
-repairs are locally verified; a fresh full CI is required. No deployment is claimed.
+repairs are locally verified; the new full CI above does not inherit its results.
+No deployment is claimed.
 The [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns progress;
 thirteen unrelated files remain preserved, and no scheduler was created.
 
