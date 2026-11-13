@@ -22,6 +22,11 @@ env:
 jobs:
   api-quality:
     runs-on: ubuntu-latest
+    env:
+      # The exact browser scan helper is also exercised by disposable PG tests.
+      # Keep its guarded port instead of weakening the seeder's admission check.
+      DATABASE_URL: postgresql+psycopg://chat_reader:chat_reader_ci@127.0.0.1:65438/chat_reader
+      CI_POSTGRES_PORT: "65438"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Start pinned disposable PostgreSQL with official-source fallback

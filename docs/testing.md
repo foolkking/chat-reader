@@ -1,5 +1,11 @@
 # Testing
 
+The API and Settings quality jobs use their job-owned loopback PostgreSQL on
+port **65438**, matching the guarded synthetic scan helper. Web and image-memory
+fixtures retain **5432**. `postgres-service.sh` still fences ownership by
+run/attempt/job; no seeder admission, timeout, memory or test-skip relaxation.
+The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
+
 ## Owner task interruption recovery — local 2026-11-13
 
 `test_task_execution_recovery.py` runs the same authenticated owner/admin recovery

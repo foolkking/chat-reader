@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T23:59:37.845869+08:00",
+  "base_revision": "a8d859bb37f0f8963c45e60a991af3e7abea8920",
+  "status": "pre_dispatch_api_fixture_port_regressions_passed_full_ci_required",
+  "scope": {
+    "verified_at": "2026-11-13T23:55:57.235303+08:00",
+    "base_revision": "a8d859bb37f0f8963c45e60a991af3e7abea8920",
+    "source_input_count": 1388,
+    "changed_inputs": [
+      ".github/workflows/build-release-images.yml",
+      "scripts/ci/release-image-sources.test.mjs"
+    ],
+    "verification_inputs_added": [
+      "scripts/ci/release-image-sources.test.mjs",
+      "scripts/ci/postgres-service.test.mjs",
+      "scripts/ci/image-base-sources.test.mjs",
+      "scripts/ci/postgres-service.sh",
+      "scripts/ci/image-base-sources.sh"
+    ],
+    "api_fixture_port": 65438,
+    "other_workflow_fields_exactly_unchanged": true,
+    "job_count": 6,
+    "application_changed": false,
+    "deploy_changed": false,
+    "build_input_count": 548,
+    "build_input_drift": [],
+    "protected_files": 13,
+    "protected_hash_drift": []
+  },
+  "source_input_manifest": "ci-api-port-inputs.json",
+  "source_input_count": 1388,
+  "unchanged_build_manifest": "ci-focused-build-inputs.json",
+  "unchanged_build_input_count": 548,
+  "original_build_not_repeated_for_unchanged_inputs": true,
+  "tests": {
+    "pg_ci_port": {
+      "port": 65438,
+      "passed": 39,
+      "same_cases_not_added_to_previous_count": true,
+      "junit": {
+        "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\ci-api-port-65438\\api-pg-green.junit.xml",
+        "bytes": 6111,
+        "sha256": "90dd64563f3ef7872998cc251af24a28d36a2017a6e6f35d11f24b584e75ead1"
+      },
+      "log": {
+        "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\ci-api-port-65438\\api-pg-green.log",
+        "bytes": 783,
+        "sha256": "456ca713a1f3ef4bd73f45c7874430a415bf1d99d4ffd73ea601a1d6df362662"
+      },
+      "boundary": "Owned native PostgreSQL17 and exact embedded fixture/services, not Linux CI or running site"
+    },
+    "ci_script_contracts": {
+      "passed": 62,
+      "skipped": 0,
+      "red_passed": 18,
+      "red_failed": 1,
+      "log": {
+        "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\ci-api-port-65438\\registry-source-green.log",
+        "bytes": 14230,
+        "sha256": "11e60f415a9a00d590216dbe0e3d8aa7016b55f4f3551ff94a02cd0fb1f9f8f7"
+      },
+      "red_log": {
+        "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\ci-api-port-65438\\registry-source-red.log",
+        "bytes": 7062,
+        "sha256": "b90cb7a95de7d571f727a908152708cca5465ea2686ef8a0d9a9424ae7c8c7be"
+      },
+      "boundary": "Actual helper code with shell-function Docker adapters; no real Docker daemon or registry"
+    },
+    "unchanged_guard_rejection": {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\ci-api-port-65438\\guard-rejects-5432.json",
+      "bytes": 228,
+      "sha256": "b24de63ccd3029b711eb446574b7f6d9f4f00fb5fb293c6523475ce797293fb0"
+    }
+  },
+  "non_business_preflight_failures": [
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\ci-api-port-65438\\guard-method-encoding-red.json",
+      "bytes": 169,
+      "sha256": "d092290d67fd008e59ed7f028bc2a7baf7a8f532eee19245a3c357d8b7ad8e8d"
+    },
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\ci-api-port-65438\\manifest-membership-preflight-red.json",
+      "bytes": 438,
+      "sha256": "1a40f1c769ffff8890ec6db5a456a47c0464f8d9f80654fc45013038003b268c"
+    },
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\ci-api-port-65438\\raw-git-byte-comparison-preflight-red.json",
+      "bytes": 219,
+      "sha256": "eb54fa997b62ecba6366fc7b9d8df5cff8b2de6a7fa24478ee885f56d29756b0"
+    }
+  ],
+  "owned_postgresql_stop": {
+    "verified_at": "2026-11-13T23:55:59.364545+08:00",
+    "stopped": true,
+    "data_retained": true,
+    "agent_deleted_files": 0,
+    "production_changed": false,
+    "local_api_or_worker_service_started": false
+  },
+  "protected_count": 13,
+  "protected_hash_drift": [],
+  "full_ci_dispatched": false,
+  "release_accepted": false,
+  "production_writes": 0,
+  "local_api_or_worker_service_started": false,
+  "remaining_acceptance_owner": "user",
+  "automation_created": false,
+  "user_source_replay": false
+}

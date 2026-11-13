@@ -52,7 +52,12 @@ test("PostgreSQL fallback keeps the previously verified digest, health probe and
   assert.match(postgresService, /--health-cmd "pg_isready -U chat_reader -d chat_reader"/);
   assert.match(postgresService, /docker pull --platform linux\/amd64 "\$source"/);
   assert.match(postgresService, /--publish "127\.0\.0\.1:\$\{port\}:5432"/);
-  assert.match(job("settings-quality"), /CI_POSTGRES_PORT: "65438"/);
+  for (const name of ["api-quality", "settings-quality"]) {
+    const body = job(name);
+    assert.match(body, /CI_POSTGRES_PORT: "65438"/, `${name} must use the guarded fixture port`);
+    assert.match(body, /DATABASE_URL: postgresql\+psycopg:\/\/chat_reader:chat_reader_ci@127\.0\.0\.1:65438\/chat_reader(?:\n|$)/,
+      `${name} must connect to the same owned fixture port`);
+  }
   assert.doesNotMatch(postgresService, /docker (?:system|volume|network) prune|compose down/);
 });
 

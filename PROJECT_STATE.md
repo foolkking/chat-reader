@@ -8,6 +8,13 @@ the remaining product/device/recovery scenarios. This does not waive automated
 release gates, stopped-writer backup, migration or runtime-health safeguards,
 and does not authorize cleanup or replay of user inputs.
 
+Focused repair **`a8d859b`** is committed and pushed, but was not dispatched.
+Pre-dispatch validation found that API CI's default PostgreSQL port conflicted
+with the guarded synthetic scan fixture. The follow-up confines API quality to
+the existing dedicated **65438** port; all six jobs and every other workflow
+field/bound remain unchanged. The same **39** cases pass on that owned port,
+and CI fixture/source checks pass **62**. Exact-source CI is still required.
+
 Fixture repair **`2ae0ed0ff26d1bc4cfe49b617cb6a08981f99a51`** is selectively
 committed and pushed. Full CI **`43436935411`** was first read at
 **22:38:46.069844 +08:00**, after the fresh 50-minute boundary. Web failed;
