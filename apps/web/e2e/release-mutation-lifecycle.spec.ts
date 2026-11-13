@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 
 const runMutationFlow = process.env.E2E_MUTATION_FLOW === "1";
@@ -160,7 +161,7 @@ test("initial recent-recording cannot make delete stale and failed undo remains 
   }
 });
 
-test("revision conflict preserves the source draft and can load the latest base before retry", async ({ page }) => {
+test("revision conflict preserves the source draft until the latest base is compared and explicitly accepted", async ({ page }) => {
   const suffix = crypto.randomUUID().slice(0, 8);
   const longAssistantSource = Array.from({ length: 180 }, (_, index) => `QA source line ${String(index + 1).padStart(3, "0")} with enough text to require editor scrolling.`).join("\n\n");
   const createdResponse = await page.request.post("/api/conversations", {
@@ -175,8 +176,11 @@ test("revision conflict preserves the source draft and can load the latest base 
   expect(createdResponse.status()).toBe(201);
   const created = await createdResponse.json();
   const conversationId = created.conversation.id as string;
+  const messageId = created.messages[1].id as string;
+  const messageEndpoint = `/api/messages/${messageId}`;
 
   try {
+    const initial = (await (await page.request.get(messageEndpoint)).json()).current_version;
     await page.goto(`/conversations/${conversationId}`);
     const assistant = page.locator("article[data-message-id]").filter({ hasText: "QA source line 001" });
     await expect(assistant).toBeVisible();
@@ -204,26 +208,66 @@ test("revision conflict preserves the source draft and can load the latest base 
     await expect.poll(async () => (await readCaret()).scrollTop).toBeGreaterThanOrEqual(beforeFirstEdit.scrollTop - 2);
     await page.keyboard.insertText("\n\nQA preserved draft");
     await expect(editor).toContainText("QA preserved draft");
+    const draft = `${longAssistantSource}\n\nQA preserved draft`;
+    const draftCaret = await readCaret();
 
-    await page.route("**/api/messages/*", async (route) => {
+    // A real concurrent writer advances canonical state, not a fabricated 409.
+    const latestSource = `${longAssistantSource}\n\nQA newer canonical source`;
+    const concurrent = await page.request.patch(messageEndpoint, { data: {
+      content_markdown: latestSource, base_version_id: initial.id,
+      base_content_hash: initial.source_content_hash, operation_id: crypto.randomUUID(),
+      save_mode: "create_version",
+    } });
+    expect(concurrent.status()).toBe(200);
+    const latest = (await (await page.request.get(messageEndpoint)).json()).current_version;
+    expect(latest.id).not.toBe(initial.id);
+    expect(latest.source_content_hash).toBe(createHash("sha256").update(latestSource, "utf8").digest("hex"));
+
+    const saves: Array<Record<string, unknown>> = [];
+    await page.route(`**${messageEndpoint}`, async (route) => {
       if (route.request().method() === "PATCH") {
-        await route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ detail: "Conversation changed since it was loaded." }) });
-        return;
+        saves.push(route.request().postDataJSON());
       }
       await route.continue();
-    }, { times: 1 });
+    });
     await page.getByTestId("source-editor-create-version").click();
 
-    const loadLatest = page.getByRole("button", { name: /Load latest state|\u52a0\u8f7d\u6700\u65b0\u72b6\u6001/ });
-    await expect(loadLatest).toBeVisible();
+    const compareLatest = page.getByRole("button", { name: /Compare latest source|\u6bd4\u8f83\u6700\u65b0\u5185\u5bb9/ });
+    await expect(compareLatest).toBeVisible();
+    expect(saves).toHaveLength(1);
+    expect(saves[0]).toMatchObject({
+      content_markdown: draft, base_version_id: initial.id, base_content_hash: initial.source_content_hash,
+    });
     await expect(editor).toContainText("QA preserved draft");
-    await loadLatest.click();
+    await compareLatest.click();
     await expect(page.getByText(/Latest state loaded|\u5df2\u52a0\u8f7d\u6700\u65b0\u72b6\u6001/).last()).toBeVisible();
     await expect(editor).toContainText("QA preserved draft");
+    await expect.poll(async () => (await readCaret()).offset).toBe(draftCaret.offset);
+    const acceptLatest = page.getByRole("button", { name: /Reviewed — keep editing this draft against the latest version|\u5df2\u6838\u5bf9\uff0c\u4ee5\u6700\u65b0\u7248\u672c\u4e3a\u57fa\u7ebf\u7ee7\u7eed\u7f16\u8f91\u8349\u7a3f/ });
+    await expect(acceptLatest).toBeVisible();
+    const comparison = page.getByTestId("floating-source-workspace").getByRole("contentinfo");
+    await comparison.getByText(/Compare current source and local draft|\u6bd4\u8f83\u5f53\u524d\u6b63\u6587\u4e0e\u672c\u673a\u8349\u7a3f/, { exact: true }).click();
+    await expect(comparison.getByText(/Comparing does not save changes|\u6bd4\u8f83\u4e0d\u4f1a\u63d0\u4ea4\u4fee\u6539/)).toBeVisible();
+    expect(saves).toHaveLength(1);
+    expect((await (await page.request.get(messageEndpoint)).json()).current_version.id).toBe(latest.id);
+
+    await acceptLatest.click();
+    expect(saves).toHaveLength(1);
+    await expect(editor).toContainText("QA preserved draft");
+    await expect.poll(async () => (await readCaret()).offset).toBe(draftCaret.offset);
 
     await page.getByTestId("source-editor-create-version").click();
-    await expect(page.getByText("QA preserved draft").first()).toBeVisible();
+    await expect.poll(async () => (await (await page.request.get(messageEndpoint)).json()).current_version.display_text).toBe(draft);
+    expect(saves).toHaveLength(2);
+    expect(saves[1]).toMatchObject({
+      content_markdown: draft, base_version_id: latest.id, base_content_hash: latest.source_content_hash,
+    });
+    expect(saves[1].operation_id).not.toBe(saves[0].operation_id);
+    const saved = (await (await page.request.get(messageEndpoint)).json()).current_version;
+    expect(saved.version_number).toBe(latest.version_number + 1);
+    expect(saved.source_content_hash).toBe(createHash("sha256").update(draft, "utf8").digest("hex"));
   } finally {
+    await page.unrouteAll({ behavior: "wait" });
     await page.request.delete(`/api/conversations/${conversationId}`);
   }
 });

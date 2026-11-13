@@ -1,6 +1,6 @@
 # Project State
 
-## Reliability candidate — 2026-11-13 (focused CI repair verified; not released)
+## Reliability candidate — 2026-11-14 (exact CI failed; repair verified locally)
 
 The latest November13 instruction authorizes selective commit/push, the full
 exact-source CI and deployment after CI success. The user owns acceptance of
@@ -8,7 +8,26 @@ the remaining product/device/recovery scenarios. This does not waive automated
 release gates, stopped-writer backup, migration or runtime-health safeguards,
 and does not authorize cleanup or replay of user inputs.
 
-Focused repair **`a8d859b`** is committed and pushed, but was not dispatched.
+API fixture-port repair **`5fcb835b23bb76779f203519ce6346422544e14a`** is
+selectively committed and pushed. Exact full CI **`43459604614`** was dispatched
+at **00:07:59.560391 +08:00**; the first read at
+**00:58:03.927117 +08:00** respected the 50-minute boundary. API and reading
+comparison succeeded, Web failed, and Settings reached its original 60-minute
+job limit after four failures. No cancellation request was sent for this run;
+both release jobs were skipped. Recovery-test and exact synthetic-task closeout
+repairs are locally verified; a fresh full CI is required. No deployment is claimed.
+The [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns progress;
+thirteen unrelated files remain preserved, and no scheduler was created.
+
+Two later, separate November14 instructions authorized safely ending the old
+stalled import and a different newly stalled import before CI completion.
+Both rolled back through the old worker's own failure path; all source bytes
+were hash-verified and retained. The latest independent **00:44:39 +08:00**
+snapshot had no active/queued tasks, leases or lock waits and a fresh idle
+heartbeat. Services/configuration/volumes remain unchanged; this is incident
+recovery, not deployment or a permanent fix to production's legacy code.
+
+Focused repair **`a8d859b`** was committed and pushed, but was not dispatched.
 Pre-dispatch validation found that API CI's default PostgreSQL port conflicted
 with the guarded synthetic scan fixture. The follow-up confines API quality to
 the existing dedicated **65438** port; all six jobs and every other workflow

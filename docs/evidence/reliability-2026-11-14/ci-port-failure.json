@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T17:30:40.120693+00:00",
+  "source_revision": "5fcb835b23bb76779f203519ce6346422544e14a",
+  "workflow_run_id": 43459604614,
+  "workflow_url": "https://github.com/foolkking/chat-reader/actions/runs/43459604614",
+  "first_status_read_not_before": "2026-11-13T16:57:59.560391+00:00",
+  "first_status_read_at": "2026-11-13T16:58:03.927117+00:00",
+  "minimum_50_minute_first_read_observed": true,
+  "final_status": "completed",
+  "final_conclusion": "failure",
+  "jobs": {
+    "api-quality": "success",
+    "web-quality": "failure",
+    "settings-quality": "cancelled",
+    "reading-performance-comparison / compare": "success",
+    "build-images": "skipped",
+    "inspect-release-artifact": "skipped"
+  },
+  "web_release_h": {
+    "passed": 119,
+    "failed": 2
+  },
+  "web_failures": [
+    "Conflict test still expects pre-comparison load-and-save flow",
+    "Partial detach asserts an unscoped checkbox before refetch settles"
+  ],
+  "settings_failures_before_job_limit": [
+    "Task export remains queued at 375px",
+    "Task export remains queued at 768px",
+    "Task export remains queued at 1440px",
+    "First offline integrity rebuild remains generating"
+  ],
+  "settings_job_limit_minutes_unchanged": 60,
+  "settings_cancel_request_sent_by_agent": false,
+  "official_logs": {
+    "settings-quality": {
+      "job_id": 132002689770,
+      "conclusion": "cancelled",
+      "sha256": "fb945d80a436f4c7edc3c7def6f7a3efdcf87463ac894347e1c87adec39f6d0b",
+      "bytes": 189020
+    },
+    "api-quality": {
+      "job_id": 132002690165,
+      "conclusion": "success",
+      "sha256": "4b35af384093cbd0c3ca6c497cc468c3c02062ca7febf44486291a32a4ff229a",
+      "bytes": 1389257
+    },
+    "web-quality": {
+      "job_id": 132002690184,
+      "conclusion": "failure",
+      "sha256": "8be912cb53a35a4aed02bf3a735660a4f4b7d7a74bcfeb707973cc8468effa51",
+      "bytes": 1151734
+    },
+    "reading-performance-comparison / compare": {
+      "job_id": 132026737822,
+      "conclusion": "success",
+      "sha256": "56a6b19f084c443967f8e13e1ff57a60baaac830fadb656c792ae9c507cab3de",
+      "bytes": 175449
+    }
+  },
+  "official_diagnostic_artifacts": [
+    {
+      "id": 14060580669,
+      "name": "settings-quality-evidence-5fcb835b23bb76779f203519ce6346422544e14a-1",
+      "sha256": "09eaf158d279a7fb2b16a5cf95543a26904666279ab99601e832ed3f34e32ec6",
+      "bytes": 38157528
+    },
+    {
+      "id": 14058048539,
+      "name": "reading-performance-comparison",
+      "sha256": "fd5cea4c2d3bd94f989a4d9446b638e5ad7371a669d7f019940d5d5db11f531e",
+      "bytes": 178917
+    },
+    {
+      "id": 14057881877,
+      "name": "release-a-quality-evidence-5fcb835b23bb76779f203519ce6346422544e14a-1",
+      "sha256": "02f7c2bfad4382c0fc55b229d505ea37af3ee7105a256515325e58e6c67bfb9b",
+      "bytes": 36147666
+    }
+  ],
+  "evidence_sha256": {
+    "first_read_receipt": "e62c89e938b469991b9b6a24674c48005f76601ff96dfdd9f77beb4ce13f9945",
+    "final_run_state": "d1d0ad4bdbefbd0666757a17b904aa4c811d8e262ba07ec4f14d08895731c935",
+    "completed_job_and_artifact_provenance": "0303eafe8d45a81ac833258d025ea70cd197b471559e9508c61e152ddbb927c9"
+  },
+  "deployable_release_artifacts_produced": false,
+  "production_changed_by_ci_diagnosis": false,
+  "new_scheduler_created": false,
+  "remaining_acceptance_owner": "user",
+  "privacy": "Only CI identities, synthetic failure categories and aggregate counts; no business IDs, source text or credentials"
+}

@@ -1,0 +1,137 @@
+{
+  "authorization": "Separate explicit user requests authorized stopping first and newly stuck imports before CI completion; release gates unchanged",
+  "backup_migration_deployment_performed": false,
+  "candidate_revision": "5fcb835b23bb76779f203519ce6346422544e14a",
+  "ci_result_read": false,
+  "evidence_sha256": {
+    "candidate_stall_coverage_verification": "4cf4f2bbb6bdf92a34c507e513556c797126028ecfe839516ab2c792bee0f946",
+    "first_independent_verification": "7496c15902b5f11fb4b3890574dad5714d63fc00dacad0abfb4ee7dccc788616",
+    "first_operation_receipt": "fd8d7cb32f1dc9ad85f164405c7a94f4af8934feb92712c0d0ecd5a69ea8e471",
+    "repeat_after_snapshot": "0a61fece4f15e6ba6a6e295e33deb2083dac644db11a8b48328cf810a85514d9",
+    "repeat_before_snapshot": "90e7d2736164cb08bab136013ff5438ed07dcf36276cfd84a18d3b503463f518",
+    "repeat_independent_verification": "62dddf1d8d05f4400574afd3642f161a3b07df2954b73599d3d23134f5f9d670",
+    "repeat_operation_receipt": "dacea38c500bf491e348f5e8c59af80de6ca17b875a51058fed5f0465f2a7172",
+    "repeat_operation_reservation": "ac4abb338058b64145497106f70428afa41854fb7f166a4d9ac44d27ef353439",
+    "repeat_probe": "0aba8a8b2ad49ef44fb69d02171ed505346444d4dba5e07e98faad05c34a1acb"
+  },
+  "incidents": [
+    {
+      "actual_source_sha256_before_after_equal": true,
+      "canonical_connection_terminated": false,
+      "label": "first_stall",
+      "operation": "single_guarded_auxiliary_import_progress_pg_cancel_backend",
+      "operation_at": "2026-11-13T16:25:57.947951Z",
+      "original_result": {
+        "attempt_count": 1,
+        "committed": false,
+        "completed": true,
+        "error_code": "IMPORT_COMMIT_FAILED",
+        "failure_code": "TASK_FAILED",
+        "phase": "failed",
+        "result_present": false,
+        "session_state": "FAILED",
+        "status": "failed"
+      },
+      "outcome_verified_at": "2026-11-13T16:26:01.913459Z",
+      "services_restarted": false,
+      "single_auxiliary_progress_cancellation_accepted": true,
+      "source_bytes": 21410219,
+      "source_count": 2,
+      "source_deleted": false,
+      "task_rows_manually_modified": false,
+      "user_input_replayed": false
+    },
+    {
+      "actual_source_sha256_before_after_equal": true,
+      "canonical_connection_terminated": false,
+      "label": "separate_repeat_stall",
+      "operation": "single_guarded_auxiliary_import_progress_pg_cancel_backend",
+      "operation_at": "2026-11-13T16:43:36.539790Z",
+      "original_result": {
+        "attempt_count": 1,
+        "committed": false,
+        "completed": true,
+        "error_code": "IMPORT_COMMIT_FAILED",
+        "failure_code": "TASK_FAILED",
+        "phase": "failed",
+        "result_present": false,
+        "session_state": "FAILED",
+        "status": "failed"
+      },
+      "outcome_verified_at": "2026-11-13T16:43:40.975750Z",
+      "services_restarted": false,
+      "single_auxiliary_progress_cancellation_accepted": true,
+      "source_bytes": 2596483,
+      "source_count": 2,
+      "source_deleted": false,
+      "task_rows_manually_modified": false,
+      "user_input_replayed": false
+    }
+  ],
+  "initial_first_recovery_guard_refused_before_any_cancellation": true,
+  "initial_guard_issue": "Legacy preview counters covered one upload, not all retained canonical SourceArtifact rows; both actual sources were verified before the sole accepted cancellation",
+  "latest_independent_snapshot": {
+    "actual_source_sha256_before_after_equal": true,
+    "all_11_container_id_start_restart_image_config_mounts_unchanged": true,
+    "candidate_10_relevant_files_and_prior_pg_evidence_hashes_rechecked": true,
+    "canonical_counts_before_after_delta": {
+      "asset_objects": 0,
+      "attachments": 0,
+      "context_member_objects": 0,
+      "continuation_revisions": 0,
+      "conversations": 0,
+      "imports": 0,
+      "message_version_attachments": 0,
+      "message_versions": 0,
+      "messages": 0,
+      "projects": 0,
+      "render_blocks": 0,
+      "skill_file_objects": 0,
+      "source_artifacts": 0,
+      "user_skills": 0
+    },
+    "database": {
+      "active_imports": 0,
+      "active_jobs": 0,
+      "advisory_leases": 0,
+      "lock_waits": 0,
+      "queued_imports": 0,
+      "queued_jobs": 0,
+      "schema_heads": [
+        "20261108_0060"
+      ],
+      "worker": {
+        "heartbeat_age_seconds": 0.181077,
+        "state": "idle"
+      }
+    },
+    "different_import_and_source_from_first_recovery": true,
+    "host_oom_kill_counter_unchanged": true,
+    "independent_after_snapshot_at": "2026-11-13T16:44:39.533554Z",
+    "new_tests_or_complete_ci_result_claimed": false,
+    "original_task_failed_without_commit": true,
+    "production_config_checkout_release_pointer_volumes_unchanged": true,
+    "retained_backup_directory_set_unchanged": true,
+    "source_bytes": 2596483,
+    "source_count": 2,
+    "verified_at": "2026-11-13T16:45:59.975701+00:00"
+  },
+  "mode": "redacted_dated_incident_evidence_not_a_deployment_receipt",
+  "new_code_assessment": {
+    "cooperative_exit_grace_seconds": 30,
+    "covers_observed_db_available_self_lock_mechanism": true,
+    "does_not_guarantee_all_inputs_success_or_universal_database_outage_deadline": true,
+    "mechanism": "Skip-locked bounded auxiliary progress/heartbeat; independent stop record and one-child supervisor; changed business progress only; commit fence and outcome-first reconciliation",
+    "new_postgres_test_run_claimed": false,
+    "no_business_progress_stop_request_seconds": 300,
+    "prior_real_postgres_red_green_log_hashes_rechecked": true,
+    "production_still_legacy": true,
+    "ten_relevant_candidate_files_unchanged": true
+  },
+  "new_scheduler_created": false,
+  "privacy": "No raw business IDs, filenames, source digests, source text, query text, credentials or environment values",
+  "production_revision": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+  "production_schema": "20261108_0060",
+  "repeat_is_a_different_import_and_input": true,
+  "schema_version": 1
+}

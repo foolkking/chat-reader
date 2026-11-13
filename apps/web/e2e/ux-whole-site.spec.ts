@@ -330,8 +330,13 @@ test("attachments: failed load, rename draft, copy feedback and partial detach r
     await files.getByRole("button", { name: "Detach selected" }).click();
     await page.getByRole("dialog", { name: /Detach 2 files/ }).getByRole("button", { name: "Detach", exact: true }).click();
     await expect(files.getByRole("alert")).toContainText("1 detached, 1 failed");
-    await expect(files.getByRole("checkbox")).toBeChecked();
-    expect((await (await page.request.get(endpoint)).json()).items).toHaveLength(1);
+    const retained = files.locator(`[data-testid="conversation-file-row"][data-attachment-id="${first.id}"]`);
+    await expect(retained.getByRole("checkbox", { name: "Select renamed.txt", exact: true })).toBeChecked();
+    await expect(files.getByTestId("conversation-file-row")).toHaveCount(1);
+    await expect(files.getByRole("checkbox", { name: "Select two.txt", exact: true })).toHaveCount(0);
+    const remaining = (await (await page.request.get(endpoint)).json()).items;
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]).toMatchObject({ id: first.id, display_name: "renamed.txt" });
     await page.unroute(`**${endpoint}/${first.id}`);
     await files.getByRole("button", { name: "Detach selected" }).click();
     await page.getByRole("dialog", { name: /Detach 1 files/ }).getByRole("button", { name: "Detach", exact: true }).click();

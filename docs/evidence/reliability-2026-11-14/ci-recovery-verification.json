@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T18:21:11.217954+00:00",
+  "base_revision": "5fcb835b23bb76779f203519ce6346422544e14a",
+  "status": "selected_recovery_regressions_passed_fresh_full_ci_required_not_deployed",
+  "previous_failed_ci_receipt": "ci-port-failure.json",
+  "scope": {
+    "verified_at": "2026-11-13T18:13:50.090859+00:00",
+    "head": "5fcb835b23bb76779f203519ce6346422544e14a",
+    "source_input_count": 1390,
+    "changed_existing_inputs": [
+      "apps/web/e2e/release-mutation-lifecycle.spec.ts",
+      "apps/web/e2e/settings-task-center.spec.ts",
+      "apps/web/e2e/ux-whole-site.spec.ts",
+      "scripts/ux/attachment-recovery-browser.mjs",
+      "scripts/ux/source-editor-table-browser.mjs"
+    ],
+    "added_inputs": [
+      "apps/api/tests/test_settings_action_task_fixture.py",
+      "scripts/ux/settings-action-task-fixture.test.mjs"
+    ],
+    "protected_count": 13,
+    "protected_drift": [],
+    "index_empty": true,
+    "fixture_program_sha256": {
+      "seedActionTask": "f09cac4b207bc7b8b65ee489f354d52b1e01b589977f2cfa330d48e07205d932",
+      "finishActionTask": "a779bd7db2c310bbb7ce2f48a854969bbb4d30de08ad63500b66bb0c73c0ff3c"
+    },
+    "application_workflow_deployment_code_changed": false,
+    "input_manifest": "ci-recovery-inputs.json",
+    "fresh_build_manifest": "ci-recovery-build-inputs.json",
+    "old_build_not_inherited": true,
+    "build_input_count": 548
+  },
+  "tests": {
+    "api_postgresql": {
+      "passed": 50,
+      "skipped": 0,
+      "existing_alembic_warning_retained": true,
+      "new_action_fixture_cases": 24,
+      "initial_missing_disposer_red_cases": 14,
+      "log": {
+        "sha256": "17f3ed203b36cd0ca8f1cd3cfb3a4361fd1d695907952c89613b1da6650af639",
+        "bytes": 658,
+        "task_relative_path": "pg-action-green1.log"
+      },
+      "red_log": {
+        "sha256": "cfa01a31db3ac6b4563cfd2ab6ea40ee1e4621850d56a4ea7c4457a2b04856c9",
+        "bytes": 40464,
+        "task_relative_path": "pg-action-red1.log"
+      },
+      "boundary": "Selected three modules; exact embedded Python, real PG/services and bounded supervised test processes. Not a full API suite or running site."
+    },
+    "mounted_source_editor": {
+      "passed": 102,
+      "original_scenarios_retained": 99,
+      "new_three_width_comparison_cases": 3,
+      "result": {
+        "sha256": "5949dbb7c9b8843237232bed829ab104b3ea87c77c6bb528cc77b9703c5db0ae",
+        "bytes": 9610,
+        "task_relative_path": "browser-source-green2/table-browser/result.json"
+      },
+      "legacy_flow_controls": {
+        "sha256": "78b74b2e5ea034e8bf1ef821d5853259125e6f2ef53797a0421fc76181002915",
+        "bytes": 909,
+        "task_relative_path": "source-controls-result.json"
+      },
+      "boundary": "Actual workspace/form/CodeMirror with explicit HTTP adapters; not authenticated API-network or physical-device acceptance."
+    },
+    "mounted_attachments": {
+      "passed": 15,
+      "original_scenarios_retained": 12,
+      "held_refetch_partial_detach_cases": 3,
+      "result": {
+        "sha256": "e24edf71e812461437b4c0e91297cfcfcee752b5852cd3914f415cf692691fa9",
+        "bytes": 16248,
+        "task_relative_path": "browser-attachment-green1/attachment-recovery-browser/result.json"
+      },
+      "original_unscoped_checkbox_red": {
+        "sha256": "44d7ffc7772d13438c724f17ed2ec1193b48b62b7ff2c44c8719ad0fc6012eaa",
+        "bytes": 1726,
+        "task_relative_path": "browser-attachment-red1/attachment-recovery-browser/failure.json"
+      }
+    },
+    "node_ux": {
+      "passed": 2510,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "sha256": "65d626a33d894a221b4c745f92250eb27e464c3e4ccabb9dab148a82de4f5608",
+        "bytes": 540213,
+        "task_relative_path": "node-ux-final.log"
+      }
+    },
+    "node_ci": {
+      "passed": 62,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "sha256": "c80c1f7b81f5a1fc84bb934bca2f3fcc025d60f974ca942494585e28437e8df7",
+        "bytes": 14231,
+        "task_relative_path": "node-ci.log"
+      }
+    },
+    "node_security_pwa": {
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "sha256": "403c5123a95ea077515a4a4fe3b716ae819f82d9a0da8c9776b96f2e128def29",
+        "bytes": 4392,
+        "task_relative_path": "node-security-pwa.log"
+      }
+    },
+    "actual_ts_callback_paths": {
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "sha256": "95728b8317283db13637ba94ad0bf721f7e1303958175f7c0d98b4e7cf6fc318",
+        "bytes": 1096,
+        "task_relative_path": "node-action-fixture.log"
+      },
+      "included_in_node_ux_not_additive": true,
+      "missing_finally_control": {
+        "sha256": "3971cb21446d62b1fc5c0278bee5fec767cabd78a84c71683c2f42126975741e",
+        "bytes": 384,
+        "task_relative_path": "fixture-finally-control-result.json"
+      }
+    },
+    "lint": {
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "bytes": 173,
+      "task_relative_path": "web-lint.log"
+    },
+    "typecheck": {
+      "sha256": "ffe435f7306c0ba9c5c3769aa9c6790139fbe427b86510e916512ba47b30f914",
+      "bytes": 413,
+      "task_relative_path": "web-typecheck.log"
+    },
+    "fresh_isolated_build": {
+      "verified_at": "2026-11-13T18:13:48.016700+00:00",
+      "exit_code": 0,
+      "input_count": 548,
+      "source_input_drift": [],
+      "copy_input_mutations": [],
+      "same_installed_dependency_realpaths": true,
+      "env_files_copied": false,
+      "node": "v20.13.1",
+      "next": "16.4.1",
+      "build_cpus": 1,
+      "full_ci_or_production_image_claimed": false,
+      "no_local_site_started": true
+    },
+    "build_log": {
+      "sha256": "d72cd64d010a5949d958a4458282de1b7e037d6292765af66c333d60df90e53f",
+      "bytes": 1479,
+      "task_relative_path": "fresh-build.log"
+    },
+    "migration_head": "20261112_0061"
+  },
+  "retained_method_failures_not_application_failures": {
+    "diagnostic_zip_is_sibling_of_extracted_directory": {
+      "sha256": "b6c9ecab45602d621ee9e5121574d28e110fe8526b562cf87572972b3c248401",
+      "bytes": 344,
+      "task_relative_path": "ci-failure-receipt.log"
+    },
+    "postgres_host_text_guard_refused_before_wrapper_retirement": {
+      "sha256": "586fc386ac867acd2d6182918b96638b8093a5f793f65a48cb299ab6e130466c",
+      "bytes": 588,
+      "task_relative_path": "postgres-wrapper-recovery.log"
+    },
+    "owned_native_launch_wrapper_pipe_recovery": {
+      "sha256": "208fee1ecb86ba0dbf5e7ecf8aa198f801468e62e25896fb50fc6313ee4ba4da",
+      "bytes": 803,
+      "task_relative_path": "postgres-start-wrapper-recovery.json"
+    },
+    "extra_synthetic_draft_comparison_requires_footer_scope": {
+      "sha256": "6abfba8e173989d3630c8e0bf899bfdc14f92546ffcb237e6c9e6be912a4bb73",
+      "bytes": 4123,
+      "task_relative_path": "browser-source-green1/table-browser/result.json"
+    }
+  },
+  "preservation": {
+    "unrelated_files": 13,
+    "unrelated_drift": [],
+    "index_empty": true,
+    "original_build_info_unchanged": true,
+    "task_postgres_stopped_data_retained": true,
+    "postgres_stop_receipt": {
+      "sha256": "ec6d6886c98c3edfa3d950b37137250b85cfb755e30e60915778b69e227f0a83",
+      "bytes": 272,
+      "task_relative_path": "postgres-stop-receipt.json"
+    },
+    "no_full_local_api_worker_service_started": true,
+    "no_prior_startup_policy_bypassed": true,
+    "production_actions_during_repair": false,
+    "user_input_replayed": false,
+    "production_cleanup_performed": false,
+    "new_scheduler_created": false
+  },
+  "remaining": {
+    "fresh_full_exact_source_ci": true,
+    "five_exact_release_artifacts": true,
+    "fresh_capacity_backup_migration_and_deployment": true,
+    "product_device_host_backup_acceptance_owner": "user",
+    "local_linux_total_memory_or_original_frame_acceptance_claimed": false
+  },
+  "privacy": "Only synthetic test categories, source-code paths and evidence hashes; no real business IDs, source content or credentials"
+}

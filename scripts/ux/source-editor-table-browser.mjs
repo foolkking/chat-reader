@@ -3,6 +3,7 @@
 // HTTP APIs, Next's client loader, assistant-ui source forwarding, cleanup UI and
 // unrelated rich-view dependencies are explicit adapters, not server acceptance.
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve, join, extname } from "node:path";
@@ -83,6 +84,9 @@ export const getConversationAttachments=async()=>window.syntheticFiles??[];
 export const editMessage=async(id,payload)=>{
   window.workspaceWrites.push({id,payload});
   const old=window.workspaceMessage;
+  if(window.workspaceEnforceBaseline&&(payload.baseVersionId!==old.current_version.id||
+      payload.baseContentHash!==old.current_version.source_content_hash))
+    throw new ApiRequestError("Source changed. Compare the latest source first.",409,"","source_baseline_conflict");
   const version={...old.current_version,id:"synthetic-saved-version",
     content_hash:"synthetic",source_content_hash:"source-"+payload.contentMarkdown,
     version_number:old.current_version.version_number+1,display_text:payload.contentMarkdown,plain_text:payload.contentMarkdown};
@@ -94,7 +98,10 @@ export const editMessage=async(id,payload)=>{
   if(window.loseSaveResponse) throw Error("CONNECTION_FAILED");
   return {message,message_version:version,conversation_revision:2,attachment_occurrences:[]};
 };
-export const getMessage=async()=>window.workspaceMessage;
+export const getMessage=async()=>{
+  window.workspaceReads=(window.workspaceReads??0)+1;
+  return window.workspaceMessage;
+};
 export const getMessageSaveReceipt=async()=>{
   window.receiptReads=(window.receiptReads??0)+1;
   if(window.missingReceipt) throw new ApiRequestError("No receipt",404,"","save_not_confirmed");
@@ -1449,6 +1456,67 @@ try {
     await expect(dialog).toBeVisible();
     if (ready) await expect(apply()).toBeEnabled();
   };
+  for (const width of [375, 800, 1440]) {
+    await run(`${width}px actual workspace: conflict comparison requires explicit acceptance before saving`, async () => {
+      const source = Array.from({ length: 180 }, (_, index) => `Synthetic source line ${index + 1} requiring real editor scrolling.`).join("\n\n");
+      const draft = source + "\n\nSynthetic preserved draft";
+      const latestSource = source + "\n\nSynthetic concurrent source";
+      const latestHash = createHash("sha256").update(latestSource, "utf8").digest("hex");
+      await page.evaluate(() => {
+        window.holdSave=false; window.loseSaveResponse=false; window.failReaderRefresh=false;
+        window.missingReceipt=false; window.workspaceEnforceBaseline=true; window.workspaceReads=0;
+      });
+      try {
+        await startWorkspace(source, width === 375);
+        await page.setViewportSize({ width, height: 900 });
+        await cm.click();
+        await page.keyboard.press("Control+End");
+        await page.keyboard.insertText("\n\nSynthetic preserved draft");
+        await expect.poll(() => page.evaluate(() => window.workspaceGate.source())).toBe(draft);
+        await page.evaluate(({ latestSource, latestHash }) => {
+          window.conflictOriginalView=window.workspaceGate.view();
+          window.conflictOriginalCaret=window.workspaceGate.view().state.selection.main.head;
+          const old=window.workspaceMessage;
+          window.workspaceMessage={...old,current_version:{...old.current_version,id:"synthetic-concurrent-version",
+            version_number:2,display_text:latestSource,plain_text:latestSource,source_content_hash:latestHash}};
+        }, { latestSource, latestHash });
+        const save = workspace.getByTestId("source-editor-create-version");
+        await save.click();
+        const compareLatest = workspace.getByRole("button", { name: /^(Compare latest source|比较最新内容)$/ });
+        await expect(compareLatest).toBeVisible();
+        assert.equal(await page.evaluate(() => window.workspaceWrites.length), 1);
+        await compareLatest.click();
+        const accept = workspace.getByRole("button", { name: /^(Reviewed — keep editing this draft against the latest version|已核对，以最新版本为基线继续编辑草稿)$/ });
+        await expect(accept).toBeVisible();
+        const comparison = workspace.getByRole("contentinfo");
+        await comparison.getByText(/^(Compare current source and local draft|比较当前正文与本机草稿)$/).click();
+        await expect(comparison.getByText(/Comparing does not save changes|比较不会提交修改/)).toBeVisible();
+        assert.equal(await page.evaluate(() => window.workspaceReads), 1);
+        assert.equal(await page.evaluate(() => window.workspaceWrites.length), 1, "Comparing cannot PATCH or adopt the base");
+        assert.equal(await page.evaluate(() => window.workspaceMessage.current_version.display_text), latestSource);
+        assert.equal(await page.evaluate(() => window.workspaceGate.source()), draft);
+        await expect(save).toHaveText(width === 375 ? "创建 v2" : "Create v2");
+        await accept.click();
+        await expect(save).toHaveText(width === 375 ? "创建 v3" : "Create v3");
+        assert.equal(await page.evaluate(() => window.workspaceWrites.length), 1, "Accepting a base cannot submit a save");
+        assert.equal(await page.evaluate(() => window.conflictOriginalView===window.workspaceGate.view()), true);
+        assert.equal(await page.evaluate(() => window.workspaceGate.view().state.selection.main.head===window.conflictOriginalCaret), true);
+        assert.equal(await page.evaluate(() => window.workspaceGate.source()), draft);
+        await save.click();
+        await expect.poll(() => page.evaluate(() => window.workspaceMessage.current_version.display_text)).toBe(draft);
+        const writes = await page.evaluate(() => window.workspaceWrites);
+        assert.equal(writes.length, 2);
+        assert.equal(writes[0].payload.baseVersionId, "synthetic-version");
+        assert.equal(writes[0].payload.baseContentHash, "source-" + source);
+        assert.equal(writes[1].payload.baseVersionId, "synthetic-concurrent-version");
+        assert.equal(writes[1].payload.baseContentHash, latestHash);
+        assert.equal(writes[1].payload.contentMarkdown, draft);
+        assert.notEqual(writes[0].payload.operationId, writes[1].payload.operationId);
+      } finally {
+        await page.evaluate(() => { window.workspaceEnforceBaseline=false; });
+      }
+    });
+  }
   await run("actual workspace: a table applies to CodeMirror, then one toolbar Undo restores the exact source", async () => {
     await startWorkspace();
     await openWorkspaceTable();

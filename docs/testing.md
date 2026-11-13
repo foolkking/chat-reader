@@ -6,6 +6,39 @@ fixtures retain **5432**. `postgres-service.sh` still fences ownership by
 run/attempt/job; no seeder admission, timeout, memory or test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
+## Synthetic task closeout and reviewed source recovery — 2026-11-14
+
+`test_settings_action_task_fixture.py` and
+`test_settings_scan_lifecycle_fixture.py` execute the browser suites' actual
+embedded Python against disposable PostgreSQL, without a running site.
+Task Center seeds return the original owner/conversation/creation/start identity.
+Every failure path releases and drains its delayed route before teardown.
+Only its own attempt-zero, token/control-free artificial cancel task is
+cancelled and finalized through existing services. Terminal receipts are retained;
+queued or genuinely supervised retries are read-only and remain worker-owned.
+Wrong scope, changed execution identity and missing test/mailbox/explicit
+loopback-database opt-ins fail closed. Legacy scheduling and the original
+300-second stale / two-second next-claim checks are unchanged.
+`scripts/ux/settings-action-task-fixture.test.mjs` executes the actual TypeScript
+test callbacks for initialization and delayed-response failures under controlled
+transport/Python adapters. It checks both retry/cancel teardown ordering; it is
+included in the existing Node UX gate and does not replace the PostgreSQL suite
+or the genuine authenticated settings matrix.
+
+The mutation lifecycle browser test now creates a real concurrent writer and
+requires comparison, explicit acceptance and an exact latest-version/hash save.
+Comparison and acceptance cannot PATCH, replace the live draft or lose its caret.
+The existing mounted editor gate retains all earlier cases and adds this flow at
+three widths. The files gate holds the post-detach GET so both rows remain mounted:
+the failed row stays checked, the successful row is unchecked, then canonical
+identity/removal and a one-file retry are verified after release. Do not use an
+unscoped checkbox or `.first()` to hide the asynchronous list state.
+
+Local static, mounted and PostgreSQL results do not replace complete exact-source
+CI, real authenticated network, Linux memory/signals, original frame matrices or
+the user's product/device/backup acceptance. Results and retained failed methods
+belong to the same ledger, not a second status page.
+
 ## Owner task interruption recovery — local 2026-11-13
 
 `test_task_execution_recovery.py` runs the same authenticated owner/admin recovery

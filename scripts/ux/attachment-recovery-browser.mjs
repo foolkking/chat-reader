@@ -62,7 +62,7 @@ const { chromium, expect } = require("@playwright/test");
 const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? "chromium" : "chrome" });
 const results = [], errors = [];
 try {
-  for (const width of [375, 800, 1440]) for (const scenario of ["upload-receipt", "finalize-receipt", "storage-refusal", "replace-rejected"]) {
+  for (const width of [375, 800, 1440]) for (const scenario of ["upload-receipt", "finalize-receipt", "storage-refusal", "replace-rejected", "partial-detach"]) {
     const context = await browser.newContext({ viewport: { width, height: 900 }, hasTouch: true });
     const page = await context.newPage();
     page.on("pageerror", error => errors.push(error.message));
@@ -73,6 +73,9 @@ try {
     }, { locale, scenario });
     const events = [], sessions = new Map(), items = new Map(), attachments = [];
     let failOnce = true;
+    let holdReads = false;
+    const readWaiters = [];
+    const releaseReads = () => { holdReads=false; for (const release of readWaiters.splice(0)) release(); };
     await page.route("https://attachments.synthetic/**", async route => {
       const request = route.request(), url = new URL(request.url()), path = url.pathname, method = request.method();
       if (path === "/api/capabilities") return route.fulfill({ json: { attachments: { upload_enabled: true, scanner_provider: "disabled" } } });
@@ -103,7 +106,10 @@ try {
         return route.fulfill({ json: item });
       }
       if (path.endsWith("/attachments")) {
-        if (method === "GET") return route.fulfill({ json: { items: attachments } });
+        if (method === "GET") {
+          if (holdReads) await new Promise(resolve => readWaiters.push(resolve));
+          return route.fulfill({ json: { items: attachments } });
+        }
         assert.equal(method, "POST");
         const ids = request.postDataJSON().upload_item_ids;
         assert.equal(ids.length, 1, "One file must finish processing before the next upload");
@@ -121,6 +127,20 @@ try {
           return route.fulfill({ status: 503, json: { detail: "Synthetic response lost after commit" } });
         }
         return route.fulfill({ json: { items: [attachment] } });
+      }
+      if (scenario === "partial-detach" && path.includes("/attachments/") && method === "DELETE") {
+        const id = path.split("/").at(-1), index = attachments.findIndex(item => item.id === id);
+        assert.ok(index >= 0);
+        const attachment = attachments[index];
+        const failed = attachment.display_name === "first.txt" && failOnce;
+        events.push({ action: "detach", id, filename: attachment.display_name, failed });
+        if (failed) {
+          failOnce=false;
+          return route.fulfill({ status: 503, json: { detail: "Synthetic detach failure" } });
+        }
+        attachments.splice(index, 1);
+        if (attachment.display_name === "second.txt") holdReads=true;
+        return route.fulfill({ status: 204 });
       }
       if (path === "/bundle.js") return route.fulfill({ contentType: "text/javascript", body: bundle });
       if (path === "/style.css") return route.fulfill({ contentType: "text/css", body: styles.css });
@@ -141,7 +161,37 @@ try {
         assert.ok(events.findIndex(event => event.action === "finalize" && event.filename === "first.txt")
           < events.findIndex(event => event.action === "upload" && event.filename === "second.txt"));
       }
-      if (scenario === "replace-rejected") {
+      if (scenario === "partial-detach") {
+        const panel = page.getByTestId("conversation-files-panel");
+        await expect(panel.getByTestId("conversation-file-row")).toHaveCount(2);
+        const first = attachments.find(item => item.display_name === "first.txt");
+        const second = attachments.find(item => item.display_name === "second.txt");
+        const failedRow = panel.locator(`[data-attachment-id="${first.id}"]`);
+        const successfulRow = panel.locator(`[data-attachment-id="${second.id}"]`);
+        await failedRow.getByRole("checkbox").check();
+        await successfulRow.getByRole("checkbox").check();
+        await panel.getByRole("button", { name: /^(Detach selected|移除所选)$/ }).click();
+        await page.getByRole("dialog").getByRole("button", { name: /^(Detach|移除)$/ }).click();
+        await expect(panel.getByRole("alert")).toContainText(/1 detached, 1 failed|已移除 1 项，1 项失败/);
+        await expect.poll(() => readWaiters.length).toBeGreaterThan(0);
+        await expect(panel.getByTestId("conversation-file-row")).toHaveCount(2);
+        await expect(failedRow.getByRole("checkbox")).toBeChecked();
+        await expect(successfulRow.getByRole("checkbox")).not.toBeChecked();
+        releaseReads();
+        await expect(panel.getByTestId("conversation-file-row")).toHaveCount(1);
+        await expect(successfulRow).toHaveCount(0);
+        await expect(failedRow.getByRole("checkbox")).toBeChecked();
+        const stored = await page.evaluate(async () => (await fetch("/api/conversations/synthetic-conversation/attachments")).json());
+        assert.deepEqual(stored.items.map(item => item.id), [first.id]);
+        await panel.getByRole("button", { name: /^(Detach selected|移除所选)$/ }).click();
+        await page.getByRole("dialog").getByRole("button", { name: /^(Detach|移除)$/ }).click();
+        await expect(panel.getByTestId("conversation-file-row")).toHaveCount(0);
+        assert.equal(attachments.length, 0);
+        const empty = await page.evaluate(async () => (await fetch("/api/conversations/synthetic-conversation/attachments")).json());
+        assert.deepEqual(empty.items, []);
+        assert.deepEqual(events.filter(event => event.action === "detach").map(event => [event.filename, event.failed]),
+          [["first.txt", true], ["second.txt", false], ["first.txt", false]]);
+      } else if (scenario === "replace-rejected") {
         const picker = page.waitForEvent("filechooser");
         await page.getByRole("button", { name: /替换源文件|Replace source file/ }).click();
         await (await picker).setFiles({ name: "corrected.txt", mimeType: "text/plain", buffer: Buffer.from("corrected source") });
@@ -167,7 +217,7 @@ try {
         assert.equal(events.filter(event => event.action === "upload").length, 2);
         assert.equal(events.filter(event => event.action === "finalize").length, 2);
       }
-      assert.equal(attachments.length, 2);
+      assert.equal(attachments.length, scenario === "partial-detach" ? 0 : 2);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth) <= 1);
       await page.screenshot({ path: join(out, `${width}-${scenario}.png`), fullPage: true });
       results.push({ width, scenario, events });
@@ -175,7 +225,7 @@ try {
       await page.screenshot({ path: join(out, `${width}-${scenario}-failure.png`), fullPage: true });
       writeFileSync(join(out, "failure.json"), JSON.stringify({ width, scenario, error: String(error), events, errors }, null, 2));
       throw error;
-    } finally { await context.close(); }
+    } finally { releaseReads(); await context.close(); }
   }
   assert.deepEqual(errors, []);
   writeFileSync(join(out, "result.json"), JSON.stringify({ status: "passed", results }, null, 2));

@@ -11,29 +11,87 @@ test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated PostgreSQ
 
 // Seed the pre-existing failure/running state; retry/cancel themselves use the
 // real authenticated API and PostgreSQL transaction. Only synthetic users qualify.
-function seedActionTask(conversationId: string, operation: "retry" | "cancel"): string {
-  return execFileSync("python", ["-c", `
-import os,sys,uuid
+type ActionTaskFixture = {
+  id: string; conversation_id: string; owner_id: string;
+  created_at: string; started_at: string; operation: "retry" | "cancel";
+};
+
+function seedActionTask(conversationId: string, operation: "retry" | "cancel"): ActionTaskFixture {
+  return JSON.parse(execFileSync("python", ["-B", "-c", `
+import os,sys,uuid,json
 from datetime import datetime,timezone
 assert os.environ.get('APP_ENV')=='test' and os.environ.get('E2E_SETTINGS_MAILBOX')=='1'
 assert os.environ.get('DATABASE_URL'), 'Explicit disposable DATABASE_URL is required; do not fall back to local configuration'
+assert any(f'127.0.0.1:{port}/' in os.environ['DATABASE_URL'] for port in (65438, 45438))
+assert sys.argv[2] in {'retry','cancel'}
 from app.core.database import SessionLocal
 from app.models.conversation import Conversation
 from app.models.background_job import BackgroundJob
 from app.models.user import User
 with SessionLocal() as db:
  conversation=db.get(Conversation,uuid.UUID(sys.argv[1]))
+ assert conversation is not None
  assert db.get(User,conversation.owner_user_id).normalized_email.startswith('task-fence-')
  retry=sys.argv[2]=='retry'
  now=datetime.now(timezone.utc)
  job=BackgroundJob(owner_user_id=conversation.owner_user_id,
   job_type='conversation_export' if retry else 'conversation_merge',
   status='failed' if retry else 'processing',phase='failed' if retry else 'messages',
-  queued_at=now,started_at=now,heartbeat_at=now,completed_at=now if retry else None,
-  total_items=1, payload={'title':conversation.display_title,'conversation_id':str(conversation.id),'export_format':'markdown_bundle'},
+  created_at=now,queued_at=now,started_at=now,heartbeat_at=now,completed_at=now if retry else None,attempt_count=0,
+  total_items=1, payload={'title':conversation.display_title,'conversation_id':str(conversation.id),'export_format':'markdown_bundle','fixture_operation':sys.argv[2]},
   error_message='Synthetic retryable failure' if retry else None)
- db.add(job); db.commit(); print(job.id)
-`, conversationId, operation], { cwd: path.resolve(process.cwd(), "../api"), encoding: "utf8" }).trim();
+ db.add(job); db.commit()
+ print(json.dumps({'id':str(job.id),'conversation_id':str(conversation.id),'owner_id':str(conversation.owner_user_id),
+  'created_at':job.created_at.isoformat(),'started_at':job.started_at.isoformat(),'operation':sys.argv[2]}))
+`, conversationId, operation], { cwd: path.resolve(process.cwd(), "../api"), encoding: "utf8", timeout: 15_000 }).trim()) as ActionTaskFixture;
+}
+
+function finishActionTask(fixture: ActionTaskFixture): void {
+  execFileSync("python", ["-B", "-c", `
+import os,sys,uuid,json
+from datetime import datetime
+assert os.environ.get('APP_ENV')=='test' and os.environ.get('E2E_SETTINGS_MAILBOX')=='1'
+assert os.environ.get('DATABASE_URL'), 'Explicit disposable DATABASE_URL is required'
+assert any(f'127.0.0.1:{port}/' in os.environ['DATABASE_URL'] for port in (65438, 45438))
+receipt=json.loads(sys.argv[1]); operation=receipt['operation']
+assert operation in {'retry','cancel'}
+from app.core.database import SessionLocal
+from app.models.conversation import Conversation
+from app.models.background_job import BackgroundJob
+from app.models.task_execution_control import TaskExecutionControl
+from app.models.user import User
+from app.services.worker_maintenance import bound_worker_transaction
+from app.services import background_jobs
+job_id=uuid.UUID(receipt['id']); execution=None
+with SessionLocal() as db:
+ bound_worker_transaction(db)
+ query=db.query(BackgroundJob).filter_by(id=job_id)
+ # Retry belongs to the real worker. Its cleanup is read-only, even while a
+ # genuine child holds the canonical row. Only the artificial cancel seed locks.
+ job=(query.with_for_update(nowait=True) if operation=='cancel' else query).one()
+ conversation=db.get(Conversation,uuid.UUID(receipt['conversation_id']))
+ assert conversation is not None and str(conversation.owner_user_id)==receipt['owner_id']
+ assert str(job.owner_user_id)==receipt['owner_id']
+ assert db.get(User,job.owner_user_id).normalized_email.startswith('task-fence-')
+ assert job.job_type==('conversation_export' if operation=='retry' else 'conversation_merge')
+ assert (job.payload or {}).get('conversation_id')==receipt['conversation_id']
+ assert (job.payload or {}).get('fixture_operation')==operation
+ assert job.created_at==datetime.fromisoformat(receipt['created_at'])
+ if operation=='cancel' and job.status not in {'committed','failed','cancelled'}:
+  assert job.status in {'queued','processing','cancelling'}
+  assert job.attempt_count==0 and job.started_at==datetime.fromisoformat(receipt['started_at'])
+  assert not (job.payload or {}).get('execution_token')
+  assert db.query(TaskExecutionControl).filter_by(task_kind='job',task_id=job_id,finished_at=None).first() is None
+  background_jobs.request_background_job_cancellation(job)
+  db.commit()
+  if job.status=='cancelling': execution=(job.attempt_count,job.started_at,None)
+if execution is not None:
+ background_jobs.process_background_job(job_id,expected_execution=execution)
+with SessionLocal() as db:
+ job=db.get(BackgroundJob,job_id)
+ if operation=='cancel': assert job.status in {'committed','failed','cancelled'}
+ print(json.dumps({'id':str(job_id),'status':job.status,'retry_left_for_real_worker':operation=='retry'}))
+`, JSON.stringify(fixture)], { cwd: path.resolve(process.cwd(), "../api"), encoding: "utf8", timeout: 15_000 });
 }
 
 for (const operation of ["retry", "cancel"] as const) {
@@ -45,6 +103,8 @@ for (const operation of ["retry", "cancel"] as const) {
     const ready = new Promise<void>(resolve => { arrived = resolve; });
     let delivered!: () => void;
     const finished = new Promise<void>(resolve => { delivered = resolve; });
+    let fixture: ActionTaskFixture | undefined;
+    let actionStarted = false;
     try {
       const password = "Synthetic-task-fence-passphrase";
       const email = `task-fence-${crypto.randomUUID()}@example.test`;
@@ -55,11 +115,13 @@ for (const operation of ["retry", "cancel"] as const) {
         { role: "user", content_markdown: "Synthetic isolated source" }, { role: "assistant", content_markdown: "Synthetic response" },
       ] } });
       expect(created.status()).toBe(201);
-      const jobId = seedActionTask((await created.json()).conversation.id, operation);
+      fixture = seedActionTask((await created.json()).conversation.id, operation);
+      const jobId = fixture.id;
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto("/");
       await page.getByTestId("sidebar-tasks-button").click();
       await page.route(`**/api/tasks/${jobId}/${operation}`, async route => {
+        actionStarted = true;
         try {
           const response = await route.fetch();
           expect(response.status()).toBe(200);
@@ -96,7 +158,16 @@ for (const operation of ["retry", "cancel"] as const) {
       await page.waitForTimeout(250);
       await expect(page.getByTestId("task-center-panel")).not.toContainText("Synthetic private first-account task");
       await expect(page.locator(`[id="task-row-${jobId}"]`)).toHaveCount(0);
-    } finally { release(); await admin.dispose(); }
+    } finally {
+      release();
+      try {
+        await page.unrouteAll({ behavior: "wait" });
+        if (actionStarted) await finished;
+      } finally {
+        try { if (fixture) finishActionTask(fixture); }
+        finally { await admin.dispose(); }
+      }
+    }
   });
 }
 
