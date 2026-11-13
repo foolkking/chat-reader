@@ -13,6 +13,7 @@ const actionNames: Record<string, [string, string]> = {
   USER_APPROVED: ["批准注册", "Registration approved"], USER_REJECTED: ["拒绝注册", "Registration rejected"], USER_DISABLED: ["禁用账户", "Account disabled"], USER_ENABLED: ["启用账户", "Account enabled"], USER_SESSIONS_REVOKED: ["撤销会话", "Sessions revoked"],
   PASSWORD_RESET_CREATED: ["创建密码重置链接", "Password reset link created"], INVITATION_CREATED: ["创建邀请", "Invitation created"], INVITATION_REVOKED: ["撤销邀请", "Invitation revoked"],
   REGISTRATION_MODE_CHANGED: ["修改注册策略", "Registration policy changed"], GLOBAL_FEATURE_CHANGED: ["修改功能策略", "Feature policy changed"],
+  TASK_EXECUTION_STOP_REQUESTED: ["请求停止执行", "Execution stop requested"],
   VIEW_USER_CONVERSATION: ["查看用户对话", "User conversation viewed"], VIEW_USER_ATTACHMENT: ["查看用户附件", "User attachment viewed"], DOWNLOAD_USER_ATTACHMENT: ["下载用户附件", "User attachment downloaded"],
 };
 

@@ -33,7 +33,8 @@ type TaskControl = {
 type TaskControls = Record<string, TaskControl>;
 
 function controlConfirmed(control: TaskControl, current: BackgroundTaskRead) {
-  if (control.action === "stop") return ["cancelling", "cancelled", "committed", "failed"].includes(current.status);
+  if (control.action === "stop") return current.execution_state === "stopping"
+    || ["cancelling", "cancelled", "committed", "failed"].includes(current.status);
   if (needsSourceCleanup(control.before)) {
     const receipt = current.result.source_cleanup;
     return !!receipt && (receipt.state === "completed" || receipt.revision !== control.before.result.source_cleanup?.revision);
@@ -555,8 +556,9 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
           : (zh ? "操作结果尚未确认；不会自动重发，也不影响其他任务。" : "The result is unconfirmed. Nothing is resubmitted and other tasks remain available.")}</p>
         {onCheck && control.state !== "pending" ? <button type="button" disabled={control.state === "checking"} onClick={onCheck} className="min-h-11 font-medium text-accent underline">{zh ? "核对状态" : "Check status"}</button> : null}
       </div> : null}
-      {task.status === "cancelling" ? <div className="mt-2 text-[var(--warning)]" role="status">
+      {(task.status === "cancelling" || task.execution_state === "stopping") && !control ? <div className="mt-2 text-[var(--warning)]" role="status">
         <p>{stopUnconfirmed ? (zh ? "停止尚未确认。可以核对状态或处理其他文件，不必退出账户。" : "Stopping is not yet confirmed. Check status or work on other files; signing out is unnecessary.")
+          : task.execution_state === "stopping" ? (zh ? "正在等待执行退出并核对结果，队列尚未释放。" : "Waiting for execution exit and outcome checks; the queue is not released yet.")
           : (zh ? (task.job_type === "conversation_batch_delete" ? "正在完成当前删除，随后停止后续项目…" : "正在等待安全停止…") : "Waiting for a safe stop…")}</p>
         {stopUnconfirmed && onCheck && !control ? <button type="button" onClick={onCheck} className="min-h-11 font-medium underline">{zh ? "核对状态" : "Check status"}</button> : null}
       </div> : null}

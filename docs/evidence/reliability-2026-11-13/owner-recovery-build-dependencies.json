@@ -1,0 +1,206 @@
+{
+  "node_version": "v20.13.1",
+  "installed_packages": {
+    "@assistant-ui/react": {
+      "version": "0.14.26",
+      "package_json_sha256": "9deed6ee0bdec7c56b1c75e9e9da71ccbffaafc25325faf7ddcc642b5a8294ae"
+    },
+    "@assistant-ui/react-markdown": {
+      "version": "0.14.5",
+      "package_json_sha256": "574e19fbc0813aff0e3f864515b99c7a56f169ee1f0075df081f1e7fa4d94f28"
+    },
+    "@assistant-ui/react-streamdown": {
+      "version": "0.3.5",
+      "package_json_sha256": "bfb3c640a366752030c37c94f454c9a0c40570bfa54aa131efe0ea7b203bd5f9"
+    },
+    "@codemirror/commands": {
+      "version": "6.10.4",
+      "package_json_sha256": "60312f33c45bfc48df0d6b6f7227259f1740847d348ad825ba0d7b317687b1ca"
+    },
+    "@codemirror/lang-markdown": {
+      "version": "6.5.1",
+      "package_json_sha256": "86fba591b986bb52cef9c26cc86685d67a519fa6603669d867fd18ae1ba441e1"
+    },
+    "@codemirror/language": {
+      "version": "6.12.4",
+      "package_json_sha256": "f1c55a3958fd2998dae159b1a8c2240f796c11a5c012ed67a3729018e2138f9d"
+    },
+    "@codemirror/state": {
+      "version": "6.7.1",
+      "package_json_sha256": "a89462af5f5cae9f586483ecb08f82657796c1c2fb418a923d96e4b5e3aa440e"
+    },
+    "@codemirror/view": {
+      "version": "6.43.7",
+      "package_json_sha256": "a38cf9b5cc84abc9cf54b6f3fc14127882a99512f5a5ef7713d20f19a5f3fc3a"
+    },
+    "@dnd-kit/core": {
+      "version": "6.3.1",
+      "package_json_sha256": "4da9a60c80aa9c0564d1f31ba1502058f2b84240842269c6d54801c8d3175d77"
+    },
+    "@dnd-kit/sortable": {
+      "version": "10.0.0",
+      "package_json_sha256": "c3b9c43549eb627d12edae5d2e1ae38e334fee774ddfe20acf1008b915f0d565"
+    },
+    "@dnd-kit/utilities": {
+      "version": "3.2.2",
+      "package_json_sha256": "c1f7cb1b258509c1fdccf9b23d072f0b81fc56498be0a6334189342b5cb8a477"
+    },
+    "@eslint/js": {
+      "version": "9.39.4",
+      "package_json_sha256": "c68baf2c859b03e43de607b9f1e392008e678a982baed3c93ab52f89843af260"
+    },
+    "@lezer/highlight": {
+      "version": "1.2.3",
+      "package_json_sha256": "14aec8006ea2f9eac0daf6df52efb0bb32067ca06836bd02c1eec9bdd6d92b63"
+    },
+    "@playwright/test": {
+      "version": "1.62.0",
+      "package_json_sha256": "351697e1ef6a68a63557ffedf1992955a2d8979b11e0bf9f175820956951c65b"
+    },
+    "@radix-ui/react-dismissable-layer": {
+      "version": "1.1.15",
+      "package_json_sha256": "638e459ff4a2d26377144fa9db3d72857a18136b59fad2e46e60be63819f812b"
+    },
+    "@tanstack/react-query": {
+      "version": "5.101.2",
+      "package_json_sha256": "d9ebc9d11e76bdb5ca6c8929bf0a11fda60ce66bf238c6b6aed4809d070cc4bf"
+    },
+    "@tanstack/react-virtual": {
+      "version": "3.14.9",
+      "package_json_sha256": "ba8c72f2161c21510d867c36215a7351a2b78979eed261de0c73ba67be74737c"
+    },
+    "@types/node": {
+      "version": "20.19.43",
+      "package_json_sha256": "30af579da31ec3b497b9405bed1592a8c041f15c8e25db3a010e3c67f765ab41"
+    },
+    "@types/react": {
+      "version": "19.2.18",
+      "package_json_sha256": "e6a4794d4b2bd136b02c33752667cc651110b82129d643a7cd238376a99607a9"
+    },
+    "@types/react-dom": {
+      "version": "19.2.4",
+      "package_json_sha256": "40a1f8d329224d660fb4c04d3b2ad5db8c007622dd494a63efbf8d47d5265350"
+    },
+    "@uiw/react-codemirror": {
+      "version": "4.25.11",
+      "package_json_sha256": "b744db8c8eb49f6915c7971c31e2753ef1a5b668161b140d688a89c97dd4c0e6"
+    },
+    "autoprefixer": {
+      "version": "10.5.2",
+      "package_json_sha256": "4962358e4c3e705a3b6f788e51cea5abd91af4b1dfa3a58bcaaf6aa7e65b5acd"
+    },
+    "buffer": {
+      "version": "6.0.3",
+      "package_json_sha256": "5b105ac0abbf5985cbe62ad28a34032d85c7ef623e0eb01f39441b0feb419004"
+    },
+    "dexie": {
+      "version": "4.4.4",
+      "package_json_sha256": "b4a8f235847b903162d17459bcf96f3bd5bc2ca595c158b026a8bb5083a68bb2"
+    },
+    "eslint": {
+      "version": "9.39.4",
+      "package_json_sha256": "80a7caf2adf34963e47b32a1e75157de6d6814c3ae5a9d90358ddd9364833fe7"
+    },
+    "fflate": {
+      "version": "0.8.3",
+      "package_json_sha256": "5922d8150b307bc0e4e441491c779c45379e9913d348848fca8d5cf02db4d134"
+    },
+    "flexsearch": {
+      "version": "0.8.212",
+      "package_json_sha256": "2694fd93988e7483e1a4d22757520993243a2d84bc1fa42109cd4fe320926113"
+    },
+    "katex": {
+      "version": "0.17.0",
+      "package_json_sha256": "c6795364e25a2973e4aabc7b7cec901fe5fcbb15a7371dd264ab4e165cadd699"
+    },
+    "lucide-react": {
+      "version": "1.24.0",
+      "package_json_sha256": "09c90c796adcbb6455ab4d67a7d5041181ffebf5acf57866dad0e3aa71f62b56"
+    },
+    "mermaid": {
+      "version": "11.16.1",
+      "package_json_sha256": "5aa9ec13c028ef286462f847211921f972c1f285ed4087fb9ed654daa40246a4"
+    },
+    "next": {
+      "version": "16.4.1",
+      "package_json_sha256": "546222266ef4402af870e96f03964570038e8498f4a4f7cb6dcf591f08cb07ec"
+    },
+    "pdfjs-dist": {
+      "version": "6.2.108",
+      "package_json_sha256": "d7918934bf0ef5b18beed1bd2d9b49a04447de445c171305a2de082ccee369ed"
+    },
+    "postcss": {
+      "version": "8.5.26",
+      "package_json_sha256": "e0f23518d0e8fc0570ac68438eff7ecc7554774de3194af6f54f502e33f0c25b"
+    },
+    "react": {
+      "version": "19.2.8",
+      "package_json_sha256": "e40c3ed9b633c9ecf188e09a4be309780a1ea0a9c068278a30ff6a27e7b2dbb6"
+    },
+    "react-dom": {
+      "version": "19.2.8",
+      "package_json_sha256": "7c82f0967114d4b5d38b1f07e543af87c9919e8d3243f9604004819319cb2200"
+    },
+    "react-markdown": {
+      "version": "10.1.0",
+      "package_json_sha256": "c6b7d280b5e5a6b620ad252abfd318560f2223562e67414fcc3dcd1f784e89c5"
+    },
+    "react-zoom-pan-pinch": {
+      "version": "4.0.4",
+      "package_json_sha256": "37019b8fe4e4c5aa1c0f5ecc2a52fa4d6076024ed302ab2f90ff01c51f0170b2"
+    },
+    "rehype-katex": {
+      "version": "7.0.1",
+      "package_json_sha256": "c8a2a4b5fafa4145ef6c073806608967187be300c523685273fb188bc8d398bc"
+    },
+    "rehype-sanitize": {
+      "version": "6.0.0",
+      "package_json_sha256": "b8c794050d76ff903a42c31e8f7a18e85e966cf231b67d9363a81c0dd5157465"
+    },
+    "remark-breaks": {
+      "version": "4.0.0",
+      "package_json_sha256": "df633e5c230d648c90bbfdfe5e75d28a2492af508a38b8751d9faf28af0443c6"
+    },
+    "remark-gfm": {
+      "version": "4.0.1",
+      "package_json_sha256": "c199482a69355b610bd1ff225b097776d4a990445b11e5f4c618930dacc8c79d"
+    },
+    "remark-math": {
+      "version": "6.0.0",
+      "package_json_sha256": "936d400d2c2a3f121c4d2b6b84b8a891af02852032b0dcb31f0407d2d6a4364f"
+    },
+    "shiki": {
+      "version": "4.3.1",
+      "package_json_sha256": "7f8b3b47c1d7c89577cd18235644aa49476af5fd3c476e3254546e97fb7bbbba"
+    },
+    "tailwindcss": {
+      "version": "3.4.19",
+      "package_json_sha256": "969a9400c6b59a0c5b3dd8ac7d083613fedf78a258cef37938c36cf452ca9349"
+    },
+    "typescript": {
+      "version": "5.9.3",
+      "package_json_sha256": "822ef7ca6452205657b6288b066481ecf508bfbf43455d715cf7d3ec457561e6"
+    },
+    "typescript-eslint": {
+      "version": "8.63.0",
+      "package_json_sha256": "bcaa4b73507ada8ee7500fae979838e0d83f447e30527bb6051adb02c9f8fffd"
+    },
+    "vaul": {
+      "version": "1.1.2",
+      "package_json_sha256": "23fe9f23330b97e7c4f8a692cba70b9b0390532c589943f854a2f0aa7b0e0eca"
+    },
+    "word-extractor": {
+      "version": "1.0.4",
+      "package_json_sha256": "d22f6131ef8867b8db1ed6d270b1e4adc94ad45b41a82c9e3801ec62f521a303"
+    },
+    "zustand": {
+      "version": "5.0.14",
+      "package_json_sha256": "ba50e4360c27bd3e677be84c5f119b15e4c8b7890ececbb248f4f531d3a272c3"
+    }
+  },
+  "dependency_metadata_sha256": {
+    "node_modules/.modules.yaml": "9999523163230b9ef56a8fb7c97ecc707baaa786e363655ec2df962aae624d94",
+    "node_modules/.pnpm/lock.yaml": "17498c0160e7f4b4d40fd6602c54c469fe4706e80646496ea836c660b376d8de"
+  },
+  "method": "Original root and Web node_modules junctions; no dependency install or upgrade"
+}

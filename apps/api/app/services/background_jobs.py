@@ -1699,11 +1699,20 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
         ):
             raise MessageEditError("This import analysis can no longer be retried. Reopen the import session.", 409)
     now = datetime.now(timezone.utc)
+    # Batch deletion commits each item's outcome together with next_index.
+    # Resume that checkpoint without erasing its success/failure receipt or
+    # silently forgetting an earlier failed item. Other retries start anew.
+    cursor = (job.payload or {}).get("next_index")
+    checkpoint = cursor if (
+        job.job_type == "conversation_batch_delete"
+        and isinstance(cursor, int) and not isinstance(cursor, bool)
+        and 0 < cursor <= len((job.payload or {}).get("conversation_ids", []))
+    ) else 0
     job.status = "queued"
     job.phase = "queued"
-    job.progress = 0
-    job.processed_items = 0
-    if not cleanup_only:
+    job.progress = min(99, int(checkpoint * 100 / max(job.total_items, 1))) if checkpoint else 0
+    job.processed_items = checkpoint
+    if not cleanup_only and not checkpoint:
         job.result = {}
     job.error_message = None
     job.queued_at = now

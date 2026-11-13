@@ -10,6 +10,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status, File, Form, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.routes.tasks import background_job_read
 from app.core.database import get_db
@@ -18,6 +19,7 @@ from app.models.administration import AdminAuditLog, SystemBackupRecord, SystemS
 from app.models.background_job import BackgroundJob
 from app.models.export_artifact import ExportArtifact
 from app.schemas.task import BackgroundTaskRead
+from app.schemas.admin_runtime import AdminExecutionIdentity
 from app.services.administration import record_admin_audit, request_id_from, require_root_admin
 from app.services.background_jobs import queue_system_archive_export
 from app.services.exporting.system_archive import SystemArchiveError, restore_system_archive
@@ -42,6 +44,59 @@ def read_runtime_status(request: Request, response: Response, db: Session = Depe
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["X-Robots-Tag"] = "noindex, noarchive"
     return runtime_snapshot(db, get_settings())
+
+
+def _execution_access(request, response, db):
+    from app.services.worker_maintenance import bound_worker_transaction
+    bound_worker_transaction(db)
+    actor = require_root_admin(request, db)
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Robots-Tag"] = "noindex, noarchive"
+    return actor
+
+
+def _execution_unavailable(db, *, write=False):
+    try:
+        db.rollback()
+    except SQLAlchemyError:
+        pass
+    return HTTPException(503, detail={
+        "code": "TASK_STOP_UNCONFIRMED" if write else "TASK_EXECUTION_UNAVAILABLE",
+        "next_action": "check_result",
+    }, headers={"Cache-Control": "private, no-store"})
+
+
+@router.get("/runtime-execution")
+def read_runtime_execution(request: Request, response: Response, db: Session = Depends(get_db)) -> dict:
+    from app.services.admin_execution import execution_snapshot
+    try:
+        actor = _execution_access(request, response, db)
+        return execution_snapshot(db, actor.id)
+    except SQLAlchemyError:
+        raise _execution_unavailable(db) from None
+
+
+@router.get("/runtime-execution/result")
+def read_runtime_execution_result(request: Request, response: Response,
+    identity: AdminExecutionIdentity = Depends(), db: Session = Depends(get_db)) -> dict:
+    from app.services.admin_execution import execution_result
+    try:
+        actor = _execution_access(request, response, db)
+        return execution_result(db, actor.id, identity)
+    except SQLAlchemyError:
+        raise _execution_unavailable(db) from None
+
+
+@router.post("/runtime-execution/stop")
+def stop_runtime_execution(identity: AdminExecutionIdentity, request: Request, response: Response,
+    db: Session = Depends(get_db)) -> dict:
+    from app.services.admin_execution import stop_execution
+    try:
+        actor = _execution_access(request, response, db)
+        return stop_execution(db, actor.id, identity, request_id=request_id_from(request))
+    except SQLAlchemyError:
+        # COMMIT acknowledgement may be lost; never claim it failed or replay it.
+        raise _execution_unavailable(db, write=True) from None
 
 
 class FeaturePolicyUpdate(BaseModel):

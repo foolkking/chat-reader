@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T07:57:45.853025+00:00",
+  "status": "authorized_release_preparation_not_ci_or_deployment_success",
+  "base_commit": "a0faa8539cb65c8cf22c4f53be775ce43eb3a574",
+  "upstream_commit": "7a4d61bea542c6e8eeee35ab0e14ad408a92c639",
+  "authorization": {
+    "selective_commit_push": true,
+    "full_exact_source_ci": true,
+    "deployment_after_ci_success": true,
+    "remaining_acceptance_owner": "user",
+    "production_cleanup": false,
+    "user_input_replay": false,
+    "scheduled_monitor": false
+  },
+  "candidate_schema_head": "20261112_0061",
+  "input_manifest": "owner-recovery-inputs.json",
+  "verified_input_count": 1381,
+  "input_drift": [],
+  "protected_file_count": 13,
+  "protected_drift": [],
+  "checks": {
+    "changed_python_ast": 12,
+    "alembic_heads": [
+      "20261112_0061"
+    ],
+    "existing_final_local_api_pg": 130,
+    "existing_local_node": 2503,
+    "boundary": "Previously executed local checks; not a new full-suite CI claim"
+  },
+  "ci_first_status_read_minimum_minutes": 50,
+  "remaining_acceptance_not_falsely_passed": [
+    "physical_tablet",
+    "cold_start_root_cause",
+    "all_task_type_external_side_effect_combinations",
+    "host_backup_restore_and_offsite_recovery"
+  ]
+}

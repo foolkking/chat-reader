@@ -1,12 +1,20 @@
 # 文档导航
 
-## 当前本地实施：可靠性整块治理 — 2026-11-12
+## 当前本地实施：可靠性整块治理 — 2026-11-13
+
+11月13日最新指示：验收由用户完成，本任务负责选择性提交/推送、等待完整
+精确CI，成功后按安全流程备份/迁移/部署。既有自动门禁不放宽，
+不清理生产、不重放用户资料；下方较早的“未授权再次提交”是历史边界。
 
 用户已批准新方案实施；下方“目标结束/等待下一步”是前一检查点。
 从[同一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)查看A–D修复、
 失败回归及尚未通过的发布门槛，不新增另一套总览。
 源码候选head0061；生产仍3564cbf/schema0060。11月12日追加授权一次本地检查点
 提交后继续下一批，不等待CI；不推送、派发CI、部署或清理生产。
+本地检查点为`a0faa85`；后一批管理员定点停止/核对仍在工作区，
+见[管理合同](system/ADMINISTRATION_CONTRACT.md#execution-interruption-and-recovery-local-2026-11-12)。
+11月13日接续补用户任务中断恢复、批量删除断点回执和扫描独立停止状态；
+恢复的工作偏好及未验收项仍只记在同一台账；最新发布授权与执行进度也在该页。
 核心合同：[源码/附件保存](system/SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md)、
 [执行与状态](system/OBSERVABILITY_CONTRACT.md)、
 [文件生命周期](system/ARTIFACT_LIFECYCLE_CONTRACT.md)、

@@ -65,7 +65,7 @@ def test_repeated_progress_and_heartbeat_are_not_business_progress(runtime):
 
 def test_cancellation_is_independent_of_locked_canonical_row(runtime):
     _, factory = runtime
-    task_id = queued(factory)
+    task_id = queued(factory, "conversation_export")
     with factory() as db:
         supervisor.claim(db)
     from app.api.routes.tasks import cancel_task

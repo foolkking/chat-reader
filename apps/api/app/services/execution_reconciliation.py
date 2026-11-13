@@ -23,6 +23,9 @@ def reconcile(kind, task_id, token, factory):
                 return False
         elif row.attempt_count == control.attempt and row.status in {"processing", "cancelling"}:
             now = datetime.now(timezone.utc)
+            # An administrator interrupts an executor, not the owner's intent.
+            # Keep failed work in its existing explicit retry flow; do not turn
+            # deletion/restore into a terminal cancellation with no recovery.
             cancelled = control.stop_reason == "user" or row.status == "cancelling"
             row.status = row.phase = "cancelled" if cancelled else "failed"
             row.completed_at = row.heartbeat_at = now
@@ -35,6 +38,9 @@ def reconcile(kind, task_id, token, factory):
                     from app.services.support_notifications import recover_notification
                     recover_notification(db, row)
                 else:
+                    if row.job_type == "user_account_delete":
+                        from app.services.user_deletion import mark_user_deletion_failed
+                        mark_user_deletion_failed(db, row.id)
                     row.payload = {**(row.payload or {}), "source_disposition": control.source_disposition or "retain"}
                     _sync_adaptive_import_record_after_job(db, row, status=row.status, now=now)
                     from app.services.exporting.system_archive_jobs import SYSTEM_JOB_TYPES, sync_system_archive_record

@@ -1,5 +1,64 @@
 # Testing
 
+## Owner task interruption recovery — local 2026-11-13
+
+`test_task_execution_recovery.py` runs the same authenticated owner/admin recovery
+cases against SQLite and explicitly enabled disposable PostgreSQL. It checks
+existing cancellation capabilities, analysis-only source disposition, concealed
+notification actions, committed batch-deletion success/failure receipts and
+original-task checkpoint retry. The scan case holds both real canonical rows
+locked while cancel/detail/pending reads finish under the unchanged two-second
+bound; partial rows remain retained and cannot be applied after cancellation.
+Its PostgreSQL client is initialized independently: the SQLite `auth_client`
+fixture must not overwrite `DATABASE_URL` before disposable schema creation.
+Timestamp receipts compare actual instants, not equivalent ISO offset spellings.
+
+The final eight-file API/PG regression passed **130**, with one retained existing
+Alembic configuration deprecation warning. It includes the existing real
+supervisor/child, canonical/control locks, scan races and migration-roundtrip
+tests. Full Web Node **2503**, lint/typecheck and a fresh **547-input** same-installed-
+dependency Next build passed. Test/build code hashes are retained; typecheck writes
+its build-info into task TEMP instead of changing the user's existing cache.
+This is a selected regression, not the entire API suite or exact release CI.
+
+The existing `import-recovery-browser.mjs` gate retains its earlier scenarios and
+adds actual task/scan controls: independent processing+stopping, unknown stop
+resolved by GET, failed checks, no duplicate cancel, re-entry and lost-focus
+recovery. All **12** width/locale/theme combinations passed. HTTP/account/Reader
+and storage adapters remain synthetic; screenshots/DOM checks are not full
+authenticated network, physical-device or accessibility-conformance acceptance.
+Existing CI wiring retains these added PNGs; no workflow dispatch was performed.
+
+Use the approved task TEMP/TMP and unique pytest basetemp. Start a Windows owned
+PG helper separately with `Start-Process -WindowStyle Hidden`, then verify its
+loopback/data-directory identity before testing or stopping it. This batch's
+original native startup session deferred its follow-up until after shutdown;
+that unavailable-database failure is retained separately, not counted as a
+functional test result. The explicit final regression ran before safe shutdown.
+See the [same status ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) and
+[incremental receipt](evidence/reliability-2026-11-13/owner-recovery-verification.json).
+No overlapping counts are summed; Linux memory/signals, original64-frame matrix,
+physical tablet, host-backup recovery and full release acceptance remain pending.
+
+## Root execution recovery — follow-up after a0faa85
+
+`test_admin_execution_recovery.py` uses actual authenticated routes and synthetic
+cross-account tasks. It covers read-only/permission boundaries, exact execution
+fences, atomic audit/stop rollback, lost commit acknowledgements, start-boundary
+checks after attempt-counter reuse, independent canonical/control row locks,
+notification UNKNOWN without resend, and original account deletion/analysis retry.
+PostgreSQL cases require `SETTINGS_POSTGRES_INTEGRATION=1` on an explicitly owned
+disposable database; they do not hold production locks.
+
+The existing `admin-runtime-browser.mjs` gate now mounts the actual control region,
+client and request deadline across375/800/1440, two locales and two themes.
+Confirmation/focus/Escape, unknown writes, read failure, response-body timeout,
+stale execution, authentication retirement and server-receipt re-entry are covered.
+HTTP is a synthetic adapter, not a full running API/browser acceptance.
+API/PG44, Node2502 and mounted12 passed at this follow-up; do not sum overlapping
+checkpoints or treat them as a new exact-source full CI. The same ledger retains
+the failed reproduction/fixture checkpoints and final build-input hashes.
+
 ## Reliability fault matrix — worktree 2026-11-12
 
 Keep one [current ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md). New suites:

@@ -135,6 +135,22 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center", stor
   };
 }
 
+test("an independent executor stop resolves an unknown command with a read, not another write", async () => {
+  const row = { ...task("synthetic-execution"), job_type: "conversation_export", execution_state: "running" };
+  const f = fixture({ rows: [row] });
+  try {
+    await f.taskProps(row.job_id).onCancel();
+    assert.equal(f.client.getQueryData(["task-controls", 1])[row.job_id].state, "unknown");
+    const stopping = { ...row, execution_state: "stopping", stop_requested_at: new Date().toISOString() };
+    f.setFinalRead(async () => stopping);
+    await f.taskProps(row.job_id).onCheck();
+    assert.equal(f.client.getQueryData(["task-controls", 1])[row.job_id], undefined);
+    assert.equal(f.client.getQueryData(["active-tasks"])[0].status, "processing");
+    assert.deepEqual(f.writes, [["cancel", row.job_id, undefined]]);
+    assert.deepEqual(f.reads, [row.job_id]);
+  } finally { f.dispose(); }
+});
+
 for (const failure of ["getter", "setItem"]) test(`${failure}: hiding a terminal task is independent of optional local storage`, () => {
   const row = task("synthetic-dismiss", "failed");
   const f = fixture({ rows: [row], storageFailure: failure });

@@ -1,5 +1,60 @@
 # Administration contract
 
+## Execution interruption and recovery (local, 2026-11-12)
+
+Runtime's aggregate snapshot remains content-free and read-only. **Review current
+execution** opens a small inline control region only on request; **View execution
+and stop records** stays under existing More runtime information for re-entry.
+No new page, dashboard grid, font, color or task framework is introduced.
+
+Root-only `/api/admin/runtime-execution` reads the single current executor and
+the actor's last stop audit. Its `/result` GET checks the original identity;
+`/stop` POST accepts exactly kind, task UUID, execution UUID and attempt.
+The control-row lock is NOWAIT; all SQL uses existing transaction-local250ms
+lock/1500ms statement limits. Canonical task rows are read without locking and
+only fixed metadata columns are selected. Account label, task family, start time
+and progress age identify the target; no bodies, filenames, payloads or raw
+errors enter the response or audit. Ordinary accounts get404; all reads/writes
+retain same-origin authentication and no-store.
+
+Stop requires an explicit consequence confirmation. It only requests termination
+of that exact execution with retained sources; completed steps or external
+notifications cannot be undone. A prior explicit discard is not overwritten.
+The stop flag and `TASK_EXECUTION_STOP_REQUESTED` audit commit atomically.
+Repeat submission while the same stop is pending does not add another audit;
+a new token/attempt or terminal business state rejects the old request with
+409 `TASK_EXECUTION_CHANGED`. No task-row reset, direct process kill, cleanup or
+cross-account business retry is exposed.
+
+A transport/COMMIT acknowledgement failure is **unconfirmed**, not stopped.
+The UI releases its busy lock after15seconds and offers only **Check result**;
+that action never POSTs. No GET failure enables another mutation. Reopening
+reads the same current execution and last audit from the server, rather than
+relying on browser storage. Audit stores the execution start boundary because
+manual retries reset attempt counters; a later attempt=1 must not masquerade
+as the old attempt's result. A moved/replaced executor is distinguished from
+canonical completion and never stopped implicitly.
+
+The existing supervisor alone verifies exit and lock release before reconciliation.
+Administrator interruption is an unfinished task (`failed` /
+`TASK_EXECUTION_INTERRUPTED`), retaining the initiating account's original explicit
+retry path. Account deletion also marks its existing deletion request FAILED;
+retry reuses the original job and does not re-enable the account. Canonical
+completion wins; notification SENDING becomes UNKNOWN, never automatic resend.
+An older execution lacking a verifiable control record gets an operator-check
+explanation, not an unsafe reset button.
+
+The inline region preserves existing quiet spacing/tokens,44px action targets,
+wrapping and bilingual copy. Opening/confirmation receive focus; Escape/Close
+return to a still-live trigger without scrolling. Authentication retirement or
+unmount fences late reads/writes. An expanded region suppresses the duplicate
+aggregate execution sentence, not the queue/storage snapshot. Read failures and
+unconfirmed results persist until checked; closing does not cancel server work.
+
+Local authenticated API/real PostgreSQL lock and mounted browser evidence is
+recorded in the single reliability ledger. This is not universal job-family
+acceptance, a host-backup operation or production remediation.
+
 ## System noise publication recovery (local, 2026-10-07)
 
 The Root rule ledger uses an explicit publication base for publishing and

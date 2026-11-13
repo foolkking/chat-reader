@@ -86,6 +86,9 @@ class CleanupScanRead(BaseModel):
     scope_type: str
     background_job_id: UUID | None
     background_job_status: str | None = None
+    execution_state: Literal["running", "stopping"] | None = None
+    business_progress_at: datetime | None = None
+    stop_requested_at: datetime | None = None
     previous_scan_id: UUID | None = None
     progress: int
     processed_messages: int

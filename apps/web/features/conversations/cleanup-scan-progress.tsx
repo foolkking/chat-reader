@@ -10,7 +10,7 @@ import type { BackgroundTaskRead, CleanupScanRead } from "../../lib/types";
 export function cleanupScanLabel(scan: CleanupScanRead, zh: boolean): string {
   if (scan.status === "APPLYING") return zh ? "正在应用清理…" : "Applying cleanup…";
   if (scan.status === "CANCELLED") return zh ? "扫描已取消" : "Scan cancelled";
-  if (scan.background_job_status === "cancelling") return zh ? "正在停止扫描…" : "Stopping scan…";
+  if (scan.execution_state === "stopping" || scan.background_job_status === "cancelling") return zh ? "正在停止扫描…" : "Stopping scan…";
   if (scan.status === "QUEUED" || scan.background_job_status === "queued") return zh ? "等待扫描" : "Waiting to scan";
   return zh ? "正在扫描消息…" : "Scanning messages…";
 }
@@ -31,13 +31,14 @@ export function CleanupScanCancelAction({ scan }: { scan: CleanupScanRead }) {
   const active = () => mounted.current && generation.current === authenticationGeneration();
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; abort.current?.abort(); }; }, []);
   useLayoutEffect(() => {
+    if (busy) return;
     if (lastFocus.current && !lastFocus.current.isConnected && document.activeElement === document.body) {
       const row = root.current?.closest<HTMLElement>("[data-cleanup-scan-id]");
       (row?.querySelector<HTMLElement>("button:not(:disabled)") ?? root.current)?.focus({ preventScroll: true });
     }
   });
   const live = ["QUEUED", "SCANNING"].includes(scan.status);
-  const stopping = scan.background_job_status === "cancelling";
+  const stopping = scan.execution_state === "stopping" || scan.background_job_status === "cancelling";
   const run = async (check: boolean) => {
     if (running.current || !scan.background_job_id || !active()) return;
     running.current = true; setBusy(true); setMessage("");
@@ -49,13 +50,16 @@ export function CleanupScanCancelAction({ scan }: { scan: CleanupScanRead }) {
       await Promise.all([client.cancelQueries({ queryKey: ["content-cleanup-pending"] }), client.cancelQueries({ queryKey: ["content-cleanup-scan", scan.id] }), client.cancelQueries({ queryKey: ["active-tasks"] })]);
       if (!active()) return;
       const patch = (old: CleanupScanRead): CleanupScanRead => ({ ...old, background_job_status: task.status,
+        execution_state: task.execution_state ?? null,
+        business_progress_at: task.business_progress_at ?? null,
+        stop_requested_at: task.stop_requested_at ?? null,
         status: task.status === "cancelled" ? "CANCELLED" : task.status === "failed" ? "FAILED" : old.status,
         error_message: task.status === "failed" ? task.error_message : old.error_message });
       client.setQueryData<CleanupScanRead>(["content-cleanup-scan", scan.id], old => old ? patch(old) : undefined);
       client.setQueriesData<CleanupScanRead[]>({ queryKey: ["content-cleanup-pending"] }, old => old?.map(item => item.id === scan.id ? patch(item) : item));
       client.setQueryData<BackgroundTaskRead[]>(["active-tasks"], old => old?.map(item => item.job_id === task.job_id ? task : item));
       setUncertain(false);
-      if (!["cancelled", "cancelling", "failed"].includes(task.status)) setMessage(task.status === "committed"
+      if (task.execution_state !== "stopping" && !["cancelled", "cancelling", "failed"].includes(task.status)) setMessage(task.status === "committed"
         ? (zh ? "扫描已完成，正在读取结果。" : "The scan finished. Loading its result.")
         : (zh ? "扫描尚未停止，可以再次取消。" : "The scan has not stopped. You can cancel it again."));
       void client.invalidateQueries({ queryKey: ["content-cleanup-scan", scan.id] });
@@ -67,11 +71,13 @@ export function CleanupScanCancelAction({ scan }: { scan: CleanupScanRead }) {
   };
   if (!live || !scan.background_job_id) return null;
   return <div ref={root} tabIndex={-1} onFocusCapture={event => { lastFocus.current = event.target; }} className="space-y-2 text-xs outline-none" data-testid="cleanup-scan-cancel">
-    {stopping ? <p role="status" className="text-secondary">{zh ? "当前批次结束后停止，正文保持不变。" : "Stopping after the current batch. Content stays unchanged."}</p>
+    {stopping ? <p role="status" className="text-secondary">{scan.execution_state === "stopping"
+      ? (zh ? "等待执行退出并核对结果，正文保持不变。" : "Waiting for execution exit and outcome checks. Content stays unchanged.")
+      : (zh ? "当前批次结束后停止，正文保持不变。" : "Stopping after the current batch. Content stays unchanged.")}</p>
       : <button type="button" disabled={busy || uncertain} onClick={() => void run(false)} className="btn-secondary min-h-11 px-3">{busy && !uncertain ? (zh ? "正在请求取消…" : "Requesting cancellation…") : (zh ? "取消扫描" : "Cancel scan")}</button>}
-    {message || uncertain ? <div ref={feedback} tabIndex={-1} className="space-y-2 outline-none">
+    {message || uncertain || stopping ? <div ref={feedback} tabIndex={-1} className="space-y-2 outline-none">
       {message ? <p role={uncertain ? "alert" : "status"} className={uncertain ? "text-[var(--danger)]" : "text-secondary"}>{message}</p> : null}
-      {uncertain ? <button type="button" disabled={busy} onClick={() => void run(true)} className="btn-secondary min-h-11 px-3">{busy ? (zh ? "正在核对…" : "Checking…") : (zh ? "核对扫描状态" : "Check scan status")}</button> : null}
+      {uncertain || stopping ? <button type="button" disabled={busy} onClick={() => void run(true)} className="btn-secondary min-h-11 px-3">{busy ? (zh ? "正在核对…" : "Checking…") : (zh ? "核对扫描状态" : "Check scan status")}</button> : null}
     </div> : null}
   </div>;
 }

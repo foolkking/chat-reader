@@ -1,5 +1,41 @@
 # API 参考
 
+## 用户任务中断恢复 — 2026-11-13（本地，未部署）
+
+- `/api/tasks/{id}/cancel`的独立执行快路仍检查原取消能力。正在受监督执行的导出、
+  附件批量下载和离线生成可取消；账户删除、派生维护/回填等原不可取消任务
+  仍409。Root的显式管理员中断是另一条已审计入口，不扩大owner取消权限。
+- `source_disposition`请求体仅适用于`adaptive_import_analysis`，其他类别409。
+  `support_notification`在任务详情、重试、取消三个入口均隐藏为404。
+- 管理员中断后的批量删除显式重试原任务时，保留有效正整数`next_index`对应的
+  已提交成功/失败回执和计数，只处理余下项目；不静默重放或忘记此前失败项。
+- 扫描详情及pending读取新增可选`execution_state`、`business_progress_at`、
+  `stop_requested_at`，来自同一独立控制投影。canonical仍可能是
+  `SCANNING`/`processing`而执行已`stopping`；接受停止不等于执行退出或队列释放。
+  这些字段不发送停止/重试，不改变原apply租约恢复。取消后的部分扫描仍不可应用。
+- 任务和扫描UI以独立`stopping`确认停止请求，等待退出期间只提供结果核对；
+  失败读取保留恢复入口，不自动重发取消或重试。没有新增migration或包格式。
+  详见[执行合同](system/OBSERVABILITY_CONTRACT.md)、
+  [扫描合同](system/CONTENT_CLEANUP_CONTRACT.md#scan-execution-and-cancellation-local-2026-10-08)
+  和[保留语义](system/RETENTION_CONTRACT.md)。
+
+## 管理员执行处理 — 2026-11-12（本地，未部署）
+
+- `GET /api/admin/runtime-execution`：Root按需读取`current`、`last_stop`、
+  `untracked`，最多一个当前执行和本人最后一条停止回执。不是任务全文列表。
+- `GET /api/admin/runtime-execution/result`：参数`task_kind=job|import`、
+  `task_id`、`execution_token`、`attempt`；只读核对原执行，不发送停止或重试。
+- `POST /api/admin/runtime-execution/stop`：body只接受上述四字段；禁止附加
+  discard等参数。执行身份/代次变化409 `TASK_EXECUTION_CHANGED`；
+  提交或响应不确定503 `TASK_STOP_UNCONFIRMED`，下一步为只读核对。
+  读服务不可用503 `TASK_EXECUTION_UNAVAILABLE`。普通账户404，未登录401。
+- 返回固定`state`、本次canonical状态、所属账户标签、任务类别和时间；
+  没有来源路径、正文、payload或原始错误。状态读取不写数据；
+  原`runtime-status`聚合合同不增加标识或内容。
+- 停止标记与最小审计同事务，锁当前独立控制行而非长事务canonical行；
+  已完成业务优先。手动重试可能重用attempt，因此审计同时保存执行开始时间，
+  原执行结果不误用新一轮结果。所有响应no-store，不增加migration。
+
 ## 源码/上传回执与执行控制 — 2026-11-12（工作区，未部署）
 
 - `MessageVersionRead.source_content_hash`：当前display_text的UTF-8 SHA256，

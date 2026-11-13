@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
 from app.models.task_execution_control import TaskExecutionControl
-from app.services.execution_control import SLOT, request_stop
+from app.services.execution_control import SLOT, execution_fields, request_stop
 from app.services.worker_maintenance import bound_worker_transaction
 from app.schemas.task import BackgroundTaskRead, OfflineDownloadTarget, TaskCancellationRequest
 from app.services.adaptive_import.contracts import AdaptiveImportError
@@ -27,6 +27,14 @@ from app.services.ownership import OwnershipScope, get_owned, ownership_scope_fr
 from app.services.adaptive_import.source_cleanup import KEY as SOURCE_CLEANUP_KEY, UNFINISHED, public_receipt
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
+SUPERVISED_CANCELLABLE_JOB_TYPES = {
+    "conversation_export", "attachment_batch_download", "offline_package",
+}
+
+
+def _job_cancellable(job, *, supervised=False):
+    allowed = CANCELLABLE_JOB_TYPES | (SUPERVISED_CANCELLABLE_JOB_TYPES if supervised else set())
+    return job.job_type in allowed and job.status in {"queued", "processing", "cancelling"}
 
 
 @router.get("/active", response_model=list[BackgroundTaskRead])
@@ -153,6 +161,8 @@ def retry_task(
 ) -> BackgroundTaskRead:
     bound_worker_transaction(db)
     owned = get_owned(db, BackgroundJob, job_id, ownership_scope) or get_owned(db, ImportRecord, job_id, ownership_scope)
+    if isinstance(owned, BackgroundJob) and owned.job_type == "support_notification":
+        raise HTTPException(404, detail="Task not found.")
     if owned is not None:
         control = db.get(TaskExecutionControl, SLOT)
         if control and control.task_id == job_id and control.finished_at is None:
@@ -199,9 +209,15 @@ def cancel_task(
 ) -> BackgroundTaskRead:
     bound_worker_transaction(db)
     owned = get_owned(db, BackgroundJob, job_id, ownership_scope) or get_owned(db, ImportRecord, job_id, ownership_scope)
+    if isinstance(owned, BackgroundJob) and owned.job_type == "support_notification":
+        raise HTTPException(404, detail="Task not found.")
+    if owned is not None and payload is not None and getattr(owned, "job_type", "") != "adaptive_import_analysis":
+        raise HTTPException(409, detail="Source retention applies only to import analysis.")
     if owned is not None and getattr(owned, "job_type", "") != "support_notification" and owned.status in {"processing", "cancelling"}:
         control = db.query(TaskExecutionControl).filter_by(slot=SLOT, task_id=job_id).with_for_update(skip_locked=True).one_or_none()
         if control and control.finished_at is None and control.attempt == owned.attempt_count:
+            if isinstance(owned, BackgroundJob) and not _job_cancellable(owned, supervised=True):
+                raise HTTPException(409, detail="This background task cannot be cancelled.")
             request_stop(db, control, disposition=payload.source_disposition if payload else "retain")
             db.commit()
             return _job_task(owned) if isinstance(owned, BackgroundJob) else _import_task(owned, db)
@@ -254,17 +270,7 @@ def background_job_read(job: BackgroundJob) -> BackgroundTaskRead:
 
 
 def _execution_fields(row):
-    db = object_session(row)
-    if db is None or row.status not in {"processing", "cancelling"}:
-        return {}
-    control = db.get(TaskExecutionControl, SLOT)
-    if not control or control.task_id != row.id or control.attempt != row.attempt_count or control.finished_at:
-        return {}
-    return {
-        "execution_state": "stopping" if control.stop_requested_at else "running",
-        "business_progress_at": control.progress_at,
-        "stop_requested_at": control.stop_requested_at,
-    }
+    return execution_fields(object_session(row), row)
 
 
 def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
@@ -336,9 +342,7 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         updated_at=job.updated_at,
         cancellation_requested_at=payload.get("cancellation_requested_at"),
         progress_updated_at=result.get("progress_updated_at"),
-        cancellable=(job.job_type in CANCELLABLE_JOB_TYPES or bool(execution) and job.job_type in {
-            "conversation_export", "attachment_batch_download", "offline_package",
-        }) and job.status in {"queued", "processing", "cancelling"},
+        cancellable=_job_cancellable(job, supervised=bool(execution)),
         attempt_count=job.attempt_count,
         **execution,
     )

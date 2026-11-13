@@ -25,11 +25,24 @@ automatic recovery retains the three-attempt limit; unknown mail sends are not
 repeated.
 
 Task reads expose optional execution_state/business_progress_at/stop_requested_at.
+Local November13 follow-up shares that read-only projection with bound noise-scan
+detail/pending reads. Canonical processing/SCANNING can coexist with independent
+stopping; acknowledging the request is not proof of exit or queue release.
+Tasks and scan controls recognize this state and keep bounded read-only recovery,
+including after read failure or re-entry, without resending a mutation.
+Independent control does not grant a new owner capability: non-cancellable
+account-deletion/maintenance tasks remain non-cancellable, source-disposition
+bodies remain analysis-only, and notification jobs remain concealed at every
+owner task action. Root interruption retains its separate explicit audit boundary.
+
 Root status distinguishes running/stalled/stopping/reconciling and progress-age
 summary, plus pending upload cleanup/protected inputs. No payload or source
 content is logged. Routine success is brief; pending/error status stays.
 “Stalled” is an observation, not proof that stopping was requested or that the
-old executor has exited. The panel stays read-only; it does not reset task rows.
+old executor has exited. The aggregate snapshot stays read-only. A separate,
+explicit Root execution-control region now requests a fenced stop and reads its
+atomic audit receipt; it does not reset task rows or replay business operations.
+See the [administration contract](ADMINISTRATION_CONTRACT.md#execution-interruption-and-recovery-local-2026-11-12).
 Maintenance is the same single-slot child lane: four bounded categories rotate,
 including between long sequences of jobs, with no concurrent executor.
 

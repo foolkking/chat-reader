@@ -1,6 +1,7 @@
 # Task And Offline Retention Contract
 
-Last reviewed: **2026-11-11**, deployed `3564cbf`, schema `20261108_0060`.
+Last reviewed: **2026-11-13**. Production remains `3564cbf`, schema `20261108_0060`;
+the supervised recovery follow-up is local candidate `20261112_0061`, not deployed.
 See [Project State](../../PROJECT_STATE.md) and the
 [approved cleanup receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
 Task visibility, draft admission expiry and physical source retention are
@@ -21,6 +22,7 @@ boundary is unchanged. Server backup retention is defined in deployment.md.
 | Staged adaptive-import source | Retained while queued/processing and after failure or an acknowledged retain-stop (`PAUSED`) | Explicit resume verifies source/version; separate confirmed disposal uses post-commit cleanup. Legacy cancellation without retention keeps its disposal behavior. Closing the dialog, choosing new files, a draft expiry or Task Center expiry does not delete retained sources. Successful imports currently retain their source files; there is no general automatic source-retention purge. |
 | Terminal Task Center result | `TASK_TERMINAL_RESULT_RETENTION_SECONDS`, default 600 seconds; accepted range 60 seconds to 24 hours | `/api/tasks/active` may return committed, failed, or cancelled jobs/imports completed inside this window so users can reopen a result after navigation or refresh. Falling outside the window removes it from this active-result view; it does not create or promise a permanent task history. |
 | Merge admission receipt | While its owned `BackgroundJob` exists; not limited by the terminal-result window | Read-only request lookup and same-key replay return the original task across statuses, including failed/cancelled. This creates no permanent history UI, new retention promise or automatic retry. |
+| Batch-deletion item checkpoint (local supervised follow-up) | While the owned task exists; Task Center visibility is still separate | Explicit retry after administrator interruption preserves a valid committed `next_index`, processed counters and both success/failure receipts. Only remaining items run; earlier failed items are neither silently replayed nor dropped. No permanent history or new purge policy. |
 | Completed account deletion with pending file cleanup | Until cleanup completes | Canonical deletion remains committed. `/api/tasks/active` includes a separate bounded window of up to 20 pending cleanup results beyond terminal retention, without consuming the active-job limit. Tasks groups them under Needs attention and retries only remaining cleanup; file keys stay in the worker payload. This is unfinished work, not a permanent completed-task history. |
 | Explicitly discarded import with unfinished source cleanup (2026-11-11 worktree) | Until explicit cleanup retry confirms removal | At most20 owned canceled sessions appear in a separate Needs attention window, outside active-job slots/terminal expiry. The private receipt remains on ImportRecord; retry never re-analyzes or imports. Paused, failed, completed and expired drafts do not acquire disposal intent. Approved account deletion transfers only these unfinished receipts to the deleting Root owner. No automatic purge/retry or new history service. |
 | Temporary user-facing Export | Successful publication pins the Root policy: default 180 seconds, allowed 1–60 minutes | Explicit close requests early release when enabled. Active downloads are protected; expired files are reclaimed by the worker, and retained task metadata allows regeneration from current owned data. Legacy deadlines remain unchanged. |
@@ -29,6 +31,13 @@ boundary is unchanged. Server backup retention is defined in deployment.md.
 | Downloaded browser Offline Library | Browser-managed, no server TTL | Imported data lives in the Library Dexie/Cache Storage boundary until the user updates/removes it or the browser evicts storage. Server package replacement or Task Center expiry does not delete an already imported local library. Persistent-storage approval reduces eviction risk but is not an infinite-retention guarantee. |
 
 ## Re-entry contract
+
+- Supervised task/scan recovery (local 2026-11-13) recognizes independent
+  `execution_state=stopping` even while canonical status remains processing.
+  An acknowledged request leaves the queue occupied until exit/outcome checks.
+  Re-entry and failed reads retain a bounded read-only check, not an automatic
+  cancel/retry. Partial scanner rows remain retained and non-applicable.
+  Existing owner cancellation permissions and terminal-result windows are unchanged.
 
 - Merge recovery (implemented 2026-10-09) checks the owned original request without
   queueing work. Only an explicit missing receipt permits original-key resubmission;

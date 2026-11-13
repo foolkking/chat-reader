@@ -18,7 +18,7 @@ export type RegistrationPolicyPatch = Partial<Omit<RegistrationPolicy, "smtp_con
 export type AdminUserUpdate = { id: string; status: AdminUserStatus; user: AdminUser };
 
 export class AdminRequestError extends Error {
-  constructor(message: string, public readonly status: number) { super(message); this.name = "AdminRequestError"; }
+  constructor(message: string, public readonly status: number, public readonly code?: string) { super(message); this.name = "AdminRequestError"; }
 }
 
 export function adminAccountSignal(signal?: AbortSignal) {
@@ -55,8 +55,24 @@ export type AdminRuntimeStatus = {
   backup: RuntimeArchive; restore: RuntimeArchive; mail: { configured: boolean };
 };
 
+export type AdminExecutionIdentity = { task_kind: "job" | "import"; task_id: string; execution_token: string; attempt: number };
+export type AdminExecutionResult = {
+  identity: AdminExecutionIdentity;
+  state: "running" | "stalled" | "stopping" | "reconciling" | "finished" | "changed";
+  canonical_status: string | null; family: string; owner: { id: string; label: string } | null;
+  started_at: string | null; progress_age_seconds: number | null;
+  stop_allowed: boolean; stop_requested_at: string | null; stop_recorded_at: string | null;
+  source_disposition: "retain" | "discard" | null;
+};
+export type AdminExecutionSnapshot = { current: AdminExecutionResult | null; last_stop: AdminExecutionResult | null; untracked: boolean };
+
 export const adminApi = {
   runtimeStatus: (signal?: AbortSignal) => request<AdminRuntimeStatus>("/api/admin/runtime-status", { signal }),
+  runtimeExecution: (signal?: AbortSignal) => request<AdminExecutionSnapshot>("/api/admin/runtime-execution", { signal }),
+  runtimeExecutionResult: (identity: AdminExecutionIdentity, signal?: AbortSignal) => request<AdminExecutionResult>(
+    `/api/admin/runtime-execution/result?${new URLSearchParams({ ...identity, attempt: String(identity.attempt) })}`, { signal }),
+  stopRuntimeExecution: (identity: AdminExecutionIdentity, signal?: AbortSignal) => request<AdminExecutionResult>(
+    "/api/admin/runtime-execution/stop", { ...json("POST", identity), signal }),
   noiseRules: (offset = 0, signal?: AbortSignal) => request<Page<AdminNoiseRule>>(`/api/admin/noise-rules?limit=20&offset=${offset}`, { signal: adminAccountSignal(signal) }),
   noiseRule: (id: string, signal?: AbortSignal) => request<AdminNoiseRule>(`/api/admin/noise-rules/${id}`, { signal: adminAccountSignal(signal) }),
   noiseRuleRevisions: (id: string, offset = 0, signal?: AbortSignal) => request<Page<AdminNoiseRevision>>(`/api/admin/noise-rules/${id}/revisions?limit=20&offset=${offset}`, { signal: adminAccountSignal(signal) }),
@@ -119,8 +135,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!response.ok) {
     if (response.status === 401 && typeof window !== "undefined") notifyAuthenticationFailure(requestGeneration);
     let message = `Request returned ${response.status}`;
-    try { const payload = await response.json() as { detail?: unknown }; if (typeof payload.detail === "string") message = payload.detail; } catch { /* bounded fallback */ }
-    throw new AdminRequestError(message, response.status);
+    let code: string | undefined;
+    try {
+      const payload = await response.json() as { detail?: unknown };
+      if (typeof payload.detail === "string") message = payload.detail;
+      else if (payload.detail && typeof payload.detail === "object" && "code" in payload.detail
+        && typeof payload.detail.code === "string" && /^[A-Z_]{1,96}$/.test(payload.detail.code)) code = payload.detail.code;
+    } catch { /* bounded fallback */ }
+    throw new AdminRequestError(message, response.status, code);
   }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }

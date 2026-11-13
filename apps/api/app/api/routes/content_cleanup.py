@@ -535,6 +535,7 @@ def _owned_scan_query(db: Session, request: Request):
 def _scan_read(db: Session, scan: ContentCleanupScan) -> CleanupScanRead:
     scan = recover_expired_apply(db, scan)
     from app.services.cleanup_scan_state import scan_job, scan_status
+    from app.services.execution_control import execution_fields
     job = scan_job(db, scan)
     effective_status = scan_status(scan, job)
     previous_scan_id = None
@@ -556,6 +557,7 @@ def _scan_read(db: Session, scan: ContentCleanupScan) -> CleanupScanRead:
         scope_type=scan.scope_type,
         background_job_id=scan.background_job_id,
         background_job_status=job.status if job else None,
+        **execution_fields(db, job),
         previous_scan_id=previous_scan_id,
         progress=scan.progress,
         processed_messages=scan.processed_messages,

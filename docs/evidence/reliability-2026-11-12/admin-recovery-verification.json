@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-12T21:15:28.811107+08:00",
+  "status": "local_followup_not_committed_or_released",
+  "base_commit": "a0faa8539cb65c8cf22c4f53be775ce43eb3a574",
+  "checks": [
+    {
+      "log_file": "pg4.log",
+      "sha256": "aa3d20c9b08d5fbc5e1e864fdfb97a9b111dcac566885034393e8c19d2d1751e",
+      "observed_summary": [
+        "44 passed, 1 warning in 133.10s (0:02:13)"
+      ],
+      "boundary": "44 actual API/PG-related cases, including owned PG locks/processes. Not final-source full API suite."
+    },
+    {
+      "log_file": "browser3.log",
+      "sha256": "8370d663005da569bdaecb684c46f02fada938922af9ab102e2780ddafda9ece",
+      "observed_summary": [
+        "{\"status\":\"passed\",\"cases\":12,\"out\":\"E:\\\\chat-reader-temp\\\\admin-recovery-20261112\\\\admin-runtime-browser\"}"
+      ],
+      "boundary": "12 widths/locales/themes, actual components/client with synthetic HTTP. Not full authenticated deployment."
+    },
+    {
+      "log_file": "node-final.log",
+      "sha256": "917cf26cfa9f70e0701c177f98a8ba5bd2904265f3b9b95d22aab614800633be",
+      "observed_summary": [
+        "# tests 2502",
+        "# pass 2502",
+        "# fail 0",
+        "# skipped 0"
+      ],
+      "boundary": "Full scripts/ux Node unit/contract suite after final source changes."
+    },
+    {
+      "log_file": "lint2.log",
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "observed_summary": [],
+      "boundary": "Final lint exited 0."
+    },
+    {
+      "log_file": "typecheck2.log",
+      "sha256": "231f3ed2a8636999437e24fd3abfb381918c1c7547d66db9b40fc5e154ab9209",
+      "observed_summary": [],
+      "boundary": "Final typecheck exited 0."
+    },
+    {
+      "log_file": "build2.log",
+      "sha256": "c29729e804dd6df760778fe9bda0f6b2534977f41b3dcb88d41e5aa063d8c457",
+      "observed_summary": [],
+      "boundary": "Next16.4.1 webpack build exited 0 in owned source copy, same installed dependencies, 1 build worker."
+    }
+  ],
+  "preserved_failed_checkpoints": [
+    {
+      "log_file": "api-red.log",
+      "sha256": "fcd47db271976e0a2d3aac1a769cbe10cf16c8bd9ffe080a693d64e024cdde65",
+      "observed_summary": [
+        "7 failed in 18.34s"
+      ],
+      "boundary": "Seven new authenticated-route cases fail before routes exist."
+    },
+    {
+      "log_file": "pg1.log",
+      "sha256": "9f3b51d4961f9c2070543a90185e719f8075c48236af24f302cb9883c27a36b0",
+      "observed_summary": [
+        "2 failed, 30 passed, 1 warning in 110.78s (0:01:50)"
+      ],
+      "boundary": "Two PG fixtures violated migrated required ownership. Fixed fixtures; schema not relaxed. Thirty other cases passed."
+    },
+    {
+      "log_file": "retry-red.log",
+      "sha256": "64300e136fd312baf74e6f456a08b1152d1d60050bd43fbfd43a38771ff1c265",
+      "observed_summary": [
+        "1 failed, 11 deselected in 5.87s"
+      ],
+      "boundary": "Administrator cancellation stranded original account deletion retry; now interrupted/failed with linked request synchronized."
+    },
+    {
+      "log_file": "attempt-red.log",
+      "sha256": "8fa199bb0bcc242c65731b9e03ab8a4a7057e85f4e427e6af5672f29dda290b2",
+      "observed_summary": [
+        "1 failed, 13 deselected in 5.80s"
+      ],
+      "boundary": "Manual retry reuses attempt=1; old result falsely displayed a later commit. Fixed with server start-boundary receipt."
+    },
+    {
+      "log_file": "node1.log",
+      "sha256": "a8af92978b6f133b7355677844febd635849de318bb3ec73e48f361746c8c63a",
+      "observed_summary": [
+        "Could not find 'E:\\1project\\chat-reader\\scripts\\ux\\*.test.mjs'"
+      ],
+      "boundary": "Windows Node20 command did not expand glob; rerun with explicit file list. No test result suppressed."
+    }
+  ],
+  "changed_source_sha256": {
+    "apps/api/app/api/routes/admin_system.py": "1d92146b9eff2836d0d4b2c4d67fd7caa03258c21f6693c8783b46f668c027f6",
+    "apps/api/app/schemas/admin_runtime.py": "58fa1973ebd4a75a3aae38cf7cff9342b5c85e4e7564c60ffafd0853153aa9fa",
+    "apps/api/app/services/admin_execution.py": "ed67b642b3740c65435c31d5ceb5f3a0af523be14e063b6509377d28bdf66a83",
+    "apps/api/app/services/execution_reconciliation.py": "6b86edbd55b324d5818c6b32768a0fd644e5d016c43da05b15dec987c4cfcbed",
+    "apps/api/tests/test_admin_execution_recovery.py": "373c244780ddc6dc5b195b7e5098cb92a98bfaa1167a247b443150e8c0951951",
+    "apps/web/components/admin-audit-panel.tsx": "628a3660ff34e56f18b1b5c88ffce147984599c36e41395943d2aef2e47ef1e0",
+    "apps/web/components/admin-execution-recovery.tsx": "36d1f81956020dce257ec9c310f1d671229b5c9138d0ed244d571ef968173fa2",
+    "apps/web/components/admin-runtime-panel.tsx": "29f17bd1b1d4906dad1686e06802098057654efc09b6300c81b75686599dfdee",
+    "apps/web/lib/admin-client.ts": "61b616186c20ace83fce64290855cffdf2f9d74d111e2668802336c268914484",
+    "scripts/ux/admin-runtime-browser.mjs": "41794f5b797eed783d09c51540447fe2675bda991f16baac272f4c6ef2bac3b2"
+  },
+  "build": {
+    "inputs": 547,
+    "file": "admin-recovery-build-inputs.json",
+    "sha256": "74c08ac40c2618c25289c1430d2a766417b3bce8f46fe09c618b798754b22c95",
+    "current_source_drift": []
+  },
+  "screenshots": [
+    {
+      "path": "admin-runtime-recovery-375-zh-CN-light.png",
+      "sha256": "4bd1250842c0be70206f5d2c0a51d640bdc89ae4a4f110c76a270675ad9d435d",
+      "scope": "Synthetic account/task; real mounted component. Screenshot visually inspected."
+    },
+    {
+      "path": "admin-runtime-recovery-375-en-US-dark.png",
+      "sha256": "7d5e3622750010cd7896efcbf10885b2a9e91f63f72fcea6c1de238f1c551d13",
+      "scope": "Synthetic account/task; real mounted component. Screenshot visually inspected."
+    }
+  ],
+  "static_checks": {
+    "diff_check": "passed",
+    "changed_python_ast": "passed",
+    "migration_head": "20261112_0061"
+  },
+  "design_review": {
+    "scope": "Extend existing runtime recovery without changing approved fonts/colors or adding a new page.",
+    "verified": [
+      "375/800/1440 reflow",
+      "44px actions",
+      "keyboard confirmation/Escape/trigger focus",
+      "on-demand only",
+      "one execution explanation",
+      "unknown response never silently resubmitted"
+    ],
+    "not_claimed": [
+      "formal accessibility conformance",
+      "whole-product visual redesign",
+      "physical touch device acceptance"
+    ]
+  },
+  "environment": {
+    "owned_postgresql": "localhost:55438, stopped after zero other client connections; data retained",
+    "production_accessed": false,
+    "commits_this_turn": 1,
+    "push": false,
+    "ci_dispatch": false,
+    "deploy": false
+  },
+  "remaining": [
+    "All job-family/external side-effect combinations not exhaustively accepted.",
+    "Original full64-frame/Linux combined-process320/640MiB and parent-death gates remain pending.",
+    "Physical tablet and host-backup restoration remain unverified.",
+    "No historical unknown-input cleanup or task reset.",
+    "Full precise-source API/CI still needs separate validation."
+  ]
+}

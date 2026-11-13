@@ -613,9 +613,22 @@ checking owner, type and payload scan identity. READY/APPLYING remain review
 states. `background_job_status` is additive; worker errors now reach the review
 even when its stored cursor still says QUEUED or SCANNING. No migration is needed.
 
+The local supervised follow-up (2026-11-13, not deployed) also projects optional
+`execution_state`, `business_progress_at` and `stop_requested_at` from the matching
+active control attempt. A scan/job may remain SCANNING/processing while execution
+is independently stopping, including while both canonical rows are locked.
+The projection does not write a stop request, rewrite those rows or change the
+existing apply-lease recovery. Task and scan reads share the same fixed fields.
+
 The existing owner-scoped task cancel endpoint accepts `content_noise_scan`.
 Queued cancellation is immediate; processing becomes cancelling and stops at the
-current chunk boundary. Both chunk requeue and final result publication require
+current chunk boundary on the compatibility path. Under supervision, stopping
+is recorded independently and canonical processing may remain until the executor
+exits and its outcome is reconciled. The scan shows stopping/check-only immediately;
+failed checks retain that action, and replacing the cancel control restores lost
+keyboard focus to a real available control. It does not offer another cancel
+while an acknowledged independent stop is pending.
+Both chunk requeue and final result publication require
 the job still to be processing. Losing that conditional update rolls back the
 chunk, without undoing earlier partial chunks or changing canonical content.
 Partial results remain non-READY and cannot be applied. A completed publication

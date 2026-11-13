@@ -1,5 +1,15 @@
 # 事实证据索引
 
+## 用户任务中断恢复 — 2026-11-13（本地，未提交）
+
+[增量回执](reliability-2026-11-13/owner-recovery-verification.json)记录实际
+认证API/PG专项130、Node2503、mounted12、547输入隔离构建、1381项
+验证输入前后无漂移及原缓存/旧证据保全。各组与旧结果有重叠，不累加为覆盖率。
+首轮权限/断点/状态失败、旧PG夹具冲突、时间偏移断言和延迟启动会话失败
+均保留哈希/分类；新截图只含合成内容。自建PG已停止，旧临时任务未动。
+没有新提交、CI、生产访问或部署；当前状态和工作偏好仍在
+[同一系统台账](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
 ## 本地可靠性故障治理 — 2026-11-12
 
 [机器回执](reliability-2026-11-12/verification.json)记录合成API、PG/真实
@@ -7,6 +17,9 @@
 仅合成内容；无真实对话、Cookie、凭据或生产文件。
 不是提交、CI或上线回执；唯一状态台账在
 [系统总览](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+后续[管理员恢复增量回执](reliability-2026-11-12/admin-recovery-verification.json)
+以本地提交`a0faa85`为基线，保留实际PG/API44、Node2502、mounted12、
+547输入隔离构建与失败复现；该增量尚未提交或发布，不覆盖上一批回执。
 
 ## 生产队列恢复及代码补防护 — 2026-11-12
 

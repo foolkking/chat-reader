@@ -54,6 +54,20 @@ def request_stop(db, control, reason="user", disposition="retain"):
     return control
 
 
+def execution_fields(db, row):
+    """Fixed read-only projection shared by Tasks and a bound noise scan."""
+    if db is None or row is None or row.status not in {"processing", "cancelling"}:
+        return {}
+    control = db.get(TaskExecutionControl, SLOT)
+    if not control or control.task_id != row.id or control.attempt != row.attempt_count or control.finished_at:
+        return {}
+    return {
+        "execution_state": "stopping" if control.stop_requested_at else "running",
+        "business_progress_at": control.progress_at,
+        "stop_requested_at": control.stop_requested_at,
+    }
+
+
 _monitor = None
 
 

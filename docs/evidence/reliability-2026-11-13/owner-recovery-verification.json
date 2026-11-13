@@ -1,0 +1,307 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T15:20:12.013834+08:00",
+  "status": "local_owner_recovery_followup_not_committed_or_released",
+  "base_commit": "a0faa8539cb65c8cf22c4f53be775ce43eb3a574",
+  "production_pointer": {
+    "application": "3564cbf",
+    "schema": "20261108_0060",
+    "boundary": "Previously recorded pointer; no production access or re-verification this batch"
+  },
+  "candidate_schema_head": "20261112_0061",
+  "scope": [
+    "Existing owner cancellation capabilities and notification concealment",
+    "Original batch-deletion checkpoint/success/failure receipts after administrator interruption",
+    "Independent stopping projection and read-only recovery in real task/scan components"
+  ],
+  "checks": [
+    {
+      "log_file": "api-pg-final.log",
+      "sha256": "434eac86d7c08268c1a1059884ce3d238c1ff507130ded1afe1fb7d39d96bfbd",
+      "observed_summary": [
+        "130 passed, 1 warning in 377.06s (0:06:17)"
+      ],
+      "boundary": "Final eight-file actual authenticated API/SQLite/owned PostgreSQL regression: 130 passed, 1 existing Alembic deprecation warning. Not full API suite."
+    },
+    {
+      "log_file": "node-full.log",
+      "sha256": "f359afee1d38b1844107981dc539621bb80def105e772a0ee30339d5c87c7780",
+      "observed_summary": [
+        "# tests 2503",
+        "# pass 2503",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "boundary": "All 150 explicitly expanded scripts/ux/*.test.mjs files: 2503 passed; the targeted 38-case run overlaps."
+    },
+    {
+      "log_file": "browser-green1.log",
+      "sha256": "8b66852f8ea58825feb30b7549654db2fa22e4f8d79be5b2953b800ff6be2997",
+      "observed_summary": [
+        "Task recovery browser: 12 passed; <TASK_TEMP>\\import-recovery-browser"
+      ],
+      "boundary": "12 widths/locales/themes; actual task/scan/Continuation components and React Query, synthetic network/account/Reader/storage adapters. Not full authenticated network acceptance."
+    },
+    {
+      "log_file": "lint.log",
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "observed_summary": [],
+      "boundary": "Final Web lint exited 0; no cache replacement."
+    },
+    {
+      "log_file": "typecheck.log",
+      "sha256": "8914e619d525b1cb40d8f3f44253a87d83db7c0938f29a7c0e0f5389a167e5f3",
+      "observed_summary": [],
+      "boundary": "Final Web typecheck exited 0; build-info redirected into approved task TEMP."
+    },
+    {
+      "log_file": "build.log",
+      "sha256": "5a888a69e6775e48618e46df051390267c01eea03529e489f80d94707930a83f",
+      "observed_summary": [],
+      "boundary": "Next16.4.1 webpack build exited 0 in fresh 547-input copy, original installed dependency junctions, one build worker; no revision falsely embedded for the uncommitted source."
+    },
+    {
+      "log_file": "migration-heads.log",
+      "sha256": "73423f8cc296997f4c5fa5d11c6fbcf544629c61e9b90c2257f86f00f0243af5",
+      "observed_summary": [],
+      "boundary": "Single candidate Alembic head 20261112_0061; migration roundtrip independently runs in the final PG regression."
+    }
+  ],
+  "preliminary_checks_not_added_as_coverage": [
+    {
+      "log_file": "owner-green1.log",
+      "sha256": "502962b2d541173a019fc86d7c6280d8490015a2032cd4dcade657bd60c55482",
+      "observed_summary": [
+        "98 passed, 2 skipped in 292.48s (0:04:52)"
+      ],
+      "boundary": "Earlier six-file regression: 98 passed, 2 optional PostgreSQL skips; final regression supersedes this checkpoint, not its retained log."
+    },
+    {
+      "log_file": "task-control-green.log",
+      "sha256": "a51009c00d6f292e4cfc01d11008d8d8116cbb912b7ec7e08fa023d828cd86fc",
+      "observed_summary": [
+        "# tests 38",
+        "# pass 38",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0"
+      ],
+      "boundary": "Targeted task-status Node suite: 38 passed; included in the full 2503-case run."
+    }
+  ],
+  "preserved_failed_checkpoints": [
+    {
+      "log_file": "owner-red.log",
+      "sha256": "bf0bf499bacca7e7f46102ef8e9189244cb90d8bbd03ff5f31053a37bc0dcf03",
+      "observed_summary": [
+        "13 failed in 32.09s"
+      ],
+      "boundary": "13 actual owner API/worker failures before capability/checkpoint/projection fixes."
+    },
+    {
+      "log_file": "notification-red.log",
+      "sha256": "042a01a53e2f6d484297c1aa1f09082df803841d97a619a0459c4bf106906624",
+      "observed_summary": [
+        "1 failed, 13 deselected in 5.24s"
+      ],
+      "boundary": "Notification task cancel did not conceal the task; actual API privacy failure before the fix."
+    },
+    {
+      "log_file": "task-control-red.log",
+      "sha256": "5a190c010f2f28af9ed68aa6690a41179159ca2dead6106191bfcb3f9f3ce8f2",
+      "observed_summary": [
+        "# tests 38",
+        "# pass 0",
+        "# fail 1",
+        "# cancelled 0",
+        "# skipped 37"
+      ],
+      "boundary": "Unknown stop command not cleared by independent stopping GET; fixed without another write."
+    },
+    {
+      "log_file": "browser-red.log",
+      "sha256": "707e910deb53ed5d7b7c588a16929fe18606290850842eafe730f4c1df9bf403",
+      "observed_summary": [],
+      "boundary": "Mounted real task row with processing+independent stopping lacked its overdue read-only check."
+    },
+    {
+      "log_file": "pg-capability-red-explicit.log",
+      "sha256": "bfa28431208fc1ab3dc8d21ff57d96d1f04e6b4da142fa38ebf8f89402f0ec2e",
+      "observed_summary": [
+        "1 failed, 11 deselected in 6.18s"
+      ],
+      "boundary": "Old real-lock fixture selected intentionally non-cancellable personal_search_backfill. Changed only its task kind to allowed conversation_export; preserved locking/two-second assertions and negative API cases."
+    },
+    {
+      "log_file": "pg-green1.log",
+      "sha256": "fd4d99113d35fd882c35de8d5e8e14adf735598bcbe2585360b488ae98123907",
+      "observed_summary": [
+        "3 failed, 45 passed, 10 deselected, 1 warning in 173.13s (0:02:53)"
+      ],
+      "boundary": "3 failures/45 passes: equivalent UTC/+08:00 timestamps compared as strings. Corrected assertions to compare instants, not permissions, schema or timing thresholds."
+    },
+    {
+      "log_file": "pg-capability-red.log",
+      "sha256": "50df0a07536416e10cf2b463b5fbaf8fe59f6d63091f246e91126d011338070d",
+      "observed_summary": [
+        "11 deselected, 1 error in 132.62s (0:02:12)"
+      ],
+      "boundary": "Deferred native bootstrap follow-up ran only after intentional database shutdown: unavailable-DB fixture error. Environment/helper failure, not a functional permission test or accepted gate."
+    }
+  ],
+  "source_continuity": {
+    "inputs": 1381,
+    "file": "owner-recovery-inputs.json",
+    "sha256": "f5df48233be61d4668822123139ffd5dbb09fde63cb6e37a2d650a29b84c5c74",
+    "before_sha256": "f5df48233be61d4668822123139ffd5dbb09fde63cb6e37a2d650a29b84c5c74",
+    "before_after_current_drift": [],
+    "boundary": "Code/test/build/config scopes listed by capture-inputs.py; excludes env, user storage, caches, PROJECT_STATE.md and the docs tree. Not an exact full API/CI run."
+  },
+  "changed_source_sha256": {
+    "apps/api/app/api/routes/tasks.py": "9efc6aae38fbf2b72fe607462758c6f1f4399babd4853ba832369d0360f6fae0",
+    "apps/api/app/api/routes/content_cleanup.py": "3eaf0cc5d4090f656c0a93557afe9a9660bbd072ba828020a2c8452a10c10858",
+    "apps/api/app/schemas/content_cleanup.py": "07726c6ef7c78504a829fdb0a0eb0b4a4806be7d07806d2810b3c9e1fbfda106",
+    "apps/api/app/services/background_jobs.py": "e01af6478488740d00aac9851034ae548a4c4a1864f203f6726a55ad8bedbc21",
+    "apps/api/app/services/execution_control.py": "7a589e73340a8d4220b2d57dd3e009875c29dcdcd0868c281f7d190f97ca34ee",
+    "apps/api/tests/test_task_execution_recovery.py": "438feec2983650d6d65aed2aca97cff62da71aa326007e2e64f9bab223e5df81",
+    "apps/api/tests/test_supervised_execution_postgres.py": "f0000c2ba15cad26b9ef63e51c8fd5b3f774ed9428800476c7f39a5985d2d307",
+    "apps/web/features/import/import-task-monitor.tsx": "979c8dc86346582531b54b3e64eb385b58e06e4ef47382ed897fe2b48b4c1ddd",
+    "apps/web/features/conversations/cleanup-scan-progress.tsx": "1e79bd985314856a2d5a499f3b6cfe7c0ea055c1df9ab1691e656c7b0b97c17c",
+    "apps/web/lib/types.ts": "402c78be070a2633a60733629619ff1f1ab8e3e9d31c1040f342c928bbb6ea40",
+    "scripts/ux/task-status-recovery.test.mjs": "bedcc767cb2c46726ed648697406845d02fcac3858bd52f51bd6e0daf0521437",
+    "scripts/ux/import-recovery-browser.mjs": "a81b7cf06dc0f624d48021e9822be776b6297b6e2bfc7121979ec12aea405bb7"
+  },
+  "build": {
+    "inputs": 547,
+    "file": "owner-recovery-build-inputs.json",
+    "sha256": "44f4c7bf6858723dd3222deb21b857d2425e3b06dd46e712633e07228d0f3c6e",
+    "original_and_build_copy_drift": [],
+    "dependencies_file": "owner-recovery-build-dependencies.json",
+    "dependencies_sha256": "7e9c502ba78df788b312e6687eddc77ed514f29e19caac8bae60eccb0977817b",
+    "installed_dependency_drift": [],
+    "node_version": "v20.13.1",
+    "boundary": "Same installed Web dependency versions/content metadata via original junctions; Windows Node20.13.1, not the Linux release-image environment."
+  },
+  "scoped_visual_review": {
+    "reviewed_final_pngs": [
+      "task-execution-375-zh-CN-light.png",
+      "scan-execution-375-en-US-dark.png",
+      "task-execution-800-en-US-dark.png",
+      "scan-execution-1440-zh-CN-light.png"
+    ],
+    "retained_failure_png_reviewed": true,
+    "all_12_measured_horizontal_overflows": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "minimum_measured_action_height_css_px": 44,
+    "focus_and_no_repeat_write": "Assertions remain in actual mounted browser scenarios",
+    "formal_accessibility_or_design_score": null,
+    "not_verified": [
+      "Zoom/reflow matrix",
+      "Screen reader",
+      "Physical tablet",
+      "Authenticated production UI"
+    ]
+  },
+  "screenshots": [
+    {
+      "path": "task-execution-375-zh-CN-light.png",
+      "sha256": "c53516d7ff65d829359d88c612784deac011f390cf149c925aa9f596313e27ad",
+      "boundary": "Synthetic final component state; manually viewed"
+    },
+    {
+      "path": "scan-execution-375-en-US-dark.png",
+      "sha256": "aa00a659d2cb73a724b6af198baa93ae6790da5931ef554987ecabfaef98c6d8",
+      "boundary": "Synthetic final component state; manually viewed"
+    },
+    {
+      "path": "task-execution-800-en-US-dark.png",
+      "sha256": "09954bcac0248d257d679bfda9a05223fcb6923d6bc8237dc46af54817d26ac7",
+      "boundary": "Synthetic final component state; manually viewed"
+    },
+    {
+      "path": "scan-execution-1440-zh-CN-light.png",
+      "sha256": "9beace92acf7130c6ea7e9f758aceda37d4651299d0f371db87f3cacef951fae",
+      "boundary": "Synthetic final component state; manually viewed"
+    },
+    {
+      "path": "task-execution-before-fix-375-zh-CN-light.png",
+      "sha256": "5f42bf4dbf7a67c7a4e31b6faee56ebdf9b0f36536026d22585369a85f5abc91",
+      "boundary": "Retained actual failure: independent stopping row lacks a read-only check; manually viewed"
+    }
+  ],
+  "retained_failing_bundle": {
+    "path": "<TASK_TEMP>/browser-red-checkpoint/bundle.js",
+    "sha256": "d2e0a7227d7372260ba539c0e3c790a690c7bef15655419755d37bd15548fffc",
+    "failure_json_sha256": "4069942d7bdf692bbb3c4d1163872d72cba3152dbfa4fff610961ff4f42d90ec"
+  },
+  "preservation": {
+    "baseline_receipt_sha256": "6007f71d96b8bae2eed30b7634c0e8ad83229e1ee64421717b9902424151564e",
+    "protected_initial_dirty_files_drift": [],
+    "prior_admin_application_source_drift": [],
+    "prior_dirty_evidence_sha256": {
+      "docs/evidence/README.md": "b506c3da82b451a2aa0ac02f3f582aac385b0da8f09be1479a97ddac28e36f31",
+      "docs/evidence/reliability-2026-11-12/admin-recovery-build-inputs.json": "74c08ac40c2618c25289c1430d2a766417b3bce8f46fe09c618b798754b22c95",
+      "docs/evidence/reliability-2026-11-12/admin-recovery-verification.json": "1313997426e7020c674b22be17cd59422c65ecd17ba9f8b43930f017fa1d32ba",
+      "docs/evidence/reliability-2026-11-12/admin-runtime-recovery-375-en-US-dark.png": "7d5e3622750010cd7896efcbf10885b2a9e91f63f72fcea6c1de238f1c551d13",
+      "docs/evidence/reliability-2026-11-12/admin-runtime-recovery-375-zh-CN-light.png": "4bd1250842c0be70206f5d2c0a51d640bdc89ae4a4f110c76a270675ad9d435d",
+      "docs/evidence/storage-cleanup-2026-11-08/summary.json": "8b624607e694868172c18e4808a92cf98173e7b54b490926bd034ab482f36c5a"
+    },
+    "existing_tsbuildinfo_sha256": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135",
+    "index_empty": true,
+    "head_unchanged": true,
+    "unrelated_user_files_and_prior_temp_tasks_untouched": true
+  },
+  "postgres": {
+    "identity_verified": true,
+    "loopback_only": true,
+    "port": 55439,
+    "version": "17.10",
+    "unexpected_client_count": 0,
+    "stopped": true,
+    "stopped_at": "2026-11-13T15:06:42.1138214+08:00",
+    "data_retained": true,
+    "data_directory": "<TASK_TEMP>/postgres-55439",
+    "other_instances_untouched": true,
+    "stop_exit": 0,
+    "status_after_stop": 3,
+    "fixture_boundary": "Fresh loopback-only owned cluster. Individual synthetic test databases disposed by existing isolated_schema fixture; cluster directory and evidence retained."
+  },
+  "documentation_sha256": {
+    "PROJECT_STATE.md": "c5f7af4e629af1b84daf29669e18289f5dca8e8c3f3049c93b1087a1e5c45300",
+    "docs/api-reference.md": "1dabc6a66a78651b5d1a72efd376a2b84b0addf657a48c3b450f9749ff437192",
+    "docs/documentation-inventory.md": "1d81ab0cb8fbdd71af73cceef829341567442d0cbd75cfcf945ce7081b469dc8",
+    "docs/evidence/README.md": "b506c3da82b451a2aa0ac02f3f582aac385b0da8f09be1479a97ddac28e36f31",
+    "docs/index.md": "8c704f413d0f8710c94ed6217d2aa67ee09ff5ea00b7f2cd5c71a8b934fba81a",
+    "docs/system/CONTENT_CLEANUP_CONTRACT.md": "6d373b8fa5b807a407d6dc64ade6ac2d24b63de32753fd9900dc5cd5fbfcd580",
+    "docs/system/OBSERVABILITY_CONTRACT.md": "6aed5452615758bda1d20ca120c5af60533aff00ddbb17c049be52ab74edb972",
+    "docs/system/RETENTION_CONTRACT.md": "afd2e94a9651c2537b08dc000c1aaacc14958ce8174b2bac2cd1168a2b1690ff",
+    "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md": "cf95e805e1321d526999ab1a79af9d600175c576e009a74747cff370470f8995",
+    "docs/testing.md": "11cf477d364a3644659e37233899294c8a77376bde91589ca90fd325188b7494"
+  },
+  "remaining_unaccepted": [
+    "Linux supervisor+child combined 320/640 MiB, no swap/OOM and real Linux parent-death signals; Docker daemon unavailable, not started",
+    "Original complete 64-frame matrix and exhaustive task/external-side-effect combinations",
+    "Physical tablet and unresolved 223/331 ms cold-start root cause",
+    "Actual host-backup restore and off-site recovery",
+    "Entire final-source API suite, authorized exact CI/artifacts/release acceptance"
+  ],
+  "actions_not_performed": [
+    "Further commit, push, CI dispatch or deployment",
+    "Production access, cleanup, environment/volume changes",
+    "Real-user source replay or import-storage modification",
+    "Global memory/rule changes, dependency install/upgrade, memory/frame threshold relaxation"
+  ]
+}

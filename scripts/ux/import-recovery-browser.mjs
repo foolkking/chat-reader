@@ -19,6 +19,7 @@ writeFileSync(join(out, "adapters.tsx"), `
 import React from "react";
 import {ContinuationDocument as ActualDocument} from ${modulePath("features/exporting/continuation-document.tsx")};
 import {ContinuationHistory as ActualHistory} from ${modulePath("features/exporting/continuation-history.tsx")};
+import {CleanupScanCancelAction as ActualScanCancel,cleanupScanLabel as actualScanLabel} from ${modulePath("features/conversations/cleanup-scan-progress.tsx")};
 import {translate} from ${modulePath("lib/i18n.ts")};
 import {withRequestDeadline} from ${modulePath("lib/request-deadline.ts")};
 export const usePreferences=()=>{
@@ -37,12 +38,13 @@ const request=(url,init={})=>withRequestDeadline(async signal=>{
   if(!response.ok) {const body=await response.json();throw new ApiRequestError(body.detail?.code??"Synthetic response",response.status,url,body.detail?.code);}
   return response.json();
 },init.signal);
-export const getActiveTasks=()=>request("/api/tasks/active");
+export const getActiveTasks=signal=>request("/api/tasks/active",{signal});
 export const getPendingCleanupScans=async()=>[];
-export const getTask=id=>request("/api/tasks/"+id);
+export const getTask=(id,signal)=>request("/api/tasks/"+id,{signal});
+export const getCleanupScan=(id,signal)=>request("/api/content-cleanup/scans/"+id,{signal});
 export const retryTask=id=>request("/api/tasks/"+id+"/retry",{method:"POST"});
 export const cancelTask=(id,signal,source_disposition)=>request("/api/tasks/"+id+"/cancel",{
-  method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source_disposition})});
+  method:"POST",signal,headers:{"Content-Type":"application/json"},body:JSON.stringify({source_disposition})});
 export const continuationApi={
  state:(id,signal)=>request("/api/conversations/"+id+"/continuation",{signal}),
  revisions:(id,offset=0,signal)=>request("/api/conversations/"+id+"/continuation/revisions",{signal}),
@@ -68,20 +70,28 @@ export const useContinuationDraft=()=>{
  retain:text=>{original.current=text;window.syntheticDraft=text;},
  discard:async()=>{window.syntheticDraft=null;original.current=null;},remove:async()=>{}};
 };
-export const ContentCleanupDialog=()=>null,CleanupDismissAction=()=>null,CleanupScanCancelAction=()=>null;
-export const cleanupScanLabel=()=>"",SettingsFocusedDialog=()=>null,ExportArtifactDelivery=()=>null;
+export const ContentCleanupDialog=()=>null,CleanupDismissAction=()=>null;
+export const CleanupScanCancelAction=ActualScanCancel,cleanupScanLabel=actualScanLabel;
+export const SettingsFocusedDialog=()=>null,ExportArtifactDelivery=()=>null;
 export default ({href,children,...props})=><a href={href} {...props}>{children}</a>;
 `);
 writeFileSync(join(out, "entry.tsx"), `
 import React,{useState} from "react";
 import {createRoot} from "react-dom/client";
-import {QueryClient,QueryClientProvider} from "@tanstack/react-query";
+import {QueryClient,QueryClientProvider,useQuery} from "@tanstack/react-query";
 import {ImportTaskMonitor} from ${modulePath("features/import/import-task-monitor.tsx")};
 import {ContinuationPanel} from ${modulePath("features/exporting/continuation-panel.tsx")};
+import {CleanupScanProgress} from ${modulePath("features/conversations/cleanup-scan-progress.tsx")};
+import {getCleanupScan} from "./adapters.tsx";
 const client=new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});
+function ScanFixture(){const scan=useQuery({queryKey:["content-cleanup-scan","synthetic-scan"],
+ queryFn:({signal})=>getCleanupScan("synthetic-scan",signal)});
+ return <section data-cleanup-scan-id="synthetic-scan">{scan.data&&<CleanupScanProgress scan={scan.data}/>}</section>}
 function Fixture(){const [open,setOpen]=useState(true);const continuation=new URL(location.href).searchParams.has("continuation");
+const scanning=new URL(location.href).searchParams.has("scan");
 return <main style={{maxWidth:720,margin:"24px auto",padding:12}}>
- {continuation?<><button className="btn-secondary min-h-11 px-3 mb-4" onClick={()=>setOpen(!open)}>Toggle continuation</button>
+ {scanning?<><button className="btn-secondary min-h-11 px-3 mb-4" onClick={()=>setOpen(!open)}>Toggle scan</button>
+ {open&&<ScanFixture/>}</>:continuation?<><button className="btn-secondary min-h-11 px-3 mb-4" onClick={()=>setOpen(!open)}>Toggle continuation</button>
  {open&&<ContinuationPanel conversationId="synthetic-context-source"/>}</>:<>
  <button className="btn-secondary min-h-11 px-3 mb-4" onClick={()=>setOpen(!open)}>Toggle tasks</button>
  {open&&<ImportTaskMonitor placement="center" forceVisible/>}
@@ -143,6 +153,18 @@ try {
     const unavailable = contextRow("context-missing", "open_list", "CONTEXT_NOT_FOUND", null);
     const transient = contextRow("context-transient", "retry", "CONTEXT_RETURN_FAILED");
     const rows = [analysis, other, limited, invalid, sourceCleanup, expired, conflict, unavailable, transient], writes = [];
+    const supervised = { ...row("supervised", "conversation_export", "processing"),
+      result: { conversation_id: "synthetic-export-source" }, execution_state: "stopping",
+      stop_requested_at: now };
+    const scanTask = { ...row("scan-execution", "content_noise_scan", "processing"),
+      result: { scan_id: "synthetic-scan" }, execution_state: "running" };
+    const scan = { id: "synthetic-scan", source: "READER", status: "SCANNING",
+      scope_type: "CURRENT_CONVERSATION", background_job_id: scanTask.job_id, background_job_status: "processing",
+      execution_state: "running", stop_requested_at: null, progress: 24,
+      processed_messages: 1, total_messages: 4, excluded_archived_count: 0, target_count: 1,
+      project_target_count: 0, unassigned_target_count: 1, occurrence_count: 1, delete_count: 0,
+      keep_count: 1, protected_count: 0, created_at: now, completed_at: null, error_message: null };
+    let stopMoment = now, scanReadFailed = false;
     let continuationState = { generation: 0, adopted_revision_id: null, pending_return_task_id: null };
     let continuationReadFailed = false;
     let actual = false, writeMode = "ok", packageMode = "ok", packageReceipt = null;
@@ -164,6 +186,24 @@ try {
     await page.route("https://import-recovery.synthetic/**", async route => {
       const path = new URL(route.request().url()).pathname;
       if (path === "/api/tasks/active") return route.fulfill({ json: rows });
+      if (path === "/api/content-cleanup/scans/synthetic-scan") return route.fulfill(scanReadFailed
+        ? { status: 503, json: {} } : { json: scan });
+      if (path === "/api/content-cleanup/scans/pending") return route.fulfill({ json: [scan] });
+      if (path === "/api/tasks/supervised/cancel") {
+        writes.push({ path });
+        supervised.execution_state = "stopping"; supervised.stop_requested_at = stopMoment;
+        return route.abort("failed");
+      }
+      if (path === "/api/tasks/scan-execution/cancel") {
+        writes.push({ path });
+        scanTask.execution_state = scan.execution_state = "stopping";
+        scanTask.stop_requested_at = scan.stop_requested_at = stopMoment;
+        return route.fulfill({ json: scanTask });
+      }
+      if (path === "/api/tasks/scan-execution") {
+        taskReads++;
+        return route.fulfill(scanReadFailed ? { status: 503, json: {} } : { json: scanTask });
+      }
       if (path.endsWith("/cancel")) {
         writes.push({ path, body: route.request().postDataJSON() });
         await cancellation;
@@ -428,12 +468,74 @@ try {
       await recovery.getByRole("button", { name: /按原请求重试|Retry the original request/ }).click();
       await expect(recovery).toHaveCount(0);
       assert.equal(packageAttempts.length, 2); assert.deepEqual(packageAttempts[1], packageAttempts[0]);
+      // The independent execution control does not rewrite the locked canonical
+      // task to "cancelling". Re-entry must still have a read-only stop check.
+      supervised.stop_requested_at = await page.evaluate(() => new Date(Date.now() - 31_000).toISOString());
+      rows.push(supervised);
+      await page.goto("https://import-recovery.synthetic/");
+      const supervisedRow = page.locator("#task-row-supervised");
+      await expect(supervisedRow).toContainText(locale === "zh-CN" ? "停止尚未确认" : "Stopping is not yet confirmed");
+      await expect(supervisedRow.getByRole("button", { name: /核对状态|Check status/ })).toBeVisible();
+      await expect(supervisedRow.getByRole("button", { name: /^取消任务$|^Cancel task$/ })).toHaveCount(0);
+      assert.equal(supervised.status, "processing");
+      supervised.execution_state = "running"; supervised.stop_requested_at = null;
+      await page.goto("https://import-recovery.synthetic/");
+      stopMoment = await page.evaluate(() => new Date().toISOString());
+      await supervisedRow.getByRole("button", { name: /^取消任务$|^Cancel task$/ }).click();
+      await expect(supervisedRow).toContainText(locale === "zh-CN" ? "操作结果尚未确认" : "The result is unconfirmed");
+      const supervisedCheck = supervisedRow.getByRole("button", { name: /核对状态|Check status/ });
+      await supervisedCheck.focus(); await page.keyboard.press("Enter");
+      await expect(supervisedRow).not.toContainText(locale === "zh-CN" ? "操作结果尚未确认" : "The result is unconfirmed");
+      assert.equal(writes.filter(item => item.path === "/api/tasks/supervised/cancel").length, 1);
+      await page.clock.fastForward(30_100);
+      await expect(supervisedRow.getByRole("button", { name: /核对状态|Check status/ })).toBeVisible();
+      await supervisedRow.getByRole("button", { name: /核对状态|Check status/ }).click();
+      assert.equal(writes.filter(item => item.path === "/api/tasks/supervised/cancel").length, 1);
+      const supervisedScreenshot = `task-execution-${width}-${locale}-${theme}.png`;
+      await page.screenshot({ path: join(out, supervisedScreenshot), fullPage: true });
+      // Actual scan controls: acknowledge the independent stop, fail its read,
+      // re-enter, then read a confirmed exit. Never offer another cancel POST.
+      await page.goto("https://import-recovery.synthetic/?scan=1");
+      const scanProgress = page.getByTestId("cleanup-scan-progress");
+      stopMoment = await page.evaluate(() => new Date().toISOString());
+      const scanCancel = scanProgress.getByRole("button", { name: /取消扫描|Cancel scan/ });
+      await scanCancel.focus(); await page.keyboard.press("Enter");
+      await expect(scanProgress).toContainText(locale === "zh-CN" ? "正在停止扫描" : "Stopping scan");
+      await expect(scanCancel).toHaveCount(0);
+      const scanCheck = scanProgress.getByRole("button", { name: /核对扫描状态|Check scan status/ });
+      await expect(scanCheck).toBeVisible();
+      await expect(scanCheck).toBeFocused();
+      scanReadFailed = true;
+      await scanCheck.click();
+      await expect(scanProgress.getByRole("alert")).toContainText(locale === "zh-CN" ? "核对失败" : "The check failed");
+      await expect(scanCancel).toHaveCount(0);
+      await page.clock.fastForward(3_100);
+      await expect(scanProgress.getByRole("alert")).toBeVisible();
+      scanReadFailed = false;
+      await page.getByRole("button", { name: "Toggle scan" }).click();
+      await page.getByRole("button", { name: "Toggle scan" }).click();
+      await expect(scanCheck).toBeVisible();
+      await expect(scanCancel).toHaveCount(0);
+      const scanScreenshot = `scan-execution-${width}-${locale}-${theme}.png`;
+      await page.screenshot({ path: join(out, scanScreenshot), fullPage: true });
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth) <= 1);
+      for (const bounds of await scanProgress.locator("button").evaluateAll(nodes => nodes.map(node => {
+        const box = node.getBoundingClientRect(); return { width: box.width, height: box.height };
+      }))) assert.ok(bounds.width >= 44 && bounds.height >= 44);
+      scanTask.status = scanTask.phase = "cancelled"; scanTask.execution_state = null; scanTask.stop_requested_at = null;
+      scan.status = "CANCELLED"; scan.background_job_status = "cancelled"; scan.execution_state = null; scan.stop_requested_at = null;
+      await scanCheck.click();
+      await expect(scanProgress).toContainText(locale === "zh-CN" ? "扫描已取消" : "Scan cancelled");
+      await expect(scanCancel).toHaveCount(0);
+      assert.equal(writes.filter(item => item.path === "/api/tasks/scan-execution/cancel").length, 1);
       results.push({ width, locale, theme, writes: writes.length, taskReads, geometry, screenshot: filename,
         taskDismissStorageRejection:theme==="light"?"setItem":"getter",
         sourceCleanup: "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
         contextRecovery: "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
         contextRead: "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
-        contextScreenshot, writeScreenshot,
+        contextScreenshot, writeScreenshot, supervisedScreenshot, scanScreenshot,
+        supervisedStop: "processing + independent stopping → re-entry/read-only check; lost acknowledgement → stop confirmed by GET without another POST",
+        scanStop: "acknowledged independent stop → check only → failed read retains notice → re-entry → confirmed cancellation, one POST",
         continuationWrites: "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry" });
     } catch (error) {
       await page.screenshot({ path: join(out, `failure-${width}-${locale}-${theme}.png`), fullPage: true }).catch(() => {});
@@ -445,7 +547,7 @@ try {
   }
   assert.deepEqual(errors, []);
   writeFileSync(join(out, "result.json"), JSON.stringify({
-    scope: "Production Task Center + ContinuationPanel/editor/history/recovery hook + React Query; synthetic network/account/Reader route, Markdown-paint and local-draft-storage adapters; actual persisted draft guards are separate tests",
+    scope: "Production Task Center + CleanupScanProgress/cancel controls + ContinuationPanel/editor/history/recovery hook + React Query; synthetic network/account/Reader route, Markdown-paint and local-draft-storage adapters; actual persisted draft guards are separate tests",
     results, errors,
   }, null, 2));
   console.log(`Task recovery browser: ${results.length} passed; ${out}`);

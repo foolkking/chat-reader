@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, RefreshCw } from "lucide-react";
 import { adminApi, AdminRequestError, type AdminRuntimeStatus } from "../lib/admin-client";
 import { usePreferences } from "./preferences-provider";
 import { authenticationGeneration, AUTH_GENERATION_CHANGED_EVENT } from "../lib/offline-access";
 import { withRequestDeadline } from "../lib/request-deadline";
+import { AdminExecutionRecovery } from "./admin-execution-recovery";
 
 function subscribeAuthentication(listener: () => void) {
   window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, listener);
@@ -22,6 +23,9 @@ export function AdminRuntimePanel() {
   const generation = useSyncExternalStore(subscribeAuthentication, authenticationGeneration, () => 0);
   const [deniedGeneration, setDeniedGeneration] = useState<number | null>(null);
   const [visible, setVisible] = useState(false);
+  const [recoveryGeneration, setRecoveryGeneration] = useState<number | null>(null);
+  const recoveryTrigger = useRef<HTMLButtonElement | null>(null);
+  const openRecovery = (trigger: HTMLButtonElement) => { recoveryTrigger.current = trigger; setRecoveryGeneration(generation); };
   useEffect(() => {
     const update = () => setVisible(document.visibilityState === "visible");
     update(); document.addEventListener("visibilitychange", update);
@@ -68,7 +72,7 @@ export function AdminRuntimePanel() {
           </span>
         </StatusRow>;
       })}</dl> : <p className="text-sm text-secondary">{unavailable}</p>}</div>
-      {data.worker.available && data.worker.execution ? <p className="text-sm text-secondary" role="status">
+      {data.worker.available && data.worker.execution && recoveryGeneration !== generation ? <p className="text-sm text-secondary" role="status">
         {data.worker.execution.state === "running"
           ? (zh ? `任务最近推进：${data.worker.execution.progress_age_seconds} 秒前。` : `Last task progress: ${data.worker.execution.progress_age_seconds}s ago.`)
           : data.worker.execution.state === "reconciling"
@@ -77,6 +81,12 @@ export function AdminRuntimePanel() {
               ? (zh ? "任务暂未推进，等待后台核对和停止；尚未确认退出。" : "No recent task progress. Waiting for the worker to check and stop it; exit is not confirmed.")
             : (zh ? "正在安全停止执行；确认退出并核对结果后继续队列。" : "Safely stopping execution; the queue continues after exit and outcome checks.")}
       </p> : null}
+      {data.worker.available && (data.worker.execution || (data.worker.status === "stale" && (data.worker.processing_task_count ?? 0) > 0))
+        ? <button type="button" aria-expanded={recoveryGeneration === generation} className="btn-secondary min-h-11 px-3 text-sm" onClick={event => openRecovery(event.currentTarget)}>{zh ? "处理当前执行" : "Review current execution"}</button> : null}
+      {recoveryGeneration === generation ? <AdminExecutionRecovery key={generation} generation={generation} zh={zh} locale={resolvedLocale} onClose={() => {
+        setRecoveryGeneration(null);
+        if (recoveryTrigger.current?.isConnected) recoveryTrigger.current.focus({ preventScroll: true });
+      }} /> : null}
       <div><h3 className="mb-2 text-sm font-semibold">{zh ? "存储" : "Storage"}</h3><dl className="divide-y divide-[var(--border)] border-y border-ui">{(["imports", "exports", "offline", "assets"] as const).map((key) => { const value = data.storage[key]; return <StatusRow key={key} label={({ imports: zh ? "导入资料" : "Imports", exports: zh ? "导出与归档" : "Exports & archives", offline: zh ? "离线包" : "Offline packages", assets: zh ? "附件" : "Attachments" })[key]}>{!value.available ? unavailable : <>{formatStorageBytes(value.bytes)} · {value.file_count} {value.kind === "object_records" ? (zh ? "对象（逻辑用量）" : "objects (logical size)") : (zh ? "文件" : "files")}{!value.complete ? <span className="block text-xs text-secondary">{zh ? "扫描不完整 · 仅已统计部分" : "Incomplete scan · counted portion only"}</span> : null}</>}</StatusRow>; })}</dl></div>
       {data.export_cleanup && (!data.export_cleanup.available || data.export_cleanup.pending_count > 0 || data.export_cleanup.failed_count > 0) ? <div><h3 className="mb-2 text-sm font-semibold">{zh ? "临时文件回收" : "Temporary file cleanup"}</h3><dl className="divide-y divide-[var(--border)] border-y border-ui"><StatusRow label={zh ? "等待释放" : "Pending reclamation"}>{data.export_cleanup.available ? `${data.export_cleanup.pending_count} · ${formatStorageBytes(data.export_cleanup.pending_bytes)}` : unavailable}</StatusRow>{data.export_cleanup.available && data.export_cleanup.failed_count > 0 ? <StatusRow label={zh ? "回收失败，等待重试" : "Failed, awaiting retry"}>{data.export_cleanup.failed_count}</StatusRow> : null}</dl></div> : null}
       {data.source_cleanup && (!data.source_cleanup.available || data.source_cleanup.pending_count > 0) ? <div className="text-sm">
@@ -97,6 +107,7 @@ export function AdminRuntimePanel() {
         <p className="mb-3 text-xs leading-5 text-secondary">{zh
           ? "以下仅为应用 .cr 归档任务记录，不包含服务器备份；完成不代表文件仍可下载或已验证恢复。"
           : "These are application .cr archive task records; this does not include server backups. Completion does not verify file availability or recovery."}</p>
+        <button type="button" className="btn-secondary mb-3 min-h-11 px-3 text-sm" onClick={event => openRecovery(event.currentTarget)}>{zh ? "查看执行与停止记录" : "View execution and stop records"}</button>
         <dl className="divide-y divide-[var(--border)] border-y border-ui">
           <StatusRow label={zh ? "最近应用归档" : "Latest application archive"}>{archive(data.backup)}</StatusRow>
           <StatusRow label={zh ? "最近应用恢复" : "Latest application restore"}>{archive(data.restore)}</StatusRow>

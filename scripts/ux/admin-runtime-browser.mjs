@@ -59,6 +59,16 @@ try {
       window.gateLocale = locale;
       window.authGeneration = 1;
       window.runtimeMode = "normal"; window.runtimeReads = 0; window.runtimeWrites = 0;
+      window.executionReads = 0; window.executionWrites = 0; window.executionMode = "normal";
+      window.execution = {
+        identity: { task_kind: "job", task_id: "00000000-0000-4000-8000-000000000001",
+          execution_token: "00000000-0000-4000-8000-000000000002", attempt: 1 },
+        state: "stalled", canonical_status: "processing", family: "export",
+        owner: { id: "00000000-0000-4000-8000-000000000003", label: "Synthetic reader" },
+        started_at: "2026-11-12T00:00:00Z", progress_age_seconds: 320, stop_allowed: true,
+        stop_requested_at: null, stop_recorded_at: null, source_disposition: null,
+      };
+      window.lastStop = null;
       const counts = { queued: 0, processing: 0, cancelling: 0, committed: 0, failed: 0, cancelled: 0 };
       const storage = { available: true, bytes: 4096, file_count: 2, complete: true };
       window.snapshot = {
@@ -73,6 +83,28 @@ try {
       };
       const realFetch = window.fetch;
       window.fetch = async (url, options) => {
+        if (String(url).includes("/api/admin/runtime-execution")) {
+          const path = new URL(String(url), location.href).pathname;
+          if (path.endsWith("/stop")) {
+            window.executionWrites++;
+            window.sentIdentity = JSON.parse(options.body);
+            if (window.executionMode === "changed") return new Response(JSON.stringify({ detail: { code: "TASK_EXECUTION_CHANGED" } }), { status: 409 });
+            window.execution = { ...window.execution, state: "stopping", stop_allowed: false,
+              stop_requested_at: "2026-11-12T00:06:00Z", stop_recorded_at: "2026-11-12T00:06:00Z", source_disposition: "retain" };
+            window.lastStop = structuredClone(window.execution);
+            if (window.executionMode === "lost") throw Error("Synthetic lost acknowledgement");
+            if (window.executionMode === "hung") return { ok: true, status: 200, json: () => new Promise(() => {}) };
+            if (window.executionMode === "late") return new Promise(resolve => {
+              window.releaseOldStop = () => resolve(new Response(JSON.stringify(window.execution)));
+            });
+            return new Response(JSON.stringify(window.execution));
+          }
+          window.executionReads++;
+          if (window.executionMode === "read-failed") throw Error("Synthetic read failure");
+          if (window.executionMode === "denied") return new Response("{}", { status: 403 });
+          return new Response(JSON.stringify(path.endsWith("/result") ? window.execution
+            : { current: window.execution.state === "finished" ? null : window.execution, last_stop: window.lastStop, untracked: false }));
+        }
         if (!String(url).endsWith("/api/admin/runtime-status")) return realFetch(url, options);
         window.runtimeReads++;
         if (options?.method && options.method !== "GET") window.runtimeWrites++;
@@ -129,6 +161,71 @@ try {
     });
     await refresh.click();
     await expect(panel.getByRole("status")).toContainText(zh ? "尚未确认退出" : "exit is not confirmed");
+    // Real on-demand control UI and client; no automatic writes or cross-account body reads.
+    assert.equal(await page.evaluate(() => window.executionReads), 0);
+    const recoveryTrigger = panel.getByRole("button", { name: zh ? "处理当前执行" : "Review current execution", exact: true });
+    await recoveryTrigger.focus(); await page.keyboard.press("Enter");
+    let recovery = panel.getByRole("region", { name: zh ? "执行处理" : "Execution recovery" });
+    await expect(recovery).toContainText("Synthetic reader");
+    const stopButton = () => recovery.getByRole("button", { name: zh ? "停止并保留来源" : "Stop and retain sources", exact: true });
+    const checkResult = () => recovery.getByRole("button", { name: zh ? "核对结果" : "Check result", exact: true });
+    const confirmStop = () => recovery.getByRole("button", { name: zh ? "确认停止" : "Confirm stop", exact: true });
+    assert.ok((await stopButton().boundingBox()).height >= 44);
+    await stopButton().click();
+    await expect(confirmStop()).toBeFocused();
+    await expect(recovery).toContainText(zh ? "已发出的通知不会回滚" : "sent notifications cannot be undone");
+    await recovery.getByRole("button", { name: zh ? "继续等待" : "Keep waiting" }).click();
+    assert.equal(await page.evaluate(() => window.executionWrites), 0);
+    await page.evaluate(() => { window.executionMode = "lost"; });
+    await stopButton().click(); await confirmStop().click();
+    await expect(recovery.getByRole("alert")).toContainText(zh ? "结果待确认" : "unconfirmed");
+    await expect(checkResult()).toBeFocused();
+    await expect(stopButton()).toHaveCount(0);
+    assert.equal(await page.evaluate(() => window.executionWrites), 1);
+    await page.evaluate(() => { window.executionMode = "read-failed"; });
+    await checkResult().click();
+    await expect(recovery.getByRole("alert")).toContainText(zh ? "核对失败" : "check failed");
+    await expect(stopButton()).toHaveCount(0);
+    await page.evaluate(() => { window.executionMode = "normal"; });
+    await checkResult().click();
+    await expect(recovery.getByRole("status")).toContainText(zh ? "尚未释放队列" : "queue is not released yet");
+    assert.equal(await page.evaluate(() => window.executionWrites), 1);
+    assert.deepEqual(await page.evaluate(() => window.sentIdentity), await page.evaluate(() => window.execution.identity));
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.screenshot({ path: join(out, `runtime-recovery-${width}-${locale}-${theme}.png`) });
+    await page.keyboard.press("Escape"); await expect(recovery).toHaveCount(0); await expect(recoveryTrigger).toBeFocused();
+    await page.evaluate(() => { window.execution = { ...window.execution, state: "finished", canonical_status: "failed" };
+      window.lastStop = structuredClone(window.execution); });
+    await recoveryTrigger.click();
+    await expect(recovery).toContainText(zh ? "执行已结束并完成核对" : "ended and was reconciled");
+    await recovery.getByRole("button", { name: zh ? "关闭" : "Close", exact: true }).click();
+    // Stale execution, uncooperative response body and retiring authentication.
+    for (const mode of ["changed", "hung", "late"]) {
+      await page.evaluate(mode => {
+        window.executionMode = mode;
+        window.execution = { ...window.execution, state: "stalled", canonical_status: "processing",
+          stop_allowed: true, stop_requested_at: null, stop_recorded_at: null };
+      }, mode);
+      await recoveryTrigger.click(); await expect(stopButton()).toBeEnabled();
+      await stopButton().click(); await confirmStop().click();
+      if (mode === "hung") {
+        await page.clock.fastForward(15_001);
+        await expect(recovery.getByRole("alert")).toContainText(zh ? "结果待确认" : "unconfirmed");
+      } else if (mode === "changed") {
+        await expect(recovery.getByRole("alert")).toContainText(zh ? "没有停止新的执行" : "new execution was not stopped");
+        await expect(stopButton()).toHaveCount(0);
+      } else {
+        await page.evaluate(() => { window.authGeneration++; dispatchEvent(new Event("chat-reader:auth-generation-changed")); window.releaseOldStop(); });
+        await expect(recovery).toHaveCount(0);
+        break;
+      }
+      await recovery.getByRole("button", { name: zh ? "关闭" : "Close", exact: true }).click();
+    }
+    await page.evaluate(() => { window.executionMode = "denied"; });
+    await recoveryTrigger.click();
+    await expect(recovery.getByRole("alert")).toContainText(zh ? "管理权限不可用" : "Administrator access is unavailable");
+    await expect(recovery).not.toContainText("Synthetic reader");
+    await recovery.getByRole("button", { name: zh ? "关闭" : "Close", exact: true }).click();
     await page.evaluate(() => { window.snapshot.worker.execution.state = "stopping"; });
     await refresh.click();
     await expect(panel.getByRole("status")).toContainText(zh ? "确认退出并核对结果后继续队列" : "after exit and outcome checks");
@@ -177,7 +274,8 @@ try {
     await expect(panel).not.toContainText(zh ? "已暂停 3" : "Paused 3");
     assert.equal(await page.evaluate(() => window.runtimeWrites), 0);
     results.push({ width, locale, theme, staleSnapshot: true, accessRevocation: true, hungBody: true,
-      hiddenPolling: true, authenticationFence: true, quietCleanup: true, archiveScope: true });
+      hiddenPolling: true, authenticationFence: true, quietCleanup: true, archiveScope: true,
+      executionStopRecovery: true, noMutationReplay: true, staleExecutionFence: true, stopReceiptReentry: true });
     await page.close();
   }
   assert.deepEqual(errors, []);

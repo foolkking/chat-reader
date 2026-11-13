@@ -215,6 +215,9 @@ export type CleanupScanRead = {
   scope_type: string;
   background_job_id: string | null;
   background_job_status?: string | null;
+  execution_state?: "running" | "stopping" | null;
+  business_progress_at?: string | null;
+  stop_requested_at?: string | null;
   previous_scan_id?: string | null;
   progress: number;
   processed_messages: number;
