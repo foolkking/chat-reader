@@ -1,12 +1,22 @@
 # Project State
 
-## Reliability candidate — 2026-11-13 (CI cancelled; fixture regressions passed)
+## Reliability candidate — 2026-11-13 (focused CI repair verified; not released)
 
 The latest November13 instruction authorizes selective commit/push, the full
 exact-source CI and deployment after CI success. The user owns acceptance of
 the remaining product/device/recovery scenarios. This does not waive automated
 release gates, stopped-writer backup, migration or runtime-health safeguards,
 and does not authorize cleanup or replay of user inputs.
+
+Fixture repair **`2ae0ed0ff26d1bc4cfe49b617cb6a08981f99a51`** is selectively
+committed and pushed. Full CI **`43436935411`** was first read at
+**22:38:46.069844 +08:00**, after the fresh 50-minute boundary. Web failed;
+one cancellation was requested at **22:39:58 +08:00** and independently confirmed.
+Settings had five pre-cancellation failures, not a 60-minute timeout; release
+jobs never started. The focused repair passes API/PG **39**, source contracts
+**9** and five rejection controls. It preserves synthetic-task/source receipts
+and the original worker/gate bounds. A fresh **548-input** same-installed-dependency
+isolated build passed; the old build was not inherited. Full CI is required; no deployment.
 
 Repair **`829e1b794a795e4bee9a456717825089e88dd354`** is selectively committed
 and pushed. Full CI **`43424349497`** failed API/Web and was cancelled at the

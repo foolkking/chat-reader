@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T23:34:09.183760+08:00",
+  "base_revision": "2ae0ed0ff26d1bc4cfe49b617cb6a08981f99a51",
+  "status": "focused_regressions_passed_fresh_full_ci_required_not_deployed",
+  "cancelled_ci": {
+    "run_id": 43436935411,
+    "source_revision": "2ae0ed0ff26d1bc4cfe49b617cb6a08981f99a51",
+    "url": "https://github.com/foolkking/chat-reader/actions/runs/43436935411",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "first_valid_read_at": "2026-11-13T14:38:46.069844+00:00",
+    "first_valid_read_elapsed_seconds": 3000.000119,
+    "single_cancel_request": {
+      "requested_at": "2026-11-13T14:39:58.712209+00:00",
+      "run": 43436935411,
+      "revision": "2ae0ed0ff26d1bc4cfe49b617cb6a08981f99a51",
+      "reason": "Web failed; stop remaining work and repair; no release possible",
+      "request_attempts": 1,
+      "status": "request_sent_confirmation_required",
+      "production_touched": false,
+      "request_exit_code": 0,
+      "request_finished_at": "2026-11-13T14:40:01.325664+00:00"
+    },
+    "confirmed_run_state": {
+      "path": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\ci-fixture-run-43436935411-failure\\run-state.json",
+      "bytes": 31001,
+      "sha256": "40276d5c24c8898706222653d23d3dc24f58c81fe972967755cf89a9feae5e06"
+    },
+    "jobs": [
+      {
+        "name": "web-quality",
+        "status": "completed",
+        "conclusion": "failure",
+        "step_count": 58
+      },
+      {
+        "name": "settings-quality",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "step_count": 17
+      },
+      {
+        "name": "api-quality",
+        "status": "completed",
+        "conclusion": "success",
+        "step_count": 13
+      },
+      {
+        "name": "reading-performance-comparison / compare",
+        "status": "completed",
+        "conclusion": "success",
+        "step_count": 13
+      },
+      {
+        "name": "build-images",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "step_count": 0
+      },
+      {
+        "name": "inspect-release-artifact",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "step_count": 0
+      }
+    ],
+    "official_diagnostic_artifacts": [
+      {
+        "id": 14047247798,
+        "name": "reading-performance-comparison",
+        "sha256": "001368961d4bc3ede35d4d735368d98378851c5d3d723a1f0f7d798ca81895e1",
+        "bytes": 104855,
+        "directory": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\ci-fixture-run-43436935411-failure\\14047247798"
+      },
+      {
+        "id": 14046319139,
+        "name": "settings-quality-evidence-2ae0ed0ff26d1bc4cfe49b617cb6a08981f99a51-1",
+        "sha256": "6b332cff912a85bc8653be3c519abd189e5187f692bc7a2f40528169f155b300",
+        "bytes": 9352939,
+        "directory": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\ci-fixture-run-43436935411-failure\\14046319139"
+      },
+      {
+        "id": 14044448476,
+        "name": "release-a-quality-evidence-2ae0ed0ff26d1bc4cfe49b617cb6a08981f99a51-1",
+        "sha256": "3b8300351b636ffc9733bd5cb57edcf746550e98b27d46b75aef78ca8577bd74",
+        "bytes": 25737725,
+        "directory": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\ci-fixture-run-43436935411-failure\\14044448476"
+      }
+    ],
+    "diagnostic_provenance": {
+      "path": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\ci-fixture-run-43436935411-failure\\diagnostic-provenance.json",
+      "bytes": 2591,
+      "sha256": "4c28b7be2b027f0d58feff6f0756a7e19b4ffa75bb24ef1ffeb34458dd629839"
+    },
+    "settings_pre_cancellation_failures": 5,
+    "settings_job_timeout_claimed": false,
+    "post_cancellation_connection_refusal_not_diagnosed_as_original_failure": true,
+    "release_artifacts_started_or_accepted": false
+  },
+  "scope": {
+    "input_manifest": "ci-focused-inputs.json",
+    "input_count": 1383,
+    "changed_existing_inputs": [
+      "apps/web/e2e/release-stabilization-contract.spec.ts",
+      "apps/web/e2e/settings-noise-scan-lifecycle.spec.ts"
+    ],
+    "added_inputs": [
+      "apps/api/tests/test_settings_scan_lifecycle_fixture.py"
+    ],
+    "application_code_changed": false,
+    "workflow_changed": false,
+    "deploy_changed": false,
+    "retained_build_manifest": "ci-repair-build-inputs.json",
+    "retained_build_changed_inputs": [
+      "apps/web/e2e/release-stabilization-contract.spec.ts",
+      "apps/web/e2e/settings-noise-scan-lifecycle.spec.ts"
+    ],
+    "retained_build_not_inherited": true,
+    "fresh_build_manifest": "ci-focused-build-inputs.json",
+    "build_input_count": 548,
+    "build_input_drift": [],
+    "copy_input_mutations": [],
+    "new_isolated_build_verified": true,
+    "new_full_ci_claimed": false
+  },
+  "tests": {
+    "api_postgresql": {
+      "passed": 39,
+      "red_failed": 11,
+      "red_passed": 3,
+      "junit": {
+        "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\api-pg-green-01.junit.xml",
+        "bytes": 6108,
+        "sha256": "8a67bca699f98dd04f7347aacf02e1952edab8ebeabfb8e872f2c4ed568a8949"
+      },
+      "red_junit": {
+        "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\pg-fixture-red.junit.xml",
+        "bytes": 23792,
+        "sha256": "adc3f4c78fb4d72cf09dfe759a35dc38a398c051922d6c47757e71fd36fcfd6e"
+      },
+      "log": {
+        "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\api-pg-green-01.log",
+        "bytes": 768,
+        "sha256": "093dba29d5ad4a392392de347f98c529e33eecb206e3723e02af1a0da2c9482a"
+      },
+      "boundary": "Exact embedded test helper, real PG/services, source and original-task receipts, unchanged legacy/2-second claim bounds; no running site."
+    },
+    "source_contract": {
+      "passed": 9,
+      "red_passed": 7,
+      "red_failed": 2,
+      "result": {
+        "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\source-contract-green-02.json",
+        "bytes": 11865,
+        "sha256": "aace9a85736b3157ff22cd526af07a145524ba54b144468aab5b10d9d303706a"
+      },
+      "red_result": {
+        "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\source-contract-red.json",
+        "bytes": 628805,
+        "sha256": "a6ab2a8b44e967250909854b2e2dddf2dfa5e54eca87923e18436ba3e284dca2"
+      },
+      "negative_controls": {
+        "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\source-contract-controls.json",
+        "bytes": 2804,
+        "sha256": "ec2b22aa2fddd1106f5a97a5e54b2efbe22fca9fb47892715f99a650ca29d301"
+      },
+      "boundary": "Static source contracts and five owned-copy rejection controls; no browser/application acceptance."
+    },
+    "lint": {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\web-lint-final.log",
+      "bytes": 173,
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+    },
+    "typecheck": {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\web-typecheck-final.log",
+      "bytes": 409,
+      "sha256": "5545002f1b810213f63f60c774a7e80edfeecd6cbc90e94d31956e625ca97da1"
+    },
+    "isolated_build": {
+      "verified_at": "2026-11-13T23:30:45.359087+08:00",
+      "exit_code": 0,
+      "input_count": 548,
+      "source_input_drift": [],
+      "copy_input_mutations": [],
+      "same_installed_dependency_realpaths": true,
+      "env_files_copied": false,
+      "node": "v20.13.1",
+      "next": "16.4.1",
+      "build_cpus": 1,
+      "full_ci_or_production_image_claimed": false,
+      "no_local_site_started": true
+    },
+    "build_log": {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\focused-build.log",
+      "bytes": 1476,
+      "sha256": "996310fc53aebbf4d943026dd950d14a4b208dd447d58c4de372f861005b9a78"
+    },
+    "migration_head": "20261112_0061"
+  },
+  "retained_non_business_method_failures": [
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\source-contract-controls.log",
+      "bytes": 303,
+      "sha256": "844d4170e4f9edc89a7942d61e37a0882afce1e611297cc749cb1b286cd173f0"
+    },
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\source_contract_controls.py",
+      "bytes": 4666,
+      "sha256": "617485a60047d9a4084ba0fe5660e426f6ab931922759a02039eb6574ba7922c"
+    },
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\source-contract-controls-green.log",
+      "bytes": 879,
+      "sha256": "c6e625008c0b418963c6f3b9a917d377ffc93ff1100065820ed35667c600c66a"
+    },
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\source_contract_controls_v2.py",
+      "bytes": 4851,
+      "sha256": "093ee6f83995bc5fddbb8faf6a66706cfa8c86d3a8587f8dc0418f404b692588"
+    },
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\source-controls-02\\missing-save-version\\run.log",
+      "bytes": 966,
+      "sha256": "32b425892ef070e70863d1dd631d9c4e192f01719b5ed38032d5b877470d01eb"
+    },
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\pg-ownership-guard-red.json",
+      "bytes": 591,
+      "sha256": "c2a2423e705ee64c99305fc7129b496fbb76c5bbbc9a09d0f8d6d458a7dad916"
+    },
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\finalize-focused-repair.log",
+      "bytes": 308,
+      "sha256": "2749ceff604fb5f4d9460e37dc191e2e12a65f7ceefb29cf0aa92f776fc5eee6"
+    },
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\finalize_focused_repair.py",
+      "bytes": 9666,
+      "sha256": "6bc8a2f1c5d3b657bef96fc9a699cd7813a413a080da2ffb3298e982e9e6f356"
+    },
+    {
+      "path": "E:\\chat-reader-temp\\reliability-ci-focused-fix-20261113-03\\retained-build-preflight-rejection.json",
+      "bytes": 224,
+      "sha256": "f82dcec8fec6777197524c8add134a0a8d29cbafc592b6918ad4e1a982828c03"
+    }
+  ],
+  "protected_unrelated_files": {
+    "apps/web/tsconfig.tsbuildinfo": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135",
+    "docs/evidence/storage-cleanup-2026-11-08/summary.json": "8b624607e694868172c18e4808a92cf98173e7b54b490926bd034ab482f36c5a",
+    "docs/execution/KING_STORAGE_CLEANUP_2026-11-08.md": "2d6018dec2b89bae43f13af8d8e72439165d20caf310f7a2c7be54283e754adc",
+    "ux-audit-next-optimization-2026-11-05-evidence/audit_api_probe.py": "f4bac752276ca0ef25978a91888d00eef0c44ad778d939914f4419aec41d1a29",
+    "ux-audit-next-optimization-2026-11-05-evidence/manifest.json": "6ca614bf037280869433c351040a379a04390c2b1ef309ee95a64b4c0825d166",
+    "ux-audit-next-optimization-2026-11-05-evidence/prior-ci-accepted.json": "7ef7c00ff491204c171425e61221c4c6747b132d47ed230ff4a6771b059acbd2",
+    "ux-audit-next-optimization-2026-11-05-evidence/probe-api-results.txt": "9a80791059e222c3cd9106339f08e21e8b5155a410183e06f359650208e63ff7",
+    "ux-audit-next-optimization-2026-11-05-evidence/probe-web-results.json": "eec1d7fe183a19027ecdbfb2ac0d1db7b929943dcdf78e1c35ae4111c9a70cf7",
+    "ux-audit-next-optimization-2026-11-05-evidence/probe-web.cjs": "74302fb726494855263bbd82ec7084e5085e8e518a90cf74f9e45fd87b34bf57",
+    "ux-audit-next-optimization-2026-11-05.md": "f1ce4a6e4aa69be69bcff3112b129419ef9a9dbe5e233340f7f82bd02f02e6f0",
+    "ux-audit-next-optimization-2026-11-06-evidence/manifest.json": "9db05b47ea562f8c727e69c54ed2bcec0b69b7eb4d4d0c6738b3bb058c7acedb",
+    "ux-audit-next-optimization-2026-11-06-evidence/source-evidence.json": "f4a23f2fabfa7a494e5e8736ea5c433eb0ebf702f3323dd8119efb320934de41",
+    "ux-audit-next-optimization-2026-11-06.md": "4405f861e5fb520669d72a165269622d624ff9aedc74c62d5d0ef9a46e0fe111"
+  },
+  "protected_count": 13,
+  "protected_hash_drift": [],
+  "owned_postgresql_stop": {
+    "verified_at": "2026-11-13T23:18:35.882312+08:00",
+    "stopped": true,
+    "dataRetained": true,
+    "agent_deleted_files": 0,
+    "worker_or_api_started": false,
+    "production_changed": false
+  },
+  "remaining_acceptance_owner": "user",
+  "local_site_started": false,
+  "previous_site_start_policy_rejection_bypassed": false,
+  "production_writes": 0,
+  "user_input_replay": false,
+  "automation_created": false
+}

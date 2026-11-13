@@ -46,7 +46,15 @@ test("conversation mutations hand the committed revision to the client", () => {
   expect(editForm).toContain("\\u52a0\\u8f7d\\u6700\\u65b0\\u72b6\\u6001");
   expect(editForm).toContain("isRevisionConflictMessage");
   expect(sourceWorkspace).toContain("getConversationReaderTurn");
-  expect(sourceWorkspace).toContain("baseVersionId: saveBaseVersionId");
+  expect(sourceWorkspace).toContain("const attempt: SourceSaveAttempt = {");
+  const saveRequest = sourceWorkspace.split("const attempt: SourceSaveAttempt = {")[1]
+    ?.split("saveAttemptRef.current = attempt;")[0];
+  expect(saveRequest).toContain("baseVersionId: saveBase?.id");
+  expect(saveRequest).toContain("baseContentHash: saveBase?.source_content_hash");
+  expect(sourceWorkspace).toContain("saveAttemptRef.current = attempt");
+  expect(sourceWorkspace).toContain("rememberSourceSave(message.id, attempt)");
+  expect(sourceWorkspace).toContain("editMessage(message.id, attempt.payload)");
+  expect(sourceWorkspace).toContain("return performSave(attempt)");
 });
 
 test("managed dialogs have one pointer-only backdrop and shared focus lifecycle", () => {
@@ -129,9 +137,15 @@ test("source cursor location is a one-shot request and cannot replay after a dir
   expect(editForm).toContain("onUpdate={handleEditorUpdate}");
   expect(editForm).toContain("dataset.cursorOffset = String(codePointOffset)");
   expect(editForm).toContain("codePointToUtf16Offset");
-  expect(editForm).toContain("const [editorDocument, setEditorDocument] = useState(initialText)");
-  expect(editForm).toContain("value={editorDocument}");
+  expect(editForm).toContain('import("./source-code-editor")');
+  expect(editForm).toContain("initialText={editorInitialTextRef.current}");
+  expect(editForm).not.toContain("value={editorDocument}");
   expect(editForm).not.toContain("value={text}");
+  const editorAdapter = source("features/editing/source-code-editor.tsx");
+  expect(editorAdapter).toContain("const [initialState] = useState(() => ({");
+  expect(editorAdapter).toContain("json: { doc: initialText, selection: EditorSelection.single(0).toJSON() }");
+  expect(editorAdapter).toContain("useCodeMirror({ ...options, theme, initialState })");
+  expect(editorAdapter).not.toMatch(/\bvalue\s*[=:]|["']value["']/);
   expect(reader).toContain("[data-source-editor-shell='true'], [role='dialog'], input, textarea, select, button, [contenteditable='true'], [role='textbox']");
   expect(reader).toContain("isEditableTarget(event.target)");
 });

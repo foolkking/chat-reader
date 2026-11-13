@@ -8,7 +8,7 @@ test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated PostgreSQ
 
 // Seed a claimed task so the UI has a deterministic in-progress interval. The
 // cancel API and subsequent worker finalization still use real transactions.
-function taskFixture(id: string, mode: "new" | "import" | "finish" | "fail" | "complete") {
+function taskFixture(id: string, mode: "new" | "import" | "finish" | "fail" | "complete" | "dispose") {
   return JSON.parse(execFileSync("python", ["-B", "-c", `
 import os,sys,uuid,json
 from datetime import datetime,timezone
@@ -19,9 +19,11 @@ from app.models.conversation import Conversation
 from app.models.import_record import ImportRecord
 from app.models.content_cleanup import ContentCleanupScan
 from app.models.background_job import BackgroundJob
+from app.models.task_execution_control import TaskExecutionControl
 from app.models.user import User
 from app.services.content_cleanup import create_scan
 from app.services.ownership import OwnershipScope
+from app.services.worker_maintenance import bound_worker_transaction
 from app.services import background_jobs
 mode=sys.argv[2]
 with SessionLocal() as db:
@@ -51,8 +53,27 @@ elif mode=='complete':
    assert job.status in {'processing','queued'}
    job.status='processing'; db.commit()
   background_jobs.process_background_job(job_id)
+elif mode=='dispose':
+ # Only the exact unleased synthetic scan may be finalized here. Never take
+ # over a real child, erase a completed receipt, or clear another test's queue.
+ with SessionLocal() as db:
+  bound_worker_transaction(db)
+  scan=db.get(ContentCleanupScan,scan_id)
+  job=db.query(BackgroundJob).filter_by(id=job_id).with_for_update().one()
+  assert job.job_type=='content_noise_scan' and job.owner_user_id==scan.owner_user_id
+  assert (job.payload or {}).get('scan_id')==str(scan_id)
+  if job.status in {'queued','processing','cancelling'}:
+   assert not (job.payload or {}).get('execution_token')
+   assert db.query(TaskExecutionControl).filter_by(task_kind='job',task_id=job_id,finished_at=None).first() is None
+   background_jobs.request_background_job_cancellation(job)
+   db.commit()
+  finish=job.status=='cancelling'
+ if finish:
+  background_jobs.process_background_job(job_id)
+ with SessionLocal() as db:
+  assert db.get(BackgroundJob,job_id).status in {'committed','failed','cancelled'}
 print(json.dumps({'id':str(scan_id),'job_id':str(job_id)}))
-`, id, mode], { cwd: path.resolve(process.cwd(), "../api"), encoding: "utf8" }).trim()) as { id: string; job_id: string };
+`, id, mode], { cwd: path.resolve(process.cwd(), "../api"), encoding: "utf8", timeout: 15_000 }).trim()) as { id: string; job_id: string };
 }
 
 async function fixture(browser: Browser, request: APIRequest, baseURL: string, width: number) {
@@ -67,13 +88,26 @@ async function fixture(browser: Browser, request: APIRequest, baseURL: string, w
   ] } });
   expect(created.status()).toBe(201); const conversation = await created.json();
   const scan = taskFixture(conversation.conversation.id, "new");
-  const page = await context.newPage();
-  const open = async () => { if (width < 768) await page.getByTestId("mobile-sidebar-button").click(); await page.getByTestId("sidebar-tasks-button").filter({ visible: true }).click(); };
-  await page.goto(baseURL); await open();
-  const center = page.getByTestId("task-center-panel"), dialog = page.getByTestId("content-cleanup-dialog");
-  const row = center.locator(`[data-cleanup-scan-id="${scan.id}"]`);
-  const readSource = async () => (await (await context.request.get(`${baseURL}/api/messages/${conversation.messages[1].id}`)).json()).current_version;
-  return { admin, context, headers, password, page, open, center, dialog, row, scan, readSource };
+  const dispose = async (followUp?: { id: string }) => {
+    try {
+      taskFixture(scan.id, "dispose");
+      if (followUp && followUp.id !== scan.id) taskFixture(followUp.id, "dispose");
+    } finally {
+      try { await context.close(); } finally { await admin.dispose(); }
+    }
+  };
+  try {
+    const page = await context.newPage();
+    const open = async () => { if (width < 768) await page.getByTestId("mobile-sidebar-button").click(); await page.getByTestId("sidebar-tasks-button").filter({ visible: true }).click(); };
+    await page.goto(baseURL); await open();
+    const center = page.getByTestId("task-center-panel"), dialog = page.getByTestId("content-cleanup-dialog");
+    const row = center.locator(`[data-cleanup-scan-id="${scan.id}"]`);
+    const readSource = async () => (await (await context.request.get(`${baseURL}/api/messages/${conversation.messages[1].id}`)).json()).current_version;
+    return { admin, context, headers, password, page, open, center, dialog, row, scan, readSource, dispose };
+  } catch (error) {
+    await dispose();
+    throw error;
+  }
 }
 
 async function shot(page: Page, name: string, dialog = true) {
@@ -107,7 +141,7 @@ for (const width of [375, 768, 1440]) {
       expect((await f.readSource()).id).toBe(before.id);
       expect((await f.readSource()).display_text).toBe(before.display_text);
       await shot(f.page, `scan-resumed-${width}`);
-    } finally { await f.context.close(); await f.admin.dispose(); }
+    } finally { await f.dispose(); }
   });
 
   test(`${width}px: real worker failure reaches Failed and can start a fresh scan`, async ({ browser, playwright, baseURL }) => {
@@ -126,7 +160,7 @@ for (const width of [375, 768, 1440]) {
       await f.dialog.getByRole("button", { name: /重新扫描原对话|Rescan conversations/ }).click();
       await expect(f.dialog.getByRole("searchbox", { name: /查找对话|Find conversation/ })).toBeVisible();
       expect((await f.readSource()).display_text).toBe("Before cite turn12search4 after.");
-    } finally { await f.context.close(); await f.admin.dispose(); }
+    } finally { await f.dispose(); }
   });
 }
 
@@ -147,7 +181,7 @@ test("768px: lost cancel response uses read-only recovery beside the task", asyn
     taskFixture(f.scan.id, "finish");
     await expect(f.center.getByRole("region", { name: "Cancelled", exact: true })).toContainText("Scan cancelled");
     await expect(f.row.getByRole("button", { name: "View result" })).toBeFocused();
-  } finally { await f.context.close(); await f.admin.dispose(); }
+  } finally { await f.dispose(); }
 });
 
 test("375px: undelivered cancellation permits explicit retry", async ({ browser, playwright, baseURL }) => {
@@ -164,7 +198,7 @@ test("375px: undelivered cancellation permits explicit retry", async ({ browser,
     await expect(f.dialog).toContainText("当前批次结束后停止");
     taskFixture(f.scan.id, "finish");
     await expect(f.dialog.getByTestId("cleanup-scan-cancelled")).toBeVisible(); expect(writes).toBe(2);
-  } finally { await f.context.close(); await f.admin.dispose(); }
+  } finally { await f.dispose(); }
 });
 
 test("1440px: scan completion wins a late cancellation without false success", async ({ browser, playwright, baseURL }) => {
@@ -180,7 +214,7 @@ test("1440px: scan completion wins a late cancellation without false success", a
     await expect(f.dialog.getByRole("searchbox", { name: /查找对话|Find conversation/ })).toBeVisible();
     await expect(f.dialog.getByTestId("cleanup-scan-cancelled")).toHaveCount(0);
     expect((await (await f.context.request.get(`${baseURL}/api/tasks/${f.scan.job_id}`)).json()).status).toBe("committed");
-  } finally { await f.context.close(); await f.admin.dispose(); }
+  } finally { await f.dispose(); }
 });
 
 test("1440px: a delayed cancellation preserves deliberately moved focus", async ({ browser, playwright, baseURL }) => {
@@ -200,7 +234,7 @@ test("1440px: a delayed cancellation preserves deliberately moved focus", async 
     taskFixture(f.scan.id, "finish");
     await expect(f.center.getByRole("region", { name: "已取消", exact: true })).toBeVisible();
     await expect(close).toBeFocused();
-  } finally { release(); await f.context.close(); await f.admin.dispose(); }
+  } finally { release(); await f.dispose(); }
 });
 
 test("768px: a late cancellation cannot restore the previous account's scan", async ({ browser, playwright, baseURL }) => {
@@ -233,7 +267,7 @@ test("768px: a late cancellation cannot restore the previous account's scan", as
     await expect(f.center).toContainText("No tasks are currently running");
     await expect(f.row).toHaveCount(0);
     await shot(f.page, "scan-account-fence-768", false);
-  } finally { release(); await f.context.close(); await f.admin.dispose(); }
+  } finally { release(); await f.dispose(); }
 });
 
 test("375px: cancelling an import follow-up keeps the imported conversation available", async ({ browser, playwright, baseURL }) => {
@@ -268,5 +302,5 @@ test("375px: cancelling an import follow-up keeps the imported conversation avai
     if (process.env.SETTINGS_SCREENSHOT_DIR) await completed.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/scan-import-cancelled-375.png` });
     await completed.getByRole("button", { name: "打开对话", exact: true }).click();
     await expect(f.page.getByText("Synthetic retained import answer.", { exact: true })).toBeVisible();
-  } finally { await f.context.close(); await f.admin.dispose(); }
+  } finally { await f.dispose(scan); }
 });

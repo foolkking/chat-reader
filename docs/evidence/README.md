@@ -1,12 +1,22 @@
 # 事实证据索引
 
-## CI阻断及夹具修复 — 2026-11-13（本地通过，新完整CI待派发）
+## CI阻断及夹具修复 — 2026-11-13（本地通过，完整CI仍待通过）
+
+[源码合同/扫描收尾回执](reliability-2026-11-13/ci-focused-verification.json)
+保留43436935411在50分钟后读取失败、单次取消、三份官方诊断ZIP，以及
+Settings取消前五项失败的链路。新PG红测11失败/3通过，修后相关39通过；
+源码合同9及五个负对照、lint/typecheck通过。应用和原门槛未改，没有部署。
+两项测试也在Web构建输入内，未继承旧构建；新548输入同依赖隔离构建通过，
+source/copy漂移均0，本机Node版本与CI不同的边界保留。
+负对照方法错误和PG路径守卫拒绝单独保留，不当作应用功能失败或成功证据。
 
 [夹具回归与取消回执](reliability-2026-11-13/ci-fixture-verification.json)
 保留43424349497的真实失败、用户要求取消、两份官方质量ZIP摘要与四项夹具
 红测；API/PG34通过/4项Windows跳过、原编辑器99及Unicode20次重复通过。
 应用/工作流/部署未改，原超时/信号退出门槛不变，不继承失败CI为发布通过。
 当前结论仍只维护[同一台账](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+[夹具修复派发回执](reliability-2026-11-13/ci-fixture-dispatch.json)绑定
+2ae0ed0与CI43436935411，记录新的50分钟首次读取边界，不是通过/部署回执。
 
 [修复回执](reliability-2026-11-13/ci-repair-verification.json)关联原失败CI、
 两条独立编辑器回退红测、最终99场景/20次picker重复/12扫描组、
