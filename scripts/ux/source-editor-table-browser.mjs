@@ -2039,9 +2039,23 @@ try {
     await cell.click();
     const input = dialog.getByTestId("source-editor-table-cell-input");
     await expect(input).toHaveValue("\u00a0kept\u00a0");
-    await input.fill("\u00a0edited\u00a0");
-    await input.press("Escape");
-    assert.equal(await cell.textContent(), "\u00a0edited\u00a0");
+    // A deferred preview may still paint the old cell after Escape. Hold that
+    // existing scheduling seam explicitly, then check exact bytes after it
+    // settles; no sleep, parser substitution or enlarged assertion timeout.
+    await holdPreview("\u00a0edited\u00a0");
+    try {
+      await input.fill("\u00a0edited\u00a0");
+      await expect(markdown).toHaveValue("| A | B |\n| --- | --- |\n| \u00a0edited\u00a0 | \u2003中\u2003 |");
+      await expect(apply()).toBeDisabled();
+      await input.press("Escape");
+      await expect(input).toHaveCount(0);
+      assert.equal(await cell.textContent(), "\u00a0kept\u00a0");
+      await expect(cell).toBeDisabled();
+      await releasePreview();
+      await expect.poll(() => cell.textContent()).toBe("\u00a0edited\u00a0");
+      await expect(cell).toBeFocused();
+      await expect(apply()).toBeEnabled();
+    } finally { await releasePreview(); }
     const raw = "| A | B |\n| --- | --- |\n| \u00a0edited\u00a0 | \ufeffraw\ufeff |";
     await markdown.fill(raw);
     await expect(apply()).toBeEnabled();

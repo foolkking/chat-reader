@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "source_revision": "829e1b794a795e4bee9a456717825089e88dd354",
+  "workflow": "build-release-images.yml",
+  "workflow_run_id": 43424349497,
+  "workflow_url": "https://github.com/foolkking/chat-reader/actions/runs/43424349497",
+  "branch": "master",
+  "dispatch_confirmed_at": "2026-11-13T12:20:35.862256+00:00",
+  "first_status_read_not_before": "2026-11-13T13:10:35.862256+00:00",
+  "status": "dispatched_result_not_read_not_released",
+  "staged_file_count": 23,
+  "unrelated_files_preserved": 13,
+  "source_input_count": 1382,
+  "remaining_acceptance_owner": "user",
+  "automation_created": false,
+  "production_cleanup_authorized": false,
+  "user_input_replay_authorized": false
+}

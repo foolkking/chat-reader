@@ -1,6 +1,6 @@
 # Project State
 
-## Reliability candidate — 2026-11-13 (original CI failed; repair awaiting CI)
+## Reliability candidate — 2026-11-13 (CI cancelled; fixture regressions passed)
 
 The latest November13 instruction authorizes selective commit/push, the full
 exact-source CI and deployment after CI success. The user owns acceptance of
@@ -8,8 +8,16 @@ the remaining product/device/recovery scenarios. This does not waive automated
 release gates, stopped-writer backup, migration or runtime-health safeguards,
 and does not authorize cleanup or replay of user inputs.
 
-Candidate **`adc80ac0dc671d86f26fc221626b4acfe4ee3651`** is selectively committed
-and pushed. Full CI **`43389645130`** failed: API/Web failed, Settings reached
+Repair **`829e1b794a795e4bee9a456717825089e88dd354`** is selectively committed
+and pushed. Full CI **`43424349497`** failed API/Web and was cancelled at the
+user's request, confirmed **21:14:35 +08:00**. The first valid result read at
+**21:12:16 +08:00** respected the 50-minute boundary; the initial TLS read
+failure is retained. Four test-fixture repairs now pass selected regression:
+API/PG **34 passed / 4 Windows POSIX skips**, mounted editor **99** and **20**
+exact Unicode repetitions. Application/workflow/deploy code and all **548**
+previously built Web inputs are unchanged. Fresh full CI is still required;
+no deployment is claimed. The preceding candidate `adc80ac` and
+full CI **`43389645130`** failed: API/Web failed, Settings reached
 its original 60-minute timeout, and downstream release jobs were skipped.
 The first read at **16:48:50 +08:00** respected the 50-minute minimum.
 CI-blocking repairs now pass local regression: PostgreSQL modules, 99 mounted
@@ -18,7 +26,9 @@ editor scenarios, twenty picker repetitions, twelve scan-recovery groups,
 both initial-value replay and repeated header history commands, not merely
 picker deduplication. The single ledger owns evidence and limitations;
 no new accepted CI or deployment is claimed. Thirteen unrelated dirty files
-remain byte-identical and unstaged.
+remain byte-identical and unstaged. Waiting-period production checks found a
+legacy import/progress/heartbeat lock chain and capacity risk; they are not fresh
+release admission. Do not force-restart that import into automatic replay.
 
 The user has now authorized implementation of the four-block reliability plan.
 The earlier pause below remains historical; it does not prohibit this local work.

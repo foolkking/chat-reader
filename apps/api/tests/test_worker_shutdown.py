@@ -5,7 +5,9 @@ import signal
 import subprocess
 import sys
 import textwrap
+import time
 import uuid
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -203,15 +205,12 @@ def test_reporter_stops_if_startup_fails(monkeypatch) -> None:
     assert reporter.events == ["start", "stop"]
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows send_signal(SIGTERM) forcibly terminates, unlike POSIX")
-@pytest.mark.parametrize("signum", [signal.SIGTERM, signal.SIGINT])
-@pytest.mark.parametrize("busy", [False, True])
-def test_posix_process_observes_external_stop_and_exits_successfully(signum, busy) -> None:
-    source = textwrap.dedent(
+def _posix_stop_process_source() -> str:
+    return textwrap.dedent(
         """
         import sys, time
         from types import SimpleNamespace
-        from app.services import task_worker
+        from app.services import task_worker, worker_supervisor
         from app.workers import import_worker
 
         class Reporter:
@@ -242,27 +241,98 @@ def test_posix_process_observes_external_stop_and_exits_successfully(signum, bus
                 return True
             return False
         task_worker.run_task_worker_iteration = iteration
+        # This fixture tests the entrypoint's signal ownership and draining.
+        # Keep its controlled legacy loop behind the current supervisor entry.
+        worker_supervisor.run_task_worker_forever = task_worker.run_task_worker_forever
         import_worker.main()
         """
     )
-    process = subprocess.Popen(
-        [sys.executable, "-u", "-c", source, "busy" if busy else "idle"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
+
+
+def test_posix_stop_fixture_targets_the_entrypoint_without_starting_a_service(monkeypatch, capsys) -> None:
+    # Exercise the child's actual fixture on Windows too, but never enter a real
+    # supervisor loop or connect to a database in this in-process boundary test.
+    for name in ("WorkerHeartbeatReporter", "get_settings", "run_task_worker_iteration"):
+        monkeypatch.setattr(task_worker, name, getattr(task_worker, name))
+
+    def controlled_loop(*, shutdown) -> None:
+        assert not shutdown.requested
+        reporter = task_worker.WorkerHeartbeatReporter()
+        reporter.start()
+        try:
+            assert task_worker.run_task_worker_iteration(
+                task_worker.get_settings(), reporter, shutdown=shutdown,
+            ) is False
+        finally:
+            reporter.stop()
+
+    monkeypatch.setattr(task_worker, "run_task_worker_forever", controlled_loop)
+    monkeypatch.setattr(
+        worker_supervisor, "run_task_worker_forever",
+        lambda **kwargs: pytest.fail("POSIX fixture missed the actual supervisor entrypoint"),
     )
-    try:
-        assert process.stdout is not None
-        assert process.stdout.readline().strip() == "START"
-        assert process.stdout.readline().strip() == "READY"
-        process.send_signal(signum)
-        stdout, stderr = process.communicate(timeout=5)
-        assert process.returncode == 0, stderr
-        assert stdout.splitlines() == (["DRAINED", "STOP"] if busy else ["STOP"])
-    finally:
-        if process.poll() is None:
-            process.kill()
-        process.communicate(timeout=5)
+    monkeypatch.setattr(sys, "argv", ["synthetic-stop-fixture", "idle"])
+    exec(_posix_stop_process_source(), {"__name__": "synthetic_stop_fixture"})
+    assert capsys.readouterr().out.splitlines() == ["START", "READY", "STOP"]
+
+
+def _wait_for_stop_fixture_ready(process, output: Path) -> None:
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        log = output.read_text(encoding="utf-8")
+        if log.splitlines()[:2] == ["START", "READY"]:
+            return
+        returncode = process.poll()
+        if returncode is not None:
+            raise AssertionError(f"Stop fixture exited with {returncode} before START/READY:\n{log}")
+        time.sleep(0.01)
+    raise AssertionError(f"Stop fixture did not emit START/READY within 5 seconds:\n{output.read_text(encoding='utf-8')}")
+
+
+def test_posix_stop_fixture_readiness_is_bounded_when_ready_is_missing(monkeypatch, tmp_path) -> None:
+    output = tmp_path / "stop-fixture.log"
+    output.write_text("START\n", encoding="utf-8")
+    clock = [0.0]
+    monkeypatch.setattr(time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+    process = SimpleNamespace(poll=lambda: None)
+    with pytest.raises(AssertionError, match="did not emit START/READY within 5 seconds"):
+        _wait_for_stop_fixture_ready(process, output)
+    assert 5 <= clock[0] <= 5.02
+
+
+def test_posix_stop_fixture_readiness_reports_early_exit(tmp_path) -> None:
+    output = tmp_path / "stop-fixture.log"
+    output.write_text("synthetic startup failure\n", encoding="utf-8")
+    process = SimpleNamespace(poll=lambda: 2)
+    with pytest.raises(AssertionError, match="exited with 2 before START/READY"):
+        _wait_for_stop_fixture_ready(process, output)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows send_signal(SIGTERM) forcibly terminates, unlike POSIX")
+@pytest.mark.parametrize("signum", [signal.SIGTERM, signal.SIGINT])
+@pytest.mark.parametrize("busy", [False, True])
+def test_posix_process_observes_external_stop_and_exits_successfully(signum, busy, tmp_path) -> None:
+    source = _posix_stop_process_source()
+    output = tmp_path / "stop-fixture.log"
+    with output.open("w", encoding="utf-8") as log:
+        process = subprocess.Popen(
+            [sys.executable, "-u", "-c", source, "busy" if busy else "idle"],
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        try:
+            _wait_for_stop_fixture_ready(process, output)
+            process.send_signal(signum)
+            process.wait(timeout=5)
+            lines = output.read_text(encoding="utf-8").splitlines()
+            assert process.returncode == 0, "\n".join(lines)
+            assert lines == ["START", "READY", *(["DRAINED"] if busy else []), "STOP"]
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=5)
 
 
 @pytest.mark.parametrize("task_kind", ["job", "noise", "import"])

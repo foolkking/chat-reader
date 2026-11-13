@@ -1,0 +1,214 @@
+{
+  "automation_created": false,
+  "base_revision": "829e1b794a795e4bee9a456717825089e88dd354",
+  "cancelled_ci": {
+    "cancel_confirmed_at": "2026-11-13T13:14:35.729138+00:00",
+    "cancel_request_not_repeated": true,
+    "cancel_requested_at": "2026-11-13T13:13:57.441005+00:00",
+    "conclusion": "cancelled",
+    "first_valid_read_at": "2026-11-13T13:12:16.362325+00:00",
+    "first_valid_read_elapsed_seconds": 3100.500069,
+    "jobs": [
+      {
+        "conclusion": "failure",
+        "name": "web-quality",
+        "status": "completed"
+      },
+      {
+        "conclusion": "failure",
+        "name": "api-quality",
+        "status": "completed"
+      },
+      {
+        "conclusion": "cancelled",
+        "name": "settings-quality",
+        "status": "completed"
+      },
+      {
+        "conclusion": "skipped",
+        "name": "reading-performance-comparison",
+        "status": "completed"
+      },
+      {
+        "conclusion": "cancelled",
+        "name": "build-images",
+        "status": "completed"
+      },
+      {
+        "conclusion": "cancelled",
+        "name": "inspect-release-artifact",
+        "status": "completed"
+      }
+    ],
+    "official_failed_run_quality_artifacts": [
+      {
+        "artifact_id": 14040460542,
+        "directory": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\cancelled-ci-artifacts\\14040460542",
+        "members": 118,
+        "name": "settings-quality-evidence-829e1b794a795e4bee9a456717825089e88dd354-1",
+        "official_zip_sha256": "00ac38e4abb67fea4a31aecb2b951e604258103acaf91c2ca7b386300cc24888",
+        "zip_bytes": 9243575
+      },
+      {
+        "artifact_id": 14037571004,
+        "directory": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\cancelled-ci-artifacts\\14037571004",
+        "members": 381,
+        "name": "release-a-quality-evidence-829e1b794a795e4bee9a456717825089e88dd354-1",
+        "official_zip_sha256": "e6b9a31d6f713d0815177071d034d7d0eeaf770e0883508bc9ac9e7bce4fac98",
+        "zip_bytes": 20222481
+      }
+    ],
+    "raw_logs": [
+      {
+        "bytes": 1610617,
+        "path": "E:\\chat-reader-temp\\reliability-release-continuation-20261113-01\\ci-repair-run-43424349497-failure\\api-quality.log",
+        "sha256": "68953712b471bf67cae39deba8141cf6502c76bc06e07065a5e999780fb538f3"
+      },
+      {
+        "bytes": 2077441,
+        "path": "E:\\chat-reader-temp\\reliability-release-continuation-20261113-01\\ci-repair-run-43424349497-failure\\web-quality.log",
+        "sha256": "9430ebbba213786aa1d5b9d43ab79dcfc9ca55d20ea501833fa7df72078e1da7"
+      },
+      {
+        "bytes": 250599,
+        "path": "E:\\chat-reader-temp\\reliability-release-continuation-20261113-01\\ci-repair-run-43424349497-failure\\settings-quality.log",
+        "sha256": "940c2403b0df00bafb5942ae1b420ff4e5cad7a755632f3cffd74f7aa23b8ece"
+      }
+    ],
+    "release_artifacts_accepted": false,
+    "request_stdout_decode_error_retained": true,
+    "run_id": 43424349497,
+    "source_revision": "829e1b794a795e4bee9a456717825089e88dd354",
+    "status": "completed",
+    "url": "https://github.com/foolkking/chat-reader/actions/runs/43424349497"
+  },
+  "global_environment_changed": false,
+  "helper_sha256": "f94ba5b8c4f6cd66e2a509d14e7c0ab1685c072939147c4ecadb1f33897838d4",
+  "operator_helper_failures": [
+    "Initial after-boundary CI read TLS timeout; raw stderr retained.",
+    "Cancellation stdout GBK decode failed; independent remote read confirmed cancelled; cancellation not repeated.",
+    "Artifact read EOF; bounded read-only retry succeeded; raw error retained.",
+    "Disposable PG guard rejected inet text /32; exact host() check used without changing path/port boundary.",
+    "Native Start-Process Wait held its descendant tree; startup not repeated; separate ownership guard gated tests."
+  ],
+  "owned_disposable_postgresql": {
+    "at": "2026-11-13T21:38:15.5156558+08:00",
+    "dataRetained": true,
+    "deletedFiles": 0,
+    "path": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\pg-data",
+    "port": 55442,
+    "productionChanged": false,
+    "startupWaiterHadGuardedContinuation": true,
+    "stopped": true
+  },
+  "physical_device_or_host_restore_accepted": false,
+  "production_auxiliary_query_cancel_authorization": {
+    "authorized_by_user": true,
+    "canonical_connection_termination_allowed": false,
+    "cleanup_allowed": false,
+    "condition": "Fresh exact-source full CI and independent official-artifact verification all green; fresh lock/connection/source-byte checks.",
+    "executed": false,
+    "input_replay_allowed": false,
+    "scope": "Only the legacy auxiliary progress SQL wait, allowing the original code to roll back and finish without retry.",
+    "task_row_rewrite_allowed": false
+  },
+  "production_changed": false,
+  "production_deployed": false,
+  "protected_files_unchanged": 13,
+  "recorded_at": "2026-11-13T13:43:27.134437+00:00",
+  "remaining_acceptance_owner": "user",
+  "schema_version": 1,
+  "scope": {
+    "application_code_changed": false,
+    "changed_from_829e1b7": [
+      "apps/api/tests/test_backup_restore_drill_postgres.py",
+      "apps/api/tests/test_offline_snapshot_postgres.py",
+      "apps/api/tests/test_worker_shutdown.py",
+      "scripts/ux/source-editor-table-browser.mjs"
+    ],
+    "inherited_build_is_not_a_new_exact_ci": true,
+    "source_input_count": 1382,
+    "web_build_input_count": 548,
+    "web_build_input_drift": [],
+    "workflow_changed": false
+  },
+  "source_input_count": 1382,
+  "source_inputs": "ci-fixture-inputs.json",
+  "status": "fixture_regressions_passed_fresh_full_ci_required_not_deployed",
+  "tests": {
+    "api_postgresql_worker_shutdown": {
+      "boundary": "Disposable loopback PostgreSQL/pg_dump/pg_restore and mocked entrypoint; four real POSIX processes are skipped on Windows and remain Linux CI gates.",
+      "log": {
+        "bytes": 113,
+        "path": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\api-pg-green-01.log",
+        "sha256": "c9a3475e5f8921975afb3b9e9d671ad669f49ae4413c9d09ac6c0e4b6d9a2be9"
+      },
+      "passed": 34,
+      "skipped": 4
+    },
+    "limits_not_relaxed": {
+      "api_full_suite_minutes": 45,
+      "browser_assertion_seconds": 5,
+      "memory_and_frame_gates_unchanged": true,
+      "posix_ready_wait_previously_unbounded_now_seconds": 5,
+      "posix_signal_exit_seconds": 5,
+      "settings_quality_minutes": 60
+    },
+    "migration_head": "20261112_0061",
+    "mounted_editor": {
+      "boundary": "local Chrome real dialog/workspace/form/CodeMirror/MarkdownRenderer core; explicit API/Next-loader/assistant-ui source-forwarding and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
+      "browser": "156.0.8078.80",
+      "passed": 99,
+      "result": {
+        "bytes": 9327,
+        "path": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\browser-green-01\\table-browser\\result.json",
+        "sha256": "bce282778c77f211da487add3a0b7830f42755ea71f6a8c5b3c78aa2f7555af8"
+      }
+    },
+    "negative_reproductions": [
+      {
+        "bytes": 17061,
+        "path": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\api-pg-red.log",
+        "sha256": "9870d50adb03508dbee23563e0994d82e06909cd1470b9bb3d9bd4523785166b"
+      },
+      {
+        "bytes": 2689,
+        "path": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\worker-fixture-red.log",
+        "sha256": "9cb7d0697751e1413a30ae2ad19f1868f980965351a4a9bc6db440c302944da7"
+      },
+      {
+        "bytes": 709,
+        "path": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\unicode-red-01\\browser.log",
+        "sha256": "9c36e3712a9c708dcb44f24e3eaf5c6643db23845a8e21934fb76f33c449c26e"
+      }
+    ],
+    "syntax": {
+      "browser_node_check": "passed",
+      "diff_check": "passed",
+      "python_modules": 3
+    },
+    "unicode_repetitions": {
+      "boundary": "Repeated same exact scenario; not additional coverage or physical-device acceptance.",
+      "cpu_rates": [
+        1,
+        4
+      ],
+      "log": {
+        "bytes": 908,
+        "path": "E:\\chat-reader-temp\\reliability-ci-fixture-fix-20261113-02\\unicode-repeat-01\\browser.log",
+        "sha256": "04bfc38cd07328f54afe9fb1b059c6b52a50bdd10c11765c449252a2f3371977"
+      },
+      "method": {
+        "boundary": "Focused repetition of the exact repaired real-component Unicode case; unchanged default five-second assertions, held preview scheduling seam; not an additional full-matrix or physical-device acceptance",
+        "copy_script_sha256": "9482662249ba898191244b2dca3d570e3a7d70d880b4cc052395eb63eb3a4c1c",
+        "cpu_throttle_rates": [
+          1,
+          4
+        ],
+        "repetitions": 20,
+        "source_script_sha256": "9ad74197d898f951cbd8a39616ea0b1049cff48e939f61accbd8af5bc6051049"
+      },
+      "passed": 20
+    }
+  }
+}

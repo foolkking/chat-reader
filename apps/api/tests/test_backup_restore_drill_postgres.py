@@ -30,6 +30,7 @@ def test_stopped_writer_database_and_asset_backup_really_restores(isolated_schem
     migrate("head")
     with engine.connect() as connection:
         server_major = int(connection.execute(sa.text("SHOW server_version_num")).scalar()) // 10000
+        source_head = connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one()
     assets = tmp_path / "source-assets"
     monkeypatch.setenv("ASSET_STORAGE_DIR", str(assets))
     monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
@@ -76,7 +77,7 @@ def test_stopped_writer_database_and_asset_backup_really_restores(isolated_schem
             "--dbname", target_name, input=dump.read_bytes())
         shutil.copytree(backup / "assets", restored_assets)
         with Session(target) as db:
-            assert db.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == "20261108_0060"
+            assert db.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == source_head
             assert db.query(Message).count() == 1
             assert db.query(MessageVersion).count() == 2
             assert db.get(MessageVersion, current_version).display_text == "Synthetic"

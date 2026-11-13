@@ -1,4 +1,5 @@
 """An offline package must not mix source states across concurrent edits."""
+import hashlib
 import json
 import uuid
 from zipfile import ZipFile
@@ -35,6 +36,8 @@ def test_offline_package_uses_one_source_snapshot(isolated_schema, tmp_path, mon
             owner = conversation.owner_user_id
             before_revision = conversation.offline_revision
             before_body = db.get(MessageVersion, message.current_version_id).display_text
+            before_version_id = message.current_version_id
+            before_content_hash = hashlib.sha256(before_body.encode("utf-8")).hexdigest()
             job = BackgroundJob(job_type="offline_package", owner_user_id=owner)
             db.add(job)
             db.commit()
@@ -48,7 +51,9 @@ def test_offline_package_uses_one_source_snapshot(isolated_schema, tmp_path, mon
                 if commit_progress:
                     db.commit()  # Worker progress must not reset the read snapshot.
                 with Session(engine) as writer:
-                    edit_message(writer, message_id, "Synthetic replacement during download.", save_mode=save_mode)
+                    edit_message(writer, message_id, "Synthetic replacement during download.",
+                        save_mode=save_mode, base_version_id=before_version_id,
+                        base_content_hash=before_content_hash)
                     writer.commit()
 
         with Session(engine) as db:
