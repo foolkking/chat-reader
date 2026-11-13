@@ -1,12 +1,24 @@
 # Project State
 
-## Reliability implementation — 2026-11-13 (local, not released)
+## Reliability candidate — 2026-11-13 (original CI failed; repair awaiting CI)
 
 The latest November13 instruction authorizes selective commit/push, the full
 exact-source CI and deployment after CI success. The user owns acceptance of
 the remaining product/device/recovery scenarios. This does not waive automated
 release gates, stopped-writer backup, migration or runtime-health safeguards,
 and does not authorize cleanup or replay of user inputs.
+
+Candidate **`adc80ac0dc671d86f26fc221626b4acfe4ee3651`** is selectively committed
+and pushed. Full CI **`43389645130`** failed: API/Web failed, Settings reached
+its original 60-minute timeout, and downstream release jobs were skipped.
+The first read at **16:48:50 +08:00** respected the 50-minute minimum.
+CI-blocking repairs now pass local regression: PostgreSQL modules, 99 mounted
+editor scenarios, twenty picker repetitions, twelve scan-recovery groups,
+2591 Node cases and the 548-input isolated build. The editor repairs address
+both initial-value replay and repeated header history commands, not merely
+picker deduplication. The single ledger owns evidence and limitations;
+no new accepted CI or deployment is claimed. Thirteen unrelated dirty files
+remain byte-identical and unstaged.
 
 The user has now authorized implementation of the four-block reliability plan.
 The earlier pause below remains historical; it does not prohibit this local work.
@@ -21,22 +33,22 @@ implementation, regression evidence and outstanding acceptance items.
   20261108_0060`**. This work does not inherit any earlier CI result.
 - Local synthetic/API/PostgreSQL/browser checks are recorded in the ledger.
   Linux combined-process320/640MiB and the full original frame matrix await
-  this exact-source CI. Physical tablet and host-backup restoration remain
+  a successful full repair CI. Physical tablet and host-backup restoration remain
   **not accepted**; the user will perform remaining acceptance.
 - Preserve earlier M/N/O edits and evidence. The November 12 follow-up authorizes
   one local checkpoint commit and continuation of the next batch, without waiting
   for CI. No push, CI dispatch, deployment, production cleanup or real-user-source
   replay is authorized by this checkpoint.
-- Checkpoint **`a0faa85`** is now committed locally. The following uncommitted
-  batch adds Root's on-demand execution stop/result-check flow, exact execution
+- Checkpoint **`a0faa85`** preceded the following administrator batch, now included
+  in `adc80ac`. The batch adds Root's on-demand execution stop/result-check flow, exact execution
   fencing and atomic audit receipts; account-deletion interruption retains its
   original recovery path. No CI or production action was performed.
 - The November13 continuation adds owner-task interruption recovery: existing
   cancellation permissions, batch-deletion checkpoint/receipt preservation and
   independent stopping in Tasks/noise scans. The same ledger owns verification
   and recovered working preferences. The subsequent release authorization
-  supersedes the earlier local-only commit restriction; no CI has yet run for
-  this final source.
+  supersedes the earlier local-only commit restriction; the exact-source CI
+  above failed and is not accepted.
 
 ## Small-host goal closeout — 2026-11-12
 

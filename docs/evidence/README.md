@@ -1,5 +1,13 @@
 # 事实证据索引
 
+## CI阻断修复 — 2026-11-13（本地通过，完整新CI待执行）
+
+[修复回执](reliability-2026-11-13/ci-repair-verification.json)关联原失败CI、
+两条独立编辑器回退红测、最终99场景/20次picker重复/12扫描组、
+Node2591、静态检查与548输入隔离构建。原失败与夹具超时保留；
+没有放宽原门槛，没有将本机依赖/合成接口等同精确CI或用户验收。
+当前结论只维护[同一台账](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
 ## 用户任务中断恢复 — 2026-11-13（本地，未提交）
 
 [增量回执](reliability-2026-11-13/owner-recovery-verification.json)记录实际

@@ -211,7 +211,14 @@ for (const width of [375, 768, 1440]) {
         if (retryClicked) { recoveredReads += 1; await route.continue(); }
         else await route.fulfill({ status: 503, json: { detail: "Synthetic import scan read failure" } });
       });
+      const commitResponse = page.waitForResponse(response =>
+        /\/api\/imports\/[^/]+\/commit$/.test(new URL(response.url()).pathname)
+        && response.request().method() === "POST");
       await page.getByTestId("commit-import-button").click();
+      const accepted = await commitResponse;
+      expect([200, 202]).toContain(accepted.status());
+      const { import_id: importId } = await accepted.json();
+      expect(importId).toMatch(/^[0-9a-f-]{36}$/);
       const completed = page.getByTestId("import-completion-summary");
       await expect(completed).toBeVisible();
       if (width === 768) {
@@ -232,6 +239,20 @@ for (const width of [375, 768, 1440]) {
         await completed.getByRole("button", { name: "Retry loading", exact: true }).click();
         await expect.poll(() => recoveredReads).toBeGreaterThan(0);
       }
+      // Import completion and its background scan are separate milestones.
+      // Use the original configured poll/test budgets for the exact import's
+      // canonical follow-up; retain the short UI assertion once it is READY.
+      await expect.poll(async () => {
+        const response = await context.request.get(
+          `${baseURL}/api/content-cleanup/scans/pending?import_id=${encodeURIComponent(importId)}`,
+        );
+        expect(response.status()).toBe(200);
+        const scans = await response.json() as Array<{ source: string; status: string }>;
+        if (!scans.length) return "NOT_CREATED";
+        expect(scans).toHaveLength(1);
+        expect(scans[0].source).toBe("IMPORT");
+        return scans[0].status;
+      }, { message: "The committed import's own scan must be ready before opening review" }).toBe("READY");
       const review = completed.getByRole("button", { name: /审查噪声|Review noise/ });
       await expect(review).toBeVisible({ timeout: 5_000 });
       await expect(completed.getByRole("alert")).toHaveCount(0);

@@ -86,7 +86,9 @@ import {getCleanupScan} from "./adapters.tsx";
 const client=new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});
 function ScanFixture(){const scan=useQuery({queryKey:["content-cleanup-scan","synthetic-scan"],
  queryFn:({signal})=>getCleanupScan("synthetic-scan",signal)});
- return <section data-cleanup-scan-id="synthetic-scan">{scan.data&&<CleanupScanProgress scan={scan.data}/>}</section>}
+ return <section data-cleanup-scan-id="synthetic-scan">
+ <button type="button" className="btn-secondary min-h-11 px-3" data-testid="scan-task-progress">View progress</button>
+ {scan.data&&<CleanupScanProgress scan={scan.data}/>}</section>}
 function Fixture(){const [open,setOpen]=useState(true);const continuation=new URL(location.href).searchParams.has("continuation");
 const scanning=new URL(location.href).searchParams.has("scan");
 return <main style={{maxWidth:720,margin:"24px auto",padding:12}}>
@@ -164,7 +166,7 @@ try {
       processed_messages: 1, total_messages: 4, excluded_archived_count: 0, target_count: 1,
       project_target_count: 0, unassigned_target_count: 1, occurrence_count: 1, delete_count: 0,
       keep_count: 1, protected_count: 0, created_at: now, completed_at: null, error_message: null };
-    let stopMoment = now, scanReadFailed = false;
+    let stopMoment = now, scanReadFailed = false, legacyScan = false;
     let continuationState = { generation: 0, adopted_revision_id: null, pending_return_task_id: null };
     let continuationReadFailed = false;
     let actual = false, writeMode = "ok", packageMode = "ok", packageReceipt = null;
@@ -196,6 +198,11 @@ try {
       }
       if (path === "/api/tasks/scan-execution/cancel") {
         writes.push({ path });
+        if (legacyScan) {
+          scanTask.status = scan.background_job_status = "cancelling";
+          scanTask.execution_state = scan.execution_state = null;
+          return route.abort("failed");
+        }
         scanTask.execution_state = scan.execution_state = "stopping";
         scanTask.stop_requested_at = scan.stop_requested_at = stopMoment;
         return route.fulfill({ json: scanTask });
@@ -528,6 +535,24 @@ try {
       await expect(scanProgress).toContainText(locale === "zh-CN" ? "扫描已取消" : "Scan cancelled");
       await expect(scanCancel).toHaveCount(0);
       assert.equal(writes.filter(item => item.path === "/api/tasks/scan-execution/cancel").length, 1);
+      // Existing canonical cancelling rows have no independent control record.
+      // A lost response's check disappears after GET confirmation, so focus
+      // must return to the surviving row action, not a removed/disabled node.
+      legacyScan = true;
+      scanTask.status = scan.background_job_status = "processing";
+      scan.status = "SCANNING";
+      scanTask.execution_state = scan.execution_state = null;
+      await page.goto("https://import-recovery.synthetic/?scan=1");
+      await scanCancel.focus(); await page.keyboard.press("Enter");
+      await expect(scanCheck).toBeVisible();
+      scanReadFailed = true;
+      await scanCheck.click();
+      await expect(scanProgress.getByRole("alert")).toContainText(locale === "zh-CN" ? "核对失败" : "The check failed");
+      scanReadFailed = false;
+      await scanCheck.focus(); await page.keyboard.press("Enter");
+      await expect(scanCheck).toHaveCount(0);
+      await expect(page.getByTestId("scan-task-progress")).toBeFocused();
+      assert.equal(writes.filter(item => item.path === "/api/tasks/scan-execution/cancel").length, 2);
       results.push({ width, locale, theme, writes: writes.length, taskReads, geometry, screenshot: filename,
         taskDismissStorageRejection:theme==="light"?"setItem":"getter",
         sourceCleanup: "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
@@ -535,7 +560,7 @@ try {
         contextRead: "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
         contextScreenshot, writeScreenshot, supervisedScreenshot, scanScreenshot,
         supervisedStop: "processing + independent stopping → re-entry/read-only check; lost acknowledgement → stop confirmed by GET without another POST",
-        scanStop: "acknowledged independent stop → check only → failed read retains notice → re-entry → confirmed cancellation, one POST",
+        scanStop: "independent stop → check only → failed read → re-entry → confirmed cancellation; legacy lost response → failed GET → cancelling confirmed → surviving row focus; one POST per original stop",
         continuationWrites: "actual editor and historical restore lost acknowledgement → byte check, no second PUT; acknowledged PUT + failed refresh → read-only retry; package unknown survives panel remount → absent receipt → explicit same-key/base/source retry" });
     } catch (error) {
       await page.screenshot({ path: join(out, `failure-${width}-${locale}-${theme}.png`), fullPage: true }).catch(() => {});

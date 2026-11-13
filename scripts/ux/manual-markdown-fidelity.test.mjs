@@ -5,6 +5,8 @@ import { test } from "node:test";
 
 const appRequire = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const ts = appRequire("typescript");
+const { EditorState } = appRequire("@codemirror/state");
+const { isolateHistory } = appRequire("@codemirror/commands");
 const read = path => ts.createSourceFile(path, readFileSync(new URL("../../apps/web/" + path, import.meta.url), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const createSource = read("features/conversations/new-conversation-dialog.tsx");
 const insertSource = read("features/conversations/message-insert-dialog.tsx");
@@ -31,7 +33,8 @@ const editorErrorMessage = compile(editSource, "editorErrorMessage", {});
 const editorErrorFeedback = compile(editSource, "editorErrorFeedback", { editorErrorKind, editorErrorMessage });
 
 // Execute actual production submit/dirty/close AST fragments, not a duplicate
-// implementation. Hooks, network, CodeMirror and attachment parsing are doubles.
+// implementation. Hooks/network/attachment parsing are doubles; document
+// replacements apply actual CodeMirror state transactions, not setter stubs.
 function createFixture(userText, assistantText = "  Synthetic answer\n") {
   const calls = [], scope = { userText, assistantText, title: "  Synthetic title  ", defaultTitle: "New conversation",
     projectId: "", submitting: { current: false }, setPending: noop, setError: noop, zh: false,
@@ -39,8 +42,13 @@ function createFixture(userText, assistantText = "  Synthetic answer\n") {
   return { calls, scope, submit: compile(createSource, "submit", scope) };
 }
 function editFixture(text, baselineText = "Synthetic original", { authoritative = text, fail = false, canonical, drafts = {} } = {}) {
-  const saved = [], updates = {}, scope = { text, baselineText, reason: "  Synthetic reason  ", attachmentDrafts: drafts,
-    editorViewRef: { current: { state: { doc: { toString: () => authoritative } } } }, saveRequestRef: { current: 0 },
+  const saved = [], updates = {}, transactions = [];
+  const view = {
+    state: EditorState.create({ doc: authoritative }),
+    dispatch(spec) { const transaction = this.state.update(spec); transactions.push(transaction); this.state = transaction.state; },
+  };
+  const scope = { text, baselineText, reason: "  Synthetic reason  ", attachmentDrafts: drafts,
+    editorViewRef: { current: view }, queuedEditorTextRef: { current: null }, isolateHistory, saveRequestRef: { current: 0 },
     editorRevisionRef: { current: 9 }, savingRef: { current: false }, saveUnknown: false, saveRecoveryReady: true,
     saveSnapshotRef: { current: null }, zh: false, removedActions: {},
     draft: { acknowledge: async value => { updates.acknowledgedDraft = value; } },
@@ -50,11 +58,12 @@ function editFixture(text, baselineText = "Synthetic original", { authoritative 
       canonicalText: canonical ?? args[0], versionId: "synthetic-version", contentHash: "synthetic-hash", versionNumber: 2,
     }; },
   };
-  for (const name of ["Error", "RevisionConflict", "ReloadStatus", "IsSaving", "BaselineText", "EditorDocument", "Text", "Reason", "ShowClosePrompt", "AttachmentDrafts", "RemovedConfirmMode", "RemovedActions", "SaveUnknown", "SaveNotice", "CanRetrySave"]) {
+  for (const name of ["Error", "RevisionConflict", "ReloadStatus", "IsSaving", "BaselineText", "Text", "Reason", "ShowClosePrompt", "AttachmentDrafts", "RemovedConfirmMode", "RemovedActions", "SaveUnknown", "SaveNotice", "CanRetrySave", "Comparison"]) {
     scope["set" + name] = value => { updates[name] = value; };
   }
+  scope.replaceEditorText = compile(editSource, "replaceEditorText", scope);
   scope.confirmSave = compile(editSource, "confirmSave", scope);
-  return { saved, updates, scope, submit: compile(editSource, "submit", scope) };
+  return { saved, updates, scope, view, transactions, submit: compile(editSource, "submit", scope) };
 }
 const bodies = ["    Synthetic code", "\tSynthetic tab\n", "\n\nSynthetic paragraph\n\n", "```text\n  Synthetic line\n    ", "  合成内容🙂  \n"];
 for (const [index, body] of bodies.entries()) {
@@ -68,7 +77,8 @@ for (const [index, body] of bodies.entries()) {
     const f = editFixture(body); await f.submit(mode);
     assert.equal(f.saved.length, 1); assert.equal(f.saved[0][0], body);
     assert.equal(f.saved[0][1], "Synthetic reason"); assert.equal(f.saved[0][2], mode); assert.equal(f.saved[0][4], 9);
-    assert.equal(f.updates.BaselineText, body); assert.equal(f.updates.EditorDocument, body); assert.equal(f.updates.Text, body);
+    assert.equal(f.updates.BaselineText, body); assert.equal(f.view.state.doc.toString(), body); assert.equal(f.updates.Text, body);
+    assert.equal(f.transactions.length, 0, "acknowledging the same source must not write the document again");
   });
 }
 for (const body of ["    Synthetic original", "Synthetic original  ", "\nSynthetic original\n"]) {
@@ -106,6 +116,39 @@ test("failed edit does not reset its draft or baseline", async () => {
 test("explicit canonical reply, including whitespace, is the new baseline", async () => {
   const f = editFixture("Synthetic draft", "Synthetic original", { canonical: "  Synthetic server source\n" });
   await f.submit("create_version"); assert.equal(f.updates.BaselineText, "  Synthetic server source\n");
+  assert.equal(f.view.state.doc.toString(), "  Synthetic server source\n");
+  assert.equal(f.transactions.length, 1);
+  assert.equal(f.transactions[0].annotation(isolateHistory), "full");
+});
+test("an explicit replacement before editor creation keeps the queued exact source", () => {
+  const f = editFixture("Synthetic draft");
+  f.scope.editorViewRef.current = null;
+  f.scope.replaceEditorText(" \tSynthetic recovered source🙂\n");
+  assert.equal(f.scope.queuedEditorTextRef.current, " \tSynthetic recovered source🙂\n");
+  assert.equal(f.updates.Text, " \tSynthetic recovered source🙂\n");
+  assert.equal(f.transactions.length, 0);
+});
+test("a header history request is consumed once despite replacement callback identities", () => {
+  const calls = [], appliedHistoryCommandRef = { current: null };
+  const scope = { editorViewRef: { current: {} }, appliedHistoryCommandRef,
+    historyCommandRequest: { id: 1, command: "undo" }, dispatchCommand: (...args) => calls.push(args) };
+  const first = compile(editSource, "applyHeaderHistoryCommand", scope);
+  first(); first();
+  compile(editSource, "applyHeaderHistoryCommand", { ...scope, dispatchCommand: (...args) => calls.push(args) })();
+  assert.deepEqual(calls, [["undo", "header"]]);
+  const next = compile(editSource, "applyHeaderHistoryCommand", { ...scope, historyCommandRequest: { id: 2, command: "redo" } });
+  next(); next();
+  assert.deepEqual(calls, [["undo", "header"], ["redo", "header"]]);
+});
+test("a header history request waits for the editor instead of being consumed before creation", () => {
+  const calls = [], editorViewRef = { current: null }, appliedHistoryCommandRef = { current: null };
+  const apply = compile(editSource, "applyHeaderHistoryCommand", { editorViewRef, appliedHistoryCommandRef,
+    historyCommandRequest: { id: 1, command: "undo" }, dispatchCommand: (...args) => calls.push(args) });
+  apply();
+  assert.equal(appliedHistoryCommandRef.current, null); assert.deepEqual(calls, []);
+  editorViewRef.current = {};
+  apply(); apply();
+  assert.equal(appliedHistoryCommandRef.current, 1); assert.deepEqual(calls, [["undo", "header"]]);
 });
 test("unresolved attachment still blocks an edit", async () => {
   const f = editFixture("![pending](cr-upload://upload)", "Synthetic original", {
@@ -132,11 +175,12 @@ test("a late save confirms its snapshot without overwriting subsequent input", a
   };
   const pending = compile(editSource, "submit", f.scope)("create_version");
   f.scope.editorRevisionRef.current += 1;
-  f.scope.editorViewRef.current.state.doc.toString = () => "Submitted source with later input";
+  f.view.dispatch({ changes: { from: f.view.state.doc.length, insert: " with later input" } });
   release();
   await pending;
   assert.equal(f.updates.BaselineText, "Submitted source");
-  assert.equal("EditorDocument" in f.updates, false);
+  assert.equal(f.view.state.doc.toString(), "Submitted source with later input");
+  assert.equal(f.transactions.length, 1, "only the later input may change the live document");
   assert.equal("Text" in f.updates, false);
   assert.equal(f.updates.dirty, true);
 });

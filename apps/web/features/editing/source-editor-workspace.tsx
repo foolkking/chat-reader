@@ -12,7 +12,7 @@ import { authenticationGeneration } from "../../lib/offline-access";
 import type { AttachmentRead, MessageEditResponse, MessageListItem, NavigateTarget } from "../../lib/types";
 import { ContentCleanupDialog, type CleanupSourceSelection } from "../conversations/content-cleanup-panel";
 import { sourceEditorNavigationTarget } from "../conversations/reader-locator-target";
-import { EditMessageForm, type SourceSaveResult, type SourceTextSelection } from "./edit-message-form";
+import { EditMessageForm, type SourceReloadRequest, type SourceSaveResult, type SourceTextSelection } from "./edit-message-form";
 import type { AttachmentDraft, AttachmentDraftCallbacks, AttachmentReferenceTarget, SourceAttachmentInsertion } from "./source-attachment-drop";
 import { findMarkdownAttachmentReferences } from "./source-attachment-drop";
 import { forgetSourceSave, readSourceSave, rememberSourceSave, type SourceSaveAttempt } from "./source-save-receipt";
@@ -93,11 +93,12 @@ export function SourceEditorWorkspace({
   // until the user asks for it.
   const [showPreview, setShowPreview] = useState(false);
   const [editorToolsOpen, setEditorToolsOpen] = useState(false);
-  const [historyCommandRequest, setHistoryCommandRequest] = useState<{ id: number; command: "undo" | "redo" } | null>(null);
+  const [historyCommandRequest, setHistoryCommandRequest] = useState<{ id: number; command: "undo" | "redo"; messageId: string } | null>(null);
   const editorToolsButtonRef = useRef<HTMLButtonElement | null>(null);
   const [localAttachmentInsertion, setLocalAttachmentInsertion] = useState<SourceAttachmentInsertion | null>(null);
   const [focusedAttachment, setFocusedAttachment] = useState<AttachmentReferenceTarget | null>(null);
   const [saveBase, setSaveBase] = useState(message.current_version);
+  const [sourceReloadRequest, setSourceReloadRequest] = useState<SourceReloadRequest | null>(null);
   const baselineMessageRef = useRef(message.id);
   const comparisonMessageRef = useRef<MessageListItem | null>(null);
   const saveAttemptRef = useRef<SourceSaveAttempt | null>(null);
@@ -356,6 +357,9 @@ export function SourceEditorWorkspace({
     if (baselineMessageRef.current === message.id) return;
     baselineMessageRef.current = message.id;
     setSaveBase(message.current_version);
+    setSourceReloadRequest(null);
+    setHistoryCommandRequest(null);
+    comparisonMessageRef.current = null;
     saveAttemptRef.current = null;
     setSourceSelection(null);
     setCleanupOpen(false);
@@ -411,18 +415,28 @@ export function SourceEditorWorkspace({
   }
 
   async function loadLatestMessage(signal?: AbortSignal): Promise<MessageListItem> {
+    const generation = authenticationGeneration();
+    const expectedText = saveBase?.display_text ?? saveBase?.plain_text ?? text;
+    const check = () => {
+      signal?.throwIfAborted();
+      if (!workspaceActiveRef.current || generation !== authenticationGeneration()
+        || baselineMessageRef.current !== message.id) throw new Error("Account or editor changed");
+    };
     const [conversation, turn] = await Promise.all([
       getConversation(message.conversation_id, signal),
       getConversationReaderTurn(message.conversation_id, message.id, signal),
     ]);
-    signal?.throwIfAborted();
+    check();
     const latestMessage = turn.items.find((item) => item.id === message.id);
     if (!latestMessage?.current_version?.id) {
       throw new Error(zh ? "无法加载最新消息状态。" : "Unable to load the latest message state.");
     }
-    setSaveBase(latestMessage.current_version);
+    const latest = savedSource(latestMessage.current_version);
     onConversationRevision?.(conversation.offline_revision);
     await onMessageChanged(latestMessage);
+    check();
+    comparisonMessageRef.current = latestMessage;
+    setSourceReloadRequest({ messageId: message.id, expectedText, latest });
     onTargetUpdated({ message: latestMessage, cursorOffset: cursorOffsetRef.current });
     return latestMessage;
   }
@@ -455,6 +469,8 @@ export function SourceEditorWorkspace({
     const confirmed = { ...saveBase!, id: receipt.current_version_id, version_number: receipt.version_number,
       content_hash: receipt.content_hash, source_content_hash: receipt.source_content_hash, display_text: attempt.text, plain_text: attempt.text };
     setSaveBase(confirmed);
+    setSourceReloadRequest(null);
+    comparisonMessageRef.current = null;
     saveAttemptRef.current = null;
     setRecoveredSave(null);
     void forgetSourceSave(message.id, attempt.operationId);
@@ -492,6 +508,8 @@ export function SourceEditorWorkspace({
     const networkCompletedAt = window.performance.now();
     const confirmed = response.message_version;
     setSaveBase(confirmed);
+    setSourceReloadRequest(null);
+    comparisonMessageRef.current = null;
     saveAttemptRef.current = null;
     setRecoveredSave(null);
     void forgetSourceSave(message.id, attempt.operationId);
@@ -584,8 +602,8 @@ export function SourceEditorWorkspace({
             <button type="button" onClick={() => { setEditorToolsOpen(false); setAttachmentPickerOpen(true); }} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "选择当前对话文件" : "Choose conversation file"} title={zh ? "选择当前对话文件" : "Choose conversation file"}><Paperclip className="h-4 w-4" /></button>
             <button ref={editorToolsButtonRef} type="button" data-testid="source-editor-tools-toggle" aria-expanded={editorToolsOpen} aria-controls="source-editor-command-panel" onClick={() => setEditorToolsOpen((value) => !value)} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle ${editorToolsOpen ? "bg-subtle text-primary" : ""}`} aria-label={zh ? "编辑工具" : "Editing tools"} title={zh ? "编辑工具（Ctrl + Alt + C）" : "Editing tools (Ctrl + Alt + C)"}><Wand2 className="h-4 w-4" /></button>
             <span className="mx-0.5 h-5 w-px bg-[var(--border)]" aria-hidden="true" />
-            <button type="button" data-testid="source-editor-undo" onClick={() => setHistoryCommandRequest((current) => ({ id: (current?.id ?? 0) + 1, command: "undo" }))} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" aria-label={zh ? "撤销" : "Undo"} title={zh ? "撤销（Ctrl+Z）" : "Undo (Ctrl+Z)"}><Undo2 className="h-4 w-4" /></button>
-            <button type="button" data-testid="source-editor-redo" onClick={() => setHistoryCommandRequest((current) => ({ id: (current?.id ?? 0) + 1, command: "redo" }))} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" aria-label={zh ? "重做" : "Redo"} title={zh ? "重做（Ctrl+Y）" : "Redo (Ctrl+Y)"}><Redo2 className="h-4 w-4" /></button>
+            <button type="button" data-testid="source-editor-undo" onClick={() => setHistoryCommandRequest((current) => ({ id: (current?.id ?? 0) + 1, command: "undo", messageId: message.id }))} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" aria-label={zh ? "撤销" : "Undo"} title={zh ? "撤销（Ctrl+Z）" : "Undo (Ctrl+Z)"}><Undo2 className="h-4 w-4" /></button>
+            <button type="button" data-testid="source-editor-redo" onClick={() => setHistoryCommandRequest((current) => ({ id: (current?.id ?? 0) + 1, command: "redo", messageId: message.id }))} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" aria-label={zh ? "重做" : "Redo"} title={zh ? "重做（Ctrl+Y）" : "Redo (Ctrl+Y)"}><Redo2 className="h-4 w-4" /></button>
           </div>
           <div className="flex items-center gap-1">
             <button type="button" data-testid="source-editor-preview-toggle" aria-pressed={showPreview} onClick={() => setShowPreview((value) => !value)} className="inline-flex h-10 w-10 items-center justify-center gap-2 rounded-lg text-xs font-medium text-secondary hover:bg-subtle sm:h-auto sm:min-h-9 sm:w-auto sm:px-3" title={zh ? (showPreview ? "\u9690\u85cf\u5b9e\u65f6\u9884\u89c8" : "\u663e\u793a\u5b9e\u65f6\u9884\u89c8") : (showPreview ? "Hide live preview" : "Show live preview")}>{showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}<span className="hidden sm:inline">{zh ? "\u9884\u89c8" : "Preview"}</span></button>
@@ -608,6 +626,7 @@ export function SourceEditorWorkspace({
             versionNumber={saveBase?.version_number ?? versionNumber}
             versionId={saveBase?.id}
             contentHash={saveBase?.source_content_hash}
+            sourceReloadRequest={sourceReloadRequest}
             saveRecoveryReady={saveRecoveryReady}
             pendingSave={recoveredSave}
             readerRefreshPending={refreshFailed}
@@ -628,7 +647,7 @@ export function SourceEditorWorkspace({
             onPreviewChange={setShowPreview}
             editorToolsOpen={editorToolsOpen}
             onEditorToolsOpenChange={setEditorToolsOpen}
-            historyCommandRequest={historyCommandRequest}
+            historyCommandRequest={historyCommandRequest?.messageId === message.id ? historyCommandRequest : null}
             onReloadLatest={async () => {
               const generation = authenticationGeneration();
               const latest = await getMessage(message.id);
@@ -640,6 +659,7 @@ export function SourceEditorWorkspace({
               const latest = comparisonMessageRef.current;
               if (latest?.current_version) setSaveBase(latest.current_version);
               comparisonMessageRef.current = null;
+              setSourceReloadRequest(null);
             }}
             onVerifySave={verifySave}
             onRetrySave={async () => {

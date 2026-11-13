@@ -626,8 +626,13 @@ current chunk boundary on the compatibility path. Under supervision, stopping
 is recorded independently and canonical processing may remain until the executor
 exits and its outcome is reconciled. The scan shows stopping/check-only immediately;
 failed checks retain that action, and replacing the cancel control restores lost
-keyboard focus to a real available control. It does not offer another cancel
-while an acknowledged independent stop is pending.
+keyboard focus to a real available control. A disabled-but-connected check can
+lose focus too: the stable row anchor restores its own available action, then
+the row's progress action, without stealing a destination the user chose during
+the read. Independent stopping keeps the read-only check; a confirmed legacy
+cancelling state returns to the ordinary progress action rather than retaining
+a redundant check. Neither transition repeats the cancellation POST. It does
+not offer another cancel while an acknowledged independent stop is pending.
 Both chunk requeue and final result publication require
 the job still to be processing. Losing that conditional update rolls back the
 chunk, without undoing earlier partial chunks or changing canonical content.

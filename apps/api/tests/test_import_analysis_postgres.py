@@ -337,31 +337,62 @@ def test_claim_identity_fences_heartbeat_requeue_and_processor_entry(controlled_
 
 def test_cancellation_between_progress_read_and_write_keeps_cancelling_phase(controlled_analysis):
     from app.services.background_jobs import request_background_job_cancellation
-    factory, _, import_id, job_id, _ = controlled_analysis
+    factory, _, import_id, job_id, root = controlled_analysis
     engine = factory.kw["bind"]
+    original_source = (root / "synthetic.json").read_bytes()
+    processor_thread = threading.get_ident()
+    cancellation_requested = threading.Event()
     intervened = []
+    progress_committed = []
+    cancellation = None
+
+    def cancel():
+        with factory() as cancel_db:
+            # This is a competing canonical write, not the independent API
+            # stop record. Bound the fixture so a regression cannot hang CI.
+            cancel_db.execute(text("SET LOCAL lock_timeout = '5000ms'"))
+            cancel_db.execute(text("SET LOCAL statement_timeout = '10000ms'"))
+            job = cancel_db.get(BackgroundJob, job_id)
+            request_background_job_cancellation(job, source_disposition="retain")
+            cancellation_requested.set()
+            cancel_db.commit()
 
     def cancel_before_progress_write(connection, cursor, statement, parameters, context, executemany):
+        nonlocal cancellation
         if intervened or not context.isupdate or "UPDATE background_jobs" not in statement:
             return
         intervened.append(True)
-        with factory() as cancel_db:
-            job = cancel_db.get(BackgroundJob, job_id)
-            request_background_job_cancellation(job, source_disposition="retain")
-            cancel_db.commit()
+        cancellation = executor.submit(cancel)
+        assert cancellation_requested.wait(5), "Competing cancellation did not reach its write."
+        # persist_report has already locked this row. Waiting for cancellation
+        # COMMIT inside before_cursor_execute would deadlock the lock owner.
+        assert not cancellation.done()
 
-    event.listen(engine, "before_cursor_execute", cancel_before_progress_write)
-    try:
-        process_background_job(job_id, factory)
-    finally:
-        event.remove(engine, "before_cursor_execute", cancel_before_progress_write)
-    assert intervened
+    def await_cancellation_after_progress_commit(_session):
+        if threading.get_ident() != processor_thread or not intervened or progress_committed:
+            return
+        progress_committed.append(True)
+        # Session.after_commit runs after the actual PostgreSQL COMMIT releases
+        # the row lock; Engine.commit runs before that and cannot be used here.
+        cancellation.result(timeout=10)
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        event.listen(engine, "before_cursor_execute", cancel_before_progress_write)
+        event.listen(factory.class_, "after_commit", await_cancellation_after_progress_commit)
+        try:
+            process_background_job(job_id, factory)
+        finally:
+            event.remove(engine, "before_cursor_execute", cancel_before_progress_write)
+            event.remove(factory.class_, "after_commit", await_cancellation_after_progress_commit)
+        assert intervened and progress_committed
+        cancellation.result(timeout=10)
     with factory() as db:
         job = db.get(BackgroundJob, job_id)
         assert job.status == "cancelled" and job.phase == "cancelled"
         assert job.result["source_retained"] is True
         assert db.get(ImportRecord, import_id).session_state == "PAUSED"
         assert db.query(Conversation).count() == 0
+    assert (root / "synthetic.json").read_bytes() == original_source
 
 
 def test_old_failed_retry_rechecks_session_after_concurrent_replacement(controlled_analysis):

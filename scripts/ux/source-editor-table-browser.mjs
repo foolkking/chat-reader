@@ -77,6 +77,7 @@ export default function dynamic(load) {
   return props=>React.createElement(Suspense,{fallback:null},React.createElement(Component,props));
 }`);
 writeFileSync(join(out, "workspace-adapters.mjs"), `
+import React from "react";
 const outsideScope=()=>{throw Error("Unexpected API/cleanup call outside this local table gate");};
 export const getConversationAttachments=async()=>window.syntheticFiles??[];
 export const editMessage=async(id,payload)=>{
@@ -102,12 +103,34 @@ export const getMessageSaveReceipt=async()=>{
 export const getAttachmentUploadSession=outsideScope;
 export const createAttachmentUploadSession=outsideScope,deleteAttachmentUploadItem=outsideScope,
   deleteConversationAttachment=outsideScope,finalizeConversationAttachments=outsideScope,
-  getConversation=outsideScope,getConversationReaderTurn=outsideScope,uploadAttachmentItem=outsideScope;
+  uploadAttachmentItem=outsideScope;
+export const getConversation=async()=>{
+  if(!window.syntheticCleanupEnabled)return outsideScope();
+  if(window.holdCleanupRead)await new Promise(resolve=>window.releaseCleanupRead=resolve);
+  return {offline_revision:2};
+};
+export const getConversationReaderTurn=async()=>{
+  if(!window.syntheticCleanupEnabled)return outsideScope();
+  return {items:[window.workspaceMessage]};
+};
 export const getImageDisplay=outsideScope,setImageDisplay=outsideScope,uploadMessageCopyPreview=outsideScope;
 export class ApiRequestError extends Error {
   constructor(message,status,path,code){super(message);this.status=status;this.path=path;this.code=code;}
 }
-export const ContentCleanupDialog=({open})=>open?outsideScope():null;`);
+// The cleanup business dialog is outside this gate. Its approved completion
+// callback alone is adapted; the real workspace/form must consume the reload.
+export const ContentCleanupDialog=({open,onApplied,onClose})=>open
+  ? React.createElement("div",{role:"dialog","aria-modal":true,"aria-label":"Synthetic cleanup completion callback",
+      style:{position:"fixed",inset:0,zIndex:280}},
+    React.createElement("button",{type:"button","data-testid":"synthetic-cleanup-complete",onClick:async()=>{
+      if(!window.syntheticCleanupEnabled)return outsideScope();
+      const old=window.workspaceMessage;
+      window.workspaceMessage={...old,current_version:{...old.current_version,
+        id:"synthetic-cleaned-version",version_number:2,display_text:window.syntheticCleanupText,
+        plain_text:window.syntheticCleanupText,source_content_hash:"source-"+window.syntheticCleanupText}};
+      await onApplied();onClose();
+    }},"Reload confirmed synthetic cleanup"))
+  : null;`);
 writeFileSync(join(out, "unused-word.mjs"), 'export default class WordOutsideScope { constructor(){throw Error("Word extraction is outside this fixture");} }');
 // Count actual parser component entries without substituting its implementation.
 // Callback-only rerenders should update editable cells, not parse the same source.
@@ -131,9 +154,11 @@ import React, {useState, useEffect, useRef} from "react";
 import {createRoot} from "react-dom/client";
 import {QueryClient,QueryClientProvider} from "@tanstack/react-query";
 import {EditorView} from "@codemirror/view";
+import {isolateHistory,undo,redo} from "@codemirror/commands";
 import {markdownLanguage} from "@codemirror/lang-markdown";
 import {TableToolDialog} from ${JSON.stringify(dialogPath)};
 import {applyMarkdownTableAction} from ${JSON.stringify(toolsPath)};
+import SourceCodeEditor from ${JSON.stringify(join(web, "features/editing/source-code-editor.tsx").replaceAll("\\", "/"))};
 import {SourceEditorWorkspace} from ${JSON.stringify(workspacePath)};
 import {configureOfflineAccess} from ${JSON.stringify(join(web, "lib/offline-access.ts").replaceAll("\\", "/"))};
 import {offlineDb} from ${JSON.stringify(join(web, "lib/offline-db.ts").replaceAll("\\", "/"))};
@@ -172,6 +197,7 @@ function Harness() {
   </form>;
 }
 function WorkspaceHarness({source}) {
+  const [hostRevision,setHostRevision]=useState(0);
   const [target,setTarget]=useState(()=>({cursorOffset:Array.from(source.slice(0,source.indexOf("|"))).length,
     message:{id:"synthetic-message",conversation_id:"synthetic-conversation",role:"assistant",ordinal:1,order_key:1,
     current_version:{id:"synthetic-version",version_number:1,display_text:source,plain_text:source,content_hash:"synthetic",source_content_hash:"source-"+source}}}));
@@ -186,6 +212,8 @@ function WorkspaceHarness({source}) {
       select(from,to=from){view().dispatch({selection:{anchor:from,head:to}});view().focus();},
       replace(text){const current=view();current.dispatch({changes:{from:0,to:current.state.doc.length,insert:text}});},
       insert(position,text){view().dispatch({changes:{from:position,insert:text}});},
+      isolatedInsert(text){const current=view();current.dispatch({changes:{from:current.state.doc.length,insert:text},annotations:isolateHistory.of("full")});},
+      rerender:()=>setHostRevision(value=>value+1),hostRevision:()=>hostRevision,
       requestSubmit(){document.querySelector("#reader-source-editor-form").requestSubmit();},
     };
   });
@@ -197,11 +225,16 @@ function WorkspaceHarness({source}) {
 }
 function Root() {
   const [workspace,setWorkspace]=useState(null);
+  const [seedEditor,setSeedEditor]=useState(null);
   const [previewProbe,setPreviewProbe]=useState(false);
   const [bodyProbe,setBodyProbe]=useState(null);
   const [assistantPerfProbe,setAssistantPerfProbe]=useState(false);
   const [mermaidProbe,setMermaidProbe]=useState(false);
   useEffect(()=>{
+    window.startSeedEditor=initialText=>{
+      window.seedEditorChanges=[];window.seedEditorCreatedAt=0;window.seedEditorCreates=0;
+      setSeedEditor({initialText,key:performance.now()});
+    };
     window.startBodyProbe=text=>{setWorkspace(null);setPreviewProbe(false);setAssistantPerfProbe(false);setMermaidProbe(false);setBodyProbe(text);};
     window.stopBodyProbe=()=>setBodyProbe(null);
     window.startPreviewProbe=()=>{setWorkspace(null);setBodyProbe(null);setPreviewProbe(true);};
@@ -213,12 +246,33 @@ function Root() {
       window.tableSourceProbeCount=0;
       setPreviewProbe(false);
       setBodyProbe(null);
+      setSeedEditor(null);
       setWorkspace({source,key:performance.now()});
     };
   },[]);
-  return mermaidProbe?<MermaidAccessibilityProbe/>:assistantPerfProbe?<AssistantMarkdownPerformanceProbe/>:bodyProbe!==null?<section data-testid="body-table-probe" className="reader-prose" style={{width:"min(100%,720px)",padding:16,boxSizing:"border-box"}}>
+  return seedEditor?<SeedEditorProbe key={seedEditor.key} initialText={seedEditor.initialText}/>:mermaidProbe?<MermaidAccessibilityProbe/>:assistantPerfProbe?<AssistantMarkdownPerformanceProbe/>:bodyProbe!==null?<section data-testid="body-table-probe" className="reader-prose" style={{width:"min(100%,720px)",padding:16,boxSizing:"border-box"}}>
     <MarkdownRenderer text={bodyProbe} isAssistant={false} preserveSourceOffsets/>
   </section>:previewProbe?<PreviewProbe/>:workspace?<WorkspaceHarness key={workspace.key} source={workspace.source}/>:<Harness/>;
+}
+function SeedEditorProbe({initialText}) {
+  const [seed,setSeed]=useState(initialText);
+  const [mirror,setMirror]=useState(initialText);
+  const viewRef=useRef(null);
+  useEffect(()=>{
+    window.seedEditorGate={
+      refreshSeed:setSeed,source:()=>viewRef.current?.state.doc.toString(),view:()=>viewRef.current,mirror:()=>mirror,
+      insert:text=>viewRef.current.dispatch({changes:{from:viewRef.current.state.doc.length,insert:text},annotations:isolateHistory.of("full")}),
+      undo:()=>undo(viewRef.current),redo:()=>redo(viewRef.current),
+    };
+  });
+  return <section data-testid="seed-editor-probe" style={{height:320}}>
+    <SourceCodeEditor initialText={seed} theme="none" height="100%"
+      onCreateEditor={view=>{
+        viewRef.current=view;window.seedEditorCreates++;window.seedEditorCreatedAt=performance.now();
+        view.dispatch({changes:{from:view.state.doc.length,insert:"\\nInput during creation"},annotations:isolateHistory.of("full")});
+      }}
+      onChange={next=>{window.seedEditorChanges.push(next);setMirror(next);}}/>
+  </section>;
 }
 function MermaidAccessibilityProbe() {
   const [code,setCode]=useState("graph TD\\naccTitle: Synthetic diagram title\\naccDescr: Synthetic diagram description.\\nA-->B");
@@ -346,6 +400,55 @@ try {
       throw error;
     }
   };
+  await run("one-shot editor seed cannot replay over creation input, later typing or Undo/Redo",async()=>{
+    const initial=" \tSynthetic seed🙂\n",created=initial+"\nInput during creation",later=created+" + later input";
+    await page.evaluate(initial=>window.startSeedEditor(initial),initial);
+    await page.waitForFunction(created=>window.seedEditorGate?.source()===created,created);
+    await page.evaluate(()=>{
+      window.seedOriginalView=window.seedEditorGate.view();
+      window.seedEditorGate.refreshSeed("A later Reader prop is not editor input");
+      window.seedEditorGate.insert(" + later input");
+    });
+    // Observe beyond the dependency's real 200ms typing latch. This is the
+    // regression's timing boundary, not a sleep used to guess readiness.
+    await page.waitForFunction(()=>performance.now()>=window.seedEditorCreatedAt+500);
+    assert.equal(await page.evaluate(()=>window.seedEditorGate.source()),later);
+    await expect.poll(()=>page.evaluate(()=>window.seedEditorGate.mirror())).toBe(later);
+    assert.deepEqual(await page.evaluate(()=>window.seedEditorChanges),[created,later]);
+    assert.equal(await page.evaluate(()=>window.seedEditorCreates===1&&window.seedEditorGate.view()===window.seedOriginalView),true);
+    await page.evaluate(()=>window.seedEditorGate.undo());
+    assert.equal(await page.evaluate(()=>window.seedEditorGate.source()),created);
+    await page.evaluate(()=>window.seedEditorGate.undo());
+    assert.equal(await page.evaluate(()=>window.seedEditorGate.source()),initial);
+    await page.evaluate(()=>window.seedEditorGate.redo());
+    assert.equal(await page.evaluate(()=>window.seedEditorGate.source()),created);
+    await page.evaluate(()=>window.seedEditorGate.redo());
+    assert.equal(await page.evaluate(()=>window.seedEditorGate.source()),later);
+  });
+  await run("header Undo/Redo requests run once across actual host callback rerenders",async()=>{
+    const initial="Synthetic history baseline",first=initial+" first",second=first+" second";
+    await page.evaluate(initial=>window.startWorkspace(initial),initial);
+    await page.waitForFunction(initial=>window.workspaceGate?.source()===initial,initial);
+    await page.evaluate(()=>{window.workspaceGate.isolatedInsert(" first");window.workspaceGate.isolatedInsert(" second");});
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),second);
+    await page.getByTestId("source-editor-undo").click();
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),first);
+    for(let revision=1;revision<=3;revision++) {
+      await page.evaluate(()=>window.workspaceGate.rerender());
+      await expect.poll(()=>page.evaluate(()=>window.workspaceGate.hostRevision())).toBe(revision);
+      assert.equal(await page.evaluate(()=>window.workspaceGate.source()),first);
+    }
+    await page.getByTestId("source-editor-redo").click();
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),second);
+    await page.evaluate(()=>window.workspaceGate.rerender());
+    await expect.poll(()=>page.evaluate(()=>window.workspaceGate.hostRevision())).toBe(4);
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),second);
+    await page.getByTestId("source-editor-undo").click();
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),first);
+    await page.getByTestId("source-editor-undo").click();
+    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),initial);
+    assert.equal(await page.evaluate(()=>window.workspaceWrites.length),0);
+  });
   for (const width of [375,800,1440]) {
     await run("save snapshot preserves later typing and editor history at "+width, async()=>{
       await page.setViewportSize({width,height:900});
@@ -437,7 +540,7 @@ try {
     await page.getByRole("button",{name:"Choose conversation file",exact:true}).click();
     await page.getByRole("checkbox",{name:"Replace all references in this message"}).check();
     await page.getByRole("button",{name:"Replace reference with replacement.txt",exact:true}).click();
-    assert.equal(await page.evaluate(()=>window.workspaceGate.source()),source.replace(first,second));
+    await expect.poll(()=>page.evaluate(()=>window.workspaceGate.source())).toBe(source.replace(first,second));
     assert.equal(await page.evaluate(()=>window.workspaceWrites.length),0);
     await page.evaluate(()=>{window.syntheticFiles=[];});
   });
@@ -1257,7 +1360,7 @@ try {
       assert.deepEqual(await page.evaluate(() => window.applied), [`before\n${latest}\nafter`]);
     } finally { await releasePreview(); }
   });
-  await run("pending grid previews retain active typing and Escape returns focus to Markdown", async () => {
+  await run("pending grid previews retain active typing and Escape returns to the settled real cell", async () => {
     await reset(small);
     await dialog.getByRole("button", { name: "Row 1, column 1", exact: true }).click();
     const input = dialog.getByTestId("source-editor-table-cell-input");
@@ -1274,10 +1377,11 @@ try {
       assert.equal(await page.evaluate(() => window.submits), 0);
       await input.press("Escape");
       await expect(dialog).toBeVisible();
-      await expect(markdown).toBeFocused();
+      await expect(markdown).not.toBeFocused();
       await releasePreview();
       await expect(dialog.getByRole("button", { name: "Row 1, column 1", exact: true })).toHaveText("pending input123");
       await expect(apply()).toBeEnabled();
+      await expect(dialog.getByRole("button", { name: "Row 1, column 1", exact: true })).toBeFocused();
     } finally { await releasePreview(); }
   });
   await run("invalid Markdown entered during a pending preview cannot be overwritten by the older valid draft", async () => {
@@ -1813,6 +1917,91 @@ try {
     await expect(dialog.locator("a")).toHaveCount(0);
     assert.deepEqual(await page.evaluate(() => window.workspaceWrites), []);
   });
+  for (const moveFocus of [false, true]) {
+    await run(`actual workspace: Escape during a pending preview ${moveFocus ? "preserves newer Markdown focus" : "returns to its real cell"}`, async () => {
+      await startWorkspace();
+      await openWorkspaceTable();
+      const cell = dialog.getByRole("button", { name: "Row 1, column 1", exact: true });
+      await cell.click();
+      const input = dialog.getByTestId("source-editor-table-cell-input");
+      const marker = "www.escape-pending.example.test";
+      await holdPreview(marker);
+      try {
+        await input.fill(marker);
+        await expect(input).toBeFocused();
+        await expect(dialog.getByTestId("source-editor-table-preview")).toHaveAttribute("aria-busy", "true");
+        await expect(apply()).toBeDisabled();
+        await input.press("Escape");
+        await expect(input).toHaveCount(0);
+        await expect(cell).toBeDisabled();
+        if (moveFocus) await markdown.click();
+        await page.screenshot({ path: join(out, `escape-pending-${moveFocus ? "newer-focus" : "cell-return"}.png`) });
+      } finally {
+        await releasePreview();
+      }
+      await expect(apply()).toBeEnabled();
+      await expect(cell).toBeEnabled();
+      if (moveFocus) await expect(markdown).toBeFocused();
+      else await expect(cell).toBeFocused();
+      await expect(markdown).toHaveValue(/\| www\.escape-pending\.example\.test \|/);
+      await expect(dialog.locator("td").first().locator(".underline")).toHaveText(marker);
+      assert.deepEqual(await page.evaluate(() => window.workspaceWrites), []);
+    });
+  }
+  for (const laterInput of [false, true]) {
+    await run(`actual workspace: explicit cleanup reload ${laterInput ? "preserves later input for comparison" : "updates source once without losing undo"}`, async () => {
+      const original = "Before Cite turn2search1 after.";
+      const cleaned = "Before  after.";
+      await startWorkspace(original);
+      await page.evaluate(({ cleaned, laterInput }) => {
+        window.syntheticCleanupEnabled = true;
+        window.syntheticCleanupText = cleaned;
+        window.holdCleanupRead = laterInput;
+        window.cleanupOriginalEditor = window.workspaceGate.view();
+        window.workspaceGate.select(7, 23);
+      }, { cleaned, laterInput });
+      try {
+        await workspace.getByTestId("source-editor-cleanup-selection").click();
+        await page.getByTestId("synthetic-cleanup-complete").click();
+        if (laterInput) {
+          await page.waitForFunction(() => Boolean(window.releaseCleanupRead));
+          await page.evaluate(() => {
+            window.workspaceGate.insert(window.workspaceGate.source().length, " Later typing.");
+            window.holdCleanupRead = false;
+            window.releaseCleanupRead();
+          });
+          await expect.poll(() => page.evaluate(() => window.workspaceGate.source())).toBe(original + " Later typing.");
+          await expect(workspace.getByTestId("source-editor-create-version")).toHaveText("Create v2");
+          await workspace.getByRole("button", { name: "Reviewed — keep editing this draft against the latest version", exact: true }).click();
+          await expect.poll(() => page.evaluate(() => window.workspaceGate.source())).toBe(original + " Later typing.");
+        } else {
+          await expect.poll(() => page.evaluate(() => window.workspaceGate.source())).toBe(cleaned);
+          await expect(workspace.getByTestId("source-editor-create-version")).toBeDisabled();
+          await workspace.getByTestId("source-editor-undo").click();
+          await expect.poll(() => page.evaluate(() => window.workspaceGate.source())).toBe(original);
+        }
+        assert.deepEqual(await page.evaluate(() => window.workspaceWrites), []);
+        assert.equal(await page.evaluate(() => window.cleanupOriginalEditor === window.workspaceGate.view()), true);
+        await expect(workspace.getByTestId("source-editor-create-version")).toHaveText("Create v3");
+        // Reload/comparison did not write. A subsequent explicit save must use
+        // the accepted canonical base while retaining the exact live draft.
+        await workspace.getByTestId("source-editor-create-version").click();
+        await expect.poll(() => page.evaluate(() => window.workspaceWrites.length)).toBe(1);
+        const save = await page.evaluate(() => window.workspaceWrites[0].payload);
+        assert.equal(save.baseVersionId, "synthetic-cleaned-version");
+        assert.equal(save.baseContentHash, "source-" + cleaned);
+        assert.equal(save.contentMarkdown, original + (laterInput ? " Later typing." : ""));
+        await expect(workspace.getByTestId("source-editor-create-version")).toHaveText("Create v4");
+        await expect(workspace.getByTestId("source-editor-create-version")).toBeDisabled();
+      } finally {
+        await page.evaluate(() => {
+          window.syntheticCleanupEnabled = false;
+          window.holdCleanupRead = false;
+          window.releaseCleanupRead?.();
+        });
+      }
+    });
+  }
   await run("actual workspace: repeated Unicode raw/grid edits retain latest values after CRLF paste", async () => {
     // The live CodeMirror document uses LF; direct dialog CRLF preservation is
     // exercised separately. Pasting CRLF into the textarea must not change it.

@@ -79,12 +79,14 @@ def _export_cleanup(db: Session, now: datetime) -> dict:
 
 def _source_cleanup(db: Session) -> dict:
     from app.services.adaptive_import.source_cleanup import KEY, UNFINISHED
-    rows = db.query(ImportRecord.analysis_summary[KEY]["state"].as_string(), func.count(ImportRecord.id)).filter(
+    # PostgreSQL must see the same bound JSON path in SELECT and GROUP BY.
+    state = ImportRecord.analysis_summary[KEY]["state"].as_string()
+    rows = db.query(state, func.count(ImportRecord.id)).filter(
         ImportRecord.status.in_(("canceled", "cancelled")), ImportRecord.session_state == "CANCELED",
         ImportRecord.committed_at.is_(None), ImportRecord.conversation_id.is_(None),
         ImportRecord.analysis_summary[KEY]["version"].as_integer() == 1,
-        ImportRecord.analysis_summary[KEY]["state"].as_string().in_(UNFINISHED),
-    ).group_by(ImportRecord.analysis_summary[KEY]["state"].as_string()).all()
+        state.in_(UNFINISHED),
+    ).group_by(state).all()
     return {"pending_count": sum(int(count) for _, count in rows),
             "blocked_count": sum(int(count) for state, count in rows if state == "blocked")}
 

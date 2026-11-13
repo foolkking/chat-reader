@@ -130,6 +130,36 @@ def test_runtime_source_cleanup_counts_only_discarded_sessions_and_does_not_expo
         assert "private-binding" not in json.dumps(result)
 
 
+@pytest.mark.skipif(os.environ.get("SETTINGS_POSTGRES_INTEGRATION") != "1",
+                    reason="requires explicitly selected disposable PostgreSQL")
+def test_postgres_source_cleanup_aggregate_reuses_its_grouped_expression(isolated_schema, monkeypatch, tmp_path):
+    from app.models.user import User
+    from app.services.adaptive_import.source_cleanup import KEY
+    engine, migrate = isolated_schema
+    migrate("head")
+    settings = roots(monkeypatch, tmp_path)
+    with Session(engine) as db:
+        owner = User(normalized_email=f"cleanup-metric-{uuid.uuid4()}@example.test")
+        db.add(owner)
+        db.flush()
+        for status, state, version in (
+            ("canceled", "pending", 1), ("cancelled", "failed", 1),
+            ("canceled", "blocked", 1), ("canceled", "completed", 1),
+            ("paused", "failed", 1), ("canceled", "blocked", 2),
+        ):
+            db.add(ImportRecord(owner_user_id=owner.id, source_profile="synthetic", source_fingerprint=uuid.uuid4().hex,
+                status=status, session_state="CANCELED", analysis_summary={KEY: {
+                    "state": state, "version": version, "revision": str(uuid.uuid4()),
+                    "root_digest": "synthetic-private-binding"}}))
+        db.commit()
+        before = db.query(ImportRecord.id, ImportRecord.status, ImportRecord.analysis_summary).all()
+        snapshot = admin_runtime.runtime_snapshot(db, settings)
+        assert snapshot["source_cleanup"] == {"available": True, "pending_count": 3, "blocked_count": 1}
+        assert "synthetic-private-binding" not in json.dumps(snapshot)
+        assert not db.new and not db.dirty and not db.deleted
+        assert db.query(ImportRecord.id, ImportRecord.status, ImportRecord.analysis_summary).all() == before
+
+
 @pytest.mark.parametrize("age,state", [(10, "alive_idle"), (500, "stale"), (-10, "unavailable")])
 def test_worker_liveness_is_not_inferred_from_finished_jobs(auth_client, monkeypatch, tmp_path, age, state):
     settings = roots(monkeypatch, tmp_path)

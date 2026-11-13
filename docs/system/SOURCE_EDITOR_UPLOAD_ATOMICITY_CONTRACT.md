@@ -1,6 +1,6 @@
 # Source Editor Upload Atomicity Contract
 
-Current worktree contract: 2026-11-12. Release I closure below is historical;
+Current worktree contract: 2026-11-13. Release I closure below is historical;
 current production/candidate status comes from `PROJECT_STATE.md`.
 
 ## Save identity and recoverability
@@ -21,6 +21,11 @@ While a request runs, typing/selection/history continue in the same editor.
 Success acknowledges only the submitted revision; newer input and attachment
 work remain dirty. A failed Reader refresh is “saved, refresh pending”, not a
 failed save. Loading latest opens comparison rather than replacing the draft.
+An explicit reload after confirmed cleanup carries its pre-read source into the
+same editor. If that source is still unchanged, one isolated, undoable transaction
+adopts the canonical text and base. Later input instead opens the existing
+comparison and keeps the old base until explicit review. Reload/comparison does
+not submit a save; ordinary Reader prop updates still cannot replace editor input.
 Small, account-scoped recovery receipts use existing Dexie v2 settings and
 in-memory fallback; unavailable storage cannot undo confirmed server success.
 The original File stays in memory only, never promised across a page reload.
@@ -68,7 +73,12 @@ committed upload item.
 
 CodeMirror `EditorView.state.doc` is the authoritative editor document. The
 React text state is a render/dirty-state mirror; the save function rereads the
-live CodeMirror document immediately before mutation.
+live CodeMirror document immediately before mutation. The message-keyed editor
+is seeded once through the existing dependency's public hook and initial state,
+never an ongoing controlled value, including during creation. This prevents a
+delayed initial-value replay from overwriting creation-time or later input.
+Explicit draft restoration, confirmed canonical replies and safe cleanup reloads
+change the live document through transactions, not generic prop synchronization.
 
 The valid transition is:
 
@@ -118,6 +128,11 @@ insertion, but cannot restore a persistable transient reference.
 Removing a reference removes only its exact Markdown range, never its whole
 line. It is undoable. Existing-file replacement is one occurrence by default;
 “all” explicitly means the current message, not other messages or history.
+Each explicit picker request has its own identity; choosing the same file again
+after Undo cannot be suppressed as a duplicate of a prior one/all replacement.
+Header Undo/Redo requests are bound to their message and consumed once per
+request ID, after the EditorView exists. Callback, focus, preview or host
+rerenders cannot replay an old history command against a newer edit.
 After the final reference is removed, the file stays in the conversation.
 Files management alone can detach a file with no current references; historical
 links and shared objects remain protected. Removing a transient marker before

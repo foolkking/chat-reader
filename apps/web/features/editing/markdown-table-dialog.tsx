@@ -753,13 +753,9 @@ const EditableTableCell = memo(function EditableTableCell({ value, row, column, 
     if (event.key === "Escape" && editing) {
       event.preventDefault();
       event.stopPropagation();
-      onEditingChange(row, column, false, !previewPending);
-      if (previewPending) {
-        buttonRef.current?.closest("[role='dialog']")
-          ?.querySelector<HTMLTextAreaElement>("textarea[data-testid='source-editor-table-markdown']")?.focus();
-      } else {
-        buttonRef.current?.focus();
-      }
+      // The parent's real-DOM focus queue waits for a pending preview and
+      // respects a newer user focus choice; a disabled old cell cannot do so.
+      onEditingChange(row, column, false, true);
       return;
     }
     if (!["Enter", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;

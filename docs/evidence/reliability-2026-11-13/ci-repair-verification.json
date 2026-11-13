@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T12:12:23.589660+00:00",
+  "base_revision": "adc80ac0dc671d86f26fc221626b4acfe4ee3651",
+  "status": "local_regressions_passed_full_exact_ci_pending_not_released",
+  "input_manifest": "ci-repair-inputs.json",
+  "input_count": 1382,
+  "changed_since_owner_checkpoint": [
+    "apps/api/app/services/admin_runtime.py",
+    "apps/api/tests/test_admin_runtime.py",
+    "apps/api/tests/test_import_analysis_postgres.py",
+    "apps/web/e2e/settings-noise-navigation.spec.ts",
+    "apps/web/features/conversations/cleanup-scan-progress.tsx",
+    "apps/web/features/editing/edit-message-form.tsx",
+    "apps/web/features/editing/markdown-table-dialog.tsx",
+    "apps/web/features/editing/source-code-editor.tsx",
+    "apps/web/features/editing/source-editor-workspace.tsx",
+    "scripts/ux/import-recovery-browser.mjs",
+    "scripts/ux/manual-markdown-fidelity.test.mjs",
+    "scripts/ux/source-editor-table-browser.mjs"
+  ],
+  "build_input_manifest": "ci-repair-build-inputs.json",
+  "build_input_count": 548,
+  "build_exit_code": 0,
+  "worktree_input_drift": [],
+  "build_input_mutations": [],
+  "env_files_copied": 0,
+  "local_node": "v20.13.1",
+  "ci_image_node": "22.13.1",
+  "same_installed_dependency_versions": {
+    "next": {
+      "version": "16.4.1",
+      "package_json_sha256": "546222266ef4402af870e96f03964570038e8498f4a4f7cb6dcf591f08cb07ec"
+    },
+    "react": {
+      "version": "19.2.8",
+      "package_json_sha256": "e40c3ed9b633c9ecf188e09a4be309780a1ea0a9c068278a30ff6a27e7b2dbb6"
+    },
+    "react-dom": {
+      "version": "19.2.8",
+      "package_json_sha256": "7c82f0967114d4b5d38b1f07e543af87c9919e8d3243f9604004819319cb2200"
+    },
+    "@uiw/react-codemirror": {
+      "version": "4.25.11",
+      "package_json_sha256": "b744db8c8eb49f6915c7971c31e2753ef1a5b668161b140d688a89c97dd4c0e6"
+    },
+    "@codemirror/state": {
+      "version": "6.7.1",
+      "package_json_sha256": "a89462af5f5cae9f586483ecb08f82657796c1c2fb418a923d96e4b5e3aa440e"
+    },
+    "@codemirror/view": {
+      "version": "6.43.7",
+      "package_json_sha256": "a38cf9b5cc84abc9cf54b6f3fc14127882a99512f5a5ef7713d20f19a5f3fc3a"
+    },
+    "@codemirror/commands": {
+      "version": "6.10.4",
+      "package_json_sha256": "60312f33c45bfc48df0d6b6f7227259f1740847d348ad825ba0d7b317687b1ca"
+    }
+  },
+  "static": {
+    "lint_exit_code": 0,
+    "typecheck_exit_code": 0,
+    "build_info_outside_worktree": true
+  },
+  "node": {
+    "files": 158,
+    "tests": 2591,
+    "passed": 2591,
+    "failed": 0,
+    "timeout_or_concurrency_override": false
+  },
+  "mounted_browser": {
+    "editor_scenarios": 99,
+    "picker_repetitions": 20,
+    "scan_recovery_groups": 12
+  },
+  "postgresql": {
+    "runtime_and_progress_modules_passed": 35,
+    "supervision_and_recovery_modules_passed": 59,
+    "existing_alembic_configuration_warnings": 1,
+    "scope": "prior repair checkpoint; no API edits in this continuation; not a final full API/CI claim",
+    "counts_are_not_added_as_coverage": true
+  },
+  "migration_head": "20261112_0061",
+  "changed_python_ast_files": [
+    "apps/api/app/services/admin_runtime.py",
+    "apps/api/tests/test_admin_runtime.py",
+    "apps/api/tests/test_import_analysis_postgres.py"
+  ],
+  "confirmed_editor_failures": {
+    "initial_controlled_value": "original wrapper negative control returned the seed while the change mirror retained creation input",
+    "history_request_replay": {
+      "same_request_id_calls": 11,
+      "new_all_reference_edit_was_undone": true
+    },
+    "picker_deduplication": "request identity boundary only, not a sufficient explanation for the two replay failures"
+  },
+  "retained_non_business_failure": "one original 10000ms Windows Git Bash fixture timeout under concurrent build/browser work; unchanged full scope then passed without timeout or concurrency overrides",
+  "original_failed_ci": {
+    "run_id": 43389645130,
+    "source_revision": "adc80ac0dc671d86f26fc221626b4acfe4ee3651",
+    "accepted": false
+  },
+  "original_workflow_sha256_unchanged": "b9ef686e40de4c2138b544371caf4c7ced550dae2fddb43ca11c1b3945450de1",
+  "evidence": {
+    "final_lint": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "final-static-03/lint.log",
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "bytes": 173
+    },
+    "final_typecheck": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "final-static-03/typecheck.log",
+      "sha256": "21b8c8e81d4990d31576e922f3a9e8d1fc85a3ee2d623d109ecda70151c09f2d",
+      "bytes": 429
+    },
+    "final_node": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "final-node-03/node-all.log",
+      "sha256": "b4ed227529bcd7224cc992e9a3efb7c5eedfa345da7756f8ff27be0798ce7ff9",
+      "bytes": 547590
+    },
+    "final_editor_browser": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "editor-browser-02/table-browser/result.json",
+      "sha256": "6000bf496fc92f21493d9044be0361830bd6283b74555bd4fb192c0dfa7bb373",
+      "bytes": 9327
+    },
+    "final_scan_browser": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "scan-browser-01/import-recovery-browser/result.json",
+      "sha256": "3e10b36d91ea69787cbcc9d28d70f07b799403b90f048187359caa1ee7bec4e7",
+      "bytes": 46240
+    },
+    "picker_twenty_repetitions": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "picker-repeat-02/table-browser/picker-debug.json",
+      "sha256": "0169e6a92a1dc1b2d16e3f0a2fd63dbc2ddaa0ca18b210ce39638a12ea7b7d3b",
+      "bytes": 69318
+    },
+    "original_wrapper_negative": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "seed-negative-01/table-browser/seed-negative-observation.json",
+      "sha256": "6c7e041cc205b6e8bb434466ea1da625b0f3574907e6b4309aa7b6ab21f4acfc",
+      "bytes": 192
+    },
+    "same_history_request_replayed": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "picker-history-red-02/table-browser/picker-debug.json",
+      "sha256": "3054c6f293347db98cd1c228dcc8fff8e65c90c61319b25f36218a0a2af9ca7f",
+      "bytes": 8315
+    },
+    "picker_after_seed_only_still_failed": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "picker-repeat-01/table-browser/picker-debug.json",
+      "sha256": "da5b518a4e8f1cc4836a74567d0b37b3981fd7bf6c9a7dd4005c7a8f9344a167",
+      "bytes": 5396
+    },
+    "parallel_windows_fixture_timeout": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "final-static-node-02/node-all.log",
+      "sha256": "6aaf31ca3591d40c65b388e677c547a17ddac2364452f142f5a2bbb721f019ad",
+      "bytes": 549523
+    },
+    "final_build": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "final-build-02/build.log",
+      "sha256": "82c4b6e690e060e3be8e118a3da133efb90a23294b2b04eebb2a38d1c8581eaf",
+      "bytes": 1483
+    },
+    "migration_head": {
+      "task_directory": "reliability-release-continuation-20261113-01",
+      "path": "migration-head.log",
+      "sha256": "73423f8cc296997f4c5fa5d11c6fbcf544629c61e9b90c2257f86f00f0243af5",
+      "bytes": 22
+    },
+    "pg_progress_deadlock_red": {
+      "task_directory": "reliability-ci-repair-20261113-01",
+      "path": "pg-deadlock-red.log",
+      "sha256": "de089217a89a40218b4f620fc30f532784eeaea2f6293391da4ecc1abcbef540",
+      "bytes": 3472
+    },
+    "pg_runtime_aggregate_red": {
+      "task_directory": "reliability-ci-repair-20261113-01",
+      "path": "pg-runtime-red.log",
+      "sha256": "e3b08309fc22bdc825f5ffdd26fcef2f6732ba246ecf0eb3621070847563027f",
+      "bytes": 17811
+    },
+    "pg_runtime_owner_fixture_red": {
+      "task_directory": "reliability-ci-repair-20261113-01",
+      "path": "pg-runtime-red2.log",
+      "sha256": "4d9864fd4802353b5893ec94b3005f8027466129560f6756bef706abe0a780a3",
+      "bytes": 2898
+    },
+    "pg_runtime_progress_green": {
+      "task_directory": "reliability-ci-repair-20261113-01",
+      "path": "pg-runtime-and-progress-green1.log",
+      "sha256": "bcebe11f28f6497e05e593131f523fadb8d2c7643ddd30376744abff83210c42",
+      "bytes": 113
+    },
+    "pg_supervision_recovery_green": {
+      "task_directory": "reliability-ci-repair-20261113-01",
+      "path": "final-api-pg.log",
+      "sha256": "ebabebf91744af77bcf6d410c5bce52b9b9f0a071ad06052926e40ad5eb54950",
+      "bytes": 658
+    },
+    "previous_picker_failure": {
+      "task_directory": "reliability-ci-repair-20261113-01",
+      "path": "picker-debug-03/table-browser/picker-debug.json",
+      "sha256": "da5b518a4e8f1cc4836a74567d0b37b3981fd7bf6c9a7dd4005c7a8f9344a167",
+      "bytes": 5396
+    },
+    "original_api_ci_failure": {
+      "task_directory": "reliability-release-20261113-01",
+      "path": "api-quality-failed.log",
+      "sha256": "6595be2d92c14e47434aaac5f8e86108e777ed404fc94614b77506b863ad0647",
+      "bytes": 1010806
+    },
+    "original_web_ci_failure": {
+      "task_directory": "reliability-release-20261113-01",
+      "path": "web-quality-failed.log",
+      "sha256": "891dced29bd55d6a0cb8488c354aba1e034e22f6d408702ced84d7ebdb00c856",
+      "bytes": 1084188
+    },
+    "original_settings_ci_failure": {
+      "task_directory": "reliability-release-20261113-01",
+      "path": "settings-quality-cancelled.log",
+      "sha256": "4517dd6999758723e84278e7bba936d844cdc9065be63a2100611b9066a7b82e",
+      "bytes": 295185
+    },
+    "original_settings_failure_artifact": {
+      "task_directory": "reliability-release-20261113-01",
+      "path": "settings-failed-artifact.zip",
+      "sha256": "d0fa6ff65e132482e50cb25ea847002a99719cd50882a357afed556a5c18904b",
+      "bytes": 9132673
+    }
+  },
+  "protected_unrelated_files": {
+    "apps/web/tsconfig.tsbuildinfo": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135",
+    "docs/evidence/storage-cleanup-2026-11-08/summary.json": "8b624607e694868172c18e4808a92cf98173e7b54b490926bd034ab482f36c5a",
+    "docs/execution/KING_STORAGE_CLEANUP_2026-11-08.md": "2d6018dec2b89bae43f13af8d8e72439165d20caf310f7a2c7be54283e754adc",
+    "ux-audit-next-optimization-2026-11-05-evidence/audit_api_probe.py": "f4bac752276ca0ef25978a91888d00eef0c44ad778d939914f4419aec41d1a29",
+    "ux-audit-next-optimization-2026-11-05-evidence/manifest.json": "6ca614bf037280869433c351040a379a04390c2b1ef309ee95a64b4c0825d166",
+    "ux-audit-next-optimization-2026-11-05-evidence/prior-ci-accepted.json": "7ef7c00ff491204c171425e61221c4c6747b132d47ed230ff4a6771b059acbd2",
+    "ux-audit-next-optimization-2026-11-05-evidence/probe-api-results.txt": "9a80791059e222c3cd9106339f08e21e8b5155a410183e06f359650208e63ff7",
+    "ux-audit-next-optimization-2026-11-05-evidence/probe-web-results.json": "eec1d7fe183a19027ecdbfb2ac0d1db7b929943dcdf78e1c35ae4111c9a70cf7",
+    "ux-audit-next-optimization-2026-11-05-evidence/probe-web.cjs": "74302fb726494855263bbd82ec7084e5085e8e518a90cf74f9e45fd87b34bf57",
+    "ux-audit-next-optimization-2026-11-05.md": "f1ce4a6e4aa69be69bcff3112b129419ef9a9dbe5e233340f7f82bd02f02e6f0",
+    "ux-audit-next-optimization-2026-11-06-evidence/manifest.json": "9db05b47ea562f8c727e69c54ed2bcec0b69b7eb4d4d0c6738b3bb058c7acedb",
+    "ux-audit-next-optimization-2026-11-06-evidence/source-evidence.json": "f4a23f2fabfa7a494e5e8736ea5c433eb0ebf702f3323dd8119efb320934de41",
+    "ux-audit-next-optimization-2026-11-06.md": "4405f861e5fb520669d72a165269622d624ff9aedc74c62d5d0ef9a46e0fe111"
+  },
+  "protected_count": 13,
+  "protected_hash_drift": [],
+  "owned_postgresql_stopped": {
+    "clusters": 2,
+    "other_clients": 0,
+    "data_directories_retained": true,
+    "deleted_files": 0
+  },
+  "remaining_acceptance_owner": "user",
+  "not_claimed": [
+    "Full exact-source CI, official release artifacts or deployment",
+    "Local full API/worker/network Settings/PWA: earlier launch was policy-blocked and not worked around",
+    "Linux combined-process memory/signals and original frame matrix before fresh CI",
+    "Physical-device or full business-side-effect acceptance",
+    "Production-backup restore or off-site recovery"
+  ],
+  "production_writes": false,
+  "user_input_replay": false,
+  "automation_created": false
+}

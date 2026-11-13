@@ -28,14 +28,21 @@ export function CleanupScanCancelAction({ scan }: { scan: CleanupScanRead }) {
   const feedback = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
+  const focusRow = useRef<HTMLElement | null>(null);
   const active = () => mounted.current && generation.current === authenticationGeneration();
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; abort.current?.abort(); }; }, []);
   useLayoutEffect(() => {
-    if (busy) return;
-    if (lastFocus.current && !lastFocus.current.isConnected && document.activeElement === document.body) {
-      const row = root.current?.closest<HTMLElement>("[data-cleanup-scan-id]");
-      (row?.querySelector<HTMLElement>("button:not(:disabled)") ?? root.current)?.focus({ preventScroll: true });
-    }
+    if (busy || !active() || !lastFocus.current) return;
+    const previous = lastFocus.current;
+    const focused = document.activeElement;
+    // Disabling a focused button may leave focus on BODY without removing it.
+    // Recover only our lost focus, never a destination chosen while reading.
+    if (focused !== document.body && focused !== previous && focused !== root.current && focused !== feedback.current) return;
+    const previousAction = previous.isConnected && previous.matches("button:not(:disabled)") ? previous : null;
+    if (focused === previousAction) return;
+    const rowAction = focusRow.current?.isConnected
+      ? focusRow.current.querySelector<HTMLElement>("button:not(:disabled)") : null;
+    (previousAction ?? root.current?.querySelector<HTMLElement>("button:not(:disabled)") ?? rowAction ?? feedback.current ?? root.current)?.focus({ preventScroll: true });
   });
   const live = ["QUEUED", "SCANNING"].includes(scan.status);
   const stopping = scan.execution_state === "stopping" || scan.background_job_status === "cancelling";
@@ -70,14 +77,17 @@ export function CleanupScanCancelAction({ scan }: { scan: CleanupScanRead }) {
     } finally { window.clearTimeout(deadline); if (active()) { running.current = false; setBusy(false); } }
   };
   if (!live || !scan.background_job_id) return null;
-  return <div ref={root} tabIndex={-1} onFocusCapture={event => { lastFocus.current = event.target; }} className="space-y-2 text-xs outline-none" data-testid="cleanup-scan-cancel">
+  return <div ref={root} tabIndex={-1} onFocusCapture={event => {
+    lastFocus.current = event.target;
+    focusRow.current = root.current?.closest<HTMLElement>("[data-cleanup-scan-id]") ?? null;
+  }} className="space-y-2 text-xs outline-none" data-testid="cleanup-scan-cancel">
     {stopping ? <p role="status" className="text-secondary">{scan.execution_state === "stopping"
       ? (zh ? "等待执行退出并核对结果，正文保持不变。" : "Waiting for execution exit and outcome checks. Content stays unchanged.")
       : (zh ? "当前批次结束后停止，正文保持不变。" : "Stopping after the current batch. Content stays unchanged.")}</p>
       : <button type="button" disabled={busy || uncertain} onClick={() => void run(false)} className="btn-secondary min-h-11 px-3">{busy && !uncertain ? (zh ? "正在请求取消…" : "Requesting cancellation…") : (zh ? "取消扫描" : "Cancel scan")}</button>}
     {message || uncertain || stopping ? <div ref={feedback} tabIndex={-1} className="space-y-2 outline-none">
       {message ? <p role={uncertain ? "alert" : "status"} className={uncertain ? "text-[var(--danger)]" : "text-secondary"}>{message}</p> : null}
-      {uncertain || stopping ? <button type="button" disabled={busy} onClick={() => void run(true)} className="btn-secondary min-h-11 px-3">{busy ? (zh ? "正在核对…" : "Checking…") : (zh ? "核对扫描状态" : "Check scan status")}</button> : null}
+      {uncertain || scan.execution_state === "stopping" ? <button type="button" disabled={busy} onClick={() => void run(true)} className="btn-secondary min-h-11 px-3">{busy ? (zh ? "正在核对…" : "Checking…") : (zh ? "核对扫描状态" : "Check scan status")}</button> : null}
     </div> : null}
   </div>;
 }

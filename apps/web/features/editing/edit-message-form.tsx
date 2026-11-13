@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { redo, undo } from "@codemirror/commands";
+import { isolateHistory, redo, undo } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import { ensureSyntaxTree, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { Compartment } from "@codemirror/state";
@@ -40,9 +40,12 @@ import { draftMatchesSource, useSourceDraft } from "./use-source-draft";
 import { SourceDraftComparison } from "./source-draft-comparison";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
-const CodeMirror = dynamic(() => import("@uiw/react-codemirror"), { ssr: false });
+const CodeMirror = dynamic(() => import("./source-code-editor"), { ssr: false });
 export type SourceSaveResult = {
   canonicalText: string; versionId: string; contentHash: string; versionNumber: number; refreshPending?: boolean;
+};
+export type SourceReloadRequest = {
+  messageId: string; expectedText: string; latest: SourceSaveResult;
 };
 
 type SavedToolbarSelection = {
@@ -91,6 +94,7 @@ export function EditMessageForm({
   onSave,
   onReloadLatest,
   onAcceptLatest,
+  sourceReloadRequest,
   onVerifySave,
   onRetrySave,
   pendingSave,
@@ -130,6 +134,7 @@ export function EditMessageForm({
   onSave: (text: string, reason: string | undefined, mode: "create_version" | "replace_current", removedActions: Array<{ attachment_id: string; action: "keep_in_conversation" | "detach_from_conversation" }>, editorRevision: number) => Promise<SourceSaveResult>;
   onReloadLatest?: () => Promise<SourceSaveResult>;
   onAcceptLatest?: () => void;
+  sourceReloadRequest?: SourceReloadRequest | null;
   onVerifySave?: () => Promise<SourceSaveResult>;
   onRetrySave?: () => Promise<SourceSaveResult>;
   pendingSave?: { operationId: string; text: string } | null;
@@ -167,8 +172,13 @@ export function EditMessageForm({
   const queuedFilesRef = useRef<File[]>([]);
   const themeCompartmentRef = useRef(new Compartment());
   const initialThemeRef = useRef(resolvedTheme);
-  const appliedInsertionRef = useRef<string | null>(null);
-  const [editorDocument, setEditorDocument] = useState(initialText);
+  const appliedInsertionRef = useRef<SourceAttachmentInsertion | null>(null);
+  const appliedSourceReloadRef = useRef<SourceReloadRequest | null>(null);
+  const appliedHistoryCommandRef = useRef<number | null>(null);
+  // Seed the existing EditorView once. Feeding its own edits back as controlled
+  // values lets the wrapper's delayed external update overwrite a newer edit.
+  const editorInitialTextRef = useRef(initialText);
+  const queuedEditorTextRef = useRef<string | null>(null);
   const [text, setText] = useState(initialText);
   const [baselineText, setBaselineText] = useState(initialText);
   const draft = useSourceDraft(conversationId, messageId, versionNumber, text, baselineText, versionId, contentHash);
@@ -300,7 +310,7 @@ export function EditMessageForm({
           } : current);
           return;
         }
-        const replacement = replacePendingMarker(view, token, canonicalId);
+        replacePendingMarker(view, token, canonicalId);
         const canonicalDocument = view.state.doc.toString();
         // A retry can race with a late successful finalize from the previous
         // attempt. If that callback already replaced this token, the marker is
@@ -316,7 +326,6 @@ export function EditMessageForm({
         }
         // EditorView is the save authority. The draft becomes ready only
         // after its canonicalization transaction is visible in that document.
-        if (replacement === "replaced") setEditorDocument(canonicalDocument);
         setText(canonicalDocument);
         setAttachmentDrafts((current) => current[token] ? { ...current, [token]: { ...current[token], itemId: canonicalId, status: "ready", progress: 100 } } : current);
       },
@@ -344,7 +353,6 @@ export function EditMessageForm({
     if (view && drafts.length) {
       insertPendingMarkers(view, drafts, position);
       const pendingDocument = view.state.doc.toString();
-      setEditorDocument(pendingDocument);
       setText(pendingDocument);
     }
   };
@@ -365,10 +373,9 @@ export function EditMessageForm({
     onExistingAttachment?.(attachment, position);
   };
   const removeAttachmentDraft = (draft: AttachmentDraftState) => {
-    const removal = removePendingMarker(editorViewRef.current, draft.token, draft.itemId);
+    removePendingMarker(editorViewRef.current, draft.token, draft.itemId);
     if (editorViewRef.current) {
       const nextDocument = editorViewRef.current.state.doc.toString();
-      if (removal === "removed") setEditorDocument(nextDocument);
       setText(nextDocument);
       if (findTransientUploadReferences(nextDocument).some(ref => ref.token === draft.token)
         || (draft.itemId && countAttachmentReferences(nextDocument, draft.itemId) > 0)) return;
@@ -651,10 +658,15 @@ export function EditMessageForm({
     }
   }, [closeCommandPanel, hideContextToolbar, onOpenAttachmentPicker, openContextToolbar, saveToolbarSelection, syncContextToolbarFromView]);
 
-  useEffect(() => {
-    if (!historyCommandRequest) return;
-    dispatchCommand(historyCommandRequest.command, "header");
-  }, [dispatchCommand, historyCommandRequest]);
+  function applyHeaderHistoryCommand() {
+    const request = historyCommandRequest;
+    if (!request || !editorViewRef.current || appliedHistoryCommandRef.current === request.id) return;
+    // Parent callbacks can change after focus, preview or attachment updates.
+    // Their new identities must not replay an already consumed Undo/Redo.
+    appliedHistoryCommandRef.current = request.id;
+    dispatchCommand(request.command, "header");
+  }
+  useEffect(() => { applyHeaderHistoryCommand(); }, [dispatchCommand, historyCommandRequest]);
 
   useEffect(() => {
     if (!editorToolsOpen && !selectionToolbarOpen && !showPreview) return;
@@ -814,8 +826,53 @@ export function EditMessageForm({
     return () => window.removeEventListener("beforeunload", protectDraft);
   }, [hasAttachmentWork, isUnchanged]);
 
-  // Reader refreshes are not editor input. Only an explicit comparison or a
-  // confirmed submitted snapshot may advance this workspace's source base.
+  // Reader refreshes are not editor input. A cleanup reload is an explicit
+  // request with the pre-read source, not generic synchronization of props.
+  function replaceEditorText(next: string) {
+    const view = editorViewRef.current;
+    if (!view) {
+      queuedEditorTextRef.current = next;
+      setText(next);
+      return;
+    }
+    if (view.state.doc.toString() !== next) {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: next },
+        annotations: isolateHistory.of("full"),
+      });
+    }
+    setText(view.state.doc.toString());
+  }
+  function applyRequestedSourceReload(view: EditorView | null) {
+    const request = sourceReloadRequest;
+    if (!view || !request || request.messageId !== messageId || appliedSourceReloadRef.current === request
+      || savingRef.current || saveUnknown || !saveRecoveryReady) return;
+    appliedSourceReloadRef.current = request;
+    const latest = request.latest;
+    const live = view.state.doc.toString();
+    if (live !== request.expectedText || hasAttachmentWork) {
+      setComparison(latest);
+      setReloadStatus("ready");
+      return;
+    }
+    onAcceptLatest?.();
+    if (live !== latest.canonicalText) {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: latest.canonicalText },
+        annotations: isolateHistory.of("full"),
+      });
+    }
+    setText(view.state.doc.toString());
+    setBaselineText(latest.canonicalText);
+    draft.restoreBase({
+      conversation_id: conversationId ?? "", message_id: messageId ?? "",
+      text: latest.canonicalText, saved_at: new Date().toISOString(), revision: editorRevisionRef.current,
+      base_version: latest.versionNumber, base_version_id: latest.versionId, base_content_hash: latest.contentHash,
+    });
+    setComparison(null); setRevisionConflict(false); setReloadStatus("idle"); setError(null);
+    onDirtyChange?.(false);
+  }
+  useLayoutEffect(() => { applyRequestedSourceReload(editorViewRef.current); });
 
   useEffect(() => {
     const view = editorViewRef.current;
@@ -835,13 +892,17 @@ export function EditMessageForm({
   }, [pendingAttachmentInsertion]);
 
   function applyAttachmentInsertion(view: EditorView, insertion: NonNullable<typeof pendingAttachmentInsertion>) {
-    const key = `${insertion.referenceUri}:${insertion.placement}`;
-    if (appliedInsertionRef.current === key) return;
+    if (appliedInsertionRef.current === insertion) return;
     if (insertion.replace) {
       const changed = changeAttachmentReference(view, insertion.replace, insertion.referenceUri,
         insertion.replace.scope, insertion.replace.remove);
       if (!changed) setError(zh ? "引用位置已变化，请重新选择该引用。" : "The reference changed. Select it again before replacing.");
-      appliedInsertionRef.current = key;
+      if (changed) {
+        // Publish the same live source mirror before releasing this request.
+        const next = view.state.doc.toString();
+        setText(next);
+      }
+      appliedInsertionRef.current = insertion;
       onAttachmentInsertionApplied?.();
       view.focus();
       return;
@@ -863,7 +924,9 @@ export function EditMessageForm({
     const after = target < view.state.doc.length && next !== "\n" ? "\n\n" : "";
     const value = `${before}${markdown}${after}`;
     view.dispatch({ changes: { from: target, insert: value }, selection: { anchor: target + value.length }, effects: EditorView.scrollIntoView(target + value.length, { y: "center" }) });
-    appliedInsertionRef.current = key;
+    const nextDocument = view.state.doc.toString();
+    setText(nextDocument);
+    appliedInsertionRef.current = insertion;
     cursorOffsetChangeRef.current?.(unicodeCodePointOffset(view.state.doc.toString(), target + value.length));
     onAttachmentInsertionApplied?.();
   }
@@ -878,8 +941,7 @@ export function EditMessageForm({
     }).catch(() => undefined);
     setBaselineText(saved.canonicalText);
     if (unchanged) {
-      setEditorDocument(saved.canonicalText);
-      setText(saved.canonicalText);
+      replaceEditorText(saved.canonicalText);
       setReason("");
       setShowClosePrompt(false);
     }
@@ -888,6 +950,8 @@ export function EditMessageForm({
     onDirtyChange?.(!unchanged && live !== saved.canonicalText);
     setSaveUnknown(false);
     setCanRetrySave(false);
+    setComparison(null);
+    setReloadStatus("idle");
     setError(null);
     setSaveNotice(zh ? "已保存" : "Saved");
     saveSnapshotRef.current = null;
@@ -1015,7 +1079,7 @@ export function EditMessageForm({
             confirmLabel: zh ? "载入草稿" : "Load draft",
           })) return;
           draft.restoreBase(recovered.value);
-          setEditorDocument(recovered.value.text); setText(recovered.value.text);
+          replaceEditorText(recovered.value.text);
           // Keep the source copy until a new edit has safely persisted.
         }}>{zh ? "恢复到编辑器" : "Restore to editor"}</button>
         <button type="button" className="min-h-10 text-secondary" onClick={async () => {
@@ -1094,7 +1158,7 @@ export function EditMessageForm({
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <div ref={editorHostRef} className="min-h-0 min-w-0 flex-1 overflow-hidden" data-testid="source-editor-codemirror" data-local-file-drop-target="true">
           <CodeMirror
-          value={editorDocument}
+          initialText={editorInitialTextRef.current}
           height="100%"
           extensions={extensions}
           theme="none"
@@ -1102,6 +1166,11 @@ export function EditMessageForm({
           onCreateEditor={(view) => {
             editorEventCleanupRef.current?.();
             editorViewRef.current = view;
+            if (queuedEditorTextRef.current !== null) {
+              const queued = queuedEditorTextRef.current;
+              queuedEditorTextRef.current = null;
+              replaceEditorText(queued);
+            }
             view.dispatch({ effects: themeCompartmentRef.current.reconfigure(codeMirrorTheme(resolvedTheme)) });
             const anchor = codePointToUtf16Offset(view.state.doc.toString(), initialCursorOffset);
             view.dispatch({ selection: { anchor }, effects: EditorView.scrollIntoView(anchor, { y: "center" }) });
@@ -1151,9 +1220,11 @@ export function EditMessageForm({
               const files = queuedFilesRef.current.splice(0);
               insertFilesAtCurrentPosition(view, files);
             }
+            applyRequestedSourceReload(view);
+            applyHeaderHistoryCommand();
           }}
           onUpdate={handleEditorUpdate}
-          onChange={(next) => { setEditorDocument(next); setText(next); }}
+          onChange={(next) => { setText(next); }}
           className="h-full text-sm [&_.cm-editor]:h-full"
           />
         </div>
