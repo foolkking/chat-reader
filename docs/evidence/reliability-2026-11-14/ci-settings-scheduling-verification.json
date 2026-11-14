@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T01:55:35.032398+00:00",
+  "base_revision": "b2d3a653f9655a6480d4f669cc12446030655037",
+  "status": "local-selected-regression-passed-full-ci-required",
+  "scope": {
+    "application_changed": [
+      "apps/api/app/services/worker_supervisor.py"
+    ],
+    "existing_test_changed": [
+      "apps/api/tests/test_supervised_execution_postgres.py"
+    ],
+    "new_test": [
+      "apps/api/tests/test_worker_supervisor.py"
+    ],
+    "changed_existing_inputs": [
+      "apps/api/app/services/worker_supervisor.py",
+      "apps/api/tests/test_supervised_execution_postgres.py"
+    ],
+    "source_input_count": 1392,
+    "source_input_drift_during_final_regression": [],
+    "protected_count": 13,
+    "protected_drift": [],
+    "index_empty": true,
+    "handler_import_refactor": false,
+    "workflow_or_production_configuration_changed": false
+  },
+  "tests": {
+    "selected_api": {
+      "command": "corepack pnpm run test:api -q <eleven named modules> --basetemp <TASK_TMP>/pytest-supervisor-final-01 -o cache_dir=<TASK_TMP>/pytest-cache-final-01",
+      "modules": [
+        "test_worker_supervisor.py",
+        "test_worker_shutdown.py",
+        "test_worker_liveness.py",
+        "test_worker_maintenance_isolation.py",
+        "test_background_job_errors.py",
+        "test_admin_execution_recovery.py",
+        "test_task_execution_recovery.py",
+        "test_cleanup_execution.py",
+        "test_supervised_execution_postgres.py",
+        "test_worker_requeue_postgres.py",
+        "test_worker_maintenance_postgres.py"
+      ],
+      "passed": 153,
+      "skipped": 43,
+      "failed": 0,
+      "seconds": 120.52,
+      "actual_loop_cases_in_batch": 17,
+      "log_sha256": "e7d273c8289168199d4ef8c8e8c81d4cf25183633e9e3bde99de20a180bb6f0c",
+      "source_sha256": {
+        "apps/api/app/services/worker_supervisor.py": "cbf111a730ee66cad14b8d335bf9c2e7696765ea407761d6cf3437894f81bbeb",
+        "apps/api/tests/test_supervised_execution_postgres.py": "596204ef9aab0ac2b7e06b14348dbef59df242e6638c59e33a0ecdf3d38d3a9d",
+        "apps/api/tests/test_worker_supervisor.py": "4e5486acf14d06e0a9246601de26bf2ce93c2f5c0a11a7c73ec04949e8c34d55"
+      },
+      "limitations": [
+        "Controlled actual scheduling loop and existing SQLite/TestClient regressions.",
+        "Real PostgreSQL and Windows-inapplicable POSIX cases are skipped, not accepted.",
+        "The added real PostgreSQL poll20 case must run in exact full CI."
+      ]
+    },
+    "ci_script_tests": {
+      "passed": 64,
+      "failed": 0,
+      "skipped": 0,
+      "log_sha256": "850d6952877c6bcaac38b7df9c165e8c27f144cb1b5fd012575e90acfccb5c52"
+    },
+    "web_lint": {
+      "passed": true,
+      "log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+    },
+    "web_typecheck": {
+      "passed": true,
+      "task_local_build_info": true,
+      "log_sha256": "199c750d7c664e041b16de5702dd0147a6b1ba43caff104299299f94c1ec4b8a"
+    },
+    "migration_head": {
+      "single_head": "20261112_0061",
+      "log_sha256": "73423f8cc296997f4c5fa5d11c6fbcf544629c61e9b90c2257f86f00f0243af5"
+    },
+    "python_ast": {
+      "files": 3,
+      "passed": true
+    },
+    "previous_web_build": {
+      "input_count": 548,
+      "input_drift": [],
+      "manifest": "ci-runtime-frame-build-inputs.json",
+      "manifest_sha256": "20da2cc1d9b180e1c998e2099d88981ec5f75ddb4648c2fbd56b6877ffc84a4a",
+      "rerun": false,
+      "description": "Only prior build-input identity was rechecked; no new build claimed."
+    },
+    "web_ux_mounted_pwa_rerun": false
+  },
+  "preserved_failures_and_nonfinal_runs": {
+    "original_actual_loop_red": {
+      "failed": 8,
+      "passed": 9,
+      "same_final_unit_test_sha256": "4e5486acf14d06e0a9246601de26bf2ce93c2f5c0a11a7c73ec04949e8c34d55",
+      "original_supervisor_sha256": "9f7b294bfb1cff5596f4b1110e26e8f6a351bba3369f2e46d8ca16845ee27e08",
+      "log_sha256": "7ea9b9ed285674b31ca44dd0434dc2e90ad5c0ca5009dcdf5dabf6ff90c46f2f"
+    },
+    "first_diagnosis_method_error": {
+      "error": "Used recorded_at rather than the actual read_at field.",
+      "occurred_before_diagnosis_receipt_creation": true,
+      "script_sha256": "70b397a8df42a9a544391559719392cc95daeaf95b50d5475ae905c50f4bfa14",
+      "log_sha256": "e1ba132426feb2d3e8090a33ad15b62c5d9adaf3db75a0b7391550f0a6d441f1",
+      "corrected_script_sha256": "858a5cbee7599cda1b1364178ab2a24f497a7fb26b339794530e104588d5441b"
+    },
+    "earlier_api_green": {
+      "passed": 153,
+      "skipped": 42,
+      "log_sha256": "e96340fdfd9bf83853d6c5e8f6dc92843eb22847417c65fd0a630334ae114ef0",
+      "not_final": "Collected before the additional PostgreSQL poll20 parameter; not its coverage."
+    },
+    "preceding_full_ci": {
+      "run": 43531859718,
+      "sha": "b2d3a653f9655a6480d4f669cc12446030655037",
+      "conclusion": "cancelled",
+      "official_reason": "Settings exceeded the original60-minute job limit.",
+      "receipt": "ci-runtime-frame-failure.json",
+      "receipt_sha256": "02f194173cc00b26cd1321300b1cd5a783310eb5dd5713a75c484dbae442a698",
+      "cancellation_requested": false,
+      "deployable": false
+    }
+  },
+  "scheduling_contract": {
+    "fresh_execution_child": true,
+    "max_concurrent_execution_children": 1,
+    "after_supervised_exit": "Immediate next iteration, not unconditional idle wait.",
+    "next_iteration_checks": [
+      "shutdown/supersession",
+      "supervision PostgreSQL lease",
+      "canonical outcome reconciliation",
+      "execution PostgreSQL lease",
+      "original claim/control fencing"
+    ],
+    "idle_unavailable_error_poll_default_seconds": 1,
+    "stall_seconds": 300,
+    "stop_grace_seconds": 30,
+    "maintenance_single_lane_timeout_seconds": 5,
+    "actual_pg_two_jobs_poll_parameters_seconds": [
+      1,
+      20
+    ],
+    "original_pg_overall_seconds": 25,
+    "original_pg_next_start_seconds": 10,
+    "poll20_pg_case_locally_executed": false,
+    "os_exit_substitutes_for_lease_release": false,
+    "fork_or_persistent_execution_pool": false,
+    "orm_connection_reuse_between_children": false,
+    "memory_or_signal_budget_changed": false,
+    "ci_timeout_or_concurrency_changed": false
+  },
+  "runner_identity_diagnostic": {
+    "official_log_values": {
+      "43503483829": {
+        "os": "Ubuntu26.04.1",
+        "image": "ubuntu-26.04",
+        "version": "20261111.82.6",
+        "official_job_log_sha256": "2b4eb0841b4543f80d7b1142fcb6a211bde2baa85e599017dee8d168098a866b"
+      },
+      "43531859718": {
+        "os": "Ubuntu26.04.1",
+        "image": "ubuntu-26.04",
+        "version": "20261111.196.1",
+        "official_job_log_sha256": "88183b167a732cb09749f2dfb549096f97b4f0e5bd54748c54346bdddc87ab2c"
+      }
+    },
+    "root_cause_proven": false,
+    "interpretation": "Same OS, different hosted-image versions; not proof of CPU/image cause."
+  },
+  "unchanged_release_contract_sha256": {
+    ".github/workflows/build-release-images.yml": "4b4f4864eda25811724f96e462680107cd784860f3a5958dd73ca236900896d1",
+    "scripts/ci/verify-reading-stability.mjs": "8f2ba7cd08470259c8dd5524e73d50797d5c5650e81c3c7802fc1b5b7081ee64",
+    "apps/api/app/workers/execution_child.py": "116335ddcd567e4bf6df42e1f3fd474a305313b234ea69106b7fb9197ecc63bf",
+    "apps/api/app/services/execution_control.py": "7a589e73340a8d4220b2d57dd3e009875c29dcdcd0868c281f7d190f97ca34ee",
+    "apps/api/app/services/execution_reconciliation.py": "6b86edbd55b324d5818c6b32768a0fd644e5d016c43da05b15dec987c4cfcbed"
+  },
+  "fact_surfaces": {
+    "PROJECT_STATE.md": "f6cd9f66351fdca5d1dd18775167873cc4a0d1c85d0b8d6d2c94cc24d3fda4d6",
+    "docs/index.md": "c7d30837dbc5969bed3e1cc810a282340ec270ab78db1507353ec82c2cbcc703",
+    "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md": "c7ad14def7e7fecad4512d4009400a46d546d8809ecd1b58e88b195696786cf5",
+    "docs/evidence/README.md": "d70ca8f9e9e7ac0df4c32a370d4dd805ee61437debb87dcca6c105c59fbe241a",
+    "docs/documentation-inventory.md": "2a5c71eb86c792083b5d34d9b2f48882d5e181401a884494c839660e9317e80b",
+    "docs/system/OBSERVABILITY_CONTRACT.md": "5933b2691457ce259c92e7ba63883b5ae5704ed10a5e2d928993465a4e276ed8",
+    "docs/testing.md": "a31dd79d4a486dad132c004d98d939462b638aa2f6c5fd1d86fc7bc1c9f5d777"
+  },
+  "new_local_links_checked": 30,
+  "full_exact_ci": "Not yet dispatched; no preceding successes inherited.",
+  "old_test_postgresql_started_or_stopped_again": false,
+  "full_local_api_worker_web_started": false,
+  "production_operations_performed": false,
+  "production_cancel_authorization_reused": false,
+  "user_input_replayed_or_removed": false,
+  "automation_created": false,
+  "remaining_product_device_disaster_recovery_acceptance": "user"
+}

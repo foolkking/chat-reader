@@ -1,0 +1,772 @@
+{
+  "schema_version": 1,
+  "status": "failed-incomplete-no-deployable-artifact",
+  "recorded_at": "2026-11-14T01:39:42.782180+00:00",
+  "workflow_run_id": 43531859718,
+  "source_revision": "b2d3a653f9655a6480d4f669cc12446030655037",
+  "attempt": 1,
+  "first_read": {
+    "read_at": "2026-11-14T00:56:06.772164+00:00",
+    "not_before": "2026-11-14T00:56:06.651342+00:00",
+    "monotonic_seconds": 3000.0,
+    "wall_and_monotonic_passed": true,
+    "sha256": "73f26d99a30aaf48998ac4726cf20d07dece2b50173f3000c37eff56ad86633d"
+  },
+  "completion": {
+    "recorded_at": "2026-11-14T01:09:01.530846+00:00",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "cancellation_requested": false,
+    "sha256": "9cea54350e6f757fdfb0709ece8377d7d018ba1ed0301486a3e7649d59ea7aaf"
+  },
+  "jobs": {
+    "api-quality": "success",
+    "web-quality": "success",
+    "settings-quality": "cancelled",
+    "reading-performance-comparison / compare": "success",
+    "build-images": "skipped",
+    "inspect-release-artifact": "skipped"
+  },
+  "settings": {
+    "started_at": "2026-11-14T00:06:11Z",
+    "completed_at": "2026-11-14T01:06:28Z",
+    "official_failure": "The job has exceeded the maximum execution time of 1h0m0s",
+    "matrix_expected": 470,
+    "pre_shutdown_printed_passes": 344,
+    "pre_shutdown_printed_failures": 0,
+    "uncompleted_matrix": true,
+    "fresh_instance_restore": "skipped",
+    "last_request_before_untimestamped_api_shutdown": "2026-11-14T01:06:18.750240+00:00",
+    "later_printed_failures": [
+      {
+        "index": 345,
+        "printed_at": "2026-11-14T01:06:19.8851134Z",
+        "location": "e2e/settings-rule-publication.spec.ts:8:7",
+        "title": "768px zh-CN: publish, retain used revision, withdraw and relearn without duplicates",
+        "classification": "service-shutdown-tail-not-pre-cancellation-assertion"
+      },
+      {
+        "index": 346,
+        "printed_at": "2026-11-14T01:06:20.7665964Z",
+        "location": "e2e/settings-rule-publication.spec.ts:8:7",
+        "title": "768px en-US: publish, retain used revision, withdraw and relearn without duplicates",
+        "classification": "service-shutdown-tail-not-pre-cancellation-assertion"
+      },
+      {
+        "index": 347,
+        "printed_at": "2026-11-14T01:06:21.6058714Z",
+        "location": "e2e/settings-rule-publication.spec.ts:8:7",
+        "title": "1440px zh-CN: publish, retain used revision, withdraw and relearn without duplicates",
+        "classification": "service-shutdown-tail-not-pre-cancellation-assertion"
+      },
+      {
+        "index": 348,
+        "printed_at": "2026-11-14T01:06:22.4659516Z",
+        "location": "e2e/settings-rule-publication.spec.ts:8:7",
+        "title": "1440px en-US: publish, retain used revision, withdraw and relearn without duplicates",
+        "classification": "service-shutdown-tail-not-pre-cancellation-assertion"
+      },
+      {
+        "index": 349,
+        "printed_at": "2026-11-14T01:06:23.3169072Z",
+        "location": "e2e/settings-rule-recovery.spec.ts:40:5",
+        "title": "375px: confirmed rule save does not wait for the list refresh",
+        "classification": "service-shutdown-tail-not-pre-cancellation-assertion"
+      }
+    ],
+    "actual_gate_evidence": {
+      "schema_version": 2,
+      "gate_id": "settings-stages-1-4",
+      "status": "running",
+      "started_at": "2026-11-14T00:09:15.844Z",
+      "test_count": 470
+    },
+    "actual_gate_evidence_sha256": "70d45b2b711fcecc07c55e87c7b560a40457bd86d1bf0617f4fedae7d2354aae",
+    "complete_result_counts_available": false
+  },
+  "timing_comparison": {
+    "reference_run": 43503483829,
+    "reference_source": "74a1e8605bc00d64b543544041c3095566f2881f",
+    "reference_matrix_summary": "470 passed (56.7m)",
+    "reference_fresh_restore_summary": "1 passed (40.2s)",
+    "matched_passed_tests_only": 344,
+    "reference_printed_duration_sum_seconds": 2778.976,
+    "current_printed_duration_sum_seconds": 3415.803,
+    "printed_duration_increase_seconds": 636.827,
+    "printed_duration_increase_percent": 22.915887,
+    "reference_start_to_matched_last_result_seconds": 2784.794554,
+    "current_start_to_matched_last_result_seconds": 3418.429951,
+    "precision": "Printed per-case durations are rounded by Playwright; not exact handler timing.",
+    "families": [
+      {
+        "file": "e2e/settings-cleanup-recovery.spec.ts",
+        "matched_count": 19,
+        "reference_printed_seconds": 133.2,
+        "current_printed_seconds": 173.9,
+        "increase_seconds": 40.7
+      },
+      {
+        "file": "e2e/settings-rule-learning.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 117.6,
+        "current_printed_seconds": 156.2,
+        "increase_seconds": 38.6
+      },
+      {
+        "file": "e2e/settings-rescan-recovery.spec.ts",
+        "matched_count": 13,
+        "reference_printed_seconds": 146.2,
+        "current_printed_seconds": 184.1,
+        "increase_seconds": 37.9
+      },
+      {
+        "file": "e2e/settings-admin-recovery.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 120.1,
+        "current_printed_seconds": 153.4,
+        "increase_seconds": 33.3
+      },
+      {
+        "file": "e2e/settings-formats.spec.ts",
+        "matched_count": 7,
+        "reference_printed_seconds": 61.7,
+        "current_printed_seconds": 93.5,
+        "increase_seconds": 31.8
+      },
+      {
+        "file": "e2e/settings-noise-navigation.spec.ts",
+        "matched_count": 11,
+        "reference_printed_seconds": 106.2,
+        "current_printed_seconds": 135.5,
+        "increase_seconds": 29.3
+      },
+      {
+        "file": "e2e/settings-export-retention.spec.ts",
+        "matched_count": 12,
+        "reference_printed_seconds": 552.2,
+        "current_printed_seconds": 579.0,
+        "increase_seconds": 26.8
+      },
+      {
+        "file": "e2e/settings-noise-dismissal.spec.ts",
+        "matched_count": 14,
+        "reference_printed_seconds": 92.8,
+        "current_printed_seconds": 118.5,
+        "increase_seconds": 25.7
+      },
+      {
+        "file": "e2e/settings-noise-scan-lifecycle.spec.ts",
+        "matched_count": 12,
+        "reference_printed_seconds": 84.5,
+        "current_printed_seconds": 110.0,
+        "increase_seconds": 25.5
+      },
+      {
+        "file": "e2e/settings-archive-replacement.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 79.7,
+        "current_printed_seconds": 105.0,
+        "increase_seconds": 25.3
+      },
+      {
+        "file": "e2e/settings-personal-backup.spec.ts",
+        "matched_count": 7,
+        "reference_printed_seconds": 50.628,
+        "current_printed_seconds": 70.2,
+        "increase_seconds": 19.572
+      },
+      {
+        "file": "e2e/settings-exception-recovery.spec.ts",
+        "matched_count": 11,
+        "reference_printed_seconds": 84.1,
+        "current_printed_seconds": 103.1,
+        "increase_seconds": 19.0
+      },
+      {
+        "file": "e2e/settings-archive-recovery.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 31.9,
+        "current_printed_seconds": 48.9,
+        "increase_seconds": 17.0
+      },
+      {
+        "file": "e2e/settings-format-health.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 36.7,
+        "current_printed_seconds": 53.4,
+        "increase_seconds": 16.7
+      },
+      {
+        "file": "e2e/settings-cleanup.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 38.4,
+        "current_printed_seconds": 53.7,
+        "increase_seconds": 15.3
+      },
+      {
+        "file": "e2e/settings-noise-diff.spec.ts",
+        "matched_count": 8,
+        "reference_printed_seconds": 53.9,
+        "current_printed_seconds": 67.6,
+        "increase_seconds": 13.7
+      },
+      {
+        "file": "e2e/settings-attachment-export.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 55.3,
+        "current_printed_seconds": 69.0,
+        "increase_seconds": 13.7
+      },
+      {
+        "file": "e2e/settings-offline-center.spec.ts",
+        "matched_count": 3,
+        "reference_printed_seconds": 45.4,
+        "current_printed_seconds": 58.5,
+        "increase_seconds": 13.1
+      },
+      {
+        "file": "e2e/settings-cleanup-completion.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 37.1,
+        "current_printed_seconds": 49.8,
+        "increase_seconds": 12.7
+      },
+      {
+        "file": "e2e/settings-presentation.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 29.9,
+        "current_printed_seconds": 41.6,
+        "increase_seconds": 11.7
+      },
+      {
+        "file": "e2e/settings-batch-export.spec.ts",
+        "matched_count": 7,
+        "reference_printed_seconds": 49.1,
+        "current_printed_seconds": 60.2,
+        "increase_seconds": 11.1
+      },
+      {
+        "file": "e2e/settings-rule-actions.spec.ts",
+        "matched_count": 16,
+        "reference_printed_seconds": 50.276,
+        "current_printed_seconds": 61.1,
+        "increase_seconds": 10.824
+      },
+      {
+        "file": "e2e/settings-pending-signout.spec.ts",
+        "matched_count": 4,
+        "reference_printed_seconds": 24.5,
+        "current_printed_seconds": 35.1,
+        "increase_seconds": 10.6
+      },
+      {
+        "file": "e2e/settings-admin-users.spec.ts",
+        "matched_count": 4,
+        "reference_printed_seconds": 31.1,
+        "current_printed_seconds": 40.8,
+        "increase_seconds": 9.7
+      },
+      {
+        "file": "e2e/settings-registration-recovery.spec.ts",
+        "matched_count": 12,
+        "reference_printed_seconds": 61.8,
+        "current_printed_seconds": 71.2,
+        "increase_seconds": 9.4
+      },
+      {
+        "file": "e2e/settings-reading-sync.spec.ts",
+        "matched_count": 9,
+        "reference_printed_seconds": 71.7,
+        "current_printed_seconds": 80.9,
+        "increase_seconds": 9.2
+      },
+      {
+        "file": "e2e/settings-global-scan-recovery.spec.ts",
+        "matched_count": 10,
+        "reference_printed_seconds": 71.822,
+        "current_printed_seconds": 81.0,
+        "increase_seconds": 9.178
+      },
+      {
+        "file": "e2e/settings-context-drafts.spec.ts",
+        "matched_count": 3,
+        "reference_printed_seconds": 26.2,
+        "current_printed_seconds": 35.2,
+        "increase_seconds": 9.0
+      },
+      {
+        "file": "e2e/settings-publication-recovery.spec.ts",
+        "matched_count": 18,
+        "reference_printed_seconds": 45.8,
+        "current_printed_seconds": 54.6,
+        "increase_seconds": 8.8
+      },
+      {
+        "file": "e2e/settings-noise-selection-scope.spec.ts",
+        "matched_count": 5,
+        "reference_printed_seconds": 32.3,
+        "current_printed_seconds": 40.2,
+        "increase_seconds": 7.9
+      },
+      {
+        "file": "e2e/settings-rule-edit-concurrency.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 54.2,
+        "current_printed_seconds": 61.8,
+        "increase_seconds": 7.6
+      },
+      {
+        "file": "e2e/settings-help-runtime.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 15.301,
+        "current_printed_seconds": 22.103,
+        "increase_seconds": 6.802
+      },
+      {
+        "file": "e2e/settings-pending-cleanup.spec.ts",
+        "matched_count": 2,
+        "reference_printed_seconds": 24.1,
+        "current_printed_seconds": 30.8,
+        "increase_seconds": 6.7
+      },
+      {
+        "file": "e2e/settings-direct-export.spec.ts",
+        "matched_count": 10,
+        "reference_printed_seconds": 16.4,
+        "current_printed_seconds": 22.5,
+        "increase_seconds": 6.1
+      },
+      {
+        "file": "e2e/settings-preferences.spec.ts",
+        "matched_count": 10,
+        "reference_printed_seconds": 46.1,
+        "current_printed_seconds": 52.0,
+        "increase_seconds": 5.9
+      },
+      {
+        "file": "e2e/settings-cleanup-layout.spec.ts",
+        "matched_count": 3,
+        "reference_printed_seconds": 16.7,
+        "current_printed_seconds": 22.3,
+        "increase_seconds": 5.6
+      },
+      {
+        "file": "e2e/settings-offline-conflicts.spec.ts",
+        "matched_count": 4,
+        "reference_printed_seconds": 30.6,
+        "current_printed_seconds": 35.9,
+        "increase_seconds": 5.3
+      },
+      {
+        "file": "e2e/context-admin-bundles.spec.ts",
+        "matched_count": 6,
+        "reference_printed_seconds": 20.7,
+        "current_printed_seconds": 25.8,
+        "increase_seconds": 5.1
+      },
+      {
+        "file": "e2e/settings-account-recovery.spec.ts",
+        "matched_count": 13,
+        "reference_printed_seconds": 15.249,
+        "current_printed_seconds": 20.2,
+        "increase_seconds": 4.951
+      },
+      {
+        "file": "e2e/settings-email-change.spec.ts",
+        "matched_count": 4,
+        "reference_printed_seconds": 12.8,
+        "current_printed_seconds": 17.3,
+        "increase_seconds": 4.5
+      },
+      {
+        "file": "e2e/settings-feature-recovery.spec.ts",
+        "matched_count": 11,
+        "reference_printed_seconds": 53.2,
+        "current_printed_seconds": 57.6,
+        "increase_seconds": 4.4
+      },
+      {
+        "file": "e2e/settings-admin-invitations-audit.spec.ts",
+        "matched_count": 4,
+        "reference_printed_seconds": 11.3,
+        "current_printed_seconds": 15.5,
+        "increase_seconds": 4.2
+      },
+      {
+        "file": "e2e/settings-rule-publication.spec.ts",
+        "matched_count": 2,
+        "reference_printed_seconds": 17.7,
+        "current_printed_seconds": 20.6,
+        "increase_seconds": 2.9
+      },
+      {
+        "file": "e2e/settings-offline-lock.spec.ts",
+        "matched_count": 1,
+        "reference_printed_seconds": 7.5,
+        "current_printed_seconds": 9.8,
+        "increase_seconds": 2.3
+      },
+      {
+        "file": "e2e/settings-offline-sync.spec.ts",
+        "matched_count": 3,
+        "reference_printed_seconds": 15.0,
+        "current_printed_seconds": 16.4,
+        "increase_seconds": 1.4
+      }
+    ]
+  },
+  "worker_diagnostics": {
+    "reference_matched_window": {
+      "sha256": "763cb20750fa643e1c8cf27b5e74bf636f96d5fce57b33e0fd4755fffc1174e8",
+      "event_counts": {
+        "background_job_committed": 396,
+        "background_job_failed": 25,
+        "artifact_staging": 89,
+        "artifact_validated": 89,
+        "artifact_published": 89,
+        "artifact_db_committed": 89,
+        "export_reclamation": 26
+      },
+      "committed_job_types": {
+        "user_account_delete": 75,
+        "conversation_derived_rebuild": 6,
+        "personal_archive_export": 11,
+        "personal_archive_preflight": 12,
+        "personal_archive_restore": 9,
+        "system_archive_export": 3,
+        "system_archive_preflight": 5,
+        "conversation_export": 24,
+        "conversation_batch_export": 8,
+        "content_noise_scan": 170,
+        "offline_package": 43,
+        "adaptive_import_analysis": 30
+      },
+      "adjacent_same_kind_completion_intervals": {
+        "adaptive_import_analysis": {
+          "count": 19,
+          "median_seconds": 3.592691,
+          "min_seconds": 2.312737,
+          "max_seconds": 5.229797
+        },
+        "content_noise_scan": {
+          "count": 152,
+          "median_seconds": 5.562949,
+          "min_seconds": 2.028394,
+          "max_seconds": 61.362979
+        },
+        "conversation_batch_export": {
+          "count": 7,
+          "median_seconds": 3.726362,
+          "min_seconds": 2.378787,
+          "max_seconds": 23.570698
+        },
+        "conversation_export": {
+          "count": 19,
+          "median_seconds": 30.471344,
+          "min_seconds": 7.546627,
+          "max_seconds": 32.571036
+        },
+        "offline_package": {
+          "count": 38,
+          "median_seconds": 3.390808,
+          "min_seconds": 2.273806,
+          "max_seconds": 48.396537
+        },
+        "personal_archive_export": {
+          "count": 2,
+          "median_seconds": 3.554871,
+          "min_seconds": 2.521696,
+          "max_seconds": 4.588047
+        },
+        "personal_archive_preflight": {
+          "count": 2,
+          "median_seconds": 2.800883,
+          "min_seconds": 2.296851,
+          "max_seconds": 3.304914
+        },
+        "system_archive_preflight": {
+          "count": 2,
+          "median_seconds": 3.298284,
+          "min_seconds": 3.285557,
+          "max_seconds": 3.311011
+        },
+        "user_account_delete": {
+          "count": 62,
+          "median_seconds": 2.289777,
+          "min_seconds": 2.2577,
+          "max_seconds": 26.222385
+        }
+      },
+      "interpretation": "Intervals include queue, interpreter startup, business work and polling; not handler durations."
+    },
+    "current_matched_window": {
+      "sha256": "9bb9adc7b65e252270ed961e397c54c5febdb956a85a06428f452d7d3c583408",
+      "event_counts": {
+        "background_job_committed": 394,
+        "background_job_failed": 25,
+        "artifact_staging": 87,
+        "artifact_validated": 87,
+        "artifact_published": 87,
+        "artifact_db_committed": 87,
+        "export_reclamation": 28
+      },
+      "committed_job_types": {
+        "user_account_delete": 75,
+        "conversation_derived_rebuild": 6,
+        "personal_archive_export": 11,
+        "personal_archive_preflight": 12,
+        "personal_archive_restore": 9,
+        "system_archive_export": 3,
+        "system_archive_preflight": 5,
+        "conversation_export": 24,
+        "conversation_batch_export": 8,
+        "content_noise_scan": 170,
+        "offline_package": 41,
+        "adaptive_import_analysis": 30
+      },
+      "adjacent_same_kind_completion_intervals": {
+        "adaptive_import_analysis": {
+          "count": 19,
+          "median_seconds": 5.473134,
+          "min_seconds": 2.869189,
+          "max_seconds": 9.087607
+        },
+        "content_noise_scan": {
+          "count": 152,
+          "median_seconds": 7.414981,
+          "min_seconds": 2.533516,
+          "max_seconds": 70.37471
+        },
+        "conversation_batch_export": {
+          "count": 7,
+          "median_seconds": 5.468865,
+          "min_seconds": 4.396023,
+          "max_seconds": 23.545223
+        },
+        "conversation_export": {
+          "count": 19,
+          "median_seconds": 30.552197,
+          "min_seconds": 10.579522,
+          "max_seconds": 34.447374
+        },
+        "offline_package": {
+          "count": 36,
+          "median_seconds": 5.391523,
+          "min_seconds": 2.870631,
+          "max_seconds": 54.60385
+        },
+        "personal_archive_export": {
+          "count": 2,
+          "median_seconds": 4.434703,
+          "min_seconds": 3.483892,
+          "max_seconds": 5.385514
+        },
+        "personal_archive_preflight": {
+          "count": 2,
+          "median_seconds": 4.613824,
+          "min_seconds": 3.869279,
+          "max_seconds": 5.35837
+        },
+        "system_archive_preflight": {
+          "count": 2,
+          "median_seconds": 3.763817,
+          "min_seconds": 3.730167,
+          "max_seconds": 3.797467
+        },
+        "user_account_delete": {
+          "count": 62,
+          "median_seconds": 2.833184,
+          "min_seconds": 2.673665,
+          "max_seconds": 35.872072
+        }
+      },
+      "interpretation": "Intervals include queue, interpreter startup, business work and polling; not handler durations."
+    },
+    "observed_poll_default_seconds": 1.0,
+    "supervisor_sha256_before_repair": "9f7b294bfb1cff5596f4b1110e26e8f6a351bba3369f2e46d8ca16845ee27e08",
+    "unconditional_wait_after_supervised_child": true,
+    "local_single_cold_import_seconds": 4.580077,
+    "local_cold_import_log_sha256": "0b7eddeaa18597743c1e33d995237d553adcede42de2830f1211ab2a68af70f6",
+    "limitations": [
+      "Single local Windows cold import, not Linux CI root-cause proof.",
+      "Mandatory post-child sleep is a real production queue cost, not proof of all CI slowdown.",
+      "No queue timing prediction substitutes for exact full CI."
+    ]
+  },
+  "unchanged_exact_commit_inputs": {
+    "paths": [
+      "apps/api",
+      "apps/web/app",
+      "apps/web/components",
+      "apps/web/features",
+      "apps/web/lib",
+      "apps/web/hooks",
+      "apps/web/providers",
+      "apps/web/e2e/context-admin-bundles.spec.ts",
+      "apps/web/e2e/gate-summary.mjs",
+      "apps/web/e2e/gate-evidence-reporter.mjs",
+      "apps/web/playwright.config.ts",
+      "apps/web/package.json",
+      ".github/workflows",
+      "scripts/ci",
+      "pnpm-lock.yaml",
+      "package.json",
+      "apps/web/e2e/settings-account-recovery.spec.ts",
+      "apps/web/e2e/settings-admin-invitations-audit.spec.ts",
+      "apps/web/e2e/settings-admin-recovery.spec.ts",
+      "apps/web/e2e/settings-admin-users.spec.ts",
+      "apps/web/e2e/settings-annotation-composition.spec.ts",
+      "apps/web/e2e/settings-annotation-reads.spec.ts",
+      "apps/web/e2e/settings-annotation-writes.spec.ts",
+      "apps/web/e2e/settings-archive-recovery.spec.ts",
+      "apps/web/e2e/settings-archive-replacement.spec.ts",
+      "apps/web/e2e/settings-attachment-export.spec.ts",
+      "apps/web/e2e/settings-batch-export.spec.ts",
+      "apps/web/e2e/settings-cleanup-completion.spec.ts",
+      "apps/web/e2e/settings-cleanup-layout.spec.ts",
+      "apps/web/e2e/settings-cleanup-recovery.spec.ts",
+      "apps/web/e2e/settings-cleanup.spec.ts",
+      "apps/web/e2e/settings-context-drafts.spec.ts",
+      "apps/web/e2e/settings-direct-export.spec.ts",
+      "apps/web/e2e/settings-email-change.spec.ts",
+      "apps/web/e2e/settings-exception-recovery.spec.ts",
+      "apps/web/e2e/settings-export-retention.spec.ts",
+      "apps/web/e2e/settings-feature-recovery.spec.ts",
+      "apps/web/e2e/settings-format-health.spec.ts",
+      "apps/web/e2e/settings-formats.spec.ts",
+      "apps/web/e2e/settings-global-scan-recovery.spec.ts",
+      "apps/web/e2e/settings-help-runtime.spec.ts",
+      "apps/web/e2e/settings-noise-diff.spec.ts",
+      "apps/web/e2e/settings-noise-dismissal.spec.ts",
+      "apps/web/e2e/settings-noise-navigation.spec.ts",
+      "apps/web/e2e/settings-noise-scan-lifecycle.spec.ts",
+      "apps/web/e2e/settings-noise-selection-scope.spec.ts",
+      "apps/web/e2e/settings-notebook-drafts.spec.ts",
+      "apps/web/e2e/settings-offline-center.spec.ts",
+      "apps/web/e2e/settings-offline-conflicts.spec.ts",
+      "apps/web/e2e/settings-offline-lock.spec.ts",
+      "apps/web/e2e/settings-offline-recovery.spec.ts",
+      "apps/web/e2e/settings-offline-sync.spec.ts",
+      "apps/web/e2e/settings-pending-cleanup.spec.ts",
+      "apps/web/e2e/settings-pending-signout.spec.ts",
+      "apps/web/e2e/settings-personal-backup.spec.ts",
+      "apps/web/e2e/settings-preferences.spec.ts",
+      "apps/web/e2e/settings-presentation.spec.ts",
+      "apps/web/e2e/settings-publication-recovery.spec.ts",
+      "apps/web/e2e/settings-reading-sync.spec.ts",
+      "apps/web/e2e/settings-registration-recovery.spec.ts",
+      "apps/web/e2e/settings-registration.spec.ts",
+      "apps/web/e2e/settings-rescan-recovery.spec.ts",
+      "apps/web/e2e/settings-rule-actions.spec.ts",
+      "apps/web/e2e/settings-rule-edit-concurrency.spec.ts",
+      "apps/web/e2e/settings-rule-learning.spec.ts",
+      "apps/web/e2e/settings-rule-publication.spec.ts",
+      "apps/web/e2e/settings-rule-recovery.spec.ts",
+      "apps/web/e2e/settings-shares.spec.ts",
+      "apps/web/e2e/settings-signout-cleanup.spec.ts",
+      "apps/web/e2e/settings-skill-recovery.spec.ts",
+      "apps/web/e2e/settings-support-contextual.spec.ts",
+      "apps/web/e2e/settings-support-navigation.spec.ts",
+      "apps/web/e2e/settings-support.spec.ts",
+      "apps/web/e2e/settings-system-backup.spec.ts",
+      "apps/web/e2e/settings-task-center.spec.ts"
+    ],
+    "count": 1138,
+    "tree_listing_sha256": "14a06f024351cb3d286540624e8b388994b3db94112907faf53d45ebdb88d54a",
+    "all_changed_paths": [
+      "PROJECT_STATE.md",
+      "apps/web/e2e/attachment-upload-flow.spec.ts",
+      "apps/web/e2e/reader-capacity.spec.ts",
+      "apps/web/e2e/source-editor-upload-atomicity.spec.ts",
+      "docs/documentation-inventory.md",
+      "docs/evidence/README.md",
+      "docs/evidence/reliability-2026-11-14/ci-probe-pagination-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-probe-pagination-failure.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-build-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-diagnostic-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-diagnostic-result.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-verification.json",
+      "docs/index.md",
+      "docs/system/PERFORMANCE_CAPACITY_CONTRACT.md",
+      "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md",
+      "docs/system/SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md",
+      "scripts/ux/reader-capacity-diagnostic.test.mjs",
+      "scripts/ux/reader-interaction-browser.mjs",
+      "scripts/ux/source-editor-table-browser.mjs"
+    ],
+    "settings_or_application_code_regression_proven": false
+  },
+  "official_logs": [
+    {
+      "job": "web-quality",
+      "job_id": 132251267159,
+      "conclusion": "success",
+      "filename": "web-quality.log",
+      "bytes": 1376166,
+      "sha256": "6186338bfca6da68c37fef0fd15f9a5d057ab90d81be241de0ae5b2bb5b4b6dc",
+      "retained_at": "2026-11-14T01:11:22.490339+00:00"
+    },
+    {
+      "job": "api-quality",
+      "job_id": 132251267494,
+      "conclusion": "success",
+      "filename": "api-quality.log",
+      "bytes": 1403903,
+      "sha256": "5e0ff3c911de356a5d0f3bc66335b068f9e13e2140d9a37a5d7e96ff7cf83b55",
+      "retained_at": "2026-11-14T01:11:26.653276+00:00"
+    },
+    {
+      "job": "settings-quality",
+      "job_id": 132251267569,
+      "conclusion": "cancelled",
+      "filename": "settings-quality.log",
+      "bytes": 177029,
+      "sha256": "88183b167a732cb09749f2dfb549096f97b4f0e5bd54748c54346bdddc87ab2c",
+      "retained_at": "2026-11-14T01:11:30.008571+00:00"
+    },
+    {
+      "job": "reading-performance-comparison / compare",
+      "job_id": 132264700603,
+      "conclusion": "success",
+      "filename": "reading-performance-comparison-compare.log",
+      "bytes": 20463990,
+      "sha256": "17a80ac72af5b92c676017c0c97f37d910de481ac2d1af00f2ef017c85456305",
+      "retained_at": "2026-11-14T01:11:57.684619+00:00"
+    }
+  ],
+  "official_artifacts": [
+    {
+      "id": 14090830245,
+      "name": "reading-performance-comparison",
+      "official_zip_sha256": "822fa76b876bcd8768c751090ca0f206d26d2aabe068da757cca022adfd3abc5",
+      "zip_bytes": 4017305,
+      "members": 101
+    },
+    {
+      "id": 14090716192,
+      "name": "release-a-quality-evidence-b2d3a653f9655a6480d4f669cc12446030655037-1",
+      "official_zip_sha256": "1e579c02832e01fac76b609265332b9d61cc80ccd71c72118632fd908c065044",
+      "zip_bytes": 40542693,
+      "members": 848
+    },
+    {
+      "id": 14090612995,
+      "name": "settings-quality-evidence-b2d3a653f9655a6480d4f669cc12446030655037-1",
+      "official_zip_sha256": "7cdf78bc7c0e4834fcad23237b35014b2b88a69ac2d0d9b666e9558bc392e87d",
+      "zip_bytes": 9444313,
+      "members": 124
+    }
+  ],
+  "annotations_sha256": "edc5e1db04b44105bbeb07387e8129c8886d9a9b3324e73442d77989f28bfb00",
+  "repair_baseline": {
+    "source_inputs_unchanged": 1391,
+    "protected_files_unchanged": 13,
+    "index_empty": true
+  },
+  "new_ci_dispatched": false,
+  "production_touched": false,
+  "user_source_replayed": false,
+  "new_scheduler_created": false,
+  "deployable": false
+}

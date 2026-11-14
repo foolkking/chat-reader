@@ -6,6 +6,23 @@ fixtures retain **5432**. `postgres-service.sh` still fences ownership by
 run/attempt/job; no seeder admission, timeout, memory or test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
+## Busy-queue scheduling without an idle penalty — local 2026-11-14
+
+`test_worker_supervisor.py` invokes the actual supervisor loop with controlled
+lease, reporter and child adapters, without a serving stack or database.
+It checks immediate busy-queue handoff, full lease/reconciliation ordering,
+empty-queue polling, failed boundaries after OS exit, shutdown/supersession,
+spawn failure and bounded single-lane maintenance including delayed lease
+release after a helper is killed. It does not replace real PostgreSQL or Linux.
+
+The existing actual supervisor/child two-job PostgreSQL test retains its
+default1-second poll and adds a deliberately slower20-second idle-poll case.
+Both keep the original25-second overall, ten-second next-start and no-overlap
+assertions; the CI matrix remains serial and its60-minute boundary unchanged.
+The local PostgreSQL is stopped and must not be restarted for this check.
+Results, the retained8-failure red run and the preceding exact CI timeout live
+in the single ledger; no local mock result establishes full release acceptance.
+
 ## Retention probes, nested landmarks and stable pagination — 2026-11-14
 
 Draft/unit/scan retention tests keep every original weak-reference, ordering

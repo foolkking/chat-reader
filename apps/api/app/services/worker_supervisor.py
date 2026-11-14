@@ -211,6 +211,9 @@ def run_task_worker_forever(*, shutdown=None):
                         supervise(child, identity[2], reporter, shutdown)
                         # Canonical outcome and lock release are checked on
                         # the next iteration before any further admission.
+                        # Do not add an idle poll after real execution; an
+                        # empty or unavailable lane still backs off below.
+                        continue
                     else:
                         reporter.set_idle()
                         # Housekeeping never owns a second user slot. Isolate

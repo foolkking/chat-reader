@@ -2,7 +2,22 @@
 
 ## 修复CI失败、前次失败及生产导入定点恢复 — 2026-11-14
 
-[最新派发回执](reliability-2026-11-14/ci-probe-pagination-dispatch.json)绑定
+[坐标修复CI派发回执](reliability-2026-11-14/ci-runtime-frame-dispatch.json)绑定
+b2d3a65及43531859718，08:06:06.651342 +08:00确认、首读不得早于08:56:06.651342，
+并须当前任务新完整3000秒monotonic等待。二十文件选择性提交/推送、十三文件
+保全；实际08:56:06.772164首读满足双边界，09:09:01独立确认completed/cancelled，
+取消请求0次。[独立失败/耗时回执](reliability-2026-11-14/ci-runtime-frame-failure.json)
+保留Settings原60分钟注解、344项取消前通过、API关闭后五项打印失败及实际
+未完成gate JSON；470矩阵/独立restore未完成，两发布job跳过，未部署。
+四份官方日志及三份ZIP核验只作诊断；同名344项打印耗时+22.9%，应用/Settings/
+workflow1138输入不变，不冒称已定位全部根因或下一次发布通过。
+[忙队列修复最终回执](reliability-2026-11-14/ci-settings-scheduling-verification.json)
+和[1392源码输入](reliability-2026-11-14/ci-settings-scheduling-inputs.json)保留实际
+循环红8/9、最终十一模块API153/43、CI脚本64、静态/单head及十三文件保全。
+旧548个Web构建输入未变，不称新build；新增慢poll20真实PG检查尚未本测，
+不提高CI超时/并发或原25/10秒、内存、信号、逐帧门槛。
+
+[前次派发回执](reliability-2026-11-14/ci-probe-pagination-dispatch.json)绑定
 74a1e86及43503483829，04:38:55.083438 +08:00确认派发；
 首次实际读取05:28:55.244142 +08:00，满足新的50分钟双边界。
 十九个白名单文件提交/推送、十三个无关文件保全；只证明一次派发，未提前

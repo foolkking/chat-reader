@@ -102,6 +102,19 @@ reversals、chronological frames和longTasks；原输入/预算不变，不修�
 旧quiet夹具未先等edge settled、Files回执schema初版方法失败均保留；修正方法
 不伪造产品故障、console/page数据或发布通过。重新核验十三保护文件/空索引，
 不改规则、全局/生成记忆、无关资料或旧失败；完整新CI和安全部署仍待完成。
+候选b2d3a65选择性提交/推送二十文件后新增独立`ci-runtime-frame-dispatch.json`，
+同步同一台账及必要入口为完整CI43531859718等待中，绑定08:06:06.651342
+派发和08:56:06.651342首读wall-clock边界及新3000秒monotonic等待。
+派发不证明成功或部署、不覆盖旧失败/诊断/生产事件，不建安排或改变生产。
+43531859718首读08:56:06.772164满足完整3000秒双边界，09:09:01确认
+Settings原60分钟超时结束，本轮未发取消请求；同步唯一台账及入口，不再写等待。
+新增独立`ci-runtime-frame-failure.json`保留官方四日志/三ZIP、344项取消前通过、
+API关闭后五项打印失败、未完成gate JSON及同名耗时对照，不冒称可部署制品。
+最小应用修复只去掉监督child退出后的强制idle等待，保留下一轮全租约/核对/
+停止和空队列节流；同步Observability、Testing、台账及必要入口。
+新增`ci-settings-scheduling-verification.json`及1392输入保留循环红8/9、
+最终API153/43、CI64和静态/单head；PG慢poll20检查交新完整CI，旧548 Web
+输入不变不称新build。十三保护文件保全，不改规则/记忆/旧资料或部署门槛。
 
 ## 用户任务中断恢复 — 2026-11-13（本地，未发布）
 

@@ -281,13 +281,16 @@ def test_session_delete_requests_stop_without_waiting_for_analysis_rows(runtime)
             assert verify.get(ImportRecord, record_id).status == "analyzing"
 
 
-def test_actual_supervisor_process_drains_two_jobs_without_overlapping(runtime, tmp_path):
+@pytest.mark.parametrize("poll_seconds", ["1", "20"])
+def test_actual_supervisor_process_drains_two_jobs_without_overlapping(runtime, tmp_path, poll_seconds):
     _, factory = runtime
     ids = [queued(factory), queued(factory)]
     log = (tmp_path / "synthetic-supervisor.log").open("wb")
     parent = subprocess.Popen([sys.executable, "-m", "app.workers.import_worker"],
         cwd=Path(__file__).resolve().parents[1],
-        env={**os.environ, "IMPORT_WORKER_POLL_SECONDS": "1"},
+        # Retain the default-poll case and also prove a busy queue is not
+        # delayed by a deliberately slower idle poll. All bounds stay intact.
+        env={**os.environ, "IMPORT_WORKER_POLL_SECONDS": poll_seconds},
         stdout=log, stderr=subprocess.STDOUT,
         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
     observed = []

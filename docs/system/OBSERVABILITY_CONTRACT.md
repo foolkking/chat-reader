@@ -24,6 +24,14 @@ does not immediately auto-requeue; its input remains protected. Existing safe
 automatic recovery retains the three-attempt limit; unknown mail sends are not
 repeated.
 
+Local November14 follow-up: a supervised child exit immediately starts the next
+scheduling iteration, not an unconditional idle sleep. That iteration rechecks
+shutdown/supersession, the supervision lease, canonical reconciliation and the
+execution lease before admission. OS exit alone never proves PostgreSQL lease
+release. Empty queues, unavailable leases/reconciliation and scheduling errors
+retain the configured idle poll (default1 second). Fresh interpreters, the
+single execution slot and bounded rotating maintenance are unchanged.
+
 Task reads expose optional execution_state/business_progress_at/stop_requested_at.
 Local November13 follow-up shares that read-only projection with bound noise-scan
 detail/pending reads. Canonical processing/SCANNING can coexist with independent

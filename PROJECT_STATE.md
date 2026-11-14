@@ -1,12 +1,42 @@
 # Project State
 
-## Reliability candidate — 2026-11-14 (local repair verified; fresh full CI required)
+## Reliability candidate — 2026-11-14 (Settings scheduling repair; not deployed)
 
 The latest November13 instruction authorizes selective commit/push, the full
 exact-source CI and deployment after CI success. The user owns acceptance of
 the remaining product/device/recovery scenarios. This does not waive automated
 release gates, stopped-writer backup, migration or runtime-health safeguards,
 and does not authorize cleanup or replay of user inputs.
+
+Base candidate **`b2d3a653f9655a6480d4f669cc12446030655037`** was selectively
+committed/pushed with twenty owned files and thirteen unrelated files preserved.
+Full exact **CI `43531859718`** was first read at **08:56:06.772164 +08:00**
+after the fresh complete3000-second wall-clock/monotonic boundary. Independently
+confirmed **completed/cancelled at09:09:01 +08:00**, with no cancellation request.
+API/Web/reading comparison succeeded; Settings exceeded its unchanged60-minute
+job limit. It printed344 passes before API shutdown, then five tail failures;
+the470-case matrix and fresh-instance restore are not complete. Actual gate
+evidence remains `running`, without final result counts. Both release jobs were
+skipped. [Independent failure/timing receipt](docs/evidence/reliability-2026-11-14/ci-runtime-frame-failure.json)
+preserves the [dispatch](docs/evidence/reliability-2026-11-14/ci-runtime-frame-dispatch.json)
+and four official logs/three digest-verified diagnostic ZIPs, not deployable artifacts.
+
+Local repair removes only the mandatory idle poll after a supervised child exits.
+The next iteration still checks shutdown/supersession, the supervisor lease,
+canonical reconciliation and the execution lease before claiming. Empty queues,
+unavailable boundaries and errors retain the configured1-second poll; fresh-child,
+maintenance, stall/grace, signal and memory limits are unchanged. Matched344-case
+printed timings increased22.9% despite1138 unchanged exact application/Settings/
+workflow inputs; this does not establish a code regression or prove the whole
+slowdown fixed. A fresh full exact CI is still required. Production remains3564cbf/schema0060.
+Final selected API regression **153 passed/43 skipped**, CI script tests **64**,
+lint/typecheck and single migration head0061 pass. All1392 final inputs are
+unchanged across the final regression; thirteen protected files and all548
+earlier Web build inputs remain byte-identical. No new build, real PostgreSQL,
+Linux memory/signal or full-site acceptance is claimed.
+[Repair verification](docs/evidence/reliability-2026-11-14/ci-settings-scheduling-verification.json)
+and [exact inputs](docs/evidence/reliability-2026-11-14/ci-settings-scheduling-inputs.json)
+do not substitute for fresh full exact CI.
 
 Focused repair **`74a1e8605bc00d64b543544041c3095566f2881f`** is selectively
 committed and pushed: nineteen task files, thirteen unrelated files byte-preserved
