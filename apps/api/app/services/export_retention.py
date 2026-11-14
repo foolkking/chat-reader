@@ -14,7 +14,6 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import HTTPException
 from sqlalchemy import and_, or_, select
 
 from app.core.observability import structured_event
@@ -73,6 +72,7 @@ def finalize_export_lifetime(db, job, result: dict, *, now=None) -> None:
 
 def regenerate_export(db, artifact, ownership_scope, key):
     """Re-admit the original options against current owned data, never a stale snapshot."""
+    from fastapi import HTTPException
     from app.services.background_jobs import queue_attachment_download, queue_conversation_export, queue_system_archive_export
     from app.services.exporting.archive_jobs import _lock_key, queue_personal_export
     original = db.get(BackgroundJob, artifact.job_id)
@@ -110,6 +110,8 @@ def regenerate_export(db, artifact, ownership_scope, key):
 
 
 def owned_export(db, artifact_id, ownership_scope, *, lock=False):
+    from fastapi import HTTPException
+
     query = select(ExportArtifact).where(ExportArtifact.id == artifact_id)
     if lock:
         query = query.with_for_update().execution_options(populate_existing=True)
@@ -125,6 +127,8 @@ def owned_export(db, artifact_id, ownership_scope, *, lock=False):
 
 
 def require_available(artifact, *, now=None):
+    from fastapi import HTTPException
+
     if artifact.lifecycle_state != "active" or utc(artifact.expires_at) <= (now or now_utc()):
         raise HTTPException(410, detail={"code": "EXPORT_EXPIRED", "next_action": "regenerate"})
 
@@ -151,6 +155,8 @@ def artifact_status(artifact, *, now=None) -> dict:
 
 
 def acquire_viewer(db, artifact, lease_id, *, now=None):
+    from fastapi import HTTPException
+
     timestamp = now or now_utc()
     require_available(artifact, now=timestamp)
     lease = db.get(ExportArtifactLease, (artifact.id, lease_id))
@@ -174,6 +180,8 @@ def release_viewer(db, artifact, lease_id, *, now=None):
 
 
 def claim_download(db, artifact, lease_id, *, now=None):
+    from fastapi import HTTPException
+
     timestamp = now or now_utc()
     require_available(artifact, now=timestamp)
     lease = db.get(ExportArtifactLease, (artifact.id, lease_id))
@@ -189,6 +197,8 @@ def claim_download(db, artifact, lease_id, *, now=None):
 
 
 def acquire_download(db, artifact, *, claim_id=None, now=None):
+    from fastapi import HTTPException
+
     timestamp = now or now_utc()
     require_available(artifact, now=timestamp)
     if claim_id is not None:

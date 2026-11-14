@@ -12,7 +12,67 @@
 资料、不清理生产、不建立自动安排；未验收项不能因委托用户而改标通过。
 11月12日的一次本地检查点与随后本地工作限制保留为历史，不覆盖最新授权。
 
-### 11月14日本轮：轻量核对与无自设CI总限时（派发后暂停）
+### 11月14日本轮：离线子进程依赖修复（新CI确认后暂停）
+
+用户报告4a943ea的[完整CI43566365014](https://github.com/foolkking/chat-reader/actions/runs/43566365014)
+失败后，才读取正式结果；首次请求07:42:43.997097Z、收到07:42:46.863100Z。
+没有新等待器或3000秒monotonic等待声明，也未发取消请求。
+Settings job06:26:47Z–07:30:19Z，**3812秒/63分32秒**；原470矩阵完整结束，
+**469通过、1失败、0跳过/用例总超时/中断**。矩阵计时3653.93秒、
+max RSS632044KB、exit1；独立restore未执行，两个发布job跳过，没有可部署镜像。
+API6716通过/3跳过/5 warnings、1730.26秒，Web/阅读比较成功仅属于该失败run。
+原19项核对、15项冷导入、8项维护预算、17项监督主循环及真实PG poll1/poll20
+均已逐项核对正式日志，不继承为本轮验收。
+[独立失败回执](../evidence/reliability-2026-11-14/ci-offline-optional-failure.json)保留四日志/
+三正式ZIP的digest/大小/CRC核验；原始日志和trace留在本任务临时目录。
+
+唯一失败是`settings-offline-recovery.spec.ts:543`的最后一页副本移除用例，
+尚未进入分页断言，准备21份真实离线副本时原60秒expect仍为`generating`。
+Trace有20次202准入、19次200下载和19次committed状态观察，最后观察processing；
+worker保留日志最终有20次对应提交，包含浏览器结束后的提交，没有对应业务失败。
+19个claim→commit样本中位1.531901秒，20个admission→claim样本中位0.733437秒，
+19个commit→下一次状态观察样本中位0.534633秒。下载次数不是独立Dexie行验证。
+原case180秒/expect60秒不增加，Web源码/e2e/两个workflow均未修改。
+
+最小修复只涉及五个应用文件：observability/ownership直接用FastAPI原本
+reexport的同一个Starlette Request；subject_account/export_retention延后实际
+HTTP操作所需的真实FastAPI HTTPException；remote scanner仅在配置有效并实际
+scan时加载HTTPX。401/账户边界、扫描策略/timeout/错误及import预算、后台成功
+提交前原finalize、生命周期/lease/清理均保留；剔除import语句后的业务AST相同。
+不改memory_budget/uploads、并发、后台业务调度或资源/逐帧/原生限时。
+
+新增29项护栏：十个被动导入、两个Request身份、AUTH_DISABLED与缺remote URL、
+六个实际账户权限/异常控制，以及scope3×asset_mode3的真实内存SQLite
+queue→claim→process→reconcile→ZIP校验。包保留owned正文、source metadata、
+project context、批注/笔记、foreign隔离、幂等、hash/CRC/终态；无真实附件，
+不能冒充附件资源或PG/21-child浏览器整链。原scanner六项保留，并追加六项错误/
+策略控制，继续用实际HTTPX适配器并断言原配置timeout。
+初始20失败/2通过、随后late-retention及新v3夹具字段失败均保留；
+仅把新夹具旧字段改成现行`display_text`，未放宽正文或包合同。首轮专项48通过。
+
+同布局308个应用源码副本、同安装环境、三组交替新鲜解释器对照：
+纯导入中位1.417621→1.064043秒，新增模块515→331；
+实际文本打包中位1.777052→1.338086秒。补充九项AUTH_ENABLED=true配置探针
+保留所有导入/业务断言且通过，不叠加进pytest计数，不是认证HTTP/PG验收。
+[本机诊断](../evidence/reliability-2026-11-14/ci-offline-optional-import-diagnosis.json)
+只证明Windows本机，未测Linux/21-child浏览器/整次CI或内存/信号验收。
+
+CI脚本72、离线Node205（25文件）、lint/typecheck及单head0061通过。
+最终43模块API**486通过/72显式跳过（68 PG、4 POSIX）**，1004.83秒，
+包含新增35项，不叠加首轮48项或补充九探针为覆盖率。
+[1399输入](../evidence/reliability-2026-11-14/ci-offline-optional-inputs.json)跨最终回归
+无漂移，统一写入[本轮验证](../evidence/reliability-2026-11-14/ci-offline-optional-verification.json)；
+十三保护文件、10目录2103旧文件和原派发回执字节保全。旧548构建输入未变不称
+新build/PWA；不重启旧测试PG/服务栈，不触碰生产、配置、资料或唯一备份。
+
+保持无项目job/step总限时和GitHub每job六小时平台上限；只选择性提交/非force
+推送并派发一次完整精确CI。随后独立`ci-offline-optional-dispatch.json`登记实际
+提交/唯一run，确认后立即暂停，由用户反馈结果，不轮询/等待器/安排/部署。
+原`ci-settings-completion-dispatch.json`按原字节纳入白名单，描述旧时点；
+它的暂停已由本次用户失败反馈结束，不据此重复派发或复用旧终止授权。
+生产只沿用先前3564cbf/schema0060指针，本轮未复查；其余验收仍归用户。
+
+### 前一轻量核对与平台默认CI限时检查点（历史）
 
 用户最新澄清只授权本轮修复、选择性提交/推送和一次完整精确CI；
 项目不配置job/step `timeout-minutes`，不是改成显式360分钟或0/null。
@@ -129,8 +189,9 @@ schema0060；两次旧导入终止授权已经执行，不复用。
    后一次修复9a084146已提交/推送，完整CI43543975636也在50分钟双边界后确认
    Settings原60分钟超时，451项打印通过但矩阵/restore未完成。尚无本轮
    可部署制品；冷启动/维护预算修复进入530a55b后，其CI43556068261仍因
-   原60分钟未完成。本批轻量核对/平台默认限时及派发后暂停见顶部；
-   不改变并发或继承旧候选结果。
+   原60分钟未完成。4a943ea的43566365014在平台默认限时下已跑完470矩阵，
+   469通过/1个离线准备失败，restore未执行，仍不可发布。本批子进程可选依赖
+   修复及派发后暂停见顶部；不改变并发或继承旧候选结果。
 6. 下述后一批已补管理员当前执行的定点停止与结果核对，但不是全局异常
    任意重置工具。所有业务类型恢复出口仍未逐项完成整链验收；不能据此
    宣称A–D所有体验目标已经全部完成。

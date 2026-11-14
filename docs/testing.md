@@ -7,6 +7,35 @@ run/attempt/job; no seeder admission, native operation deadline, memory or
 test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
+## Offline child optional HTTP dependencies — local 2026-11-14
+
+`test_worker_optional_dependency_imports.py` adds29 cases: ten passive fresh
+imports, two exact FastAPI/Starlette Request identity checks, AUTH_DISABLED and
+unconfigured-remote rejection, six actual account/401 exception controls, and
+nine scope/asset-mode memory-SQLite queue→claim→process→reconcile→ZIP checks.
+Guards reject FastAPI/HTTPX on unselected paths, networking, other subprocesses
+and non-memory SQLite after read-only OS/config setup. Actual packages retain
+owned v3 bodies, source metadata, project context, annotations/notebook, foreign
+isolation, idempotency, hash/CRC and canonical/control terminal results.
+These packages have no real attachments; choosing all three asset modes is not
+attachment resource acceptance. Selected HTTP paths keep real FastAPI types.
+
+The original scanner controls remain, with six additional transport/JSON/IO/
+import-budget and infected/unknown-policy cases. They select actual HTTPX with
+an explicit post adapter, retain source bytes and assert the existing configured
+timeout. Export finalization and lifetime/lease/reclamation tests remain required.
+Supplementary nine fresh probes with AUTH_ENABLED=true retain the same package
+assertions/guards; that flag is not authenticated HTTP or PostgreSQL acceptance,
+and those diagnostic probes are not added to the pytest regression count.
+
+CI43566365014 finished its470-case Settings matrix with469 passed/1 failed,
+during the original60-second21-copy preparation before pagination. The original180-second case/
+60-second expect,470-case matrix and independent restore remain unchanged.
+No Web/e2e/workflow change or local serving-stack/PG restart is part of this
+repair. Windows matched imports/text-package timing is diagnostic, not Linux,
+21-child browser or whole-CI acceptance. See the [new verification](evidence/reliability-2026-11-14/ci-offline-optional-verification.json);
+earlier partial job success is not inherited.
+
 ## Platform-default CI completion timing — 2026-11-14
 
 The release workflow and its reusable reading comparison omit every custom
@@ -70,7 +99,8 @@ release after a helper is killed. It does not replace real PostgreSQL or Linux.
 The existing actual supervisor/child two-job PostgreSQL test retains its
 default1-second poll and adds a deliberately slower20-second idle-poll case.
 Both keep the original25-second overall, ten-second next-start and no-overlap
-assertions; the CI matrix remains serial and its60-minute boundary unchanged.
+assertions; the CI matrix remains serial with unchanged native test bounds.
+Project job/step totals now use the platform-default policy above.
 The local PostgreSQL is stopped and must not be restarted for this check.
 Results, the retained8-failure red run and the preceding exact CI timeout live
 in the single ledger; no local mock result establishes full release acceptance.

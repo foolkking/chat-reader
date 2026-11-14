@@ -1,5 +1,21 @@
 # 事实证据索引
 
+## 离线子进程可选依赖修复 — 2026-11-14（新CI确认后暂停）
+
+[独立失败回执](reliability-2026-11-14/ci-offline-optional-failure.json)登记
+4a943ea/43566365014：Settings job63分32秒、完整470矩阵469/1，不是job总超时；
+原21-copy准备失败、restore未执行、发布job跳过。四正式日志/三ZIP核验，
+20准入/19下载/最终20 worker提交不冒充独立Dexie验证或可部署制品。
+[本机诊断](reliability-2026-11-14/ci-offline-optional-import-diagnosis.json)
+记录308同布局源码、三组交替导入/实际文本包对照及九个认证配置标志探针；
+不冒充真实附件、认证HTTP、PG、Linux或整次CI提速。
+[最终专项验证](reliability-2026-11-14/ci-offline-optional-verification.json) /
+[1399输入](reliability-2026-11-14/ci-offline-optional-inputs.json)保留红测及失败方法，
+登记API486通过/72显式PG或平台跳过、CI72/离线Node205及静态/单head；
+十三保护文件/10目录2103文件/原派发字节保全，旧548输入不变不称新build/PWA。
+随后独立`ci-offline-optional-dispatch.json`登记唯一提交/新CI；确认后立即暂停，
+不轮询/等待器/安排/取消/部署，由用户反馈结果，不继承旧run局部成功。
+
 ## 无项目CI总限时的完成观察 — 2026-11-14（派发后暂停）
 
 [前次530a55b超时](reliability-2026-11-14/ci-settings-completion-failure.json)

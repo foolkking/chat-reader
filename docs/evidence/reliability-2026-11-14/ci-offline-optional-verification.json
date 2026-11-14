@@ -1,0 +1,549 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T08:51:31.716577+00:00",
+  "parent_revision": "4a943eaa7ae801d9b83055664de335f0a79bc7ee",
+  "status": "locally-verified-fresh-full-ci-required-pause-after-one-dispatch",
+  "scope": "Five application import boundaries only; real FastAPI exception/Request identities and scanner/retention semantics preserved.",
+  "worktree_byte_input_count": 1399,
+  "input_manifest_sha256": "66e91e0b8ca393ac13f078e5107a196f858ce682a443f6abab22e54440eb16fa",
+  "inputs_unchanged_across_final_regression": true,
+  "tests": {
+    "selected_api": {
+      "tests": 558,
+      "passed": 486,
+      "failed": 0,
+      "error": 0,
+      "skipped": 72,
+      "by_module": {
+        "test_admin_execution_recovery.py": {
+          "passed": 12,
+          "skipped": 2
+        },
+        "test_attachment_scanner.py": {
+          "passed": 12
+        },
+        "test_auth.py": {
+          "passed": 31
+        },
+        "test_background_job_errors.py": {
+          "passed": 26
+        },
+        "test_context_cleanup.py": {
+          "passed": 4
+        },
+        "test_context_cleanup_postgres.py": {
+          "skipped": 3
+        },
+        "test_context_export_integrity.py": {
+          "passed": 26
+        },
+        "test_context_return_recovery.py": {
+          "passed": 19
+        },
+        "test_context_upload_cleanup.py": {
+          "passed": 30
+        },
+        "test_direct_export_snapshot_postgres.py": {
+          "skipped": 5
+        },
+        "test_execution_reconciliation_imports.py": {
+          "passed": 19
+        },
+        "test_export_retention.py": {
+          "passed": 21
+        },
+        "test_export_retention_postgres.py": {
+          "skipped": 5
+        },
+        "test_my_shares.py": {
+          "passed": 5
+        },
+        "test_observability.py": {
+          "passed": 7
+        },
+        "test_offline_annotations_api.py": {
+          "passed": 9
+        },
+        "test_offline_asset_integrity.py": {
+          "passed": 5
+        },
+        "test_offline_catalog_query_budget.py": {
+          "passed": 5
+        },
+        "test_offline_context_anchors.py": {
+          "passed": 2
+        },
+        "test_offline_context_preflight.py": {
+          "passed": 6
+        },
+        "test_offline_context_recovery.py": {
+          "passed": 1
+        },
+        "test_offline_download_leases.py": {
+          "passed": 6
+        },
+        "test_offline_download_postgres.py": {
+          "skipped": 1
+        },
+        "test_offline_revision_postgres.py": {
+          "skipped": 5
+        },
+        "test_offline_snapshot_postgres.py": {
+          "skipped": 4
+        },
+        "test_offline_task_recovery.py": {
+          "passed": 11
+        },
+        "test_optimization_auth.py": {
+          "passed": 2
+        },
+        "test_ownership_scope.py": {
+          "passed": 3
+        },
+        "test_personal_archive_auth.py": {
+          "passed": 1
+        },
+        "test_plain_export_recovery.py": {
+          "passed": 17
+        },
+        "test_stale_recovery_bounds.py": {
+          "passed": 4,
+          "skipped": 7
+        },
+        "test_supervised_execution_postgres.py": {
+          "skipped": 13
+        },
+        "test_task_execution_recovery.py": {
+          "passed": 14,
+          "skipped": 14
+        },
+        "test_tasks_api.py": {
+          "passed": 49
+        },
+        "test_worker_import_boundaries.py": {
+          "passed": 15
+        },
+        "test_worker_liveness.py": {
+          "passed": 31
+        },
+        "test_worker_maintenance_import_budget.py": {
+          "passed": 8
+        },
+        "test_worker_maintenance_isolation.py": {
+          "passed": 10
+        },
+        "test_worker_maintenance_postgres.py": {
+          "skipped": 5
+        },
+        "test_worker_optional_dependency_imports.py": {
+          "passed": 29
+        },
+        "test_worker_requeue_postgres.py": {
+          "skipped": 4
+        },
+        "test_worker_shutdown.py": {
+          "passed": 29,
+          "skipped": 4
+        },
+        "test_worker_supervisor.py": {
+          "passed": 17
+        }
+      },
+      "junit_sha256": "6703aa84967b266b88d620e616e788aeef66fae11e579c4352977c8874a9f924",
+      "reported_seconds": 1004.83,
+      "modules": [
+        "test_worker_optional_dependency_imports.py",
+        "test_observability.py",
+        "test_attachment_scanner.py",
+        "test_execution_reconciliation_imports.py",
+        "test_worker_import_boundaries.py",
+        "test_worker_maintenance_import_budget.py",
+        "test_worker_supervisor.py",
+        "test_worker_shutdown.py",
+        "test_worker_liveness.py",
+        "test_worker_maintenance_isolation.py",
+        "test_background_job_errors.py",
+        "test_admin_execution_recovery.py",
+        "test_task_execution_recovery.py",
+        "test_offline_task_recovery.py",
+        "test_plain_export_recovery.py",
+        "test_stale_recovery_bounds.py",
+        "test_tasks_api.py",
+        "test_export_retention.py",
+        "test_ownership_scope.py",
+        "test_auth.py",
+        "test_optimization_auth.py",
+        "test_personal_archive_auth.py",
+        "test_my_shares.py",
+        "test_offline_annotations_api.py",
+        "test_offline_asset_integrity.py",
+        "test_offline_catalog_query_budget.py",
+        "test_offline_context_anchors.py",
+        "test_offline_context_preflight.py",
+        "test_offline_context_recovery.py",
+        "test_offline_download_leases.py",
+        "test_context_export_integrity.py",
+        "test_context_cleanup.py",
+        "test_context_return_recovery.py",
+        "test_context_upload_cleanup.py",
+        "test_direct_export_snapshot_postgres.py",
+        "test_export_retention_postgres.py",
+        "test_offline_download_postgres.py",
+        "test_offline_revision_postgres.py",
+        "test_offline_snapshot_postgres.py",
+        "test_supervised_execution_postgres.py",
+        "test_worker_requeue_postgres.py",
+        "test_worker_maintenance_postgres.py",
+        "test_context_cleanup_postgres.py"
+      ],
+      "execution_receipt": {
+        "requested_at": "2026-11-14T08:29:32.0299971+00:00",
+        "completed_at": "2026-11-14T08:46:29.4844051+00:00",
+        "modules": [
+          "test_worker_optional_dependency_imports.py",
+          "test_observability.py",
+          "test_attachment_scanner.py",
+          "test_execution_reconciliation_imports.py",
+          "test_worker_import_boundaries.py",
+          "test_worker_maintenance_import_budget.py",
+          "test_worker_supervisor.py",
+          "test_worker_shutdown.py",
+          "test_worker_liveness.py",
+          "test_worker_maintenance_isolation.py",
+          "test_background_job_errors.py",
+          "test_admin_execution_recovery.py",
+          "test_task_execution_recovery.py",
+          "test_offline_task_recovery.py",
+          "test_plain_export_recovery.py",
+          "test_stale_recovery_bounds.py",
+          "test_tasks_api.py",
+          "test_export_retention.py",
+          "test_ownership_scope.py",
+          "test_auth.py",
+          "test_optimization_auth.py",
+          "test_personal_archive_auth.py",
+          "test_my_shares.py",
+          "test_offline_annotations_api.py",
+          "test_offline_asset_integrity.py",
+          "test_offline_catalog_query_budget.py",
+          "test_offline_context_anchors.py",
+          "test_offline_context_preflight.py",
+          "test_offline_context_recovery.py",
+          "test_offline_download_leases.py",
+          "test_context_export_integrity.py",
+          "test_context_cleanup.py",
+          "test_context_return_recovery.py",
+          "test_context_upload_cleanup.py",
+          "test_direct_export_snapshot_postgres.py",
+          "test_export_retention_postgres.py",
+          "test_offline_download_postgres.py",
+          "test_offline_revision_postgres.py",
+          "test_offline_snapshot_postgres.py",
+          "test_supervised_execution_postgres.py",
+          "test_worker_requeue_postgres.py",
+          "test_worker_maintenance_postgres.py",
+          "test_context_cleanup_postgres.py"
+        ],
+        "postgres_opt_in": false,
+        "exit_code": 0,
+        "local_serving_stack_started": false,
+        "logs_directory": "<task>",
+        "command": "corepack pnpm run test:api <43 exact modules> -q -ra --basetemp=<task>/pytest-api-optional-final01 --junitxml=<task>/api-optional-final01.xml -o cache_dir=<task>/pytest-api-optional-cache01",
+        "child_wall_seconds": 1017.4453515,
+        "schema_version": 1
+      },
+      "log_sha256": "f160fcd925768096cd5f3951bf33f9a25da78cb6b74ad0d5254e92e118b6d833",
+      "new_dependency_cases_included": 29,
+      "new_scanner_cases_included": 6,
+      "explicit_skip_gates": {
+        "PostgreSQL_opt_in": 68,
+        "Windows_POSIX": 4
+      },
+      "scope": "Task-local SQLite/TestClient/controlled-process regression; opt-in PG and Windows POSIX skips remain explicit."
+    },
+    "ci_scripts": {
+      "tests": 72,
+      "pass": 72,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "log_sha256": "baf4b8bd212342e25bdfd233440c001a58bd326484292d92de01810c9e552325"
+    },
+    "offline_node": {
+      "tests": 205,
+      "pass": 205,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "log_sha256": "03cbde81a494b92472267334fcad2346e95d828e82756b881b657d0f485011c8",
+      "files": [
+        "scripts/ux/bounded-download.test.mjs",
+        "scripts/ux/offline-attachment-query-policy.test.mjs",
+        "scripts/ux/offline-catalog-read-recovery.test.mjs",
+        "scripts/ux/offline-conflict-merge-draft-refresh.test.mjs",
+        "scripts/ux/offline-continuation-read-states.test.mjs",
+        "scripts/ux/offline-download-plan.test.mjs",
+        "scripts/ux/offline-download-recovery.test.mjs",
+        "scripts/ux/offline-download-retry-review.test.mjs",
+        "scripts/ux/offline-export-attachment-count-read.test.mjs",
+        "scripts/ux/offline-file-references.test.mjs",
+        "scripts/ux/offline-library-download-status-read.test.mjs",
+        "scripts/ux/offline-library-initial-navigation.test.mjs",
+        "scripts/ux/offline-library-local-read-state.test.mjs",
+        "scripts/ux/offline-library-search-navigation.test.mjs",
+        "scripts/ux/offline-reader-query-policy.test.mjs",
+        "scripts/ux/offline-resource-bounds.test.mjs",
+        "scripts/ux/offline-resource-check.test.mjs",
+        "scripts/ux/offline-search-documents.test.mjs",
+        "scripts/ux/offline-search-lifecycle.test.mjs",
+        "scripts/ux/offline-search-ranges.test.mjs",
+        "scripts/ux/offline-search-readiness.test.mjs",
+        "scripts/ux/offline-search-retry.test.mjs",
+        "scripts/ux/offline-search-scope.test.mjs",
+        "scripts/ux/offline-stream-recovery.test.mjs",
+        "scripts/ux/settings-offline-inspection.test.mjs"
+      ]
+    },
+    "lint": {
+      "passed": true,
+      "log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+    },
+    "typecheck": {
+      "passed": true,
+      "task_local_build_info": true,
+      "log_sha256": "adeececeae9148f60caa414c98f71213dc439792b52294bcc1348af08af2a6ee"
+    },
+    "migration_head": {
+      "single_head": "20261112_0061",
+      "log_sha256": "73423f8cc296997f4c5fa5d11c6fbcf544629c61e9b90c2257f86f00f0243af5"
+    },
+    "static_execution_receipt": {
+      "ci_scripts": [
+        "scripts/ci/changed-area-selector.test.mjs",
+        "scripts/ci/image-base-sources.test.mjs",
+        "scripts/ci/postgres-service.test.mjs",
+        "scripts/ci/release-image-sources.test.mjs",
+        "scripts/ci/settings-completion-timing.test.mjs"
+      ],
+      "browser_or_pwa_executed": false,
+      "typecheck_build_info_in_task_directory": true,
+      "python": "Python 3.11.7",
+      "node": "v20.13.1",
+      "results": {
+        "alembic-optional-final01": {
+          "exit_code": 0,
+          "requested_at": "2026-11-14T08:32:00.1528671+00:00",
+          "child_wall_seconds": 1.6520727,
+          "completed_at": "2026-11-14T08:32:01.8049729+00:00"
+        },
+        "ci-tools-optional-final01": {
+          "exit_code": 0,
+          "requested_at": "2026-11-14T08:31:02.5561324+00:00",
+          "child_wall_seconds": 2.9944772,
+          "completed_at": "2026-11-14T08:31:05.5550409+00:00"
+        },
+        "offline-node-optional-final01": {
+          "exit_code": 0,
+          "requested_at": "2026-11-14T08:31:05.5990610+00:00",
+          "child_wall_seconds": 3.301212,
+          "completed_at": "2026-11-14T08:31:08.9003153+00:00"
+        },
+        "typecheck-optional-final01": {
+          "exit_code": 0,
+          "requested_at": "2026-11-14T08:31:27.4009311+00:00",
+          "child_wall_seconds": 32.7418465,
+          "completed_at": "2026-11-14T08:32:00.1428263+00:00"
+        },
+        "lint-optional-final01": {
+          "exit_code": 0,
+          "requested_at": "2026-11-14T08:31:08.9090089+00:00",
+          "child_wall_seconds": 18.484211,
+          "completed_at": "2026-11-14T08:31:27.3932637+00:00"
+        }
+      },
+      "recorded_at": "2026-11-14T08:32:01.8112107+00:00",
+      "offline_scripts": [
+        "scripts/ux/bounded-download.test.mjs",
+        "scripts/ux/offline-attachment-query-policy.test.mjs",
+        "scripts/ux/offline-catalog-read-recovery.test.mjs",
+        "scripts/ux/offline-conflict-merge-draft-refresh.test.mjs",
+        "scripts/ux/offline-continuation-read-states.test.mjs",
+        "scripts/ux/offline-download-plan.test.mjs",
+        "scripts/ux/offline-download-recovery.test.mjs",
+        "scripts/ux/offline-download-retry-review.test.mjs",
+        "scripts/ux/offline-export-attachment-count-read.test.mjs",
+        "scripts/ux/offline-file-references.test.mjs",
+        "scripts/ux/offline-library-download-status-read.test.mjs",
+        "scripts/ux/offline-library-initial-navigation.test.mjs",
+        "scripts/ux/offline-library-local-read-state.test.mjs",
+        "scripts/ux/offline-library-search-navigation.test.mjs",
+        "scripts/ux/offline-reader-query-policy.test.mjs",
+        "scripts/ux/offline-resource-bounds.test.mjs",
+        "scripts/ux/offline-resource-check.test.mjs",
+        "scripts/ux/offline-search-documents.test.mjs",
+        "scripts/ux/offline-search-lifecycle.test.mjs",
+        "scripts/ux/offline-search-ranges.test.mjs",
+        "scripts/ux/offline-search-readiness.test.mjs",
+        "scripts/ux/offline-search-retry.test.mjs",
+        "scripts/ux/offline-search-scope.test.mjs",
+        "scripts/ux/offline-stream-recovery.test.mjs",
+        "scripts/ux/settings-offline-inspection.test.mjs"
+      ],
+      "schema_version": 1,
+      "new_build_executed": false,
+      "postgres_opt_in": false
+    },
+    "supplementary_auth_flag_text_package_probes": {
+      "passed": 9,
+      "included_in_pytest_count": false,
+      "authenticated_http_acceptance": false
+    },
+    "previous_web_build": {
+      "input_count": 548,
+      "input_drift": [],
+      "rerun": false,
+      "input_manifest_sha256": "20da2cc1d9b180e1c998e2099d88981ec5f75ddb4648c2fbd56b6877ffc84a4a"
+    },
+    "new_web_mounted_pwa_rerun": false
+  },
+  "red_and_intermediate_checkpoints": {
+    "optional-red": {
+      "tests": 22,
+      "passed": 2,
+      "failed": 20,
+      "error": 0,
+      "skipped": 0,
+      "by_module": {
+        "test_worker_optional_dependency_imports.py": {
+          "failed": 20,
+          "passed": 2
+        }
+      },
+      "junit_sha256": "d92d114ba02c1bf76073b1d7c911e74d69a1c1b7d48c36f27251a34891fc28c1",
+      "purpose": "Original fresh-import guards reject unnecessary API/HTTPX loading.",
+      "log_sha256": "41c73b32794038a236bdba604aa79eb1080caeaaa743ef928c703bcf8a6d0082"
+    },
+    "optional-green-1": {
+      "tests": 35,
+      "passed": 26,
+      "failed": 9,
+      "error": 0,
+      "skipped": 0,
+      "by_module": {
+        "test_attachment_scanner.py": {
+          "passed": 6
+        },
+        "test_observability.py": {
+          "passed": 7
+        },
+        "test_worker_optional_dependency_imports.py": {
+          "passed": 13,
+          "failed": 9
+        }
+      },
+      "junit_sha256": "e54cd0740f62efaf249a2269ca750216639bd5aecbb3708fe481e9e685dce4a3",
+      "purpose": "Retained first attempt exposed late FastAPI loading through export finalization.",
+      "log_sha256": "6b4f95cfb32ff6be02f7ea9c105ac4e47437f44871a22e6b7459c7db92dc02dd"
+    },
+    "retention-optional-red": {
+      "tests": 1,
+      "passed": 0,
+      "failed": 1,
+      "error": 0,
+      "skipped": 0,
+      "by_module": {
+        "test_worker_optional_dependency_imports.py": {
+          "failed": 1
+        }
+      },
+      "junit_sha256": "f1531d73a996d46e08c9c51b4caef584115a5ea784e7dd4320e454b020c19582",
+      "purpose": "Additional fresh export-retention guard reproduces that import.",
+      "log_sha256": "2218ccb7a329787550b6b99a1a748ce466d5b7463465bc8924acdcab750391e0"
+    },
+    "optional-green-2": {
+      "tests": 48,
+      "passed": 39,
+      "failed": 9,
+      "error": 0,
+      "skipped": 0,
+      "by_module": {
+        "test_attachment_scanner.py": {
+          "passed": 12
+        },
+        "test_observability.py": {
+          "passed": 7
+        },
+        "test_worker_optional_dependency_imports.py": {
+          "passed": 20,
+          "failed": 9
+        }
+      },
+      "junit_sha256": "188cad1c2bceb7cb240ce7914d8ea2c6c071c833113a5e846a012ef17463fb0c",
+      "purpose": "Jobs committed; new fixture used obsolete v3 content key, corrected only to existing display_text.",
+      "log_sha256": "4afbb62451fc00c9e052fb50becdc717f1dd62ae66592461ab87437bea754746"
+    },
+    "optional-green-3": {
+      "tests": 48,
+      "passed": 48,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0,
+      "by_module": {
+        "test_attachment_scanner.py": {
+          "passed": 12
+        },
+        "test_observability.py": {
+          "passed": 7
+        },
+        "test_worker_optional_dependency_imports.py": {
+          "passed": 29
+        }
+      },
+      "junit_sha256": "ba3fdb922aa4dbecdb5f78bb413d26309873d1a89c4017fe20f9baaae9b43782",
+      "purpose": "First selected green pass; not added to the final regression count.",
+      "log_sha256": "22de604edc213e127b9e19fe84d273a9b882efa27652a54945e6443f510bce0c"
+    }
+  },
+  "workflow_sha256": {
+    ".github/workflows/build-release-images.yml": "68528675e886a5247dfd813e180e0f8f092c32a493cbf24a3cfb41c370ac4636",
+    ".github/workflows/reading-performance.yml": "7bf4e4659666b1195ab358d7a4e95d1739cab2c84210a8e5479c70173def0027"
+  },
+  "workflows_web_e2e_and_all_other_previous_inputs_unchanged": true,
+  "custom_job_step_timeout_fields": 0,
+  "github_hosted_job_cap_hours": 6,
+  "original_case_expect_worker_pg_resource_frame_gates_preserved": true,
+  "changed_python_ast": {
+    "files": 7,
+    "passed": true
+  },
+  "application_business_ast_unchanged_after_removing_import_statements": true,
+  "diagnosis_sha256": "ddd62d58882a4438565bde76cf3e72eb1c188b8cd61c7ba1174b8baa903df757",
+  "failure_sha256": "097498d8235b209c8ed74da48819e8e37fbc684e632a52932d9b729a347ad33a",
+  "fact_surfaces_sha256": {
+    "PROJECT_STATE.md": "d3f6bc0b6b88c59c0c4bd854a625df801513c9d0621cf0f49467c60698005c57",
+    "docs/index.md": "b20d9dfdc7dfd6719c7d49bb8657033818db7615fc191a36c037e83c1bb348c6",
+    "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md": "40ff068a7f9937f1f8d7b452e9bdaf8f683af8721e9616b2b2e08e92d61eeff5",
+    "docs/testing.md": "0844644faf46a3e29aabf8906f1015438bde259190a9c6f579d000a48fd979cb",
+    "docs/system/OBSERVABILITY_CONTRACT.md": "f55f383870875bb5981026d579fc7b238755720b32efb13a7cedaa01a1edd7cb",
+    "docs/documentation-inventory.md": "3441e4d0c6813cd4692eecd5d433ae4de12545b7eaa68ba5147e0f3cc0b98bcf",
+    "docs/evidence/README.md": "b8df8e4741d2d19296ce17a3b3e8dac573c664cca48e67796de331f9ad3b1b46"
+  },
+  "protected_files_unchanged": 13,
+  "previous_task_files_unchanged": 2103,
+  "previous_dispatch_original_bytes_preserved": true,
+  "old_test_postgresql_started_or_stopped_again": false,
+  "full_local_serving_stack_started": false,
+  "production_operations_performed": false,
+  "production_last_verified_pointer": {
+    "revision": "3564cbf",
+    "schema": "20261108_0060",
+    "rechecked_in_this_turn": false
+  },
+  "production_cancel_authorization_reused": false,
+  "user_input_replayed_or_removed": false,
+  "automation_created": false,
+  "remaining_device_and_disaster_recovery_acceptance_owner": "user",
+  "after_confirmed_dispatch": "Pause immediately; user will report result; no status polling, waiter, automation or deployment."
+}

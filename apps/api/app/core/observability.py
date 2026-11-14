@@ -9,8 +9,8 @@ from contextvars import ContextVar, Token
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)

@@ -1,5 +1,23 @@
 # Markdown 文档台账
 
+## 离线子进程可选依赖与独立CI失败 — 2026-11-14
+
+用户报告4a943ea的43566365014失败后，定点同步Project State、导航、唯一台账、
+Testing、Observability及事实证据索引；不重整目录、修改AGENTS/全局记忆或旧回执。
+新增`ci-offline-optional-failure.json`保存63分32秒job、完整469/1矩阵、
+原21-copy准备失败、四日志/三ZIP及真实trace/worker关联，不冒称job超时、
+独立Dexie行验证或新的monotonic等待。原PG poll1/poll20等日志成功只属于旧run。
+`ci-offline-optional-import-diagnosis.json`保存308源码副本、三组交替Windows
+纯导入/实际文本包对照与九项AUTH_ENABLED=true补充探针，不替代PG/浏览器/资源验收。
+`ci-offline-optional-verification.json`和1399输入保存最终API486/72显式跳过、
+CI72/离线Node205、原红测/两次失败方法、静态/单head及十三保护文件/
+10目录2103旧文件保全；不累加重叠用例，
+旧548构建输入不变不称新build/PWA。五个应用文件仅改变import边界，业务AST保留。
+原`ci-settings-completion-dispatch.json`按原字节纳入本轮选择性提交，描述旧时点；
+随后独立`ci-offline-optional-dispatch.json`只记录实际新提交和唯一run。
+无项目job/step总限时，但GitHub每job六小时平台限制仍在；确认后暂停，由用户反馈，
+不轮询/等待器/安排/取消/部署，不复用旧导入终止授权或继承旧CI局部成功。
+
 ## CI完成耗时观察与暂停边界 — 2026-11-14
 
 按用户最新明确授权，两个workflow移除39个自设job/step总限时字段；

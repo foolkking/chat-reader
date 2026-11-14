@@ -8,8 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
 
-import httpx
-
 from app.core.config import get_settings
 
 
@@ -100,6 +98,9 @@ class RemoteScanner(AttachmentScanner):
         settings = get_settings()
         if not settings.remote_scanner_url:
             raise AssetScanError("Remote scanner URL is not configured.")
+        # Catalog/policy reads do not select the remote scanner.
+        import httpx
+
         headers = {}
         if settings.remote_scanner_token:
             headers["Authorization"] = f"Bearer {settings.remote_scanner_token}"

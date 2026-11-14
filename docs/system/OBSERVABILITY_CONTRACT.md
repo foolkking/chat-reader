@@ -49,6 +49,17 @@ disposition, execution fencing, backup status and idempotent audit remain
 unchanged. Fresh-interpreter, in-memory SQLite controls cover actual reconciliation;
 Windows timing is diagnostic, not Linux or whole-CI throughput acceptance.
 
+Local November14 offline-child follow-up: observability and ownership import
+the exact Starlette Request that FastAPI reexports, without cold-loading the
+API package. Account and export HTTP operations retain real FastAPI exceptions
+through local imports; AUTH_DISABLED/passive retention paths need no API import.
+Remote scanner policy/catalog reads do not load HTTPX; only a configured,
+selected remote scan does, with the original timeout, policy and errors.
+Successful worker publication still calls the original export-lifetime helper.
+No observability, authority, lease, cleanup or package business rule changes.
+Fresh text-package/owner/ZIP controls and matched Windows timings are local
+evidence, not real-attachment, PostgreSQL, Linux or full-CI acceptance.
+
 Maintenance starts its unchanged two-second cooperative deadline before
 selected cleanup imports, loads only an eligible lane and rechecks stop/time
 after that import. An import failure is isolated to its category, like an

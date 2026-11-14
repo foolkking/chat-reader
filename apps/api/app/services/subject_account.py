@@ -2,7 +2,6 @@
 
 import uuid
 
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -13,6 +12,8 @@ def lock_subject_account(db: Session, subject_key: str, *, allow_inactive: bool 
     # AUTH_ENABLED=false retains the pre-account development/test namespace.
     if not get_settings().auth_enabled:
         return
+    from fastapi import HTTPException
+
     try:
         user_id = uuid.UUID(subject_key)
     except ValueError:

@@ -11,9 +11,9 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
-from fastapi import Request
 from sqlalchemy import false, or_
 from sqlalchemy.orm import Query, Session
+from starlette.requests import Request
 
 
 OwnedModel = TypeVar("OwnedModel")

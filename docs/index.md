@@ -5,13 +5,17 @@
 11月14日本轮最新指示：修复、选择性提交/推送、只派发一次完整精确CI，
 不设项目job/step总限时；确认后立即暂停，不等待/轮询、建安排或部署，
 由用户反馈结果。GitHub每job仍有六小时平台上限，原用例/worker/PG/
-内存/逐帧与发布门禁不变。轻量核对修复最终API307/60跳过（含新增19项）、
-CI脚本72、静态/单head通过；1398输入及十三保护文件无漂移。
-[本批验证](evidence/reliability-2026-11-14/ci-settings-completion-verification.json) /
-[本机诊断](evidence/reliability-2026-11-14/ci-settings-completion-import-diagnosis.json) /
-[前次530a55b超时回执](evidence/reliability-2026-11-14/ci-settings-completion-failure.json)。
+内存/逐帧与发布门禁不变。4a943ea的CI43566365014已完成失败：
+Settings跑63分32秒，470矩阵469通过/1失败，不是job总超时；独立restore未运行。
+本轮仅延后未选中的FastAPI/HTTPX依赖，保留真实Request/异常、离线及保留语义。
+最终API486通过/72显式PG或平台跳过、CI72/离线Node205、静态/单head通过；
+1399输入及十三保护文件保全，旧548输入不变不称新build/PWA。
+[本批验证](evidence/reliability-2026-11-14/ci-offline-optional-verification.json) /
+[本机诊断](evidence/reliability-2026-11-14/ci-offline-optional-import-diagnosis.json) /
+[独立失败回执](evidence/reliability-2026-11-14/ci-offline-optional-failure.json)。
 当前执行以[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)及随后独立
-`ci-settings-completion-dispatch.json`为准；回执出现后不得根据旧“待派发”重提交。
+`ci-offline-optional-dispatch.json`为准；原派发回执不重写，旧run成功项不继承。
+回执出现后不得根据旧“待派发”重提交；生产未复查或变更。
 
 ### 前一冷启动及发布检查点（历史）
 

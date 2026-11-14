@@ -105,6 +105,8 @@ def test_remote_scanner_uses_configured_endpoint_and_token(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    import httpx
+
     source = tmp_path / "sample.bin"
     source.write_bytes(b"remote-content")
     monkeypatch.setenv("REMOTE_SCANNER_URL", "https://scanner.invalid/v1/scan")
@@ -117,7 +119,7 @@ def test_remote_scanner_uses_configured_endpoint_and_token(
         captured.update(kwargs)
         return _FakeRemoteResponse()
 
-    monkeypatch.setattr(scanner_module.httpx, "post", fake_post)
+    monkeypatch.setattr(httpx, "post", fake_post)
 
     result = RemoteScanner().scan(source)
 
@@ -127,6 +129,68 @@ def test_remote_scanner_uses_configured_endpoint_and_token(
     assert result.detail == "remote-node"
     assert captured["url"] == "https://scanner.invalid/v1/scan"
     assert captured["headers"] == {"Authorization": "Bearer test-token"}
+    assert captured["timeout"] == get_settings().remote_scanner_timeout_seconds
+
+
+@pytest.mark.parametrize("failure", ["http", "json", "disk", "import_budget"])
+def test_remote_scanner_retains_failure_and_import_budget_contract(monkeypatch, tmp_path, failure):
+    import httpx
+    from app.services.uploads import UploadLimitError
+
+    source = tmp_path / "remote-failure.bin"
+    source.write_bytes(b"synthetic retained remote bytes")
+    monkeypatch.setenv("REMOTE_SCANNER_URL", "https://scanner.invalid/v1/scan")
+    get_settings.cache_clear()
+    error = {
+        "http": httpx.HTTPError("Synthetic transport failure"),
+        "json": ValueError("Synthetic invalid response JSON"),
+        "disk": OSError("Synthetic remote IO failure"),
+        "import_budget": UploadLimitError("IMPORT_WORKSPACE_EXCEEDED", "Synthetic import budget", status_code=422),
+    }[failure]
+
+    class InvalidJSONResponse(_FakeRemoteResponse):
+        def json(self):
+            raise error
+
+    def failed_post(*args, **kwargs):
+        if failure == "json":
+            return InvalidJSONResponse()
+        raise error
+
+    monkeypatch.setattr(httpx, "post", failed_post)
+    expected = UploadLimitError if failure == "import_budget" else AssetScanError
+    with pytest.raises(expected) as caught:
+        RemoteScanner().scan(source)
+    if failure == "import_budget":
+        assert caught.value is error
+        assert caught.value.code == "IMPORT_WORKSPACE_EXCEEDED" and caught.value.status_code == 422
+    else:
+        assert str(caught.value) == "Remote attachment scanner is unavailable."
+        assert caught.value.__cause__ is error
+    assert source.read_bytes() == b"synthetic retained remote bytes"
+
+
+@pytest.mark.parametrize("status", ["infected", "unknown"])
+def test_remote_scanner_does_not_allow_infected_or_unknown_response(monkeypatch, tmp_path, status):
+    import httpx
+
+    source = tmp_path / "remote-policy.bin"
+    source.write_bytes(b"synthetic remote policy bytes")
+    monkeypatch.setenv("REMOTE_SCANNER_URL", "https://scanner.invalid/v1/scan")
+    get_settings.cache_clear()
+
+    class PolicyResponse(_FakeRemoteResponse):
+        def json(self):
+            return {"status": status}
+
+    monkeypatch.setattr(httpx, "post", lambda *args, **kwargs: PolicyResponse())
+    if status == "infected":
+        result = RemoteScanner().scan(source)
+        assert result.status == "infected" and result.allowed_by_policy is False
+    else:
+        with pytest.raises(AssetScanError, match="Remote attachment scanner returned an invalid response."):
+            RemoteScanner().scan(source)
+    assert source.read_bytes() == b"synthetic remote policy bytes"
 
 
 def test_invalid_scanner_provider_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:

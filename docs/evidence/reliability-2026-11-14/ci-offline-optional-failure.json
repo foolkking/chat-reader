@@ -1,0 +1,906 @@
+{
+  "schema_version": 1,
+  "failed_source_revision": "4a943eaa7ae801d9b83055664de335f0a79bc7ee",
+  "workflow_run_id": 43566365014,
+  "workflow_run_attempt": 1,
+  "workflow_url": "https://github.com/foolkking/chat-reader/actions/runs/43566365014",
+  "status": "completed",
+  "conclusion": "failure",
+  "first_status_read": {
+    "request_at": "2026-11-14T07:42:43.997097+00:00",
+    "received_at": "2026-11-14T07:42:46.863100+00:00",
+    "request_duration_seconds": 2.875,
+    "exit_code": 0,
+    "basis": "User reported failure after dispatch pause; no new monotonic waiter was started or claimed."
+  },
+  "official_collection": {
+    "run_id": 43566365014,
+    "head_sha": "4a943eaa7ae801d9b83055664de335f0a79bc7ee",
+    "attempt": 1,
+    "reads": [
+      {
+        "name": "official-settings-quality.log",
+        "requested_at": "2026-11-14T07:43:37.892472+00:00",
+        "received_at": "2026-11-14T07:43:44.870260+00:00",
+        "seconds": 6.967999999993481,
+        "bytes": 314050,
+        "sha256": "037cc796a3eb3de25f5c019ab05cf565fbe75666adbe1d30d4c41039042ec701",
+        "exit_code": 0
+      },
+      {
+        "name": "official-settings-quality-job.json",
+        "requested_at": "2026-11-14T07:43:44.870260+00:00",
+        "received_at": "2026-11-14T07:43:46.160666+00:00",
+        "seconds": 1.297000000020489,
+        "bytes": 4357,
+        "sha256": "d74aa86fdb762e5bd61a6df8c7abacb6ff174786bcd89cdce13876e28da4ef00",
+        "exit_code": 0
+      },
+      {
+        "name": "official-settings-quality-annotations.json",
+        "requested_at": "2026-11-14T07:43:46.160666+00:00",
+        "received_at": "2026-11-14T07:43:47.324681+00:00",
+        "seconds": 1.1570000000065193,
+        "bytes": 1466,
+        "sha256": "2a6fa2a7413cef55c59ebe2b05946517488f1ac6dc0e6427bc3634bd1c7235ff",
+        "exit_code": 0
+      },
+      {
+        "name": "official-web-quality.log",
+        "requested_at": "2026-11-14T07:43:47.380716+00:00",
+        "received_at": "2026-11-14T07:43:49.569006+00:00",
+        "seconds": 2.187999999965541,
+        "bytes": 2483292,
+        "sha256": "3e1d46944261ed8db4dfe38f0b13d63571b23999ce6aba81675e79468a4169ec",
+        "exit_code": 0
+      },
+      {
+        "name": "official-api-quality.log",
+        "requested_at": "2026-11-14T07:43:49.570010+00:00",
+        "received_at": "2026-11-14T07:43:51.567913+00:00",
+        "seconds": 2.0,
+        "bytes": 1659147,
+        "sha256": "9a80bf1b6759cc81c885089676b0a3f1599fdb288997db950f790a42da92a015",
+        "exit_code": 0
+      },
+      {
+        "name": "official-reading-performance-comparison.log",
+        "requested_at": "2026-11-14T07:43:51.568914+00:00",
+        "received_at": "2026-11-14T07:43:56.034725+00:00",
+        "seconds": 4.467999999993481,
+        "bytes": 128086,
+        "sha256": "f41a99383c345e8a47a7966d64ff57d1f967cfa6987490ecc8ba4d83e02dc21f",
+        "exit_code": 0
+      },
+      {
+        "name": "official-artifacts.json",
+        "requested_at": "2026-11-14T07:43:56.034725+00:00",
+        "received_at": "2026-11-14T07:43:57.209073+00:00",
+        "seconds": 1.172000000020489,
+        "bytes": 2222,
+        "sha256": "da1459055afd771c18d87e92a4c30744fca2404d6b980c6ac44f03495abde57b",
+        "exit_code": 0
+      }
+    ]
+  },
+  "official_artifact_downloads": {
+    "run_id": 43566365014,
+    "head_sha": "4a943eaa7ae801d9b83055664de335f0a79bc7ee",
+    "attempt": 1,
+    "artifacts": [
+      {
+        "artifact_id": 14104356960,
+        "name": "release-a-quality-evidence-4a943eaa7ae801d9b83055664de335f0a79bc7ee-1",
+        "archive": "official-artifact-14104356960.zip",
+        "extracted_directory": "official-artifact-14104356960",
+        "requested_at": "2026-11-14T07:44:44.436344+00:00",
+        "received_at": "2026-11-14T07:44:57.519686+00:00",
+        "elapsed_seconds": 13.093999999924563,
+        "downloaded_bytes": 40486216,
+        "official_size_in_bytes": 40486216,
+        "official_digest": "sha256:56cc0ddb2b956c6ba2970768912488f422a1f4e80a72d6f5c7b861ef444fbb09",
+        "sha256": "56cc0ddb2b956c6ba2970768912488f422a1f4e80a72d6f5c7b861ef444fbb09",
+        "member_count": 848,
+        "zip_crc_passed": true,
+        "role": "diagnostic evidence only; no deployable images"
+      },
+      {
+        "artifact_id": 14104014830,
+        "name": "settings-quality-evidence-4a943eaa7ae801d9b83055664de335f0a79bc7ee-1",
+        "archive": "official-artifact-14104014830.zip",
+        "extracted_directory": "official-artifact-14104014830",
+        "requested_at": "2026-11-14T07:44:57.519686+00:00",
+        "received_at": "2026-11-14T07:45:19.022495+00:00",
+        "elapsed_seconds": 21.5,
+        "downloaded_bytes": 80939534,
+        "official_size_in_bytes": 80939534,
+        "official_digest": "sha256:08f4205d23495d0f8fc94ecc6c47083f6748b74b9a398a705b9fa446285254ae",
+        "sha256": "08f4205d23495d0f8fc94ecc6c47083f6748b74b9a398a705b9fa446285254ae",
+        "member_count": 210,
+        "zip_crc_passed": true,
+        "role": "diagnostic evidence only; no deployable images"
+      },
+      {
+        "artifact_id": 14103438010,
+        "name": "reading-performance-comparison",
+        "archive": "official-artifact-14103438010.zip",
+        "extracted_directory": "official-artifact-14103438010",
+        "requested_at": "2026-11-14T07:45:19.022495+00:00",
+        "received_at": "2026-11-14T07:45:24.535760+00:00",
+        "elapsed_seconds": 5.51500000001397,
+        "downloaded_bytes": 3979664,
+        "official_size_in_bytes": 3979664,
+        "official_digest": "sha256:8d100a329a50bcf1602c21d51d71987131c3e9f15d494036c819dc15bcac70ce",
+        "sha256": "8d100a329a50bcf1602c21d51d71987131c3e9f15d494036c819dc15bcac70ce",
+        "member_count": 101,
+        "zip_crc_passed": true,
+        "role": "diagnostic evidence only; no deployable images"
+      }
+    ]
+  },
+  "settings_job_elapsed_seconds": 3812.0,
+  "settings_gate": {
+    "schema_version": 2,
+    "gate_id": "settings-stages-1-4",
+    "status": "failed",
+    "started_at": "2026-11-14T06:29:24.340Z",
+    "test_count": 470,
+    "completed_at": "2026-11-14T07:30:13.524Z",
+    "duration_ms": 3652701,
+    "result_counts": {
+      "passed": 469,
+      "failed": 1,
+      "timedOut": 0,
+      "skipped": 0,
+      "interrupted": 0
+    }
+  },
+  "settings_build_timing": "phase=authenticated-web-build\nelapsed_seconds=91.57\nmax_rss_kb=2789436\nexit_code=0\n",
+  "settings_matrix_timing": "Command exited with non-zero status 1\nphase=settings-matrix\nelapsed_seconds=3653.93\nmax_rss_kb=632044\nexit_code=1\n",
+  "settings_restore_timing": null,
+  "independent_restore_executed": false,
+  "failure": {
+    "test_file": "apps/web/e2e/settings-offline-recovery.spec.ts",
+    "line": 543,
+    "name": "removing the last offline copy on page two returns to the retained copies",
+    "phase": "real 21-copy download setup before pagination assertions",
+    "expected": "completed",
+    "received": "generating",
+    "original_expect_timeout_ms": 60000,
+    "original_case_timeout_ms": 180000,
+    "failure_is_job_timeout": false
+  },
+  "trace_summary": {
+    "input_data": "isolated synthetic CI fixtures only",
+    "admissions": 20,
+    "successful_downloads": 19,
+    "successful_task_status_observations": 19,
+    "worker_terminal_commits_in_retained_log": 20,
+    "last_observed_child_state": "processing",
+    "children": [
+      {
+        "child": 1,
+        "admitted_at": "2026-11-14T07:28:05.890Z",
+        "admission_http_ms": 44.441,
+        "poll_count": 3,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.198341,
+        "claim_to_commit_seconds": 1.488505,
+        "commit_to_next_status_observation_seconds": 0.412154
+      },
+      {
+        "child": 2,
+        "admitted_at": "2026-11-14T07:28:08.156Z",
+        "admission_http_ms": 67.393,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 1.402894,
+        "claim_to_commit_seconds": 1.513322,
+        "commit_to_next_status_observation_seconds": 0.313784
+      },
+      {
+        "child": 3,
+        "admitted_at": "2026-11-14T07:28:11.466Z",
+        "admission_http_ms": 44.132999999999996,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.906313,
+        "claim_to_commit_seconds": 1.505987,
+        "commit_to_next_status_observation_seconds": 0.7097
+      },
+      {
+        "child": 4,
+        "admitted_at": "2026-11-14T07:28:14.679Z",
+        "admission_http_ms": 45.952,
+        "poll_count": 3,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.514814,
+        "claim_to_commit_seconds": 1.523642,
+        "commit_to_next_status_observation_seconds": 0.059544
+      },
+      {
+        "child": 5,
+        "admitted_at": "2026-11-14T07:28:16.902Z",
+        "admission_http_ms": 77.108,
+        "poll_count": 3,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.34797,
+        "claim_to_commit_seconds": 1.53029,
+        "commit_to_next_status_observation_seconds": 0.27074
+      },
+      {
+        "child": 6,
+        "admitted_at": "2026-11-14T07:28:19.133Z",
+        "admission_http_ms": 45.914,
+        "poll_count": 3,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.172172,
+        "claim_to_commit_seconds": 1.506597,
+        "commit_to_next_status_observation_seconds": 0.419231
+      },
+      {
+        "child": 7,
+        "admitted_at": "2026-11-14T07:28:21.324Z",
+        "admission_http_ms": 54.576,
+        "poll_count": 3,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.05374,
+        "claim_to_commit_seconds": 1.531901,
+        "commit_to_next_status_observation_seconds": 0.573359
+      },
+      {
+        "child": 8,
+        "admitted_at": "2026-11-14T07:28:23.595Z",
+        "admission_http_ms": 44.083,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.87103,
+        "claim_to_commit_seconds": 1.645717,
+        "commit_to_next_status_observation_seconds": 0.625253
+      },
+      {
+        "child": 9,
+        "admitted_at": "2026-11-14T07:28:26.830Z",
+        "admission_http_ms": 46.382999999999996,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.717098,
+        "claim_to_commit_seconds": 1.593191,
+        "commit_to_next_status_observation_seconds": 0.815711
+      },
+      {
+        "child": 10,
+        "admitted_at": "2026-11-14T07:28:30.079Z",
+        "admission_http_ms": 77.598,
+        "poll_count": 5,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 2.070223,
+        "claim_to_commit_seconds": 1.597066,
+        "commit_to_next_status_observation_seconds": 0.530711
+      },
+      {
+        "child": 11,
+        "admitted_at": "2026-11-14T07:28:34.378Z",
+        "admission_http_ms": 53.527,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.851457,
+        "claim_to_commit_seconds": 1.563162,
+        "commit_to_next_status_observation_seconds": 0.713381
+      },
+      {
+        "child": 12,
+        "admitted_at": "2026-11-14T07:28:37.602Z",
+        "admission_http_ms": 59.386,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.707683,
+        "claim_to_commit_seconds": 1.576158,
+        "commit_to_next_status_observation_seconds": 0.857159
+      },
+      {
+        "child": 13,
+        "admitted_at": "2026-11-14T07:28:40.872Z",
+        "admission_http_ms": 69.89399999999999,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 1.110918,
+        "claim_to_commit_seconds": 1.515449,
+        "commit_to_next_status_observation_seconds": 0.534633
+      },
+      {
+        "child": 14,
+        "admitted_at": "2026-11-14T07:28:44.139Z",
+        "admission_http_ms": 43.423,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.93885,
+        "claim_to_commit_seconds": 1.551659,
+        "commit_to_next_status_observation_seconds": 0.674491
+      },
+      {
+        "child": 15,
+        "admitted_at": "2026-11-14T07:28:47.400Z",
+        "admission_http_ms": 47.819,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.749777,
+        "claim_to_commit_seconds": 1.536628,
+        "commit_to_next_status_observation_seconds": 0.849595
+      },
+      {
+        "child": 16,
+        "admitted_at": "2026-11-14T07:28:50.633Z",
+        "admission_http_ms": 49.537,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.594024,
+        "claim_to_commit_seconds": 1.547018,
+        "commit_to_next_status_observation_seconds": 1.024958
+      },
+      {
+        "child": 17,
+        "admitted_at": "2026-11-14T07:28:53.957Z",
+        "admission_http_ms": 56.064,
+        "poll_count": 3,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.342688,
+        "claim_to_commit_seconds": 1.512992,
+        "commit_to_next_status_observation_seconds": 0.25832
+      },
+      {
+        "child": 18,
+        "admitted_at": "2026-11-14T07:28:56.182Z",
+        "admission_http_ms": 47.322,
+        "poll_count": 3,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 0.173365,
+        "claim_to_commit_seconds": 1.509037,
+        "commit_to_next_status_observation_seconds": 0.429598
+      },
+      {
+        "child": 19,
+        "admitted_at": "2026-11-14T07:28:58.395Z",
+        "admission_http_ms": 54.59,
+        "poll_count": 4,
+        "last_observed_status": "committed",
+        "admission_to_claim_seconds": 1.057834,
+        "claim_to_commit_seconds": 1.560808,
+        "commit_to_next_status_observation_seconds": 0.522358
+      },
+      {
+        "child": 20,
+        "admitted_at": "2026-11-14T07:29:01.675Z",
+        "admission_http_ms": 58.935,
+        "poll_count": 4,
+        "last_observed_status": "processing",
+        "admission_to_claim_seconds": 2.372768
+      }
+    ],
+    "downloads": [
+      {
+        "downloaded_at": "2026-11-14T07:28:08.008Z",
+        "status": 200,
+        "http_ms": 85.408,
+        "bytes": 1452
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:11.402Z",
+        "status": 200,
+        "http_ms": 26.179000000000002,
+        "bytes": 1453
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:14.605Z",
+        "status": 200,
+        "http_ms": 26.468,
+        "bytes": 1449
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:16.799Z",
+        "status": 200,
+        "http_ms": 34.115,
+        "bytes": 1455
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:19.069Z",
+        "status": 200,
+        "http_ms": 22.087999999999997,
+        "bytes": 1455
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:21.249Z",
+        "status": 200,
+        "http_ms": 20.537000000000003,
+        "bytes": 1458
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:23.508Z",
+        "status": 200,
+        "http_ms": 32.952,
+        "bytes": 1454
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:26.754Z",
+        "status": 200,
+        "http_ms": 23.499,
+        "bytes": 1451
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:29.981Z",
+        "status": 200,
+        "http_ms": 31.804000000000002,
+        "bytes": 1457
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:34.294Z",
+        "status": 200,
+        "http_ms": 23.296,
+        "bytes": 1455
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:37.522Z",
+        "status": 200,
+        "http_ms": 23.511,
+        "bytes": 1452
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:40.765Z",
+        "status": 200,
+        "http_ms": 30.014,
+        "bytes": 1453
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:44.053Z",
+        "status": 200,
+        "http_ms": 28.603,
+        "bytes": 1453
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:47.321Z",
+        "status": 200,
+        "http_ms": 23.610000000000003,
+        "bytes": 1452
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:50.552Z",
+        "status": 200,
+        "http_ms": 22.041,
+        "bytes": 1454
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:53.867Z",
+        "status": 200,
+        "http_ms": 29.908,
+        "bytes": 1452
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:56.093Z",
+        "status": 200,
+        "http_ms": 27.709,
+        "bytes": 1451
+      },
+      {
+        "downloaded_at": "2026-11-14T07:28:58.311Z",
+        "status": 200,
+        "http_ms": 23.742,
+        "bytes": 1454
+      },
+      {
+        "downloaded_at": "2026-11-14T07:29:01.555Z",
+        "status": 200,
+        "http_ms": 34.668,
+        "bytes": 1453
+      }
+    ],
+    "worker_events": [
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:07.587584+00:00",
+        "child": 1
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:07.587750+00:00",
+        "child": 1
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:11.083306+00:00",
+        "child": 2
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:11.083430+00:00",
+        "child": 2
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:13.890971+00:00",
+        "child": 3
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:13.891190+00:00",
+        "child": 3
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:16.731209+00:00",
+        "child": 4
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:16.731368+00:00",
+        "child": 4
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:18.792324+00:00",
+        "child": 5
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:18.792459+00:00",
+        "child": 5
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:20.823132+00:00",
+        "child": 6
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:20.823286+00:00",
+        "child": 6
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:22.922050+00:00",
+        "child": 7
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:22.922272+00:00",
+        "child": 7
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:26.123781+00:00",
+        "child": 8
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:26.123932+00:00",
+        "child": 8
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:29.152015+00:00",
+        "child": 9
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:29.152205+00:00",
+        "child": 9
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:33.758476+00:00",
+        "child": 10
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:33.758641+00:00",
+        "child": 10
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:36.804686+00:00",
+        "child": 11
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:36.804832+00:00",
+        "child": 11
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:39.898182+00:00",
+        "child": 12
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:39.898329+00:00",
+        "child": 12
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:43.514788+00:00",
+        "child": 13
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:43.514943+00:00",
+        "child": 13
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:46.640817+00:00",
+        "child": 14
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:46.640960+00:00",
+        "child": 14
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:49.698277+00:00",
+        "child": 15
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:49.698409+00:00",
+        "child": 15
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:52.796294+00:00",
+        "child": 16
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:52.796478+00:00",
+        "child": 16
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:55.824809+00:00",
+        "child": 17
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:55.824987+00:00",
+        "child": 17
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:28:57.876277+00:00",
+        "child": 18
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:28:57.876421+00:00",
+        "child": 18
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:29:01.029732+00:00",
+        "child": 19
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:29:01.029956+00:00",
+        "child": 19
+      },
+      {
+        "category": "offline",
+        "event": "artifact_db_committed",
+        "timestamp": "2026-11-14T07:29:05.771963+00:00",
+        "child": 20
+      },
+      {
+        "attempt": 1,
+        "event": "background_job_committed",
+        "job_type": "offline_package",
+        "timestamp": "2026-11-14T07:29:05.772208+00:00",
+        "child": 20
+      }
+    ],
+    "trace_zip_sha256": "c8ae41a23c2cb3405f3cd142d11b5748bacf0e9ff6dae446f2c2ea4cdd60ce09",
+    "real_ids_or_response_bodies_persisted": false,
+    "local_database_copy_count_inferred": false,
+    "timing_summary": {
+      "admission_to_claim_seconds": {
+        "sample_count": 20,
+        "median_seconds": 0.7334375,
+        "maximum_seconds": 2.372768
+      },
+      "claim_to_commit_seconds": {
+        "sample_count": 19,
+        "median_seconds": 1.531901,
+        "maximum_seconds": 1.645717
+      },
+      "commit_to_next_status_observation_seconds": {
+        "sample_count": 19,
+        "median_seconds": 0.534633,
+        "maximum_seconds": 1.024958
+      }
+    },
+    "dexie_rows_independently_verified": false,
+    "download_count_is_not_independent_dexie_row_proof": true
+  },
+  "other_jobs": [
+    {
+      "name": "web-quality",
+      "conclusion": "success",
+      "status": "completed"
+    },
+    {
+      "name": "api-quality",
+      "conclusion": "success",
+      "status": "completed"
+    },
+    {
+      "name": "reading-performance-comparison / compare",
+      "conclusion": "success",
+      "status": "completed"
+    },
+    {
+      "name": "build-images",
+      "conclusion": "skipped",
+      "status": "completed"
+    },
+    {
+      "name": "inspect-release-artifact",
+      "conclusion": "skipped",
+      "status": "completed"
+    }
+  ],
+  "cancellation_requests_sent": 0,
+  "new_monotonic_waiter_claimed": false,
+  "production_changed": false,
+  "deployable_artifact_produced": false,
+  "official_prior_api_case_audit": {
+    "passed": 6716,
+    "skipped": 3,
+    "warnings": 5,
+    "reported_seconds": 1730.26,
+    "exact_cases_confirmed_passed": {
+      "test_worker_supervisor.py": [
+        "test_busy_queue_rechecks_guard_reconciliation_and_lease_without_mandatory_poll",
+        "test_empty_queue_keeps_original_poll_deadline_and_does_not_busy_spin",
+        "test_completed_child_immediately_checks_empty_queue_then_backs_off",
+        "test_unavailable_scheduling_boundary_keeps_poll_and_never_claims[guard]",
+        "test_unavailable_scheduling_boundary_keeps_poll_and_never_claims[reconciliation]",
+        "test_unavailable_scheduling_boundary_keeps_poll_and_never_claims[execution]",
+        "test_unavailable_scheduling_boundary_keeps_poll_and_never_claims[database]",
+        "test_os_exit_does_not_bypass_next_iterations_failed_boundary[guard]",
+        "test_os_exit_does_not_bypass_next_iterations_failed_boundary[reconciliation]",
+        "test_os_exit_does_not_bypass_next_iterations_failed_boundary[execution]",
+        "test_os_exit_does_not_bypass_next_iterations_failed_boundary[database]",
+        "test_after_child_stop_prevents_any_next_admission[shutdown]",
+        "test_after_child_stop_prevents_any_next_admission[superseded]",
+        "test_busy_queue_still_runs_bounded_single_lane_maintenance_and_checks_lease[False]",
+        "test_busy_queue_still_runs_bounded_single_lane_maintenance_and_checks_lease[True]",
+        "test_spawn_error_backs_off_instead_of_busy_retrying_claimed_work",
+        "test_startup_stop_never_registers_or_queries"
+      ],
+      "test_execution_reconciliation_imports.py": [
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[conversation_export-user]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[conversation_export-stalled]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[conversation_export-admin]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[offline_package-user]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[offline_package-stalled]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[offline_package-admin]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[content_noise_scan-user]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[content_noise_scan-stalled]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[content_noise_scan-admin]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[system_archive_export-user]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[system_archive_export-stalled]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[system_archive_export-admin]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[system_archive_preflight-user]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[system_archive_preflight-stalled]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[system_archive_preflight-admin]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[system_archive_restore-user]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[system_archive_restore-stalled]",
+        "test_actual_interrupted_task_reconciles_without_archive_handlers[system_archive_restore-admin]",
+        "test_archive_projection_is_the_existing_system_handler_reexport"
+      ],
+      "test_worker_import_boundaries.py": [
+        "test_passive_worker_import_does_not_load_unselected_handlers[app.services.background_jobs]",
+        "test_passive_worker_import_does_not_load_unselected_handlers[app.services.worker_maintenance]",
+        "test_passive_worker_import_does_not_load_unselected_handlers[app.services.execution_reconciliation]",
+        "test_passive_worker_import_does_not_load_unselected_handlers[app.workers.execution_child]",
+        "test_passive_worker_import_does_not_load_unselected_handlers[app.services.content_cleanup]",
+        "test_existing_worker_instrumentation_seams_keep_results_and_exceptions[process_scan_chunk-app.services.content_cleanup]",
+        "test_existing_worker_instrumentation_seams_keep_results_and_exceptions[rebuild_conversation_derived_data-app.services.derived_rebuild]",
+        "test_existing_worker_instrumentation_seams_keep_results_and_exceptions[delete_conversation_record-app.services.conversations.conversation_deletion]",
+        "test_existing_worker_instrumentation_seams_keep_results_and_exceptions[execute_user_account_delete-app.services.user_deletion]",
+        "test_existing_worker_instrumentation_seams_keep_results_and_exceptions[cleanup_deleted_account_assets-app.services.user_deletion]",
+        "test_message_edit_error_reexport_keeps_identity_and_public_detail",
+        "test_cleanup_write_seams_are_lazy_and_preserve_instrumentation[_create_version-app.services.editing.message_edit_service]",
+        "test_cleanup_write_seams_are_lazy_and_preserve_instrumentation[_get_current_version-app.services.editing.message_edit_service]",
+        "test_cleanup_write_seams_are_lazy_and_preserve_instrumentation[_write_event-app.services.editing.message_edit_service]",
+        "test_cleanup_write_seams_are_lazy_and_preserve_instrumentation[rebuild_search_and_toc_for_conversation-app.services.search.search_indexer]"
+      ],
+      "test_worker_maintenance_import_budget.py": [
+        "test_stopped_pass_does_not_import_cleanup_handlers",
+        "test_slow_or_stopped_import_cannot_start_an_item_or_import_later_families[budget]",
+        "test_slow_or_stopped_import_cannot_start_an_item_or_import_later_families[stopped]",
+        "test_cleanup_import_failure_is_isolated_and_private",
+        "test_all_four_first_lanes_get_the_same_budget_without_importing_later_lanes[0]",
+        "test_all_four_first_lanes_get_the_same_budget_without_importing_later_lanes[1]",
+        "test_all_four_first_lanes_get_the_same_budget_without_importing_later_lanes[2]",
+        "test_all_four_first_lanes_get_the_same_budget_without_importing_later_lanes[3]"
+      ],
+      "test_supervised_execution_postgres.py": [
+        "test_repeated_progress_and_heartbeat_are_not_business_progress",
+        "test_cancellation_is_independent_of_locked_canonical_row",
+        "test_all_job_progress_skips_own_row_lock",
+        "test_real_stuck_process_releases_before_next_task",
+        "test_real_commit_ack_loss_protects_assets_until_outcome_verified[committed]",
+        "test_real_commit_ack_loss_protects_assets_until_outcome_verified[aborted]",
+        "test_real_commit_ack_loss_protects_assets_until_outcome_verified[unconfirmed]",
+        "test_terminal_canonical_result_wins_and_old_execution_is_fenced",
+        "test_legacy_active_execution_without_control_cannot_be_bypassed",
+        "test_control_migration_roundtrip_keeps_one_head",
+        "test_session_delete_requests_stop_without_waiting_for_analysis_rows",
+        "test_actual_supervisor_process_drains_two_jobs_without_overlapping[1]",
+        "test_actual_supervisor_process_drains_two_jobs_without_overlapping[20]"
+      ]
+    },
+    "basis": "Retained official log from failed 4a943ea run only; not inherited by this repair.",
+    "log_sha256": "9a80bf1b6759cc81c885089676b0a3f1599fdb288997db950f790a42da92a015"
+  },
+  "original_analysis_sha256": "155740376aa8602f042ce74d704f384ce0e4446daa37973e5b0404798403a413",
+  "new_status_polling_or_waiter_started": false
+}

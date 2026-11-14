@@ -1,6 +1,6 @@
 # Project State
 
-## Reliability candidate — 2026-11-14 (platform-default CI; pause after dispatch)
+## Reliability candidate — 2026-11-14 (offline child imports; pause after dispatch)
 
 The latest November14 instruction authorizes this repair, selective commit/push
 and one full exact-source CI with no custom job/step total timeout. Confirm the
@@ -10,27 +10,35 @@ automatic waiting/deployment sequence for this turn. Native test/worker/PG,
 memory/frame and release-safety gates remain. Hosted jobs still have GitHub's
 six-hour platform cap, not unlimited execution.
 
-Reconciliation now directly imports the existing lightweight archive projection,
-preserving the heavy module's same-object reexports and all business outcomes.
-Final25-module API regression **307 passed/60 explicit integration or platform
-skips** includes19 new controls; CI scripts **72**, lint/typecheck and single
-head0061 pass. Parsed workflow comparison preserves original jobs, step order,
-commands and gates while removing39 timeout fields and adding Settings timing.
-All1398 verification inputs/thirteen protected files remain stable;548 prior
-Web build inputs are unchanged, not a new build/PWA claim. Windows actual
-in-memory reconciliation improves locally, not proof of Linux/whole-CI speedup.
-[Verification](docs/evidence/reliability-2026-11-14/ci-settings-completion-verification.json) /
-[diagnosis](docs/evidence/reliability-2026-11-14/ci-settings-completion-import-diagnosis.json).
+The user reported **4a943ea / CI43566365014** failed. Settings finished its
+470-case matrix in a **63m32s job:469 passed/1 failed**, not a job timeout.
+The failure was the unchanged60-second preparation of21 offline copies, before
+pagination assertions. Trace records20 admissions/19 successful downloads;
+the retained worker log eventually records20 commits, not a stuck execution
+or independent proof of19 Dexie rows. Restore was not run; release jobs were
+skipped. [Official failure](docs/evidence/reliability-2026-11-14/ci-offline-optional-failure.json)
+preserves four logs/three verified diagnostic ZIPs, not deployable images.
 
-Preceding **530a55b / CI43556068261** is completed/cancelled: Settings exceeded
-its former60-minute job bound;431 printed passes/six termination-window failures
-are not the complete470+restore1 matrix. API/Web/comparison succeeded only in
-that failed run; both release jobs were skipped. [Independent failure receipt](docs/evidence/reliability-2026-11-14/ci-settings-completion-failure.json)
-retains four official logs/three verified diagnostic ZIPs and the stopped
-waiter's actual incomplete monotonic record. No cancellation or production action.
-The subsequent `ci-settings-completion-dispatch.json` receipt records the one
-actual submission; once present, do not redispatch or resume work before user
-feedback. Production remains the previously verified3564cbf/schema0060.
+Five application import boundaries now avoid unselected FastAPI/HTTPX loading:
+Request remains FastAPI's exact Starlette object; account/export HTTP errors
+retain the real FastAPI exception, and only configured remote scans load HTTPX.
+Business AST, lifetime/lease/scan policy, worker and native test bounds remain.
+Final43-module API regression **486 passed/72 explicit PG/POSIX skips** includes
+35 new controls; CI scripts72, offline Node205, lint/typecheck and single head0061
+pass. All1399 inputs, thirteen protected files and2103 prior task files remain
+stable;548 prior Web build inputs are unchanged, not a new build/PWA claim.
+Windows matched text-package median **1.777052→1.338086s** is diagnostic, not
+Linux/21-copy/whole-CI acceptance. [Diagnosis](docs/evidence/reliability-2026-11-14/ci-offline-optional-import-diagnosis.json) /
+[final local verification](docs/evidence/reliability-2026-11-14/ci-offline-optional-verification.json) /
+[1399 inputs](docs/evidence/reliability-2026-11-14/ci-offline-optional-inputs.json).
+
+The original `ci-settings-completion-dispatch.json` bytes remain historical.
+The subsequent independent `ci-offline-optional-dispatch.json` records this
+repair's sole submission; once present, pause until user feedback. No waiter,
+status polling, automation, cancellation, production recheck or deployment.
+Production's last verified pointer remains3564cbf/schema0060.
+The [previous platform-default checkpoint](docs/evidence/reliability-2026-11-14/ci-settings-completion-verification.json)
+and its earlier timeout receipt remain separate historical evidence.
 
 ### Earlier cold-start checkpoint (history)
 
