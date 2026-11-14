@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import time
 import zipfile
 
 
@@ -39,6 +40,8 @@ QUALITY_NAMES = (
     "api-quality", "web-quality", "settings-quality", "reading-performance-comparison / compare",
 )
 NEEDS_NAMES = ("api-quality", "web-quality", "settings-quality", "reading-performance-comparison")
+EVIDENCE_GET_TIMEOUT_SECONDS = 180
+EVIDENCE_GET_MAX_ATTEMPTS = 3
 DOC_PATHS = {
     "PROJECT_STATE.md", "docs/index.md", "docs/documentation-inventory.md",
     "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md", "docs/system/RELEASE_SAFETY_BASELINE.md",
@@ -360,11 +363,54 @@ def verified_jobs(run, jobs, *, source_sha, source_run, attempt, reuse):
     return result
 
 
+def evidence_error_kind(stderr):
+    """Classify only known transient failures, without exposing raw CLI errors."""
+    statuses = set(re.findall(rb"\(HTTP ([1-5]\d{2})\)", stderr or b""))
+    if len(statuses) == 1:
+        status = int(statuses.pop())
+        return f"http-{status}", status in {408, 429, 500, 502, 503, 504}
+    if statuses:
+        return "ambiguous-http-status", False
+    for text, kind in (
+        (b"connection reset by peer", "connection-reset"),
+        (b"TLS handshake timeout", "tls-timeout"),
+        (b"i/o timeout", "io-timeout"),
+        (b"unexpected EOF", "unexpected-eof"),
+        (b"context deadline exceeded", "transport-timeout"),
+    ):
+        if text in (stderr or b""):
+            return kind, True
+    return "unclassified", False
+
+
 def api(endpoint, *, cache, name, binary=False):
-    result = subprocess.run(["gh", "api", f"repos/{REPOSITORY}/{endpoint}"],
-                            cwd=REPO, capture_output=True, timeout=180)
-    # Never print or persist credentials, subprocess environment or raw errors.
-    require(result.returncode == 0, f"Official GitHub evidence query failed: {name}")
+    deadline = time.monotonic() + EVIDENCE_GET_TIMEOUT_SECONDS
+    for attempt in range(1, EVIDENCE_GET_MAX_ATTEMPTS + 1):
+        remaining = deadline - time.monotonic()
+        require(remaining > 0,
+                f"Official GitHub evidence query failed: {name} (deadline; attempts={attempt - 1})")
+        try:
+            result = subprocess.run(["gh", "api", f"repos/{REPOSITORY}/{endpoint}"],
+                                    cwd=REPO, capture_output=True, timeout=remaining)
+        except subprocess.TimeoutExpired:
+            # Timeout objects can include raw command, response and credential data.
+            raise GateError(f"Official GitHub evidence query failed: {name} "
+                            f"(deadline; attempts={attempt})") from None
+        require(time.monotonic() <= deadline,
+                f"Official GitHub evidence query failed: {name} (deadline; attempts={attempt})")
+        if result.returncode == 0:
+            break
+        kind, transient = evidence_error_kind(result.stderr)
+        delay = attempt
+        budget_available = deadline - time.monotonic() > delay
+        require(transient and attempt < EVIDENCE_GET_MAX_ATTEMPTS and budget_available,
+                f"Official GitHub evidence query failed: {name} "
+                f"({kind}; attempts={attempt}{'; deadline' if not budget_available else ''})")
+        # These fields are fixed rule names/numbers, never raw API/token data.
+        print(f"Official GitHub evidence GET retry: {name} "
+              f"({kind}; attempt={attempt}/{EVIDENCE_GET_MAX_ATTEMPTS}; delay={delay}s)")
+        time.sleep(delay)
+    # Failed/partial responses and stale cache files are never accepted.
     path = cache / name
     require(not path.is_symlink(), "Refusing a linked diagnostic cache path.")
     path.write_bytes(result.stdout)

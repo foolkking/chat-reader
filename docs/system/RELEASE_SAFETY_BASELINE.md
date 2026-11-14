@@ -119,7 +119,43 @@ This contract defines the Release A security and provenance gate. It does not ch
 
 ## Release gate
 
+### Ordinary full CI after image-only failure — 2026-11-14
+
+The latest user instruction authorizes one normal full release CI, not another
+image-only lineage extension. Dispatch the existing workflow with empty
+`quality_source_run_id`; all four quality jobs, image builds, five real memory
+cases and the independent artifact consumer run against the new exact source.
+Full-exact producer/consumer proof requires that new run/attempt's successful
+quality jobs; it does not download or inherit43578495558 logs/quality ZIPs.
+The old fixed74f direct-child restriction and its controls remain unchanged.
+
+b84ac1d/43599055418 failed at its original API-log download after37/34/Node77
+controls passed. No image/memory gate ran, artifacts are zero, and the hidden
+HTTP failure is not proven to be a permission or transient-network problem.
+A fresh local byte-identical log download is not CI-token acceptance.
+[Independent failure](../evidence/reliability-2026-11-14/ci-image-only-selector-failure.json).
+
+The evidence GET adapter retries only classified transient failures, at most
+three identical reads within one original180-second monotonic deadline,
+including1/2-second backoffs. Auth/missing/ambiguous/unknown/certificate errors
+fail closed. Safe error classes/counts replace raw CLI errors; no partial
+response or stale cache substitutes for evidence. Original source/content/
+manifest validators, permissions, workflow and resource/native bounds remain.
+Local Python100/Node77, including29 additive fault/full-mode controls, are not
+new complete quality, Linux or release acceptance.
+[Local verification](../evidence/reliability-2026-11-14/ci-evidence-transport-verification.json).
+
+Selectively commit/push, confirm the sole full dispatch, then pause without
+result polling, waiter, automation, cancellation or deployment. The subsequent
+`ci-full-quality-dispatch.json` owns the actual candidate/run; once present,
+do not repeat submission. No custom job/step timeout, production operation,
+cleanup or user-source replay is authorized by this checkpoint.
+
 ### Authorized selector-fixture repair — 2026-11-14
+
+**Historical authorization; its sole b84ac1d/43599055418 dispatch failed.**
+The current normal full-CI instruction above supersedes submission preparation
+below, not its immutable source proof or dispatch evidence.
 
 The user's subsequent explicit approval permits the exact selector fixture
 repair, its source proof, selective commit/push and **one image-only dispatch**.

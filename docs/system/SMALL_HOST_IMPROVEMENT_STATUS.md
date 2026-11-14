@@ -12,7 +12,50 @@
 资料、不清理生产、不建立自动安排；未验收项不能因委托用户而改标通过。
 11月12日的一次本地检查点与随后本地工作限制保留为历史，不覆盖最新授权。
 
-### 11月14日本轮新授权：精确selector修正与固定来源链（提交/单次派发准备）
+### 11月14日最新授权：普通完整CI，不再扩展仅镜像来源链
+
+用户在报告再次失败后明确允许直接提交普通CI，让同一次运行自行完成构建。
+本轮选择性提交/正常推送并只派发一次原`build-release-images.yml`，
+`quality_source_run_id`为空。四项质量、镜像与独立制品检查全部重新执行；
+不增加另一个parent/白名单，不复用43578495558或任何旧质量/内存结果。
+确认唯一run身份后立即暂停，由用户反馈；不等待/轮询/创建安排/取消/部署。
+随后独立`ci-full-quality-dispatch.json`记录实际提交/run；它出现后禁止重复派发。
+
+正式[CI43599055418](https://github.com/foolkking/chat-reader/actions/runs/43599055418)
+为精确b84ac1d、attempt1、workflow_dispatch、completed/failure。builder在
+13:18:05Z–13:18:21Z运行16秒，唯一失败step为来源证明，下载
+`source-api-quality.log`时GET失败。原37、selector34及Node77全部通过；
+四质量job按前一已批准模式明确skip，消费者skip，正式制品0。Docker/base、
+五例真实内存、ORM、镜像/包装均未执行，不是导入业务或资源验收失败的证明。
+[独立失败回执](../evidence/reliability-2026-11-14/ci-image-only-selector-failure.json)
+保存六次正式GET、原builder日志/注解指纹及未执行边界，旧派发字节不改。
+
+runner正式日志已有Actions/Contents read，不能先归为缺少权限。旧代码把
+CLI错误全部压成通用失败，HTTP状态与具体原因未保留，无法追溯证明是403、
+限流或传输瞬断。13:36:21.823360Z的新本地原API日志GET成功，1421531字节、
+SHA256与前次相同，6751/3/5 warnings、17监督及真实PG poll1/poll20仍完整。
+本机凭据不是当时CI token；该成功只证明当前可读，不证明原失败根因消失。
+
+本地只修改`image-only-quality-reuse.py`的GET适配器并新增29项控制：
+HTTP408/429/500/502/503/504及明确的reset/EOF/传输timeout最多三次同GET，
+1/2秒backoff与请求共享原180秒总预算；401/403/404、其他/歧义/未知错误、
+证书错误立即拒绝。超时、错误正文/凭据/签名URL不输出或持久化；失败/部分
+响应和旧缓存不替代证据，JSON/ZIP/来源/用例/manifest的原校验不放宽。
+最初26控制红测保留；加入三个完整模式控制后Python100、Node77通过。
+full-exact生产者及独立消费者CLI控制要求新run四质量通过，只取新run/attempt
+元数据，不读取原日志/ZIP或调用旧Git来源链。新29只属本地控制，原工作流
+未修改；不冒充新Linux、真实PG、完整质量、镜像/内存或生产验收。
+[本地验证](../evidence/reliability-2026-11-14/ci-evidence-transport-verification.json) /
+[1409输入冻结](../evidence/reliability-2026-11-14/ci-evidence-transport-inputs.json)。
+
+原37/34控制、两份SHA工作流补丁、selector/ORM/helper、四质量job body和
+所有五例320/640MiB无swap、64MiB增量、原生/平台期限均未改。新修复不符合
+固定74f的直系候选限制，不能将单测通过当成新的image-only准入；本轮明确
+走普通完整CI，不改或绕过那条规则。仍无项目job/step总限时，GitHub每job
+六小时平台上限保留。生产只沿用旧3564cbf/schema0060，不复查或操作配置、
+资料、volume、唯一备份或长期5432 PostgreSQL；剩余产品/设备/灾备验收归用户。
+
+### 前一精确selector修正授权（历史，唯一派发已失败）
 
 用户最新“可以”单独批准上一诊断提出的精确范围：selector夹具修正、必要的
 来源策略/检出证明、选择性提交并正常推送、只派发一次仅镜像CI。不是复用

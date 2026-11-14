@@ -1,6 +1,20 @@
 # Markdown 文档台账
 
-## 精确selector来源链修正与单次派发授权 — 2026-11-14
+## 取证GET容错与一次普通完整CI授权 — 2026-11-14
+
+用户报告b84ac1d/43599055418再次失败后，明确允许直接提交普通CI完成构建。
+仅定点同步原九文档的当前入口、唯一台账、测试/发布/环境合同及证据索引；
+不重整全仓、改AGENTS/全局记忆、旧回执或无关资料。新增
+`ci-image-only-selector-failure.json`分担正式16秒builder/原API日志取证失败/
+HTTP原因未知及制品0；`ci-evidence-transport-verification.json`与1409输入
+记录初始26红测、最终100/Node77控制及有限同GET/脱敏，非Linux/完整CI验收。
+旧`ci-image-only-selector-dispatch.json`保留原字节并随本轮选择性提交留存；
+随后独立`ci-full-quality-dispatch.json`只登记实际新候选/唯一普通CI。
+原工作流、两份SHA补丁、所有原业务/依赖/测试/资源门禁不改；空quality source
+重新执行完整六job，不扩展旧image-only直系规则或继承旧质量/内存结果。
+确认派发后暂停，不等待/轮询/安排/取消/部署，生产/配置/唯一备份未动。
+
+## 前一精确selector授权（历史，唯一镜像CI已失败）— 2026-11-14
 
 用户另行批准精确测试/来源策略/检出证明、选择性提交/推送和一次仅镜像CI。
 仅定点同步原九份文档的当前入口、唯一台账、发布/测试/环境合同及证据索引；

@@ -1,6 +1,38 @@
 # Project State
 
-## Reliability candidate — 2026-11-14 (exact selector-lineage repair authorized)
+## Reliability candidate — 2026-11-14 (ordinary full CI authorized)
+
+After the latest image-only failure, the user authorized a normal full CI.
+Selectively commit/push and dispatch the existing release workflow once with
+empty `quality_source_run_id`; confirm its identity, then pause. No result
+polling, waiter, automation, cancellation or deployment. The subsequent
+`ci-full-quality-dispatch.json` owns that actual candidate/run; do not repeat
+submission once its receipt exists.
+
+Exact b84ac1d / CI43599055418 failed in the source-proof step while downloading
+the original API job log. Policy37/selector34/Node77 passed; images, memory and
+the independent consumer never ran, and artifacts are zero. The HTTP error was
+not retained, so neither permission failure nor a transient network cause is
+proven. A fresh local download matches the previous log bytes, not the CI token.
+[Independent failure](docs/evidence/reliability-2026-11-14/ci-image-only-selector-failure.json).
+
+The local evidence GET adapter adds at most three identical read-only attempts
+for classified transient errors within the original shared180-second deadline.
+Authentication/missing/unknown errors and invalid evidence still fail closed;
+only safe error classes/counts are reported. Local Python100/Node77 pass,
+including29 new fault/full-mode controls. The workflow and all application,
+dependency, existing-test, resource and migration inputs are unchanged.
+[Local verification](docs/evidence/reliability-2026-11-14/ci-evidence-transport-verification.json) /
+[current policy](docs/system/RELEASE_SAFETY_BASELINE.md#ordinary-full-ci-after-image-only-failure--2026-11-14) /
+[single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md).
+
+Full mode requires fresh quality jobs from the new exact candidate/run; it
+does not read or inherit43578495558 logs/artifacts, broaden image-only lineage,
+or accept old image/resource results. All six jobs and original native/resource
+gates remain, without custom job/step total timeouts. Production remains the
+previously verified3564cbf/schema0060 pointer, not rechecked or changed.
+
+## Earlier selector-lineage authorization (history; sole dispatch failed)
 
 The user separately approved the exact selector fixture patch, source-lineage
 proof, selective commit/push and **one image-only dispatch**. Confirm the sole

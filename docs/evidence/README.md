@@ -1,6 +1,18 @@
 # 事实证据索引
 
-## 精确selector来源链的新授权与本地验证 — 2026-11-14
+## 取证GET失败、容错控制与普通完整CI授权 — 2026-11-14
+
+[独立失败](reliability-2026-11-14/ci-image-only-selector-failure.json)保存
+b84ac1d/43599055418正式六job、16秒builder、37/34/Node77通过、原API日志
+GET失败、HTTP原因未知、镜像/内存未执行及制品0；原派发字节不重写。
+[本地验证](reliability-2026-11-14/ci-evidence-transport-verification.json) /
+[1409输入](reliability-2026-11-14/ci-evidence-transport-inputs.json)保存初始26红测、
+最终100控制（含29新增）/Node77、原180秒内有限同GET、脱敏/失败拒绝，
+以及普通生产者/独立消费者只核验新run质量的控制。不是CI-token或新发布验收。
+用户随后授权一次普通完整CI，旧质量不复用、来源链不扩大；实际新提交/run由
+随后独立`ci-full-quality-dispatch.json`记录，确认即暂停、不等待/安排/取消/部署。
+
+## 前一精确selector授权与本地验证（历史，唯一CI已失败）— 2026-11-14
 
 [新独立验证](reliability-2026-11-14/ci-image-only-selector-lineage-verification.json) /
 [新输入冻结](reliability-2026-11-14/ci-image-only-selector-lineage-inputs.json)记录

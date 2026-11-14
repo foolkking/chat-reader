@@ -2,6 +2,20 @@
 
 ## 当前候选：可靠性整块治理 — 2026-11-14
 
+最新授权改走普通完整CI：选择性提交/正常推送，只派发一次原工作流，
+`quality_source_run_id`为空，四项质量及镜像/独立制品门禁全部新跑。
+确认派发身份后暂停，不等待/轮询/安排/取消/部署；随后独立
+`ci-full-quality-dispatch.json`存在后不得重复派发。
+b84ac1d/43599055418在下载原API日志时失败，控制37+34/Node77通过，
+镜像/内存未执行、制品0；HTTP错误类型未保留，不能定性为权限或网络根因。
+本地GET容错/脱敏及完整模式控制通过100项，原工作流/业务/资源输入不改。
+[当前发布合同](system/RELEASE_SAFETY_BASELINE.md#ordinary-full-ci-after-image-only-failure--2026-11-14) /
+[独立失败](evidence/reliability-2026-11-14/ci-image-only-selector-failure.json) /
+[本地验证](evidence/reliability-2026-11-14/ci-evidence-transport-verification.json) /
+[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。不复用旧质量或扩展来源链。
+
+### 前一精确selector授权（历史，唯一派发已失败）
+
 用户已单独批准精确selector夹具及来源链修正、选择性提交/推送和一次仅镜像CI。
 当前准入固定4481→74f→单一直系候选，先验证74f全Git树及原严格修复证明，
 再绑定唯一测试SHA；原37控制和补丁不改，新增34控制及两处depth3检出。

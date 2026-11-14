@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T14:19:01.270648+00:00",
+  "status": "official_image_only_selector_run_failed_before_images",
+  "head_sha": "b84ac1d0faf89eb25552c01d6d71cad0751f33d1",
+  "workflow_run_id": "43599055418",
+  "workflow_run_attempt": 1,
+  "workflow_path": ".github/workflows/build-release-images.yml",
+  "workflow_event": "workflow_dispatch",
+  "workflow_url": "https://github.com/foolkking/chat-reader/actions/runs/43599055418",
+  "builder_started_at": "2026-11-14T13:18:05Z",
+  "builder_completed_at": "2026-11-14T13:18:21Z",
+  "builder_elapsed_seconds": 16,
+  "failed_step": {
+    "name": "Record verified release quality provenance",
+    "status": "completed",
+    "conclusion": "failure",
+    "number": 4,
+    "started_at": "2026-11-14T13:18:12Z",
+    "completed_at": "2026-11-14T13:18:18Z"
+  },
+  "observed_failure": "Official GitHub evidence query failed: source-api-quality.log",
+  "underlying_http_status": null,
+  "underlying_failure_cause": "not retained by original sanitized adapter; not established",
+  "observed_token_permissions": {
+    "actions": "read",
+    "contents": "read"
+  },
+  "controls_passed": {
+    "original_python": 37,
+    "selector_python": 34,
+    "node": 77
+  },
+  "four_quality_jobs_deliberately_skipped_not_new_successes": true,
+  "images_memory_orm_package_and_consumer_not_executed": true,
+  "artifact_count": 0,
+  "deployable_artifacts": 0,
+  "official_jobs": [
+    {
+      "id": 132459686994,
+      "name": "build-images",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-14T13:18:05Z",
+      "completed_at": "2026-11-14T13:18:21Z"
+    },
+    {
+      "id": 132459687864,
+      "name": "api-quality",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T13:18:02Z",
+      "completed_at": "2026-11-14T13:18:01Z"
+    },
+    {
+      "id": 132459722061,
+      "name": "reading-performance-comparison",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T13:18:10Z",
+      "completed_at": "2026-11-14T13:18:02Z"
+    },
+    {
+      "id": 132459729107,
+      "name": "settings-quality",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T13:18:12Z",
+      "completed_at": "2026-11-14T13:18:01Z"
+    },
+    {
+      "id": 132459729709,
+      "name": "web-quality",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T13:18:12Z",
+      "completed_at": "2026-11-14T13:18:01Z"
+    },
+    {
+      "id": 132459768187,
+      "name": "inspect-release-artifact",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T13:18:21Z",
+      "completed_at": "2026-11-14T13:18:21Z"
+    }
+  ],
+  "official_read_receipts": [
+    {
+      "name": "official-run",
+      "method": "GET",
+      "endpoint": "repos/foolkking/chat-reader/actions/runs/43599055418",
+      "requested_at": "2026-11-14T13:32:13.048669+00:00",
+      "received_at": "2026-11-14T13:32:14.963154+00:00",
+      "elapsed_monotonic_seconds": 1.9060000000754371,
+      "exit_code": 0,
+      "stdout_bytes": 12498,
+      "stdout_sha256": "91e8e056187095d662266f9af3113fc3be4d99aa55af0bf6a37e73ffe870bd2a",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "official-jobs-attempt1",
+      "method": "GET",
+      "endpoint": "repos/foolkking/chat-reader/actions/runs/43599055418/attempts/1/jobs?per_page=100",
+      "requested_at": "2026-11-14T13:32:14.964286+00:00",
+      "received_at": "2026-11-14T13:32:16.232813+00:00",
+      "elapsed_monotonic_seconds": 1.2809999999590218,
+      "exit_code": 0,
+      "stdout_bytes": 9122,
+      "stdout_sha256": "d1c450af82dba74edef55f665de6a95a4bc9a4350d37b56cb9c6398032980eea",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "official-artifacts",
+      "method": "GET",
+      "endpoint": "repos/foolkking/chat-reader/actions/runs/43599055418/artifacts?per_page=100",
+      "requested_at": "2026-11-14T13:32:16.233815+00:00",
+      "received_at": "2026-11-14T13:32:17.394190+00:00",
+      "elapsed_monotonic_seconds": 1.1559999999590218,
+      "exit_code": 0,
+      "stdout_bytes": 32,
+      "stdout_sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "official-failed-job-132459686994",
+      "method": "GET",
+      "endpoint": "repos/foolkking/chat-reader/actions/jobs/132459686994/logs",
+      "requested_at": "2026-11-14T13:32:17.394190+00:00",
+      "received_at": "2026-11-14T13:32:20.346377+00:00",
+      "elapsed_monotonic_seconds": 2.9540000000270084,
+      "exit_code": 0,
+      "stdout_bytes": 44928,
+      "stdout_sha256": "ddce53db04bc479479972150c099c7794d5126d8433d5f22c61abc2643669a11",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "official-check-132459686994",
+      "method": "GET",
+      "endpoint": "repos/foolkking/chat-reader/check-runs/132459686994",
+      "requested_at": "2026-11-14T13:32:20.346377+00:00",
+      "received_at": "2026-11-14T13:32:21.578986+00:00",
+      "elapsed_monotonic_seconds": 1.234000000054948,
+      "exit_code": 0,
+      "stdout_bytes": 3066,
+      "stdout_sha256": "11f36182229970d3bf2d340b41d08c4746d83d2ec033cba0ffd7a68b0547e89c",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "official-annotations-132459686994",
+      "method": "GET",
+      "endpoint": "repos/foolkking/chat-reader/check-runs/132459686994/annotations?per_page=100",
+      "requested_at": "2026-11-14T13:32:21.578986+00:00",
+      "received_at": "2026-11-14T13:32:22.773268+00:00",
+      "elapsed_monotonic_seconds": 1.1869999999180436,
+      "exit_code": 0,
+      "stdout_bytes": 1723,
+      "stdout_sha256": "12175223104041fd45a1a79eae44aa4f81e03f41e3be8f3375742d57bbf89f6c",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "fresh_local_original_log_probe": {
+    "source_job_id": 132397937119,
+    "official_source_run_attempt": 1,
+    "source_job_status": "success",
+    "listed_artifact_count": 4,
+    "requests": [
+      {
+        "name": "fresh-original-source-run",
+        "endpoint": "actions/runs/43578495558",
+        "method": "GET",
+        "requested_at": "2026-11-14T13:36:17.606014+00:00",
+        "received_at": "2026-11-14T13:36:19.309932+00:00",
+        "monotonic_elapsed_seconds": 1.702999999979511,
+        "exit_code": 0,
+        "http_error_status": null,
+        "stdout_bytes": 12495,
+        "stdout_sha256": "ad8452eaed295b20f6e483d8183de27653e051dfc33aa8a95a4ec0f8e5a834f3",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "fresh-original-source-jobs",
+        "endpoint": "actions/runs/43578495558/attempts/1/jobs?per_page=100",
+        "method": "GET",
+        "requested_at": "2026-11-14T13:36:19.310932+00:00",
+        "received_at": "2026-11-14T13:36:20.695372+00:00",
+        "monotonic_elapsed_seconds": 1.375,
+        "exit_code": 0,
+        "http_error_status": null,
+        "stdout_bytes": 28157,
+        "stdout_sha256": "92321d4e10fe8eba84311229380fb2fab7ab4976e07ff0729dee25ecba616547",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "fresh-original-source-artifacts",
+        "endpoint": "actions/runs/43578495558/artifacts?per_page=100",
+        "method": "GET",
+        "requested_at": "2026-11-14T13:36:20.696358+00:00",
+        "received_at": "2026-11-14T13:36:21.823360+00:00",
+        "monotonic_elapsed_seconds": 1.125,
+        "exit_code": 0,
+        "http_error_status": null,
+        "stdout_bytes": 2951,
+        "stdout_sha256": "395f234ff520eea1873c7bcedea7aa10c0f8398611b8bf25eaecb81015eace26",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "fresh-original-source-api-job-log",
+        "endpoint": "actions/jobs/132397937119/logs",
+        "method": "GET",
+        "requested_at": "2026-11-14T13:36:21.823360+00:00",
+        "received_at": "2026-11-14T13:36:25.725519+00:00",
+        "monotonic_elapsed_seconds": 3.9070000000065193,
+        "exit_code": 0,
+        "http_error_status": null,
+        "stdout_bytes": 1421531,
+        "stdout_sha256": "4280ea2c5b74f2032843fac0fbcc8bcbd6e342e7e3de96f3cf83166a5442657f",
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "local_credential_not_equal_to_ci_token": true,
+    "ci_error_status_not_retained": true,
+    "ci_root_cause_not_inferred_from_local_success": true,
+    "old_download_exists": true,
+    "matches_previous_download": true,
+    "exact_observed_api_summary_present": true,
+    "supervisor_unique_cases": 17,
+    "supervisor_total_cases": 17,
+    "real_pg_poll_cases": [
+      1,
+      20
+    ]
+  },
+  "local_source_log_success_does_not_prove_ci_token_or_original_cause_resolved": true,
+  "old_selector_dispatch_receipt_sha256": "ff002accbd63ca7497cb1342c34b23591e6e302217dfe9e88804920e2e5a84af",
+  "old_dispatch_and_failure_evidence_not_rewritten": true,
+  "no_new_wait_or_3000_second_monotonic_claim": true,
+  "ci_state_mutation_requests_during_failure_diagnosis": 0,
+  "production_not_rechecked_or_modified": true
+}

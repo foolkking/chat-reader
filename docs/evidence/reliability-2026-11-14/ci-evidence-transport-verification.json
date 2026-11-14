@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T14:19:01.283644+00:00",
+  "status": "local_controls_passed_not_ci_or_release_acceptance",
+  "precommit_head_sha": "b84ac1d0faf89eb25552c01d6d71cad0751f33d1",
+  "authorized_next_operation": "one selective commit/normal push/normal full workflow dispatch then pause",
+  "next_dispatch_inputs": {
+    "quality_source_run_id": ""
+  },
+  "next_ci_reuses_original_quality": false,
+  "code_changes": [
+    "scripts/ci/image-only-quality-reuse.py",
+    "scripts/ci/test_image_only_evidence_transport.py"
+  ],
+  "owned_document_changes": [
+    "PROJECT_STATE.md",
+    "docs/index.md",
+    "docs/documentation-inventory.md",
+    "docs/evidence/README.md",
+    "docs/testing.md",
+    "docs/deployment.md",
+    "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md",
+    "docs/system/RELEASE_SAFETY_BASELINE.md",
+    "docs/system/DEPLOYMENT_AND_ENVIRONMENT.md"
+  ],
+  "original_function_changes": [
+    "api"
+  ],
+  "additive_functions": [
+    "evidence_error_kind"
+  ],
+  "all_other_original_functions_constants_and_cli_ast_unchanged": true,
+  "get_attempt_limit": 3,
+  "shared_original_get_deadline_seconds": 180,
+  "backoff_seconds": [
+    1,
+    2
+  ],
+  "backoff_included_in_same_deadline": true,
+  "retriable_http_statuses": [
+    408,
+    429,
+    500,
+    502,
+    503,
+    504
+  ],
+  "auth_missing_unknown_ambiguous_and_certificate_errors_fail_closed": true,
+  "no_raw_error_environment_token_cookie_signed_url_or_partial_failure_response_persisted": true,
+  "no_stale_cache_source_attempt_or_endpoint_fallback": true,
+  "json_zip_source_quality_counts_and_manifest_validators_unchanged": true,
+  "original_workflow_unchanged_git_sha256": "2d57174de064a79526b43f97f66cc8e83029b2d9ab8172bdd69d677616300916",
+  "six_original_jobs_four_empty_input_quality_selectors_and_no_custom_timeout_verified": true,
+  "new_controls_not_newly_wired_workflow_gates": true,
+  "python_controls": {
+    "passed": 100,
+    "skipped": 0,
+    "original": 37,
+    "selector": 34,
+    "new": 29
+  },
+  "node_controls": {
+    "passed": 77,
+    "skipped": 0,
+    "selector7_included_not_additional": true
+  },
+  "final_command_receipts": [
+    {
+      "name": "final-python-controls-v3",
+      "requested_at": "2026-11-14T14:18:52.683099+00:00",
+      "received_at": "2026-11-14T14:18:56.092692+00:00",
+      "elapsed_monotonic_seconds": 3.422000000020489,
+      "exit_code": 0,
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 19429,
+      "stderr_sha256": "d4f2a3302a4ded33c6b58d255bdb3ecbfc795d3d6e28987e9db342ca1ff18b06"
+    },
+    {
+      "name": "final-ci-node-controls-v3",
+      "requested_at": "2026-11-14T14:18:56.094697+00:00",
+      "received_at": "2026-11-14T14:19:00.078303+00:00",
+      "elapsed_monotonic_seconds": 3.984000000054948,
+      "exit_code": 0,
+      "stdout_bytes": 16932,
+      "stdout_sha256": "42bf98dfbe2ef9a38ac73f1fb40b20e166e219435639f056d61bdabd4cb86a3b",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "final-whitespace-controls-v3",
+      "requested_at": "2026-11-14T14:19:00.079303+00:00",
+      "received_at": "2026-11-14T14:19:00.142326+00:00",
+      "elapsed_monotonic_seconds": 0.06199999991804361,
+      "exit_code": 0,
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 1207,
+      "stderr_sha256": "f1d791a833ed50978d5200bc07f0bf398f1e57fa606bb65dd2ec1a5bb4542474"
+    }
+  ],
+  "initial_red_controls": {
+    "tests_run": 26,
+    "exit_code": 1,
+    "log_bytes": 52712,
+    "log_sha256": "f6aeff09bc21035d2b7d98cb066a2659d91558f0149c34c62654d8b300c92c2f",
+    "subtest_failures_not_unique_test_count": true
+  },
+  "local_whitespace_method_correction": {
+    "original_helper_sha256": "95d243dc8270eff41e735c600e1c1cc11383a3fa535fa1c235a6698bcc03211c",
+    "original_log_sha256": "41da91eac3ca66fefbfa9c915ffe26de7f0852573d25b7447a963b47f3690dcd",
+    "initial_failure_stdout_sha256": "4dbbb4e90a681bd1d5dcae2e69291376732db26136132c879338859fb001008e",
+    "correction": "Do not apply synthetic Git config isolation to workspace line-ending validation; use existing repository/user policy and exact owned paths. No global setting or whitespace rule changed.",
+    "scoped_existing_git_policy_check_exit": 0,
+    "stdout_bytes": 0,
+    "stderr_bytes": 1207,
+    "original_method_files_preserved": true
+  },
+  "local_report_format_method_correction": {
+    "v2_helper_sha256": "0fb72ad3b8684604aed00230e374ea1fdef90deabadbac5175cb790d11932167",
+    "v2_log_sha256": "76da55b4edd16a75fc9b50364f681e501789b557982ca472578e224de656e77c",
+    "v2_regressions_and_all_protected_historical_input_temp_phases_passed_before_report_format_assertion": true,
+    "official_counts": {
+      "tests": 77,
+      "pass": 77,
+      "fail": 0,
+      "skipped": 0
+    },
+    "correction": "Official Node runner uses the spec reporter (ℹ), not local TAP (#). Change only the evidence parser; preserve every test and count. Reuse the immutable completed v2 old-temp hash checkpoint rather than reread 23763 old files.",
+    "no_source_test_gate_or_old_evidence_bytes_changed": true,
+    "old_v1_v2_scripts_and_logs_preserved": true
+  },
+  "old_temp_hash_preservation_uses_completed_immutable_v2_checkpoint_not_new_reexecution": true,
+  "all_selected_files_still_require_strict_cached_whitespace_check_before_commit": true,
+  "actual_git_controls": {
+    "fixed_b84_immutable_lineage_still_verified": true,
+    "unchanged_tree_temp_child_of_b84_rejected": true,
+    "rejection": "Selector repair requires one direct, non-merge child of the fixed74f repair.",
+    "dirty_preflight_checkout_rejected": "Tracked/index drift is not an accepted image source.",
+    "no_workspace_commit_created_by_fixture": true
+  },
+  "full_mode_cli_tests": {
+    "new_run_four_quality_successes_required": true,
+    "fresh_quality_failure_not_replaced_by_old_quality": true,
+    "producer_and_independent_consumer_use_full_exact": true,
+    "no_original_source_api_log_zip_or_git_reuse_chain": true,
+    "transport_and_checkout_mocked_not_real_ci_or_checkout_acceptance": true
+  },
+  "input_manifest": "ci-evidence-transport-inputs.json",
+  "input_manifest_sha256": "4ba49b67b3564edbdf3bbd54a39e6c250249e91499a13eac0c2b380b27d20f66",
+  "selected_inputs": 1409,
+  "all_inputs_stable_across_final_controls": true,
+  "owned_document_sha256": {
+    "PROJECT_STATE.md": "25906311c579e455aa746268cf1caa2906225c6b8001a19ef775b233df4783ae",
+    "docs/index.md": "57039b2ffe3db98fa82b07c5a9a7adf78940bfcda4d80247e4b1c77210c3d7f9",
+    "docs/documentation-inventory.md": "1cc7d7bf4bb60078be2de7f4f0936debd59f97a28da3f743379fdd8388251749",
+    "docs/evidence/README.md": "9cab5829f4fc9050c3aac9c8dba1356cb1f5a184c32957f9eb3995749e8e386f",
+    "docs/testing.md": "9666e48bdaee893931e269b1acf24bde44db7356aed0d33508b832d15f55ad8b",
+    "docs/deployment.md": "ff61ee88fed4b4af266c228d1952aa3fd4a571c8ab89d46784a1657131e0e75f",
+    "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md": "cadc663e73a3ef7eff9a33d223db5726c7c6179cc56d19e3e9cf08f0836b3d18",
+    "docs/system/RELEASE_SAFETY_BASELINE.md": "da742ce11fd214717cb2759d4ec90c99ba84d17246c2d708cdafc73bc69eee13",
+    "docs/system/DEPLOYMENT_AND_ENVIRONMENT.md": "3f459150187a51f81dc08e2eb0c557796eef5a9af258b2cadbf04a83cf003f8d"
+  },
+  "protected_worktree_files": 14,
+  "historical_evidence_files_preserved": 52,
+  "old_temp_roots_preserved": {
+    "reliability-ci-timeout-diagnosis-fix-20261114-10": 2103,
+    "reliability-ci-platform-failure-fix-20261114-11": 2580,
+    "reliability-ci-build-images-failure-fix-20261114-12": 739,
+    "reliability-ci-image-only-failure-20261114-13": 208,
+    "reliability-ci-selector-provenance-fix-20261114-14": 18133
+  },
+  "workspace_index_still_empty": true,
+  "no_new_full_web_api_pwa_real_pg_linux_image_memory_or_production_acceptance": true,
+  "no_ci_result_poll_wait_cancel_automation_or_deployment": true,
+  "production_not_rechecked_or_modified": true,
+  "task_temp_directory_name": "reliability-ci-image-only-selector-failure-20261114-15",
+  "actual_commit_and_unique_full_run_owned_by_subsequent_independent_dispatch_receipt": true
+}

@@ -7,7 +7,44 @@ run/attempt/job; no seeder admission, native operation deadline, memory or
 test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
+## Evidence GET faults and normal full-mode controls — local 2026-11-14
+
+The latest instruction selects ordinary full CI with empty quality-source input.
+The release workflow is unchanged: fresh API/Web/Settings/Reader quality,
+five real memory cases, image construction and independent artifact checks
+remain mandatory. The old one-off source chain is not extended.
+
+`test_image_only_evidence_transport.py` adds29 offline controls: classified
+transient GET recovery/exhaustion, one shared original180-second deadline,
+permission/missing/unknown/certificate rejection, partial/stale response
+rejection, credential-safe diagnostics and original JSON/ZIP/source validators.
+Three full-mode controls prove fresh quality is required and both CLI producer/
+consumer paths avoid the original source/log/ZIP and Git reuse chain. Fixtures
+mock transport/checkout; they are not real CI-token, Git checkout or network tests.
+The new29 are local controls, not newly wired workflow gates.
+
+```text
+python -m unittest discover -s scripts/ci -p 'test_image_only_*.py' -v
+```
+
+Local Python100 (original37+selector34+new29), Node77 and the package selector7
+pass with zero skips; the7 are included in77, not additional unique coverage.
+The initial26-control red log is retained. No new Web/API full suite, PWA,
+PostgreSQL, Linux/image/resource or product acceptance is claimed.
+b84ac1d/43599055418 stopped at the original API-log download with controls
+passing and zero artifacts; its unretained HTTP cause remains unknown.
+[Failure](evidence/reliability-2026-11-14/ci-image-only-selector-failure.json) /
+[verification](evidence/reliability-2026-11-14/ci-evidence-transport-verification.json) /
+[current release policy](system/RELEASE_SAFETY_BASELINE.md#ordinary-full-ci-after-image-only-failure--2026-11-14).
+
+Confirm the one authorized normal full dispatch and immediately pause; no
+result polling, waiter, automation, cancellation or deployment. All custom
+job/step total timeouts remain absent; native/platform bounds are unchanged.
+
 ## Exact selector-repair lineage controls — local 2026-11-14
+
+Historical single-dispatch checkpoint; the latest ordinary full-CI instruction
+above does not expand this one-off lineage or relabel its failed run as accepted.
 
 The separately approved repair pins the fixture's exact Git/LF bytes and the
 4481→fixed74f→single-direct-candidate chain. The original37 controls/patch remain
