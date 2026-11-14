@@ -1,5 +1,25 @@
 # Markdown 文档台账
 
+## 普通CI最终失败与严格安全合同修正 — 2026-11-14
+
+定点同步Project State、导航、唯一台账、Testing、Release Safety及两证据入口；
+不重整全仓、不改AGENTS/全局记忆、旧回执或无关资料。
+新增`ci-full-quality-final-failure.json`区分整次最终仅Web失败/三诊断ZIP已验证，
+不覆盖仍在运行时的旧Web快照；`ci-release-contract-verification.json`和1409
+输入记录单一测试修正、33拒绝控制、源码36/Python100/Node77及静态/保全。
+业务/workflow/依赖/资源输入不变，五个runtime用例与所有新CI门禁保留。
+选择性提交/推送并只派发一次空quality source完整CI；随后
+`ci-release-contract-dispatch.json`出现即暂停，不等待/安排/取消/部署。
+
+## 前一独立导入停止与部分Web失败检查点（历史）— 2026-11-14
+
+新增`production-stall-recovery-followup.json`保存当前执行的单次定点停止、
+4来源真实哈希保全及独立空闲/11容器保全，不覆盖旧事件或冒充部署。
+新增`ci-full-web-failure.json`保存普通CI的Web44/1旧工作流断言失败和当时仍
+运行的整次快照；诊断制品只有元数据，未下载或验收。
+仅更新Project State、导航、唯一台账和本索引/证据入口；源码/测试/工作流/
+1409输入及旧回执保持不变，未新提交/派发/取消CI或部署。
+
 ## 取证GET容错与一次普通完整CI授权 — 2026-11-14
 
 用户报告b84ac1d/43599055418再次失败后，明确允许直接提交普通CI完成构建。

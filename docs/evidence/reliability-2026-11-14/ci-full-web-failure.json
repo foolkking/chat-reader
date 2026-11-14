@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T15:19:03.009740+00:00",
+  "status": "official_web_job_failed_whole_run_in_progress_at_diagnostic_snapshot",
+  "observation_trigger": "User reported web-quality already failed",
+  "run_snapshot": {
+    "conclusion": null,
+    "created_at": "2026-11-14T14:23:42Z",
+    "event": "workflow_dispatch",
+    "head_sha": "3d8f77fa54330e2fc8998a9329d4bdfe796f694b",
+    "html_url": "https://github.com/foolkking/chat-reader/actions/runs/43604634535",
+    "id": 43604634535,
+    "path": ".github/workflows/build-release-images.yml",
+    "run_attempt": 1,
+    "status": "in_progress",
+    "updated_at": "2026-11-14T14:23:52Z"
+  },
+  "jobs_snapshot": [
+    {
+      "id": 132476524117,
+      "name": "api-quality",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 132476524300,
+      "name": "settings-quality",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 132476524364,
+      "name": "web-quality",
+      "status": "completed",
+      "conclusion": "failure"
+    }
+  ],
+  "failed_web_step": {
+    "completed_at": "2026-11-14T14:48:14Z",
+    "conclusion": "failure",
+    "name": "Focused online browser and security checks",
+    "number": 40,
+    "started_at": "2026-11-14T14:46:15Z",
+    "status": "completed"
+  },
+  "failed_test": {
+    "path": "apps/web/e2e/release-security-baseline.spec.ts",
+    "test_line": 149,
+    "first_failed_assertion_line": 151,
+    "title": "release workflow cannot build a deployable artifact before quality passes",
+    "observed_failure": "Old literal build-images condition regex does not match the already approved full/image-only condition"
+  },
+  "focused_online_browser_result": {
+    "passed": 44,
+    "failed": 1
+  },
+  "actual_existing_full_mode_still_requires_all_four_fresh_quality_successes": true,
+  "repair_must_preserve_full_mode_and_protected_reuse_fail_closed_semantics": true,
+  "remaining_workflow_assertions_require_review_not_just_removing_first_assertion": true,
+  "release_workflow_application_and_original_tests_not_modified_in_this_checkpoint": true,
+  "diagnostic_artifact_metadata_only_not_downloaded_or_content_verified": [
+    {
+      "created_at": "2026-11-14T14:48:16Z",
+      "digest": "sha256:039c940091a43a4ace3035605131c321055c687a2f520ef5f9fe0529895b0f0b",
+      "expired": false,
+      "id": 14118691040,
+      "name": "release-a-quality-evidence-3d8f77fa54330e2fc8998a9329d4bdfe796f694b-1",
+      "size_in_bytes": 25579870,
+      "workflow_run": {
+        "head_branch": "master",
+        "head_repository_id": 1297627534,
+        "head_sha": "3d8f77fa54330e2fc8998a9329d4bdfe796f694b",
+        "id": 43604634535,
+        "repository_id": 1297627534
+      }
+    }
+  ],
+  "official_read_receipts": [
+    {
+      "name": "official-run",
+      "method": "GET",
+      "endpoint": "actions/runs/43604634535",
+      "requested_at": "2026-11-14T14:55:32.391182+00:00",
+      "received_at": "2026-11-14T14:55:33.719103+00:00",
+      "elapsed_monotonic_seconds": 1.3290000000270084,
+      "exit_code": 0,
+      "stdout_bytes": 361,
+      "stdout_sha256": "a63bade340fc585b6b9df347014e059c841a8046d7cc89355fc64daa0224eb1c"
+    },
+    {
+      "name": "official-jobs-attempt1",
+      "method": "GET",
+      "endpoint": "actions/runs/43604634535/attempts/1/jobs?per_page=100",
+      "requested_at": "2026-11-14T14:55:33.719647+00:00",
+      "received_at": "2026-11-14T14:55:35.068457+00:00",
+      "elapsed_monotonic_seconds": 1.3429999999934807,
+      "exit_code": 0,
+      "stdout_bytes": 16542,
+      "stdout_sha256": "136f1144d66abf2dd8a06718ccdcf5900d05e639680ef96a0c4752dae80cefea"
+    },
+    {
+      "name": "official-web-job-132476524364",
+      "method": "GET",
+      "endpoint": "actions/jobs/132476524364/logs",
+      "requested_at": "2026-11-14T14:55:35.068976+00:00",
+      "received_at": "2026-11-14T14:55:38.922814+00:00",
+      "elapsed_monotonic_seconds": 3.85999999998603,
+      "exit_code": 0,
+      "stdout_bytes": 1206859,
+      "stdout_sha256": "ce9e7ac6c087e6327fca9677a1855e8af9c96c19d1eae3c40ab82dc01b73f63a"
+    },
+    {
+      "name": "official-artifacts",
+      "method": "GET",
+      "endpoint": "actions/runs/43604634535/artifacts?per_page=100",
+      "requested_at": "2026-11-14T14:55:38.925819+00:00",
+      "received_at": "2026-11-14T14:55:40.086801+00:00",
+      "elapsed_monotonic_seconds": 1.1560000000754371,
+      "exit_code": 0,
+      "stdout_bytes": 460,
+      "stdout_sha256": "15eed39c49f17a04c87d770c68a64d9196736a4892734c8a7d5bf7efbf42516a"
+    }
+  ],
+  "official_web_job_log_sha256": "ce9e7ac6c087e6327fca9677a1855e8af9c96c19d1eae3c40ab82dc01b73f63a",
+  "dispatch_receipt_sha256": "9d23928be61478623c16cdf60385f6131a6122a8392995df4b6a73aac2b821ed",
+  "user_report_is_not_a_new_fifty_minute_wait_or_whole_run_completion_claim": true,
+  "local_code_repair_commit_push_ci_redispatch_cancel_wait_automation_or_deployment": false,
+  "task_temp_directory_name": "reliability-ci-full-web-failure-20261114-16"
+}

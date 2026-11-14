@@ -1,6 +1,41 @@
 # Project State
 
-## Reliability candidate — 2026-11-14 (ordinary full CI authorized)
+## Latest full-CI contract repair and retained incident — 2026-11-14
+
+Exact3d8f77f/43604634535 is completed/failure: API6751/3 skips/5 warnings,
+Settings470+independent restore1 and candidate reading comparison9 pass.
+Web alone failed its old literal release-workflow assertion (44/1); ten later
+Web gates and both image-release jobs did not run.
+[Final failure](docs/evidence/reliability-2026-11-14/ci-full-quality-final-failure.json)
+verifies four official logs/three diagnostic ZIPs, not deployable artifacts.
+
+Only the existing security spec changes: current exact full/reuse selectors,
+mandatory source proof before builds, and independent consumer proof remain
+strict;33 additive rejection controls supplement the original case.
+Local source-only36, Python100, Node77 and lint/typecheck pass. All other1408
+inputs,58 historical receipts and13 unrelated files remain byte-identical.
+[Verification](docs/evidence/reliability-2026-11-14/ci-release-contract-verification.json) /
+[inputs](docs/evidence/reliability-2026-11-14/ci-release-contract-inputs.json).
+No application/workflow/resource change, local serving stack or new build.
+
+Selectively commit/push and dispatch ordinary full CI once with empty quality
+source; confirm identity, then pause. The independent
+`ci-release-contract-dispatch.json` owns that new run once present; do not repeat
+submission, poll results, wait, cancel, schedule or deploy. No project job/step
+total timeout; native bounds and GitHub's six-hour job cap remain.
+
+The separately requested current-import stop is complete: the legacy worker
+rolled back to failed, with all four source files hash-verified and retained.
+The independent23:12 +08:00 snapshot has zero active/queued tasks or lock waits,
+an idle worker, and unchanged11 containers/configuration/volumes.
+[New incident receipt](docs/evidence/reliability-2026-11-14/production-stall-recovery-followup.json).
+Production is still3564cbf/schema0060; this is not deployment or a permanent fix.
+
+The [earlier Web snapshot](docs/evidence/reliability-2026-11-14/ci-full-web-failure.json)
+still records its original in-progress observation; its bytes are not changed
+into the later final result. Production is not rechecked or modified this turn.
+
+## Earlier reliability candidate — 2026-11-14 (its ordinary full CI failed)
 
 After the latest image-only failure, the user authorized a normal full CI.
 Selectively commit/push and dispatch the existing release workflow once with

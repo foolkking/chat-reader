@@ -12,7 +12,71 @@
 资料、不清理生产、不建立自动安排；未验收项不能因委托用户而改标通过。
 11月12日的一次本地检查点与随后本地工作限制保留为历史，不覆盖最新授权。
 
-### 11月14日最新授权：普通完整CI，不再扩展仅镜像来源链
+### 11月14日最新：整次CI仅Web失败，严格发布合同修正本地通过
+
+用户反馈整次失败后，正式attempt1确认3d8f77f/43604634535为completed/failure。
+API6751通过/3显式跳过/5 warnings，17监督及真实PG poll1/poll20均通过；
+Settings job57分59秒，470矩阵全部通过（timing3287.74秒）并独立restore1
+通过（43.44秒）；候选阅读比较9通过。历史baseline的9失败是原比较记录，
+不当成候选失败或改写为通过。Web唯一失败step/用例仍是旧安全工作流字面断言，
+专项44通过/1失败；正式Web14门禁只有3 PASS/1 FAIL/10 NOT_VERIFIED。
+镜像及独立消费者skip，Docker/内存/ORM未执行，无可部署制品。
+[独立最终失败](../evidence/reliability-2026-11-14/ci-full-quality-final-failure.json)
+保存四正式日志和三官方size/SHA/CRC/路径验证诊断ZIP。首次本地Web ZIP读取
+失败且未保留错误类型，后续同一制品正式GET成功/原digest一致；不冒充CI-token
+或传输根因已修。旧派发及当时仍运行的Web快照原字节保留。
+
+仅修改`release-security-baseline.spec.ts`：原用例名称及其他七原用例全文保留，
+过时builder条件和reading job头断言按现行空/非空selector严格校正；空input
+仍必须四项新质量成功，非空只通往原固定来源/全Git链证明，不能任意复用。
+生产者证明必须无条件先于任何Docker build，原内存/检查/包装/上传顺序保留；
+消费者必须绑定实际source/head/producer attempt，先证明后load。
+新增33项实际变更且必须被拒绝的负对照，包括逐项质量/dependency/branch、
+缺取消栅栏、可选/缺失证明、提前build/load、缺/可选内存、缺诊断和错误包装顺序。
+没有删除失败断言、增加skip、放宽worker/PG/浏览器/逐帧/内存或资源时限。
+
+原失败用例先独立复现；最终源码专项36（原三个纯源码用例+新增33）、
+现有Python100、CI Node77、lint/typecheck通过，均零新增skip。五个原runtime
+用例未本地启动站点重测，仍完整保留交新CI；不是本地浏览器/PWA/build或PG验收。
+首轮临时编辑语法错误和Windows Node20不展开Bash glob的命令错误原日志保留，
+没有掩盖成测试通过。typecheck增量文件放任务TEMP，用户tsbuildinfo不变。
+1409输入只此测试变化，其余1408、58历史回执及13无关文件实际哈希不变。
+[本地验证](../evidence/reliability-2026-11-14/ci-release-contract-verification.json) /
+[输入冻结](../evidence/reliability-2026-11-14/ci-release-contract-inputs.json)。
+
+按既定普通完整CI路线选择性提交/正常推送，只派发一次原工作流，quality source
+为空；不运行image-only preflight、扩parent/白名单或继承旧质量/内存结果。
+新独立`ci-release-contract-dispatch.json`登记实际candidate/run；确认即暂停，
+不等待/轮询/取消/安排/部署，回执出现后不得重复提交。项目job/step总限时仍无，
+GitHub六小时平台上限和全部原生门禁保留。生产未复查/操作，旧3564cbf/schema0060
+仍只是先前验证指针；唯一备份、配置/volume及用户来源不动，剩余验收仍归用户。
+
+### 前一23:12检查点（历史）：本次导入定点停止完成，Web断言当时待修
+
+用户另行要求终止当前卡住的导入。新执行仍在旧3564cbf/schema0060上：
+persisting/progress10，核验时已81分钟；canonical等待应用、进度等canonical、
+心跳再等进度。只作一次绑定当前执行/源集合/连接代次/容器的辅助进度语句取消，
+原worker自行回滚为FAILED/IMPORT_COMMIT_FAILED；没有手写任务终态或终止
+canonical连接，也没有重启、清队列、删除来源或自动重放。
+实际canonical来源是4文件/4,894,923字节，不用preview的2文件计数代替；
+前后及独立复核均逐文件核对真实SHA。23:12 +08:00活动/排队任务、租约及
+锁等待均0，worker空闲；原两项排队后台工作正常继续，未被取消或删除。
+11容器身份/启动/重启/镜像/配置/挂载、生产checkout/config/volume及备份
+目录集合不变。未重新验收备份内容；初次重型只读快照失败，轻量快照保留原
+5秒SQL预算但不统计全表，故不宣称canonical全表数量差为0。
+[独立事件回执](../evidence/reliability-2026-11-14/production-stall-recovery-followup.json)
+不覆盖前两次事件，也不表示候选修复已经部署。
+
+用户先前报告普通完整CI3d8f77f/43604634535的Web失败。正式日志确认唯一
+失败step为Focused online browser and security checks，44通过/1失败：
+release-security-baseline.spec.ts:149的首个断言仍匹配旧build-images字面条件。
+当前空quality source的路径仍要求四项新质量成功；后续修正必须同时核对全部
+工作流断言及完整/受保护复用的拒绝语义，不能删除断言或放宽实际发布门禁。
+[Web失败回执](../evidence/reliability-2026-11-14/ci-full-web-failure.json)只记录当时
+API/Settings仍在运行的快照和未下载的诊断制品元数据，不宣称整次完成或制品
+内容验收。此次优先处理生产停止，尚未修测试或重新提交/派发/取消/等待/部署。
+
+### 11月14日普通完整CI授权：唯一派发已完成，不再扩展仅镜像来源链
 
 用户在报告再次失败后明确允许直接提交普通CI，让同一次运行自行完成构建。
 本轮选择性提交/正常推送并只派发一次原`build-release-images.yml`，

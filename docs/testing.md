@@ -7,6 +7,35 @@ run/attempt/job; no seeder admission, native operation deadline, memory or
 test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
+## Release workflow contract and rejection controls — local 2026-11-14
+
+The unchanged full workflow's failed3d8f77f CI exposed two old header/condition
+assumptions in `release-security-baseline.spec.ts`. The original failing title,
+all other seven original cases and native deadlines remain. The repaired source
+assertions require exact default/full/reuse conditions, four dependencies, the
+unconditional producer verifier before any build, all original memory/inspection/
+package/upload steps, and independent source/head/producer-attempt proof before
+load. Nonempty input still passes through the unchanged fixed lineage validator.
+
+33 additive mutations must actually change the workflow and be rejected.
+Local source-only36 includes the original three static cases and33 negatives;
+Python100, Node77 and lint/typecheck pass. The isolated task-local Playwright
+config selects only source tests, retains90-second cases/60-second expects/one
+worker, and has no server/browser fixture. It does not skip or remove the five
+runtime cases: those and all fourteen Web gates remain in fresh full CI.
+No local serving stack, build/PWA, API suite, PG or image-memory rerun is claimed.
+The initial original failure, transient edit syntax error and Windows glob
+command error are preserved, not renamed passing tests.
+[Verification](evidence/reliability-2026-11-14/ci-release-contract-verification.json) /
+[1409 inputs](evidence/reliability-2026-11-14/ci-release-contract-inputs.json).
+
+The [final failed run](evidence/reliability-2026-11-14/ci-full-quality-final-failure.json)
+has API6751/3 skips/5 warnings, Settings470+restore1 and candidate comparison9
+successes, Web focused44/1, and ten subsequent Web gates unverified. No release
+image/real-memory/consumer ran. These old successes are not reused by the next
+ordinary empty-input full dispatch; confirm its identity, then pause for the
+user's result without polling, scheduling, cancellation or deployment.
+
 ## Evidence GET faults and normal full-mode controls — local 2026-11-14
 
 The latest instruction selects ordinary full CI with empty quality-source input.

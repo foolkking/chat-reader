@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T15:51:30.451412+00:00",
+  "status": "local_source_only_repair_verified_new_full_ci_required",
+  "precommit_head_sha": "3d8f77fa54330e2fc8998a9329d4bdfe796f694b",
+  "modified_test": "apps/web/e2e/release-security-baseline.spec.ts",
+  "application_workflow_dependencies_migrations_and_resource_inputs_unchanged": true,
+  "repair": {
+    "original_test_title_and_all_other_original_spec_cases_retained": true,
+    "obsolete_literal_build_condition_and_reading_header_updated_to_current_contract": true,
+    "exact_default_full_selector_four_success_branch_and_guarded_reuse_branch_required": true,
+    "mandatory_producer_verifier_before_any_docker_build_required": true,
+    "original_quality_diagnostics_memory_inspection_packaging_and_upload_order_preserved": true,
+    "independent_source_candidate_producer_attempt_verification_before_docker_load_required": true,
+    "original_fixed_image_only_source_lineage_and_100_python_controls_unchanged": true,
+    "negative_controls": [
+      "release quality gate rejects a nonempty default quality source",
+      "release quality gate rejects skipping fresh api-quality in full mode",
+      "release quality gate rejects omitting the api-quality build dependency",
+      "release quality gate rejects accepting skipped api-quality as fresh quality",
+      "release quality gate rejects accepting fresh api-quality in the declared reuse branch",
+      "release quality gate rejects skipping fresh web-quality in full mode",
+      "release quality gate rejects omitting the web-quality build dependency",
+      "release quality gate rejects accepting skipped web-quality as fresh quality",
+      "release quality gate rejects accepting fresh web-quality in the declared reuse branch",
+      "release quality gate rejects skipping fresh settings-quality in full mode",
+      "release quality gate rejects omitting the settings-quality build dependency",
+      "release quality gate rejects accepting skipped settings-quality as fresh quality",
+      "release quality gate rejects accepting fresh settings-quality in the declared reuse branch",
+      "release quality gate rejects skipping fresh reading-performance-comparison in full mode",
+      "release quality gate rejects omitting the reading-performance-comparison build dependency",
+      "release quality gate rejects accepting skipped reading-performance-comparison as fresh quality",
+      "release quality gate rejects accepting fresh reading-performance-comparison in the declared reuse branch",
+      "release quality gate rejects an absent cancellation guard",
+      "release quality gate rejects quality failure ignored by the builder",
+      "release quality gate rejects optional producer provenance",
+      "release quality gate rejects missing fresh dependency results in provenance",
+      "release quality gate rejects a provenance source different from the declared input",
+      "release quality gate rejects an absent producer source verifier",
+      "release quality gate rejects an extra Docker build before provenance",
+      "release quality gate rejects missing real bounded-memory verification",
+      "release quality gate rejects optional real bounded-memory verification",
+      "release quality gate rejects missing non-deployable diagnostics",
+      "release quality gate rejects packaging before image inspection",
+      "release quality gate rejects an independent consumer admitted without a successful producer",
+      "release quality gate rejects an absent independent source verifier",
+      "release quality gate rejects optional independent inspection",
+      "release quality gate rejects an extra Docker load before independent provenance",
+      "release quality gate rejects an independent proof for a different producer attempt"
+    ]
+  },
+  "tests": {
+    "original_failed_case_reproduced": {
+      "failed": 1,
+      "passed": 0
+    },
+    "final_playwright_source_only": {
+      "passed": 36,
+      "failed": 0,
+      "skipped": 0,
+      "negative_controls": 33
+    },
+    "python_release_controls": {
+      "passed": 100,
+      "skipped": 0
+    },
+    "node_ci_controls": {
+      "passed": 77,
+      "skipped": 0
+    },
+    "lint": "passed",
+    "typecheck": "passed",
+    "typecheck_incremental_output_kept_in_task_temp_user_tsbuildinfo_unchanged": true,
+    "source_only_config_preserves_90000_case_60000_expect_and_one_worker": true,
+    "five_original_runtime_spec_cases_deferred_to_complete_fresh_ci_not_skipped_or_deleted": true,
+    "local_browser_full_pwa_web_build_api_suite_postgresql_and_image_memory_not_run": true
+  },
+  "failed_local_attempts_retained": [
+    {
+      "file": "source-original-red.log",
+      "kind": "expected_original_contract_failure"
+    },
+    {
+      "file": "source-green-first.log",
+      "kind": "transient_edit_syntax_error_no_tests_collected_corrected"
+    },
+    {
+      "file": "node-ci-controls.log",
+      "kind": "Windows_Node20_does_not_expand_Bash_glob"
+    }
+  ],
+  "local_evidence_sha256": {
+    "source-report-red.json": "c19d717f3ce235d2d8af303d5ed15d94ab309f6dd7ac23de71b607e06f433f7c",
+    "source-report-green-final.json": "50bff2f598bda63b5df6b35500514aef4a16e82bcc22b9c934924e091104cf6c",
+    "source-original-red.log": "2ba3b1bc5a811d6130b0409e31e74525db96943a6d149bd56cb9377761287243",
+    "source-green-first.log": "013a680000129cb3d96f165e6a92a53968151fb52253cfb599159ec1bd2d194a",
+    "source-green-final.log": "7c4fa42c2be61d4fc28c7726995f3b3b1bbce07aaf8c6fdcf9c701758e63489d",
+    "python-controls.log": "45b2fc2354fa9333cc81ccfa9ab00d6c0113bf51021a3020fd773ec4400cd45d",
+    "node-ci-controls.log": "7405d213e792be7df2926d2f53fa096aee7ecbec2d0fda501f43f7c77ab3a8bb",
+    "node-ci-controls-final.log": "5bafd4fa1408e521c28538ffe384c9cd77f2291c2d6da364668ea40eeb957ad1",
+    "web-lint.log": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+    "web-typecheck.log": "e9f3956ff4f945d1ce12d011f593af50390311a4528f057fce3cac8b6618048e",
+    "playwright-source.config.cjs": "d9dfbfa4f55b7fb087ad704a89f0159f589e1b1ed804c35d212189bbbb0cbaae",
+    "official-final-read-receipt.json": "d3d5504e96282fba22c923e9d6948f4d0a33e58d7680a304ee90a9a7e18b5b21",
+    "official-final-artifact-receipt.json": "1655bbcdda6eca24e51f1276ac1ceff8c39d1fb1518e79785beecc1265875062"
+  },
+  "input_count": 1409,
+  "all_other_1408_inputs_unchanged": true,
+  "protected_unrelated_files": 13,
+  "historical_evidence_files_byte_preserved": 58,
+  "no_skip_removal_deadline_memory_or_security_gate_relaxation": true,
+  "normal_core_autocrlf_true_preserved_index_empty": true,
+  "local_node": "20.13.1",
+  "ci_image_node": "22.13.1",
+  "local_python": "3.11.7",
+  "local_controls_are_not_linux_fresh_quality_or_release_acceptance": true,
+  "next_step": "selective_commit_normal_push_single_full_dispatch_empty_quality_source_then_immediate_pause",
+  "new_dispatch_receipt": "ci-release-contract-dispatch.json",
+  "image_only_source_chain_not_extended_and_no_image_only_preflight": true,
+  "no_custom_ci_job_or_step_total_timeout_platform_six_hour_cap_and_native_gates_retained": true,
+  "production_not_rechecked_or_modified": true,
+  "cancellation_rerun_dispatch_wait_automation_or_production_operations_in_local_repair": 0,
+  "task_temp_directory_name": "reliability-ci-full-final-failure-fix-20261114-18"
+}

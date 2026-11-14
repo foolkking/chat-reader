@@ -121,6 +121,29 @@ This contract defines the Release A security and provenance gate. It does not ch
 
 ### Ordinary full CI after image-only failure — 2026-11-14
 
+The subsequent full3d8f77f/43604634535 completed/failure solely in the Web
+security spec's obsolete literal workflow assertion. API6751, Settings470+
+independent restore1 and candidate reading comparison9 passed; ten remaining
+Web gates and both release jobs did not execute. The final diagnosis verifies
+four logs/three diagnostic ZIPs, not images or inherited fresh quality.
+[Final failure](../evidence/reliability-2026-11-14/ci-full-quality-final-failure.json).
+
+Only that spec now matches the current exact job selectors/conditions and
+adds33 rejection controls. Empty input requires all four fresh successes;
+nonempty input still requires the original pinned source/lineage verifier.
+Producer proof remains unconditional before any build, original real-memory/
+inspection/package/upload steps remain mandatory, and the consumer proves
+source/head/actual producer attempt before loading. Python100/Node77 and
+source-only36/static checks pass locally, not Linux or release acceptance.
+[Verification](../evidence/reliability-2026-11-14/ci-release-contract-verification.json).
+Application, workflow, dependency and resource bytes remain unchanged.
+
+This repair follows the same ordinary full-CI route below: one selective
+commit/normal push/empty-input dispatch, identity confirmation, then pause.
+`ci-release-contract-dispatch.json` owns the actual new run once present.
+The earlier `ci-full-quality-dispatch.json` stays immutable historical evidence;
+do not redispatch it or expand the fixed image-only lineage.
+
 The latest user instruction authorizes one normal full release CI, not another
 image-only lineage extension. Dispatch the existing workflow with empty
 `quality_source_run_id`; all four quality jobs, image builds, five real memory
@@ -147,7 +170,7 @@ new complete quality, Linux or release acceptance.
 
 Selectively commit/push, confirm the sole full dispatch, then pause without
 result polling, waiter, automation, cancellation or deployment. The subsequent
-`ci-full-quality-dispatch.json` owns the actual candidate/run; once present,
+`ci-release-contract-dispatch.json` owns this repair's actual candidate/run; once present,
 do not repeat submission. No custom job/step timeout, production operation,
 cleanup or user-source replay is authorized by this checkpoint.
 

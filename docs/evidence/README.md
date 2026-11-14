@@ -1,5 +1,26 @@
 # 事实证据索引
 
+## 普通完整CI最终失败与安全合同修正 — 2026-11-14
+
+[最终失败](reliability-2026-11-14/ci-full-quality-final-failure.json)：
+3d8f77f/43604634535仅Web旧字面断言失败，API6751、Settings470+restore1、
+候选比较9通过；Web后十门禁及两发布job未执行，三诊断ZIPsize/SHA/CRC已核对。
+[本地修正验证](reliability-2026-11-14/ci-release-contract-verification.json) /
+[1409输入](reliability-2026-11-14/ci-release-contract-inputs.json)：
+仅修测试合同并追加33拒绝控制，源码36/Python100/Node77及静态通过；
+旧58回执/13无关文件保全，不冒充新浏览器/Linux/镜像/生产验收。
+随后`ci-release-contract-dispatch.json`登记实际新完整CI，确认即暂停；
+不继承旧成功项、扩镜像来源链、取消或操作生产，旧派发和部分快照原字节保留。
+
+## 前一独立导入停止与部分CI Web失败（历史）— 2026-11-14
+
+[本次停止](reliability-2026-11-14/production-stall-recovery-followup.json)：
+旧worker自行回滚失败，4来源真实哈希保全，23:12独立空闲/锁0及11容器保全；
+不覆盖旧事件，不表示候选修复已部署或备份内容重验。
+[Web失败](reliability-2026-11-14/ci-full-web-failure.json)：
+在线专项44/1，旧工作流条件字面断言失败；整次当时仍运行，制品仅元数据。
+没有新修测试、提交/派发、取消、等待或部署。
+
 ## 取证GET失败、容错控制与普通完整CI授权 — 2026-11-14
 
 [独立失败](reliability-2026-11-14/ci-image-only-selector-failure.json)保存

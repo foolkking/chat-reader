@@ -146,19 +146,247 @@ test("normal production bundles do not expose the PWA negative fault bridge", as
   }
 });
 
-test("release workflow cannot build a deployable artifact before quality passes", () => {
-  const workflow = fs.readFileSync(path.resolve(process.cwd(), "../../.github/workflows/build-release-images.yml"), "utf8").replace(/\r\n/g, "\n");
-  expect(workflow).toMatch(/\n {2}build-images:\n {4}needs: \[api-quality, web-quality, settings-quality, reading-performance-comparison\]\n {4}if: \$\{\{ needs\.api-quality\.result == 'success' && needs\.web-quality\.result == 'success' && needs\.settings-quality\.result == 'success' && needs\.reading-performance-comparison\.result == 'success' \}\}/);
-  expect(workflow).toMatch(/\n {2}api-quality:\n/);
-  expect(workflow).toMatch(/\n {2}web-quality:\n/);
-  expect(workflow).toMatch(/\n {2}settings-quality:\n/);
-  expect(workflow).toMatch(/\n {2}reading-performance-comparison:\n {4}needs: \[api-quality\]\n {4}uses: \.\/\.github\/workflows\/reading-performance.yml/);
+const releaseQualityJobs = ["api-quality", "web-quality", "settings-quality", "reading-performance-comparison"];
+const readReleaseWorkflow = () => fs.readFileSync(
+  path.resolve(process.cwd(), "../../.github/workflows/build-release-images.yml"), "utf8",
+).replace(/\r\n/g, "\n");
+
+function releaseJob(workflow: string, name: string) {
+  const parts = workflow.split(`\n  ${name}:\n`);
+  expect(parts, `Exactly one ${name} job is required`).toHaveLength(2);
+  return `  ${name}:\n${parts[1].split(/\n {2}[a-z][a-z0-9-]*:\n/, 1)[0]}`;
+}
+
+function releaseStep(job: string, name: string) {
+  const parts = job.split(`      - name: ${name}\n`);
+  expect(parts, `Exactly one ${name} step is required`).toHaveLength(2);
+  return `      - name: ${name}\n${parts[1].split(/\n {6}- /, 1)[0].trimEnd()}`;
+}
+
+function assertReleaseQualityGate(workflow: string) {
+  expect(workflow).toMatch(/workflow_dispatch:\n {4}inputs:\n {6}quality_source_run_id:\n {8}description: [^\n]+\n {8}required: false\n {8}default: ''\n {8}type: string/);
+  expect([...workflow.matchAll(/^ {2}[a-z][a-z0-9-]*:\n/gm)]).toHaveLength(6);
+  for (const name of releaseQualityJobs) {
+    expect(releaseJob(workflow, name).split("\n").slice(0, 2).join("\n")).toBe(
+      `  ${name}:\n    if: \${{ inputs.quality_source_run_id == '' }}`,
+    );
+  }
+  expect(releaseJob(workflow, "reading-performance-comparison")).toContain(
+    "    needs: [api-quality]\n    uses: ./.github/workflows/reading-performance.yml",
+  );
+
+  const builder = releaseJob(workflow, "build-images");
+  const successes = releaseQualityJobs.map((name) => `needs.${name}.result == 'success'`).join(" && ");
+  const skips = releaseQualityJobs.map((name) => `needs.${name}.result == 'skipped'`).join(" && ");
+  // Nonempty input only reaches the pinned source/lineage verifier below; it
+  // is not permission to publish when fresh full-mode quality was skipped.
+  expect(builder.split("\n").slice(0, 3).join("\n")).toBe([
+    "  build-images:",
+    `    needs: [${releaseQualityJobs.join(", ")}]`,
+    `    if: \${{ !cancelled() && ((inputs.quality_source_run_id == '' && ${successes}) || (inputs.quality_source_run_id != '' && ${skips})) }}`,
+  ].join("\n"));
+  expect(releaseStep(builder, "Record verified release quality provenance")).toBe([
+    "      - name: Record verified release quality provenance",
+    "        env:",
+    "          GH_TOKEN: ${{ github.token }}",
+    "          QUALITY_JOB_RESULTS: ${{ toJSON(needs) }}",
+    "          QUALITY_SOURCE_RUN_ID: ${{ inputs.quality_source_run_id }}",
+    "        run: >-",
+    "          python3 scripts/ci/image-only-quality-reuse.py",
+    '          --source-run "$QUALITY_SOURCE_RUN_ID"',
+    '          --head "$GITHUB_SHA"',
+    '          --output "$RUNNER_TEMP/quality-verification.json"',
+  ].join("\n"));
+
+  let previousStep = -1;
+  for (const name of [
+    "Record verified release quality provenance",
+    "Prepare pinned image bases with official-source fallback",
+    "Build API and worker image",
+    "Verify real 320 MiB worker ZIP analysis and commit without swap",
+    "Verify bounded ZIP 100 and 500 MiB sources and long Markdown",
+    "Verify real ORM memory-control-plane status and source guards",
+    "Build Web image",
+    "Inspect release images",
+    "Package images and provenance",
+    "Upload deployable release artifact",
+  ]) {
+    expect(releaseStep(builder, name), `${name} must not be conditional`).not.toMatch(/^ {8}if:/m);
+    const position = builder.indexOf(`      - name: ${name}\n`);
+    expect(position, `${name} must follow its prerequisite`).toBeGreaterThan(previousStep);
+    previousStep = position;
+  }
+  expect(builder.indexOf("docker build")).toBeGreaterThan(
+    builder.indexOf("      - name: Record verified release quality provenance\n"),
+  );
+
+  const consumer = releaseJob(workflow, "inspect-release-artifact");
+  expect(consumer.split("\n").slice(0, 3).join("\n")).toBe(
+    "  inspect-release-artifact:\n    needs: build-images\n    if: ${{ needs.build-images.result == 'success' }}",
+  );
+  const independentInspection = releaseStep(consumer, "Inspect downloaded release archive independently");
+  expect(independentInspection.split("\n").slice(0, 6).join("\n")).toBe([
+    "      - name: Inspect downloaded release archive independently",
+    "        working-directory: release-artifact",
+    "        env:",
+    "          GH_TOKEN: ${{ github.token }}",
+    "          QUALITY_SOURCE_RUN_ID: ${{ inputs.quality_source_run_id }}",
+    "        run: |",
+  ].join("\n"));
+  expect(independentInspection).toContain([
+    "          python3 ../scripts/ci/image-only-quality-reuse.py \\",
+    '            --source-run "$QUALITY_SOURCE_RUN_ID" --head "$GITHUB_SHA" \\',
+    '            --producer-attempt "$ARTIFACT_PRODUCER_ATTEMPT" \\',
+    "            --verify-report quality-verification.json --manifest release-manifest.json \\",
+    '            --output "$RUNNER_TEMP/quality-verification-consumer.json"',
+  ].join("\n"));
+  expect(independentInspection.indexOf("docker load")).toBeGreaterThan(
+    independentInspection.indexOf("python3 ../scripts/ci/image-only-quality-reuse.py"),
+  );
+  expect(consumer.indexOf("docker load")).toBeGreaterThan(
+    consumer.indexOf("      - name: Inspect downloaded release archive independently\n"),
+  );
+
   expect(workflow).toContain('SETTINGS_POSTGRES_INTEGRATION: "1"');
   expect(workflow).toContain('E2E_SETTINGS_MAILBOX: "1"');
   expect(workflow).not.toMatch(/continue-on-error:\s*true/);
+  expect(workflow.indexOf("name: Upload non-deployable quality evidence")).toBeGreaterThanOrEqual(0);
   expect(workflow.indexOf("name: Upload non-deployable quality evidence")).toBeLessThan(workflow.indexOf("  build-images:"));
-  expect(workflow.indexOf("name: Inspect release images")).toBeLessThan(workflow.indexOf("name: Package images and provenance"));
-  expect(workflow.indexOf("name: Package images and provenance")).toBeLessThan(
-    workflow.indexOf("name: Upload deployable release artifact"),
-  );
+}
+
+test("release workflow cannot build a deployable artifact before quality passes", () => {
+  assertReleaseQualityGate(readReleaseWorkflow());
 });
+
+function mutateReleaseJob(workflow: string, name: string, before: string, after: string) {
+  const job = releaseJob(workflow, name);
+  return workflow.replace(job, job.replace(before, after));
+}
+
+const unsafeReleaseMutations = [
+  {
+    name: "a nonempty default quality source",
+    mutate: (workflow: string) => workflow.replace("        default: ''", "        default: '43578495558'"),
+  },
+  ...releaseQualityJobs.flatMap((name) => [
+    {
+      name: `skipping fresh ${name} in full mode`,
+      mutate: (workflow: string) => mutateReleaseJob(workflow, name, "quality_source_run_id == ''", "quality_source_run_id != ''"),
+    },
+    {
+      name: `omitting the ${name} build dependency`,
+      mutate: (workflow: string) => mutateReleaseJob(workflow, "build-images",
+        `    needs: [${releaseQualityJobs.join(", ")}]`,
+        `    needs: [${releaseQualityJobs.filter((job) => job !== name).join(", ")}]`),
+    },
+    {
+      name: `accepting skipped ${name} as fresh quality`,
+      mutate: (workflow: string) => mutateReleaseJob(workflow, "build-images",
+        `needs.${name}.result == 'success'`, `needs.${name}.result == 'skipped'`),
+    },
+    {
+      name: `accepting fresh ${name} in the declared reuse branch`,
+      mutate: (workflow: string) => mutateReleaseJob(workflow, "build-images",
+        `needs.${name}.result == 'skipped'`, `needs.${name}.result == 'success'`),
+    },
+  ]),
+  {
+    name: "an absent cancellation guard",
+    mutate: (workflow: string) => mutateReleaseJob(workflow, "build-images", "!cancelled() && ", ""),
+  },
+  {
+    name: "quality failure ignored by the builder",
+    mutate: (workflow: string) => mutateReleaseJob(workflow, "build-images",
+      "    runs-on: ubuntu-latest", "    continue-on-error: true\n    runs-on: ubuntu-latest"),
+  },
+  {
+    name: "optional producer provenance",
+    mutate: (workflow: string) => workflow.replace(
+      "      - name: Record verified release quality provenance\n",
+      "      - name: Record verified release quality provenance\n        if: ${{ false }}\n",
+    ),
+  },
+  {
+    name: "missing fresh dependency results in provenance",
+    mutate: (workflow: string) => workflow.replace("          QUALITY_JOB_RESULTS: ${{ toJSON(needs) }}\n", ""),
+  },
+  {
+    name: "a provenance source different from the declared input",
+    mutate: (workflow: string) => mutateReleaseJob(workflow, "build-images",
+      "QUALITY_SOURCE_RUN_ID: ${{ inputs.quality_source_run_id }}", 'QUALITY_SOURCE_RUN_ID: ""'),
+  },
+  {
+    name: "an absent producer source verifier",
+    mutate: (workflow: string) => mutateReleaseJob(workflow, "build-images",
+      "python3 scripts/ci/image-only-quality-reuse.py", "echo unverified-quality"),
+  },
+  {
+    name: "an extra Docker build before provenance",
+    mutate: (workflow: string) => workflow.replace(
+      "      - name: Record verified release quality provenance\n",
+      "      - name: Unverified early image\n        run: docker build .\n\n      - name: Record verified release quality provenance\n",
+    ),
+  },
+  {
+    name: "missing real bounded-memory verification",
+    mutate: (workflow: string) => workflow.replace(
+      releaseStep(releaseJob(workflow, "build-images"), "Verify bounded ZIP 100 and 500 MiB sources and long Markdown"), "",
+    ),
+  },
+  {
+    name: "optional real bounded-memory verification",
+    mutate: (workflow: string) => workflow.replace(
+      "      - name: Verify bounded ZIP 100 and 500 MiB sources and long Markdown\n",
+      "      - name: Verify bounded ZIP 100 and 500 MiB sources and long Markdown\n        if: ${{ false }}\n",
+    ),
+  },
+  {
+    name: "missing non-deployable diagnostics",
+    mutate: (workflow: string) => workflow.replace("name: Upload non-deployable quality evidence", "name: Missing quality diagnostics"),
+  },
+  {
+    name: "packaging before image inspection",
+    mutate: (workflow: string) => workflow
+      .replace("name: Inspect release images", "name: Swapped image inspection")
+      .replace("name: Package images and provenance", "name: Inspect release images")
+      .replace("name: Swapped image inspection", "name: Package images and provenance"),
+  },
+  {
+    name: "an independent consumer admitted without a successful producer",
+    mutate: (workflow: string) => mutateReleaseJob(workflow, "inspect-release-artifact",
+      "if: ${{ needs.build-images.result == 'success' }}", "if: ${{ always() }}"),
+  },
+  {
+    name: "an absent independent source verifier",
+    mutate: (workflow: string) => mutateReleaseJob(workflow, "inspect-release-artifact",
+      "python3 ../scripts/ci/image-only-quality-reuse.py", "echo unverified-consumer"),
+  },
+  {
+    name: "optional independent inspection",
+    mutate: (workflow: string) => workflow.replace(
+      "      - name: Inspect downloaded release archive independently\n",
+      "      - name: Inspect downloaded release archive independently\n        if: ${{ false }}\n",
+    ),
+  },
+  {
+    name: "an extra Docker load before independent provenance",
+    mutate: (workflow: string) => workflow.replace(
+      "      - name: Inspect downloaded release archive independently\n",
+      "      - name: Unverified early load\n        run: docker load --input unverified.tar\n\n      - name: Inspect downloaded release archive independently\n",
+    ),
+  },
+  {
+    name: "an independent proof for a different producer attempt",
+    mutate: (workflow: string) => mutateReleaseJob(workflow, "inspect-release-artifact",
+      '--producer-attempt "$ARTIFACT_PRODUCER_ATTEMPT"', '--producer-attempt "1"'),
+  },
+];
+
+for (const { name, mutate } of unsafeReleaseMutations) {
+  test(`release quality gate rejects ${name}`, () => {
+    const workflow = readReleaseWorkflow();
+    const unsafe = mutate(workflow);
+    expect(unsafe, "The negative control must actually change the workflow").not.toBe(workflow);
+    expect(() => assertReleaseQualityGate(unsafe)).toThrow();
+  });
+}

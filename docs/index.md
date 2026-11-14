@@ -2,6 +2,24 @@
 
 ## 当前候选：可靠性整块治理 — 2026-11-14
 
+普通完整CI3d8f77f/43604634535最终仅Web失败，API6751、Settings470+restore1、
+候选阅读比较9通过；后十项Web及两发布job未执行，不能继承为新发布验收。
+[最终失败](evidence/reliability-2026-11-14/ci-full-quality-final-failure.json)核验四日志/三诊断ZIP。
+只修原安全测试的旧工作流合同并加33拒绝控制；本地源码36/Python100/Node77、
+lint/typecheck通过，[验证](evidence/reliability-2026-11-14/ci-release-contract-verification.json) /
+[1409输入](evidence/reliability-2026-11-14/ci-release-contract-inputs.json)。
+业务、工作流、依赖及资源门禁不改；选择性提交/正常推送，空quality source只派发
+一次完整CI。随后`ci-release-contract-dispatch.json`出现即以其实际run为准并暂停，
+不等待/轮询/安排/取消/部署；旧派发和仍在运行时的Web快照原字节保留。
+
+以下为此前独立事件/部分CI快照，不覆盖上方最新修复：
+最新独立停止请求已完成：原worker自行回滚失败，4个来源实际哈希全部保全；
+23:12 +08:00复核活动/排队任务及锁等待为0，worker空闲，生产仍3564cbf/schema0060。
+[本次事件](evidence/reliability-2026-11-14/production-stall-recovery-followup.json)。
+普通CI3d8f77f/43604634535的Web在线专项44通过/1失败，旧工作流字面断言待修；
+[独立失败](evidence/reliability-2026-11-14/ci-full-web-failure.json)不代表整次已结束。
+本轮未修测试、重新提交/派发、取消CI或部署；旧事件与派发字节保留。
+
 最新授权改走普通完整CI：选择性提交/正常推送，只派发一次原工作流，
 `quality_source_run_id`为空，四项质量及镜像/独立制品门禁全部新跑。
 确认派发身份后暂停，不等待/轮询/安排/取消/部署；随后独立
