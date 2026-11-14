@@ -3,7 +3,7 @@
 // HTTP APIs, Next's client loader, assistant-ui source forwarding, cleanup UI and
 // unrelated rich-view dependencies are explicit adapters, not server acceptance.
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve, join, extname } from "node:path";
@@ -79,10 +79,15 @@ export default function dynamic(load) {
 }`);
 writeFileSync(join(out, "workspace-adapters.mjs"), `
 import React from "react";
+import * as actualApi from ${JSON.stringify(join(web, "lib/api.ts").replaceAll("\\", "/"))};
+export const ApiRequestError=actualApi.ApiRequestError;
 const outsideScope=()=>{throw Error("Unexpected API/cleanup call outside this local table gate");};
-export const getConversationAttachments=async()=>window.syntheticFiles??[];
+export const getConversationAttachments=async(...args)=>window.workspaceUploadScenario
+  ? actualApi.getConversationAttachments(...args) : window.syntheticFiles??[];
 export const editMessage=async(id,payload)=>{
   window.workspaceWrites.push({id,payload});
+  const fault=window.workspaceSaveFaults?.shift();
+  if(fault) throw new ApiRequestError("Synthetic rejected or unknown save",fault,"","");
   const old=window.workspaceMessage;
   if(window.workspaceEnforceBaseline&&(payload.baseVersionId!==old.current_version.id||
       payload.baseContentHash!==old.current_version.source_content_hash))
@@ -107,10 +112,12 @@ export const getMessageSaveReceipt=async()=>{
   if(window.missingReceipt) throw new ApiRequestError("No receipt",404,"","save_not_confirmed");
   return window.saveReceipt;
 };
-export const getAttachmentUploadSession=outsideScope;
-export const createAttachmentUploadSession=outsideScope,deleteAttachmentUploadItem=outsideScope,
-  deleteConversationAttachment=outsideScope,finalizeConversationAttachments=outsideScope,
-  uploadAttachmentItem=outsideScope;
+const uploadApi=name=>(...args)=>window.workspaceUploadScenario?actualApi[name](...args):outsideScope();
+export const getAttachmentUploadSession=uploadApi("getAttachmentUploadSession");
+export const createAttachmentUploadSession=uploadApi("createAttachmentUploadSession"),
+  deleteAttachmentUploadItem=outsideScope,deleteConversationAttachment=outsideScope,
+  finalizeConversationAttachments=uploadApi("finalizeConversationAttachments"),
+  uploadAttachmentItem=uploadApi("uploadAttachmentItem");
 export const getConversation=async()=>{
   if(!window.syntheticCleanupEnabled)return outsideScope();
   if(window.holdCleanupRead)await new Promise(resolve=>window.releaseCleanupRead=resolve);
@@ -121,9 +128,6 @@ export const getConversationReaderTurn=async()=>{
   return {items:[window.workspaceMessage]};
 };
 export const getImageDisplay=outsideScope,setImageDisplay=outsideScope,uploadMessageCopyPreview=outsideScope;
-export class ApiRequestError extends Error {
-  constructor(message,status,path,code){super(message);this.status=status;this.path=path;this.code=code;}
-}
 // The cleanup business dialog is outside this gate. Its approved completion
 // callback alone is adapted; the real workspace/form must consume the reload.
 export const ContentCleanupDialog=({open,onApplied,onClose})=>open
@@ -384,8 +388,11 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errors = [];
   const consoleErrors = [];
+  const injectedHttpErrors = [];
   page.on("pageerror", error => { errors.push(error.message); console.error("BROWSER " + error.stack); });
-  page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  page.on("console", message => {
+    if (message.type() === "error") consoleErrors.push({ text: message.text(), url: message.location().url });
+  });
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   await page.waitForFunction(() => Boolean(window.tableGate));
   const dialog = page.getByTestId("source-editor-table-tool");
@@ -479,6 +486,198 @@ try {
       await page.evaluate(()=>{window.holdSave=false;window.releaseSave=null;});
     });
   }
+  for (const width of [375,800,1440]) {
+    await page.setViewportSize({width,height:900});
+    await run(`${width}px: a reference caret replaces; an ordinary source caret inserts without losing the old file`,async()=>{
+      const first="11111111-1111-4111-8111-111111111111",second="22222222-2222-4222-8222-222222222222";
+      const source=`[existing.txt](cr-asset://${first})\n\nOrdinary source tail.`;
+      await page.evaluate(({source,first,second})=>{
+        window.syntheticFiles=[first,second].map((id,index)=>({id,
+          display_name:index?"new-file.txt":"existing.txt",original_filename:index?"new-file.txt":"existing.txt",
+          resolution_status:"resolved",status:"available",detected_mime_type:"text/plain"}));
+        window.startWorkspace(source);
+      },{source,first,second});
+      await page.waitForFunction(source=>window.workspaceGate?.source()===source,source);
+      await page.evaluate(()=>window.workspaceGate.select(5));
+      await page.getByRole("button",{name:"Choose conversation file",exact:true}).click();
+      await expect(page.getByRole("button",{name:"Replace reference with new-file.txt",exact:true})).toBeVisible();
+      await expect(page.getByRole("button",{name:"Insert new-file.txt at cursor",exact:true})).toHaveCount(0);
+      await page.getByTestId("source-editor-attachment-picker").getByRole("button",{name:"Close",exact:true}).click();
+      await page.getByTestId("source-editor-codemirror").locator(".cm-content").click();
+      await page.keyboard.press("Control+End");
+      await page.getByRole("button",{name:"Choose conversation file",exact:true}).click();
+      await expect(page.getByLabel("Replace all references in this message")).toHaveCount(0);
+      await page.getByRole("button",{name:"Insert new-file.txt at cursor",exact:true}).click();
+      const inserted=await page.evaluate(()=>window.workspaceGate.source());
+      assert.ok(inserted.includes(`cr-asset://${first}`)&&inserted.includes(`cr-asset://${second}`));
+      assert.equal(await page.evaluate(()=>window.workspaceWrites.length),0);
+      await page.getByTestId("source-editor-create-version").click();
+      await expect.poll(()=>page.evaluate(()=>window.workspaceWrites.length)).toBe(1);
+      assert.deepEqual(await page.evaluate(()=>window.workspaceWrites[0].payload.removedAttachmentActions),[]);
+    });
+    await run(`${width}px: removing the last source reference saves KEEP without a deletion dialog`,async()=>{
+      const id="11111111-1111-4111-8111-111111111111";
+      const source=`Before [existing.txt](cr-asset://${id}) after.`;
+      await page.evaluate(({source,id})=>{
+        window.syntheticFiles=[{id,display_name:"existing.txt",original_filename:"existing.txt",
+          resolution_status:"resolved",status:"available",detected_mime_type:"text/plain"}];
+        window.startWorkspace(source);
+      },{source,id});
+      await page.waitForFunction(source=>window.workspaceGate?.source()===source,source);
+      await page.evaluate(()=>window.workspaceGate.replace("Before after."));
+      await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+      await page.getByTestId("source-editor-create-version").click();
+      await expect.poll(()=>page.evaluate(()=>window.workspaceWrites.length)).toBe(1);
+      await expect(page.getByRole("dialog",{name:"Attachment references were removed",exact:true})).toHaveCount(0);
+      const saved=await page.evaluate(()=>window.workspaceWrites[0].payload);
+      assert.equal(saved.contentMarkdown,"Before after.");
+      assert.deepEqual(saved.removedAttachmentActions,[{attachment_id:id,action:"keep_in_conversation"}]);
+      assert.equal(await page.evaluate(()=>window.syntheticFiles[0].status),"available");
+      // Upload/file deletion APIs remain rejecting adapters in this scenario.
+    });
+
+    for (const scenario of ["ordered","retry-check"]) {
+      await run(`${width}px: actual source upload ${scenario} keeps original receipts and single-flight saves`,async()=>{
+        const events=[],sessions=new Map(),items=new Map(),attachments=[];
+        let resolveSeen,releaseFirst;
+        const firstSeen=new Promise(resolve=>resolveSeen=resolve);
+        const firstRelease=new Promise(resolve=>releaseFirst=resolve);
+        let held=false,failed=false;
+        const handler=async route=>{
+          const request=route.request(),url=new URL(request.url()),method=request.method(),path=url.pathname;
+          if(path.endsWith("/attachment-upload-sessions")&&method==="POST") {
+            const body=request.postDataJSON(),session={id:body.request_id,status:"open",items:[],expires_at:"2099-01-01T00:00:00Z"};
+            sessions.set(session.id,session);events.push({kind:"session"});
+            return route.fulfill({status:201,json:session});
+          }
+          if(path.includes("/attachment-upload-sessions/")) {
+            const session=sessions.get(path.split("/")[3]);assert.ok(session);
+            if(method==="GET") {events.push({kind:"check"});return route.fulfill({json:session});}
+            assert.equal(method,"POST");
+            const id=url.searchParams.get("request_id");
+            const filename=request.postDataBuffer().toString().match(/filename="([^"]+)"/)?.[1];
+            assert.ok(id&&filename);
+            const item={id,validation_status:"ready",original_filename:filename};
+            session.items.push(item);items.set(id,item);events.push({kind:"upload",filename});
+            return route.fulfill({status:201,json:item});
+          }
+          if(path.endsWith("/attachments")) {
+            if(method==="GET") {events.push({kind:"list"});return route.fulfill({json:{items:attachments}});}
+            assert.equal(method,"POST");
+            const ids=request.postDataJSON().upload_item_ids;
+            assert.equal(ids.length,1);
+            const item=items.get(ids[0]);assert.ok(item);
+            events.push({kind:"finalize-start",filename:item.original_filename});
+            if(scenario==="ordered"&&!held) {held=true;resolveSeen();await firstRelease;}
+            if(scenario==="retry-check"&&!failed) {
+              failed=true;events.push({kind:"finalize-failed",filename:item.original_filename});
+              injectedHttpErrors.push({
+                text:"Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+                url:request.url(),
+              });
+              return route.fulfill({status:500,json:{detail:"Synthetic finalize acknowledgement unavailable"}});
+            }
+            item.validation_status="committed";
+            const attachment={id:randomUUID(),source_attachment_id:item.id,display_name:item.original_filename,
+              original_filename:item.original_filename,detected_mime_type:"text/plain",status:"available",
+              resolution_status:"resolved",scan_status:"scanner_disabled",occurrences:[],
+              occurrence_count:0,current_occurrence_count:0,is_used:false,created_at:"2026-11-14T00:00:00Z"};
+            attachments.push(attachment);events.push({kind:"finalize-end",filename:item.original_filename});
+            return route.fulfill({status:201,json:{items:[attachment]}});
+          }
+          throw Error(`Unexpected source-upload fixture request ${method} ${path}`);
+        };
+        await page.route("**/api/**",handler);
+        try {
+          const source="Original upload source.";
+          await page.evaluate(({source,scenario})=>{window.workspaceUploadScenario=scenario;window.startWorkspace(source);},{source,scenario});
+          await page.waitForFunction(source=>window.workspaceGate?.source()===source,source);
+          await page.getByTestId("source-editor-attachment-input").setInputFiles(
+            (scenario==="ordered"?["ordered-a.txt","ordered-b.txt"]:["retry-once.txt"])
+              .map(name=>({name,mimeType:"text/plain",buffer:Buffer.from(name)})),
+          );
+          if(scenario==="ordered") {
+            await firstSeen;
+            await expect(page.getByTestId("source-editor-attachment-drafts")
+              .locator("[data-upload-status='uploading']")).toHaveCount(2);
+            assert.deepEqual(events.filter(event=>event.kind==="upload").map(event=>event.filename),["ordered-a.txt"]);
+            await expect(page.getByTestId("source-editor-create-version")).toBeDisabled();
+            await page.evaluate(()=>window.workspaceGate.requestSubmit());
+            assert.equal(await page.evaluate(()=>window.workspaceWrites.length),0);
+            assert.equal(attachments.length,0);
+            releaseFirst();
+          } else {
+            const row=page.getByTestId("source-editor-attachment-drafts")
+              .locator("[data-testid^='source-editor-upload-']").filter({hasText:"retry-once.txt"});
+            await expect(row).toHaveAttribute("data-upload-status","error");
+            const twice=async()=>{
+              if(width<640) await row.getByRole("button",{name:"Actions for retry-once.txt",exact:true}).click();
+              await row.getByRole("button",{name:"Retry",exact:true}).evaluate(button=>{button.click();button.click();});
+            };
+            await twice();
+            await expect.poll(()=>events.filter(event=>event.kind==="check").length).toBe(1);
+            await expect(row).toHaveAttribute("data-upload-status","error");
+            await expect(page.getByTestId("source-editor-create-version")).toBeDisabled();
+            assert.equal(events.filter(event=>event.kind==="finalize-start").length,1);
+            assert.equal(events.filter(event=>event.kind==="upload").length,1);
+            assert.ok((await page.evaluate(()=>window.workspaceGate.source())).includes("cr-upload://"));
+            await twice();
+          }
+          await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+          const expected=scenario==="ordered"?2:1;
+          assert.equal(attachments.length,expected);
+          assert.equal(events.filter(event=>event.kind==="session").length,expected);
+          assert.equal(events.filter(event=>event.kind==="upload").length,expected);
+          if(scenario==="ordered") {
+            const end=events.findIndex(event=>event.kind==="finalize-end"&&event.filename==="ordered-a.txt");
+            const next=events.findIndex(event=>event.kind==="upload"&&event.filename==="ordered-b.txt");
+            assert.ok(end>=0&&next>end,"The next file cannot start before the first canonical finalization.");
+          } else assert.equal(events.filter(event=>event.kind==="finalize-start").length,2);
+          await page.getByTestId("source-editor-create-version").click();
+          await expect.poll(()=>page.evaluate(()=>window.workspaceWrites.length)).toBe(1);
+          const saved=await page.evaluate(()=>window.workspaceWrites[0].payload.contentMarkdown);
+          assert.equal((saved.match(/cr-asset:\/\//g)??[]).length,expected);
+          assert.ok(!saved.includes("cr-upload://"));
+        } finally {
+          releaseFirst();
+          await page.unroute("**/api/**",handler);
+          await page.evaluate(()=>{window.workspaceUploadScenario=null;});
+        }
+      });
+    }
+    await run(`${width}px: deterministic 409/500 retains canonical source and retries only a checked original save`,async()=>{
+      const source="[canonical.txt](cr-asset://11111111-1111-4111-8111-111111111111)\n\nOriginal source.";
+      await page.evaluate(source=>{window.workspaceSaveFaults=[409,500];window.missingReceipt=true;window.startWorkspace(source);},source);
+      try {
+        await page.waitForFunction(source=>window.workspaceGate?.source()===source,source);
+        await page.evaluate(()=>window.workspaceGate.insert(window.workspaceGate.source().length," Saved snapshot."));
+        await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+        await page.getByTestId("source-editor-create-version").click();
+        await expect(page.getByTestId("floating-source-workspace").getByRole("alert")).toBeVisible();
+        await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+        await page.getByTestId("source-editor-create-version").click();
+        await expect(page.getByRole("button",{name:"Check result",exact:true})).toBeVisible();
+        await expect(page.getByTestId("source-editor-create-version")).toBeDisabled();
+        await page.evaluate(()=>window.workspaceGate.requestSubmit());
+        assert.equal(await page.evaluate(()=>window.workspaceWrites.length),2);
+        await page.evaluate(()=>window.workspaceGate.insert(window.workspaceGate.source().length," Later typing."));
+        await page.getByRole("button",{name:"Check result",exact:true}).click();
+        await expect(page.getByRole("button",{name:"Retry original save",exact:true})).toBeVisible();
+        assert.equal(await page.evaluate(()=>window.workspaceWrites.length),2);
+        await page.getByRole("button",{name:"Retry original save",exact:true}).click();
+        await expect.poll(()=>page.evaluate(()=>window.workspaceWrites.length)).toBe(3);
+        const writes=await page.evaluate(()=>window.workspaceWrites);
+        assert.deepEqual(writes[2].payload,writes[1].payload);
+        assert.notEqual(writes[1].payload.operationId,writes[0].payload.operationId);
+        assert.ok(writes.every(write=>write.payload.contentMarkdown.includes("cr-asset://")
+          &&!write.payload.contentMarkdown.includes("cr-upload://")));
+        assert.equal(await page.evaluate(()=>window.workspaceGate.source()),source+" Saved snapshot. Later typing.");
+      } finally {
+        await page.evaluate(()=>{window.workspaceSaveFaults=null;window.missingReceipt=false;});
+      }
+    });
+  }
+  await page.setViewportSize({width:1440,height:900});
   await run("unknown save checks its receipt without another PATCH; refresh failure is separate",async()=>{
     await page.evaluate(()=>{window.loseSaveResponse=true;window.failReaderRefresh=true;window.startWorkspace("Unknown baseline");});
     await page.waitForFunction(()=>window.workspaceGate?.source()==="Unknown baseline");
@@ -3011,11 +3210,15 @@ try {
     await cdp.detach();
   }
   assert.deepEqual(errors, []);
-  assert.deepEqual(consoleErrors, []);
+  // Every console error must match one deliberately injected 500, including
+  // its exact local request URL and multiplicity. Do not suppress other
+  // transport, renderer or application errors from the original scenarios.
+  assert.equal(injectedHttpErrors.length, 3);
+  assert.deepEqual(consoleErrors, injectedHttpErrors);
   writeFileSync(resultPath, JSON.stringify({
     date, startedAt, status: "passed",
     boundary: "local Chrome real dialog/workspace/form/CodeMirror/MarkdownRenderer core; explicit API/Next-loader/assistant-ui source-forwarding and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
-    passed: results, pageErrors: errors, consoleErrors, browser: browser.version(),
+    passed: results, pageErrors: errors, consoleErrors, injectedHttpErrors, browser: browser.version(),
   }, null, 2));
   console.log(`PASS ${results.length} browser scenarios; evidence: ${out}`);
 } finally {

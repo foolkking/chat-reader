@@ -2,7 +2,34 @@
 
 ## 修复CI失败、前次失败及生产导入定点恢复 — 2026-11-14
 
-[当前修复派发回执](reliability-2026-11-14/ci-recovery-dispatch.json)绑定
+[最新派发回执](reliability-2026-11-14/ci-probe-pagination-dispatch.json)绑定
+74a1e86及43503483829，04:38:55.083438 +08:00确认派发；
+首次实际读取05:28:55.244142 +08:00，满足新的50分钟双边界。
+十九个白名单文件提交/推送、十三个无关文件保全；只证明一次派发，未提前
+回查、创建安排或部署，不继承旧成功项，不覆盖下方失败/事件回执。
+[独立失败回执](reliability-2026-11-14/ci-probe-pagination-failure.json)记录
+05:39:07独立确认completed/failure、取消请求0次、API6656/Settings470+restore1
+通过及Web五项旧语义失败、阅读math10000 cold0真实213ms超原150ms门槛。
+四份官方job日志及三份官方ZIP精确run/SHA/attempt/digest核验；两发布job
+跳过，均非可部署制品。还保留首轮挂载117场景完成后因三次刻意HTTP500导致的
+全局console断言失败；修正只核对精确消息/URL/数量，不屏蔽其他错误。
+[完整九例CPU诊断派发回执](reliability-2026-11-14/ci-runtime-frame-diagnostic-dispatch.json)
+绑定43514182245及原失败SHA，05:50:15.070938确认，首次读取边界
+06:40:15.070938 +08:00；新完整monotonic等待，不建安排、不重复取消或操作生产。
+它是diagnostic-only，不能覆盖原213ms失败、证明根因已修或替代发布验收。
+[独立CPU诊断结果](reliability-2026-11-14/ci-runtime-frame-diagnostic-result.json)
+记录该run失败结束、06:40:15.205718首次读取与3000.015秒monotonic边界，
+18份测量/54份cold CPU及全部原失败保留；三例raw坐标失败不证明渲染根因。
+[本轮最终本地回执](reliability-2026-11-14/ci-runtime-frame-verification.json)保留
+真实DOM正负对照、collector红5/8和绿25、原Reader39加3共42、Node2519/CI64/
+PWA20、静态及新548输入构建。editor117/Files15/API75只是同批较早证据，
+不是追加重测。第一次quiet夹具和本地回执schema方法失败均保留，不放宽门槛。
+[最终1391源码输入](reliability-2026-11-14/ci-runtime-frame-inputs.json)和
+[新548构建输入](reliability-2026-11-14/ci-runtime-frame-build-inputs.json)重新核对
+十三保护文件/索引，较早坐标清单不当作最终。v4保留raw reversals及全帧/
+longTasks，不继承CPU诊断为发布通过，原213ms未复现仍不称已修。
+
+[前次修复派发回执](reliability-2026-11-14/ci-recovery-dispatch.json)绑定
 7f8a642及43483733253，02:33:11.802991 +08:00确认派发；
 首次状态读取边界03:23:11.802991 +08:00。十九个任务文件选择性提交、
 十三个无关文件保全；只证明一次派发，不证明结果或部署，不继承旧成功项。

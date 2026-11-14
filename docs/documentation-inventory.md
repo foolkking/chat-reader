@@ -72,6 +72,36 @@ Web比较定位超时；03:26:36单次取消并独立确认，两发布job均零
 API/PG39、mounted102、Node2510/CI62/PWA20、静态检查及新548输入隔离构建。
 1391项最终输入/十三个保护文件无漂移，自建PG核验后停止、资料保留；
 本机运行时不冒充CI，不新增另一套状态页或宣称完整CI/部署通过。
+修复74a1e86已选择性提交/推送十九个白名单文件；同步同一台账和必要入口
+为新完整CI43503483829等待中。独立`ci-probe-pagination-dispatch.json`绑定
+04:38:55.083438确认派发及05:28:55.083438首次读取边界；当前任务内完整
+等待50分钟，不覆盖旧失败/生产事件回执、不创建安排或改变生产。
+43503483829在05:28:55.244142首次读取满足50分钟双边界；05:39:07独立
+确认失败结束，取消请求0次。同步唯一台账及必要入口为Web测试修复/CPU诊断中；
+新增独立`ci-probe-pagination-failure.json`记录API6656及Settings470+restore1
+成功、Web五项旧交互语义失败、阅读math10000 cold0真实213ms超原150ms。
+四份官方日志/三份ZIP摘要与来源核验，发布job跳过，不作为部署制品。
+本地挂载117保留原102场景并追加三宽度15例；首轮总console断言失败单独保留，
+修正仅精确匹配三次刻意500的消息、请求URL和数量，不放宽未知错误门槛。
+Files15仍覆盖显式移除；未改业务/工作流/migration/部署或旧PG状态。
+最终真实API/TestClient75、Node UX2510/CI64/PWA20、lint/typecheck通过；
+两e2e变化拒绝旧构建，548输入同安装依赖新隔离build及1391最终输入核对通过，
+十三保护文件无漂移、索引空，不冒充完整精确CI或Linux/生产验收。
+源码/附件合同只校正既有验证说明：held first finalize下的串行上传、原回执
+先读后显式重试、caret替换/插入、自动KEEP与独立Files detach；历史记录未改。
+新增`ci-runtime-frame-diagnostic-dispatch.json`绑定精确失败SHA、43514182245、
+05:50:15.070938派发及06:40:15.070938首读边界；原九例完整顺序/门槛保留，
+任务内新monotonic等待，不建安排；diagnostic-only不冒充发布或根因已修。
+43514182245已失败结束，首读06:40:15.205718满足wall-clock/3000.015秒双边界；
+新增独立`ci-runtime-frame-diagnostic-result.json`保留18测量/54冷CPU及原失败。
+沿用同一台账，校正当前入口的“等待”说法；原213ms未复现仍不标已修。
+更新Performance合同的测量v4：每帧/每wheel共享真实DOM锚点，完整保留raw
+reversals、chronological frames和longTasks；原输入/预算不变，不修改应用策略。
+新增`ci-runtime-frame-verification.json`及最终1391源码/新548构建输入，
+登记Reader42保留原39、collector红5/8和绿25、Node2519/CI64/PWA20与静态。
+旧quiet夹具未先等edge settled、Files回执schema初版方法失败均保留；修正方法
+不伪造产品故障、console/page数据或发布通过。重新核验十三保护文件/空索引，
+不改规则、全局/生成记忆、无关资料或旧失败；完整新CI和安全部署仍待完成。
 
 ## 用户任务中断恢复 — 2026-11-13（本地，未发布）
 

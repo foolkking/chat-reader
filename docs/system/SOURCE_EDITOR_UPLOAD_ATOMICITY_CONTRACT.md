@@ -1,6 +1,6 @@
 # Source Editor Upload Atomicity Contract
 
-Current worktree contract: 2026-11-13. Release I closure below is historical;
+Current worktree contract: 2026-11-14. Release I closure below is historical;
 current production/candidate status comes from `PROJECT_STATE.md`.
 
 ## Save identity and recoverability
@@ -167,13 +167,18 @@ fallback remains unchanged.
 
 ## Verification Contract
 
-The Release I browser gate runs the real production build with deterministic
+The upload-token browser gate runs the real production build with deterministic
 Playwright request barriers. It covers pending immediate submit, fast/slow
-upload, typing, out-of-order uploads, partial failure, retry, cursor, selection,
+upload, typing, sequential uploads under a held first finalization, partial
+failure, original-session/item readback before explicit retry, cursor, selection,
 scroll, file chooser, drag/drop, clipboard paste, delete-before-completion,
 undo/redo, and 409/500 save recovery. A save payload is captured and must
 contain `cr-asset://` and no `cr-upload://`; persisted versions and occurrences
-are then read back from the API.
+are then read back from the API. Caret-on-reference replacement and ordinary-caret
+insertion are distinct; removing the last reference verifies automatic KEEP,
+then a separate explicit Files detach preserves historical content. Unknown-save
+checks must not PATCH, and the later original-save retry preserves the exact
+payload, operation UUID and source baseline.
 
 The API gate covers PATCH, conversation create and message insert rejection,
 transaction state remaining unchanged, code-literal acceptance, canonical

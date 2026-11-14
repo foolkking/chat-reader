@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T23:59:29.804908+00:00",
+  "base_revision": "74a1e8605bc00d64b543544041c3095566f2881f",
+  "status": "local_fixture_coordinate_repairs_verified_fresh_full_exact_ci_required_not_deployed",
+  "scope": {
+    "source_input_count": 1391,
+    "changed_existing_inputs": [
+      "apps/web/e2e/attachment-upload-flow.spec.ts",
+      "apps/web/e2e/reader-capacity.spec.ts",
+      "apps/web/e2e/source-editor-upload-atomicity.spec.ts",
+      "scripts/ux/reader-capacity-diagnostic.test.mjs",
+      "scripts/ux/reader-interaction-browser.mjs",
+      "scripts/ux/source-editor-table-browser.mjs"
+    ],
+    "added_code_inputs": [],
+    "unrelated_protected_files": 13,
+    "protected_drift": [],
+    "index_empty": true,
+    "application_workflow_migration_deployment_code_changed": false,
+    "input_manifest": "ci-runtime-frame-inputs.json",
+    "fresh_build_manifest": "ci-runtime-frame-build-inputs.json",
+    "old_build_not_inherited": true,
+    "fresh_build_input_count": 548,
+    "final_manifest_recaptured_after_diagnostic_edge_settled_fixture_fix": true,
+    "earlier_coordinate_manifest_is_not_final": true
+  },
+  "tests": {
+    "reader_actual_mounted": {
+      "passed": 42,
+      "original_scenarios": 39,
+      "original_scenarios_byte_preserved": true,
+      "additional_coordinate_controls": [
+        {
+          "scenario": "quiet-reclamation",
+          "frame_count": 188,
+          "wheel_samples": 30,
+          "physical_reverse_samples": 0,
+          "unknown_samples": 0,
+          "raw_reverse_samples": 1,
+          "physical_monotonic": true,
+          "raw_monotonic": false,
+          "diagnostic_only_not_release_budget_claim": true
+        },
+        {
+          "scenario": "actual-reverse-wheel",
+          "frame_count": 130,
+          "wheel_samples": 30,
+          "physical_reverse_samples": 2,
+          "unknown_samples": 0,
+          "raw_reverse_samples": 1,
+          "physical_monotonic": false,
+          "raw_monotonic": false,
+          "diagnostic_only_not_release_budget_claim": true
+        },
+        {
+          "scenario": "actual-backward-jump",
+          "frame_count": 133,
+          "wheel_samples": 30,
+          "physical_reverse_samples": 1,
+          "unknown_samples": 0,
+          "raw_reverse_samples": 0,
+          "physical_monotonic": false,
+          "raw_monotonic": true,
+          "diagnostic_only_not_release_budget_claim": true
+        }
+      ],
+      "result": {
+        "task_relative_path": "reader-interaction-final-02/reader-interaction-browser/result.json",
+        "sha256": "a7f5f6787612c90910770f9f49a55dcfe792930fb5a20657473dde55d9ebd110",
+        "bytes": 1428428
+      },
+      "script_sha256": "a5856be720a349c7a0d65a8bdf94465546fca5ba008da0c884f75de3fffb5245",
+      "boundary": "Mounted real Reader and collector with synthetic adapters, not a serving local stack or Linux release-capacity acceptance.",
+      "quiet_fixture_waits_for_actual_edge_settled_before_400ms_pause": true,
+      "release_workload_has_no_added_quiet_pause": true
+    },
+    "coordinate_controls": {
+      "red": {
+        "passed": 5,
+        "failed": 8,
+        "skipped": 0,
+        "log": {
+          "task_relative_path": "reader-coordinate-controls-red-01.log",
+          "sha256": "e8ee4622eb3e1a55a04f6b8bf1f9f458eefee9e903ef31f023451eba5b6f58e1",
+          "bytes": 7874
+        }
+      },
+      "green": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0,
+        "log": {
+          "task_relative_path": "reader-coordinate-controls-green-02.log",
+          "sha256": "b23d2344b01d1973f893bd1b4079350c6ba69172d2155f704ce2afda215a41ef",
+          "bytes": 5643
+        }
+      },
+      "included_in_node_total_not_additive": true,
+      "actual_compiled_collector_executed": true,
+      "all_frames_and_213ms_long_task_retained": true,
+      "remount_version_change_missing_anchor_fail_closed": true,
+      "reverse_tolerance_px": 2
+    },
+    "source_editor_mounted_earlier_in_same_batch": {
+      "passed": 117,
+      "original_scenarios_retained": 102,
+      "result": {
+        "task_relative_path": "mounted-02/table-browser/result.json",
+        "sha256": "2a40b66a116afea94baa79a9a16fc100d4296edf067791a255cf23e685dde2b8",
+        "bytes": 12350
+      },
+      "exact_injected_500_message_url_count_verified": 3,
+      "additional_errors": 0,
+      "harness_input_unchanged_since_that_run": true,
+      "fixture_tail_official_trace_sha256": "ce02093df9c60cc1f7100ee8a61d1d41851622fa4fbf2c57420aaf8978044ec1",
+      "submitted_and_persisted_v3_source_have_ordinary_tail": true,
+      "Control_End_is_outside_inclusive_reference_end_for_this_fixture": true,
+      "not_an_additional_rerun_or_real_api_network_acceptance": true
+    },
+    "files_mounted_earlier_in_same_batch": {
+      "passed": 15,
+      "result": {
+        "task_relative_path": "mounted-files-01/attachment-recovery-browser/result.json",
+        "sha256": "5f7423d968dab58daa041295263f820033d35466e6299d2d8a8fb006f13914b1",
+        "bytes": 16248
+      },
+      "not_an_additional_rerun": true,
+      "original_result_schema": "status/results; no fabricated console or page-error telemetry"
+    },
+    "selected_api_testclient_earlier_in_same_batch": {
+      "passed": 75,
+      "log": {
+        "task_relative_path": "api-selected-01.log",
+        "sha256": "78ea469e419b914b49ef0b5bfbd99e9338eb025398ad03055021fe69637a888a",
+        "bytes": 193
+      },
+      "not_rerun_after_coordinate_only_changes": true,
+      "api_application_and_test_inputs_unchanged": true,
+      "boundary": "Existing SQLite/inline TestClient fixtures, not PostgreSQL/Linux or full API-suite acceptance."
+    },
+    "node_ux": {
+      "passed": 2519,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "task_relative_path": "node-ux-03.log",
+        "sha256": "cbdbcbeae60ce9f22f44548afbe8c6879c716f6c45b5eb7cc8498cccd52450e4",
+        "bytes": 542105
+      }
+    },
+    "node_ci": {
+      "passed": 64,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "task_relative_path": "node-ci-03.log",
+        "sha256": "8324501bb63865adecd6b970a8c6010c34da2cc06a5a1cef72c7613ade29fdeb",
+        "bytes": 16328
+      }
+    },
+    "node_security_pwa_units": {
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "log": {
+        "task_relative_path": "node-security-pwa-03.log",
+        "sha256": "3b73ba8666a7b250dc942afc273f6285a14a8c891dbe57d03bc665abc3e84a17",
+        "bytes": 4394
+      }
+    },
+    "static": {
+      "command": {
+        "started_at": "2026-11-14T07:54:28.2267412+08:00",
+        "ended_at": "2026-11-14T07:55:45.6215923+08:00",
+        "lint_exit_code": 0,
+        "typecheck_exit_code": 0,
+        "temporary_environment_process_local": true,
+        "build_info_task_local": true,
+        "full_local_stack_started": false
+      },
+      "lint": {
+        "task_relative_path": "web-lint-final-04.log",
+        "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+        "bytes": 173
+      },
+      "typecheck": {
+        "task_relative_path": "web-typecheck-final-05.log",
+        "sha256": "c03f60472bb5fd76460fb67d270d01d288cd2c79c63e7b6cc331acad71e79cd5",
+        "bytes": 431
+      },
+      "single_migration_head": "20261112_0061"
+    },
+    "fresh_build": {
+      "command": {
+        "command": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "build"
+        ],
+        "ended_at": "2026-11-14T07:40:00.1015238+08:00",
+        "old_output_not_inherited": true,
+        "no_local_site_started": true,
+        "ci_or_production_image_claimed": false,
+        "started_at": "2026-11-14T07:38:31.1688003+08:00",
+        "build_cpus": 1,
+        "exit_code": 0
+      },
+      "log": {
+        "task_relative_path": "coordinate-fresh-build-01.log",
+        "sha256": "1b030773be4fb1be03af5d1955d9df34527d38ec403946850055a755cc55111c",
+        "bytes": 1490
+      },
+      "source_and_copy_input_drift": [],
+      "same_installed_dependency_realpaths": true,
+      "env_files_copied": false,
+      "node": "v20.13.1",
+      "not_ci_node22_or_production_image_acceptance": true
+    }
+  },
+  "diagnostic_result": {
+    "receipt": "ci-runtime-frame-diagnostic-result.json",
+    "sha256": "8f50b277fd1d4f0053031db7c8e40a388299ef10276d26bb2fd1494600f40439",
+    "not_release_acceptance": true,
+    "original_unprofiled_213ms_not_reproduced_not_claimed_fixed": true
+  },
+  "preserved_failures": {
+    "old_raw_rebase_probe": {
+      "task_relative_path": "reader-capacity-rebase-red-01/reader-interaction-browser/result.json",
+      "sha256": "9988f4151e4aac2355927d56414d25bb1e9979b7fead958d0e66ac3a61d7eb1c",
+      "bytes": 428879
+    },
+    "quiet_fixture_started_before_edge_settled": {
+      "task_relative_path": "reader-interaction-final-01/reader-interaction-browser/result.json",
+      "sha256": "20c1719386ab5be391a996159c5c3c410e93acf34e99e3e2fc4c9bfc0d6faf6b",
+      "bytes": 662332
+    },
+    "old_quiet_fixture_script": {
+      "task_relative_path": "reader-interaction-final-01/harness-before-settled-wait.mjs",
+      "sha256": "3b5e72eef9a5cc874ccd62cbb36ae1aafa3c596534fa76fa93ebc61ceca5a65f",
+      "bytes": 49854
+    },
+    "wrong_typecheck_cli_separator": {
+      "task_relative_path": "web-typecheck-03.log",
+      "sha256": "774f9f8cfce73b48f713913094c0773926dcace2bd165eb5da45edd3921c8c51",
+      "bytes": 782
+    },
+    "first_editor_console_check": {
+      "task_relative_path": "mounted-01-source-editor-table-browser.mjs",
+      "sha256": "e2df6d7aaa3826981f54fcddab09b02f347e7fa1d0dc8cc77ec2d4a861cfc90d",
+      "bytes": 212006
+    },
+    "local_receipt_verifier_assumed_files_error_array": {
+      "task_relative_path": "record-final-verification-01.log",
+      "sha256": "3b49ac55a2b32ac90fdd675a1df37a7a7b017c50a2b6b89681ad30efc92490d9",
+      "bytes": 373
+    },
+    "original_local_receipt_verifier_method": {
+      "task_relative_path": "record_final_verification-01.py",
+      "sha256": "8a85e1e4da14a8fde2e7a8d4f0c8f18b972b00d44aa5d605592642864f6aff08",
+      "bytes": 18922
+    }
+  },
+  "frozen_release_contract": {
+    "measurement_version": 4,
+    "scroll_direction": "shared-real-dom-anchor",
+    "wheel_steps": 30,
+    "wheel_delta_px": 120,
+    "sample_delay_ms": 34,
+    "reverse_tolerance_px": 2,
+    "p95_frame_ms": 34,
+    "longest_long_task_ms": 150,
+    "long_task_total_ms": 250,
+    "mounted_messages": 40,
+    "mounted_blocks": 120,
+    "linux_full_original_stability_and_memory_signal_gates_required": true
+  },
+  "fact_surfaces": {
+    "code": "changed-and-verified-local",
+    "runtime": "pending-fresh-release-checks-production-unchanged",
+    "docs": "pending-targeted-synchronization",
+    "rules": "verified-current-no-rule-writes",
+    "memory": "generated-read-only-no-writes",
+    "workspace": "thirteen-protected-files-preserved-no-cleanup"
+  },
+  "full_exact_ci": "new_dispatch_required_no_previous_success_inherited",
+  "production_operations_performed": false,
+  "old_test_postgresql_started_or_stopped_again": false,
+  "full_local_api_worker_web_started": false,
+  "production_cancel_authorization_reused": false,
+  "user_input_replayed_or_removed": false,
+  "automation_created": false,
+  "remaining_product_physical_device_disaster_recovery_acceptance": "user_owned_not_claimed_passed"
+}

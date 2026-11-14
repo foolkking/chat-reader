@@ -1,6 +1,6 @@
 # Project State
 
-## Reliability candidate — 2026-11-14 (focused repair verified, fresh CI pending)
+## Reliability candidate — 2026-11-14 (local repair verified; fresh full CI required)
 
 The latest November13 instruction authorizes selective commit/push, the full
 exact-source CI and deployment after CI success. The user owns acceptance of
@@ -8,7 +8,53 @@ the remaining product/device/recovery scenarios. This does not waive automated
 release gates, stopped-writer backup, migration or runtime-health safeguards,
 and does not authorize cleanup or replay of user inputs.
 
-Repair **`7f8a6425a1d3b9f5c255925ce55340a406a3e063`** is selectively committed
+Focused repair **`74a1e8605bc00d64b543544041c3095566f2881f`** is selectively
+committed and pushed: nineteen task files, thirteen unrelated files byte-preserved
+and unstaged. Full exact CI **`43503483829`** was first read at
+**05:28:55.244142 +08:00**, after its fresh fifty-minute wall-clock/monotonic
+boundary. Independently confirmed **completed/failure at 05:39:07 +08:00**;
+no cancellation was requested. API **6656 passed / 3 skipped / 5 warnings**,
+Settings **470 passed plus independent restore1**; Web failed five cases and
+Reader math10000 cold0 measured **213ms against the unchanged 150ms bound**.
+Both release jobs were skipped. Four official logs and three official diagnostic
+ZIPs are verified, not deployable artifacts.
+[Failure receipt](docs/evidence/reliability-2026-11-14/ci-probe-pagination-failure.json)
+preserves the [dispatch](docs/evidence/reliability-2026-11-14/ci-probe-pagination-dispatch.json)
+and original failure; no earlier partial success is inherited.
+
+The Web fixes align the old tests with the existing reference-caret, automatic
+KEEP, sequential upload and original-receipt recovery contracts; application,
+workflow, migration and deployment code are unchanged. Mounted editor **117**
+(all original102 plus fifteen scenarios) and Files **15** pass with explicit
+HTTP adapters, not authenticated server acceptance. The first mounted run's
+final console-check failure is retained; every deliberate500 is now checked by
+exact message, request URL and count, without suppressing unrelated errors.
+Selected real API/TestClient checks **75** remain earlier local evidence with
+unchanged API inputs, not an additional rerun. Final Reader **42** retains all
+original39 scenarios plus three real-collector coordinate controls; Node UX
+**2519**, CI scripts **64**, security/PWA unit **20**, lint/typecheck and a new
+**548-input** same-installed-dependency isolated build pass. Final **1391**
+source/test/config inputs were recaptured after the diagnostic fixture correction;
+thirteen protected files and the empty index are verified. No local serving
+stack or PostgreSQL restart. [Local verification and input manifests](docs/evidence/reliability-2026-11-14/ci-runtime-frame-verification.json)
+do not replace a new full exact CI.
+
+The unexplained213ms is not claimed fixed. Diagnostic-only full-sequence CPU run
+**`43514182245`** completed/failure; its first read at **06:40:15.205718 +08:00**
+passed the fresh fifty-minute wall-clock boundary and **3000.015** monotonic
+seconds. All eighteen measurements and fifty-four cold profiles are retained.
+Its three assertion failures concern raw scrollTop, not a proven TOC/GC/KaTeX
+cause. Independent mounted evidence distinguishes legitimate whole-turn rebasing
+from real backwards movement missed by the old wheel-only comparator.
+Measurement **v4** uses shared connected real DOM anchors on every frame and
+wheel sample, preserves raw reversals/all frames/long tasks, and retains the
+original **2/34/150/250/40/120** budgets and **30×120px +34ms** inputs.
+[Diagnostic result](docs/evidence/reliability-2026-11-14/ci-runtime-frame-diagnostic-result.json)
+is not release acceptance. Only tests/fixtures and owned documentation changed;
+no scheduler or production action. The two authorized old-import cancellations
+are complete and are not reused for later imports.
+
+Preceding repair **`7f8a6425a1d3b9f5c255925ce55340a406a3e063`** is selectively committed
 and pushed: nineteen task files, thirteen unrelated files byte-preserved and
 unstaged. Exact full CI **`43483733253`** was confirmed at
 **02:33:11.802991 +08:00**; the first read at **03:23:11.814857 +08:00**

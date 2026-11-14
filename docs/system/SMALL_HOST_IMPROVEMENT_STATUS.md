@@ -80,8 +80,9 @@
    合成`.cr`/系统归档恢复不是宿主灾备演练。
 4. 旧“无回执”文件与未知提交文件受保护；本轮不自动修复/清理历史数据。
    兼容接口新增不代表旧离线副本被改写。
-5. 完整精确源码CI43459604614已失败；修复7f8a642的完整新CI43483733253
-   也失败并单次取消，修复中。没有可部署制品，不得继承旧候选结果。
+5. 完整精确源码CI43459604614、43483733253和74a1e86的43503483829均已失败；
+   43514182245也已结束，仅为CPU诊断。Web夹具及阅读坐标测量修正已本地验证，
+   必须新完整精确CI全绿；尚无本轮可部署制品，不得继承旧候选结果。
 6. 下述后一批已补管理员当前执行的定点停止与结果核对，但不是全局异常
    任意重置工具。所有业务类型恢复出口仍未逐项完成整链验收；不能据此
    宣称A–D所有体验目标已经全部完成。
@@ -424,6 +425,109 @@ CI，实体设备/产品/宿主恢复验收仍由用户完成。
 [本批最终回执](../evidence/reliability-2026-11-14/ci-probe-pagination-verification.json)
 及精确输入不覆盖前批。完整新CI、Linux总资源/信号、原完整帧矩阵及五份
 精确制品仍须通过，再做fresh生产准入/备份/迁移/部署；用户验收范围不代做。
+
+### 11月14日：探针/定位/分页修复提交与新完整CI（派发记录，后续失败）
+
+- 选择性提交/推送`74a1e8605bc00d64b543544041c3095566f2881f`共十九文件；
+  1391项最终源码/测试/配置、548项新构建输入、十三个保护文件无漂移，
+  本地/远端master精确一致，索引空，无amend/force push或全量暂存。
+- 新完整[CI43503483829](https://github.com/foolkking/chat-reader/actions/runs/43503483829)
+  在**04:38:55.083438 +08:00**确认派发；首次读取不早于
+  **05:28:55.083438 +08:00**。[独立派发回执](../evidence/reliability-2026-11-14/ci-probe-pagination-dispatch.json)
+  不覆盖旧失败或事件回执，只证明派发。等待器在当前任务进程内从启动后
+  完整等待五十monotonic分钟并核对wall-clock边界，不创建安排或提前读状态。
+- 六job、原API45/Settings60分钟、读取/信号/内存/完整逐帧门槛不变。新run
+  不继承前次局部成功；该派发时点尚无通过结论或发布制品，后续失败见下。
+  生产仍3564cbf/schema0060。
+  两次定点导入恢复授权均已执行，不复用旧helper取消新活动任务或重放来源。
+
+### 11月14日：完整CI失败、Web旧语义修复与精确CPU诊断（未部署）
+
+- `43503483829 / 74a1e86 / attempt1`首次读取
+  **05:28:55.244142 +08:00**满足新50分钟wall-clock/monotonic双边界；
+  **05:39:07**独立确认completed/failure，取消请求**0次**。
+  API**6656通过/3跳过/5 warnings，2009.90秒**；Settings**470+独立restore1**
+  通过。Web五项失败、reading comparison一项失败；build-images和
+  inspect-release-artifact均skipped，未执行发布步骤或产生可部署制品。
+- 四份官方job日志和三份ZIP精确run/SHA/attempt/官方digest均核验、安全解压；
+  `gh run view --job --log`在整run仍执行时拒绝取已结束job日志的方法失败保留，
+  改用官方jobs/logs接口，不因取证方法失败取消run。
+- Web五份官方trace逐项定位：两文件实际201且列表齐全，重开caret在图片引用
+  上，picker提供Replace而不是Insert；最后引用删除已自动KEEP，无旧确认弹窗；
+  第一finalize held时两draft pending且第二上传尚未开始；unknown finalize第一次
+  Retry只读原session/item，第二次显式重试原条目；unknown save须Check result后
+  Retry original save。不是缓存丢文件、数据库删除卡死或原导入资料损坏的证明。
+- 仅校准两个旧e2e和已有挂载夹具，保留源文件/历史引用、串行次序、save blocked、
+  无transient、单次上传及原operation/base/hash快照复用断言。真实Files显式detach
+  与历史content可读断言保留，不改应用、工作流、migration或部署代码。
+  挂载编辑器**117**（原102全部保留，三宽度新增15）、Files**15**通过；
+  真实API/TestClient选定三模块**75**、Node UX2510、CI scripts64、
+  安全/PWA20及最终lint/typecheck通过。API组使用现有SQLite/inline合成夹具，
+  不冒充PG/Linux总内存或完整服务验收，不重启已停止的PG。
+  两e2e仍属于构建范围，拒绝继承旧输出；新**548输入**同安装依赖隔离Next
+  build通过，原输入与副本漂移0，未复制env；最终**1391输入**与十三个保护
+  文件核对通过、索引空。新增修改仅三项原测试/夹具，业务和部署代码未变。
+- 首轮挂载117个场景body执行完，但全局console断言因三次刻意注入500失败；
+  原脚本/日志/未完成回执保留。修正精确匹配三条消息、各自请求URL和数量，
+  任何额外transport/renderer/application错误仍失败。不是屏蔽console或放宽门槛。
+- Reader同runner baseline九例通过，candidate八通过/一失败：
+  **math10000 cold0 longest/total213ms、p95约16.8ms、mounted22**，其余两个
+  cold long task均0，parse91/render119/math17未随tier增加。原unfiltered JSON
+  保留，但trace关闭且无CPU栈；213ms及历史223/331ms根因尚未证明，不称噪声
+  或已修，不猜改TOC、GC、KaTeX。
+- 仅派发已有完整九例CPU诊断
+  [43514182245](https://github.com/foolkking/chat-reader/actions/runs/43514182245)，
+  精确`diagnostic_ref=74a1e8605bc00d64b543544041c3095566f2881f`；
+  **05:50:15.070938 +08:00**确认派发，首读不早于
+  **06:40:15.070938**，当前任务进程从启动完整等待3000 monotonic秒并核对
+  wall-clock。baseline→candidate原九例/顺序/门槛均保留，每cold追加CPU；
+  **diagnostic-only，不是发布验收**，不能继承其通过或覆盖原失败。
+
+[独立失败回执](../evidence/reliability-2026-11-14/ci-probe-pagination-failure.json) /
+[CPU诊断派发回执](../evidence/reliability-2026-11-14/ci-runtime-frame-diagnostic-dispatch.json)
+不覆盖旧派发/失败/生产事件。十三个保护文件与索引仍保全；不重启或再次停止
+旧测试PG、不启动完整本机站点、不建安排、不操作生产或重复两次已完成的取消。
+必须新完整精确CI全绿、五份精确制品及fresh容量/备份/迁移/部署安全检查。
+
+### 11月14日：CPU诊断结束与真实阅读坐标修正（本地通过，完整CI待派发）
+
+- `43514182245 / 74a1e86 / attempt1`已completed/failure；首次读取
+  **06:40:15.205718 +08:00**满足wall-clock及**3000.015秒**monotonic边界。
+  全18份测量、54份cold CPU profile和官方ZIP/日志摘要核验保留。
+  baseline两例、candidate一例失败均是旧raw scrollMonotonic；candidate
+  plain1000 cold1两段长任务只有`(program)`栈，不能归因TOC/GC/KaTeX。
+  math10000三cold长任务为0/58/0ms；原非profile213ms未复现，不称已修。
+- 原六份retention trace及同一实际Reader/plain1000正负对照证实：
+  合法整轮回收可大幅减少raw scrollTop而真实DOM锚点不后退；真实-120px
+  轮间回跳又可被下一wheel抵消，旧轮间raw comparator反而漏检。
+  测量v4在每rAF/每wheel用仍连接的共享真实block/article，按前一阅读线
+  排序选锚点；同ID重挂、版本变化、缺共享/可见锚点均不能伪造连续。
+  原raw samples/reversals、所有chronological frames/longTasks完整保留。
+  原2px、34/150/250ms、40/120 DOM门槛及30×120px+34ms输入均不变；
+  未改应用、250ms回收策略、工作流、migration或部署代码。
+- 实际collector13项先红**5通过/8失败**，修后三模块专项**25通过**；
+  同组包含在最终Node数，不重复累加。真实mounted Reader原39场景逐字
+  保留，加合法回收/反向wheel/轮间回跳三组，最终**42通过**。
+  第一次完整mounted run完成37项后，诊断quiet开始时edge仍busy，未触发
+  回收；保留原脚本/result/失败现场。仅在诊断夹具中先有界等edge settled，
+  再计400ms quiet；发布capacity采样不新增pause或放宽时限。
+- 最终Node UX**2519**、CI scripts**64**、安全/PWA单测**20**及
+  lint/typecheck通过。先前同批editor117/Files15/API TestClient75输入
+  未变，不冒称追加重跑或真实API网络验收。官方fixture的原PATCH及
+  v3响应证实正文末尾是普通文本，Control+End在引用范围外；未再改e2e。
+- capacity变化拒绝旧build，新**548输入**同安装依赖隔离Next build通过，
+  原库/副本漂移0、未复制env。最后诊断夹具修正后重新捕获**1391输入**，
+  十三个保护文件无漂移、索引空；较早1391清单不冒充最终输入。
+  本地回执初版误读Files不存在的errors数组，在写证据前失败；方法和日志
+  保留，按真实status/results校验，不制造console/page telemetry。
+
+[CPU诊断结果](../evidence/reliability-2026-11-14/ci-runtime-frame-diagnostic-result.json) /
+[最终本地回执](../evidence/reliability-2026-11-14/ci-runtime-frame-verification.json) /
+[最终源码输入](../evidence/reliability-2026-11-14/ci-runtime-frame-inputs.json) /
+[新构建输入](../evidence/reliability-2026-11-14/ci-runtime-frame-build-inputs.json)。
+不重启/再次停止旧自建PG，不绕过完整本机站点启动拒绝，不清理或重放来源，
+不重复两次已完成的生产取消，不创建安排。完整新CI及五份精确制品、fresh
+容量/停写备份/0060→0061/健康保全仍须完成；产品、实体设备、灾备由用户验收。
 
 ### 11月14日：两次明确授权结束卡住导入（已恢复，生产仍旧版）
 

@@ -52,11 +52,37 @@ separate first-window capacity gate without weakening that history:
 - mounted messages: at most 40 in the capacity first-window workload;
 - mounted virtual blocks: at most 120;
 - no page-level horizontal overflow;
-- wheel samples may not reverse by more than 2 CSS pixels;
+- real reading movement may not reverse by more than 2 CSS pixels;
 - no blank window or overlapping virtual rows.
 
 The first-window bound is not substituted for the stricter settled far-target
 bound in `reader-restoration.spec.ts`.
+
+### Reading coordinates — measurement v4
+
+The original thirty 120px wheel inputs and 34ms sample delay remain unchanged.
+Direction is measured from a shared, still-connected real DOM block/article
+relative to the Reader viewport, both on every animation frame and at every
+wheel sample. Candidates are ranked by the previous reading line, not by a
+favourable new delta. A reused ID after remount or version replacement does not
+establish continuity. Missing visible/shared anchors are unknown and fail.
+Neither settled/compensating flags nor a changed scrollHeight excuse a reverse.
+
+Whole-turn reclamation can legitimately rebase raw scrollTop while retaining
+the actual reading anchor. V4 retains all original raw wheel samples/reversal
+records, adds every frame's raw coordinates and physical-anchor evidence, and
+reports raw monotonicity separately. It also catches a real backwards movement
+undone before the next wheel sample. The 2px tolerance is unchanged; no failed
+frame, >=1s freeze or long task is discarded. Chronological frame intervals
+and all long-task durations are preserved before a copy is sorted for p95.
+
+This is a measurement correction, not a product scroll writer, pin, spacer,
+longer reclamation delay or relaxed capacity budget. The identical single-file
+harness is used on both historical baseline and candidate. Mounted synthetic
+coordinate/negative controls supplement the original complete Linux workloads
+and stability matrix; their deliberate quiet pause is not in the release
+capacity workload. Older v3 diagnostic evidence remains unchanged and does not
+prove that an unexplained cold long task has been fixed.
 
 ## Same-runner release gate
 

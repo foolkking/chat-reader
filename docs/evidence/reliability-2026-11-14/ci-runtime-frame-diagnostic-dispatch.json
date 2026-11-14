@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "source_revision": "74a1e8605bc00d64b543544041c3095566f2881f",
+  "workflow": "reading-performance.yml",
+  "workflow_run_id": 43514182245,
+  "workflow_url": "https://github.com/foolkking/chat-reader/actions/runs/43514182245",
+  "branch": "master",
+  "diagnostic_ref": "74a1e8605bc00d64b543544041c3095566f2881f",
+  "diagnostic_only": true,
+  "dispatch_confirmed_at": "2026-11-13T21:50:15.070938+00:00",
+  "first_status_read_not_before": "2026-11-13T22:40:15.070938+00:00",
+  "original_failed_release_run": 43503483829,
+  "sequence": "baseline then exact failed candidate; all nine original cases and thresholds",
+  "release_acceptance": false,
+  "production_changed": false,
+  "automation_created": false
+}

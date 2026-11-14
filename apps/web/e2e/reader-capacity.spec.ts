@@ -15,6 +15,35 @@ test.use({ trace: "off" });
 type Tier = 398 | 1000 | 10000;
 type Profile = "plain" | "math" | "mixed";
 
+type CapacityScrollSample = {
+  at: number;
+  scrollTop: number;
+  scrollHeight: number;
+  mountedMessages: number;
+  mountedBlocks: number;
+  visibleAnchors: Array<{ key: string; top: number; bottom: number }>;
+  anchorKey: string | null;
+  anchorBeforeTop: number | null;
+  anchorAfterTop: number | null;
+  forwardPx: number | null;
+  status: "initial" | "measured" | "unknown";
+  unknownReason: "invalid-root" | "no-visible-anchor" | "no-shared-real-anchor" | null;
+};
+
+type CapacityTelemetryState = {
+  frames: number[];
+  longTasks: number[];
+  longTaskSpans: Array<{ startTime: number; duration: number }>;
+  includeTiming: boolean;
+  startedAt: number;
+  frameId: number;
+  observer: PerformanceObserver | null;
+  initialScroll: CapacityScrollSample;
+  scrollFrames: CapacityScrollSample[];
+  scrollWheelSamples: CapacityScrollSample[];
+  captureWheel: () => CapacityScrollSample;
+};
+
 const tiers: Tier[] = [398, 1000, 10000];
 const profiles: Profile[] = ["plain", "math", "mixed"];
 
@@ -33,7 +62,8 @@ for (const profile of profiles) {
       const warm = await measureWarmRevisit(page, conversationId);
       const payload = {
         fixture: { version: "release-d-reader-capacity-v1", seed: 20260814, profile, messages },
-        measurement: { version: 3, trace: false, wheelSteps: 30, wheelDelta: 120, sampleDelayMs: 34, diagnosticOnly: diagnostic },
+        measurement: { version: 4, trace: false, wheelSteps: 30, wheelDelta: 120, sampleDelayMs: 34,
+          scrollDirection: "shared-real-dom-anchor", reverseTolerancePx: 2, diagnosticOnly: diagnostic },
         runs, warm,
       };
       // The list/gate reporters do not materialize body-only attachments.
@@ -204,16 +234,86 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
   // Move once, before the timed window. Repeated hover actions wait for
   // stability and capture diagnostic snapshots between every wheel event.
   await root.hover();
-  await page.evaluate((includeTiming) => {
-    const state = {
+  await root.evaluate((element, includeTiming) => {
+    const startedAt = performance.now();
+    type Anchor = { node: HTMLElement; key: string; top: number; bottom: number; block: boolean };
+    type Snapshot = { sample: CapacityScrollSample; anchors: Anchor[] };
+    const keyFor = (node: HTMLElement) => {
+      const article = node.closest<HTMLElement>("article[data-message-id]");
+      if (!article?.dataset.messageId) return null;
+      const message = `${article.dataset.messageId}:${article.dataset.messageVersionId ?? ""}`;
+      return node.dataset.blockIndex !== undefined
+        ? `block:${message}:${node.dataset.blockIndex}:${node.dataset.blockId ?? node.id}`
+        : `message:${message}`;
+    };
+    const readScroll = (previous: Snapshot | null): Snapshot => {
+      const bounds = element.getBoundingClientRect();
+      const anchors: Anchor[] = [];
+      let mountedMessages = 0, mountedBlocks = 0;
+      for (const node of element.querySelectorAll<HTMLElement>("article[data-message-id], [data-block-index]")) {
+        if (node.dataset.blockIndex !== undefined) mountedBlocks++;
+        else mountedMessages++;
+        const key = keyFor(node), rect = node.getBoundingClientRect();
+        if (key && node.isConnected && Number.isFinite(rect.top) && Number.isFinite(rect.bottom)
+          && rect.height > 0 && rect.bottom > bounds.top && rect.top < bounds.bottom) {
+          anchors.push({ node, key, top: rect.top - bounds.top, bottom: rect.bottom - bounds.top,
+            block: node.dataset.blockIndex !== undefined });
+        }
+      }
+      // Rank by the previous reading line, never by a favourable current delta.
+      // Retain only actual DOM references; looking up the same ID after remount
+      // or using scrollHeight/edge flags to invent an offset is not evidence.
+      const distance = (anchor: Anchor) => anchor.top <= 120 && anchor.bottom >= 120
+        ? 0 : Math.min(Math.abs(anchor.top - 120), Math.abs(anchor.bottom - 120));
+      const candidates = [...(previous?.anchors ?? [])].sort((left, right) =>
+        distance(left) - distance(right) || Number(right.block) - Number(left.block));
+      let shared: Anchor | null = null, afterTop: number | null = null;
+      for (const candidate of candidates) {
+        if (!candidate.node.isConnected || !element.contains(candidate.node) || keyFor(candidate.node) !== candidate.key) continue;
+        const rect = candidate.node.getBoundingClientRect();
+        if (rect.height <= 0 || !Number.isFinite(rect.top)) continue;
+        shared = candidate;
+        afterTop = rect.top - bounds.top;
+        break;
+      }
+      const validRoot = element.isConnected && bounds.height > 0 && Number.isFinite(element.scrollTop)
+        && Number.isFinite(element.scrollHeight);
+      const measured = Boolean(validRoot && anchors.length && shared && afterTop !== null);
+      return {
+        anchors,
+        sample: {
+          at: performance.now(), scrollTop: element.scrollTop, scrollHeight: element.scrollHeight,
+          mountedMessages, mountedBlocks,
+          visibleAnchors: anchors.map(({ key, top, bottom }) => ({ key, top, bottom })),
+          anchorKey: shared?.key ?? null, anchorBeforeTop: shared?.top ?? null, anchorAfterTop: afterTop,
+          forwardPx: measured ? shared!.top - afterTop! : null,
+          status: !previous && validRoot && anchors.length ? "initial" : measured ? "measured" : "unknown",
+          unknownReason: !validRoot ? "invalid-root" : !anchors.length ? "no-visible-anchor"
+            : previous && !measured ? "no-shared-real-anchor" : null,
+        },
+      };
+    };
+    const initial = readScroll(null);
+    let framePrevious = initial, wheelPrevious = initial;
+    const state: CapacityTelemetryState & { lastFrame: number } = {
       frames: [] as number[], longTasks: [] as number[], lastFrame: 0,
       longTaskSpans: [] as Array<{ startTime: number; duration: number }>, includeTiming,
-      startedAt: performance.now(), frameId: 0, observer: null as PerformanceObserver | null,
+      startedAt, frameId: 0, observer: null as PerformanceObserver | null,
+      initialScroll: initial.sample, scrollFrames: [] as CapacityScrollSample[], scrollWheelSamples: [] as CapacityScrollSample[],
+      captureWheel: () => {
+        const next = readScroll(wheelPrevious);
+        wheelPrevious = next;
+        state.scrollWheelSamples.push(next.sample);
+        return next.sample;
+      },
     };
-    (window as typeof window & { __capacityTelemetry?: typeof state }).__capacityTelemetry = state;
+    (window as typeof window & { __capacityTelemetry?: CapacityTelemetryState }).__capacityTelemetry = state;
     const frame = (time: number) => {
       if (state.lastFrame) state.frames.push(time - state.lastFrame);
       state.lastFrame = time;
+      const next = readScroll(framePrevious);
+      framePrevious = next;
+      state.scrollFrames.push(next.sample);
       state.frameId = requestAnimationFrame(frame);
     };
     state.frameId = requestAnimationFrame(frame);
@@ -246,28 +346,33 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
   for (let step = 0; step < steps; step += 1) {
     await page.mouse.wheel(0, 120);
     await page.waitForTimeout(34);
-    const sample = await root.evaluate((element) => ({
-      scrollTop: element.scrollTop,
-      scrollHeight: element.scrollHeight,
-      messages: element.querySelectorAll("article[data-message-id]").length,
-      blocks: element.querySelectorAll("[data-block-index]").length,
-      horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
-      edgeStage: element.dataset.readerEdgeStage ?? null,
-      navigationStage: element.dataset.navigationStage ?? null,
-      layoutCompensating: element.dataset.readerLayoutCompensating === "true",
-      surfaceCompensating: element.dataset.readerSurfaceCompensating === "true",
-      visibleMessage: (() => {
-        const rootRect = element.getBoundingClientRect();
-        const article = Array.from(element.querySelectorAll<HTMLElement>("article[data-message-id]")).find((candidate) => {
-          const rect = candidate.getBoundingClientRect();
-          return rect.bottom > rootRect.top && rect.top < rootRect.bottom;
-        });
-        return {
-          id: article?.dataset.messageId ?? null,
-          top: article ? Math.round(article.getBoundingClientRect().top - rootRect.top) : null,
-        };
-      })(),
-    }));
+    const sample = await root.evaluate((element) => {
+      const state = (window as typeof window & { __capacityTelemetry?: CapacityTelemetryState }).__capacityTelemetry;
+      if (!state) throw new Error("Capacity telemetry was not installed");
+      const scroll = state.captureWheel();
+      return {
+        scrollTop: scroll.scrollTop,
+        scrollHeight: scroll.scrollHeight,
+        messages: element.querySelectorAll("article[data-message-id]").length,
+        blocks: element.querySelectorAll("[data-block-index]").length,
+        horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
+        edgeStage: element.dataset.readerEdgeStage ?? null,
+        navigationStage: element.dataset.navigationStage ?? null,
+        layoutCompensating: element.dataset.readerLayoutCompensating === "true",
+        surfaceCompensating: element.dataset.readerSurfaceCompensating === "true",
+        visibleMessage: (() => {
+          const rootRect = element.getBoundingClientRect();
+          const article = Array.from(element.querySelectorAll<HTMLElement>("article[data-message-id]")).find((candidate) => {
+            const rect = candidate.getBoundingClientRect();
+            return rect.bottom > rootRect.top && rect.top < rootRect.bottom;
+          });
+          return {
+            id: article?.dataset.messageId ?? null,
+            top: article ? Math.round(article.getBoundingClientRect().top - rootRect.top) : null,
+          };
+        })(),
+      };
+    });
     if (samples.length && sample.scrollTop + 2 < samples[samples.length - 1]!) {
       scrollReversals.push({
         step,
@@ -288,10 +393,7 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     if (sample.horizontalOverflow) throw new Error("page-level horizontal overflow during capacity run");
   }
   const value = await page.evaluate(() => {
-    const state = (window as typeof window & { __capacityTelemetry?: {
-      frames: number[]; longTasks: number[]; startedAt: number; frameId: number; observer: PerformanceObserver | null;
-      longTaskSpans: Array<{ startTime: number; duration: number }>; includeTiming: boolean;
-    } }).__capacityTelemetry;
+    const state = (window as typeof window & { __capacityTelemetry?: CapacityTelemetryState }).__capacityTelemetry;
     if (!state) throw new Error("Capacity telemetry was not installed");
     cancelAnimationFrame(state.frameId);
     for (const entry of state.observer?.takeRecords() ?? []) {
@@ -302,6 +404,7 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     }
     state.observer?.disconnect();
     return { frames: state.frames, longTasks: state.longTasks, durationMs: performance.now() - state.startedAt,
+      initialScroll: state.initialScroll, scrollFrames: state.scrollFrames, scrollWheelSamples: state.scrollWheelSamples,
       ...(state.includeTiming ? { diagnosticTiming: { startedAt: state.startedAt, longTaskSpans: state.longTaskSpans } } : {}) };
   });
   const memory = await page.evaluate(() => {
@@ -312,16 +415,36 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     };
   });
   // A >=1s freeze is a failure, not a frame to silently discard.
-  const frames = value.frames.sort((left, right) => left - right);
+  const frames = [...value.frames].sort((left, right) => left - right);
+  const directionTrace = [
+    { phase: "initial", index: 0, sample: value.initialScroll },
+    ...value.scrollFrames.map((sample, index) => ({ phase: "frame", index, sample })),
+    ...value.scrollWheelSamples.map((sample, index) => ({ phase: "wheel", index, sample })),
+  ];
+  const scrollUnknowns = directionTrace.flatMap(({ phase, index, sample }) =>
+    sample.status === "unknown" ? [{ phase, index, ...sample }] : []);
+  const physicalScrollReversals = directionTrace.flatMap(({ phase, index, sample }) =>
+    sample.forwardPx !== null && sample.forwardPx < -2 ? [{ phase, index, ...sample }] : []);
+  const scrollEvidenceComplete = scrollUnknowns.length === 0 && value.scrollFrames.length > 0
+    && value.scrollWheelSamples.length === steps;
   return {
     durationMs: value.durationMs,
     frameCount: frames.length,
     mountedMessagesMax,
     mountedBlocksMax,
-    scrollMonotonic: samples.every((value, index) => index === 0 || value + 2 >= samples[index - 1]!),
+    scrollMonotonic: scrollEvidenceComplete && physicalScrollReversals.length === 0,
+    scrollEvidenceComplete,
+    rawScrollMonotonic: samples.every((value, index) => index === 0 || value + 2 >= samples[index - 1]!),
     scrollSamples: samples,
     scrollReversals,
+    initialScroll: value.initialScroll,
+    scrollFrames: value.scrollFrames,
+    scrollWheelSamples: value.scrollWheelSamples,
+    physicalScrollReversals,
+    scrollUnknowns,
     pageHorizontalOverflow: false,
+    frameIntervals: value.frames,
+    longTasks: value.longTasks,
     p95FrameInterval: frames[Math.max(0, Math.ceil(frames.length * 0.95) - 1)] ?? null,
     longestTask: value.longTasks.length ? Math.max(...value.longTasks) : 0,
     longTaskTotal: value.longTasks.reduce((sum, item) => sum + item, 0),

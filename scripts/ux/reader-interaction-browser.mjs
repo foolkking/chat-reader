@@ -125,10 +125,11 @@ const results=[], errors=[];
 const touchOnly=process.env.READER_TOUCH_ONLY==="1";
 const requestOnly=process.env.READER_REQUEST_ONLY==="1";
 const retentionOnly=process.env.READER_RETENTION_ONLY==="1";
+const coordinateOnly=process.env.READER_CAPACITY_COORDINATE_ONLY==="1";
 let current;
 try {
   for(const width of [1440,800,375]) for(const locale of ["en-US","zh-CN"]) for(const theme of ["light","dark"]) {
-    if(requestOnly||retentionOnly) continue;
+    if(requestOnly||retentionOnly||coordinateOnly) continue;
     if(touchOnly&&(width===1440||locale!=="en-US"||theme!=="light")) continue;
     const page=await browser.newPage({viewport:{width,height:900},hasTouch:true});
     current=page;
@@ -406,7 +407,7 @@ try {
     }
     await page.close();
   }
-  if(!touchOnly&&!retentionOnly) for(const width of [375,800,1440]) {
+  if(!touchOnly&&!retentionOnly&&!coordinateOnly) for(const width of [375,800,1440]) {
     const page=await browser.newPage({viewport:{width,height:900}});
     current=page;
     page.on("pageerror",error=>errors.push(error.stack??error.message));
@@ -458,7 +459,7 @@ try {
     results.push({requestLifetime:true,width,initialTimeoutRetry:true,edgeTimeoutRetry:true,retainedBody:true});
     await page.close();
   }
-  if(!touchOnly&&!requestOnly) for(const [width,count,offline,protect] of [
+  if(!touchOnly&&!requestOnly&&!coordinateOnly) for(const [width,count,offline,protect] of [
     [375,80,false,false],[800,80,false,false],[1440,80,false,false],
     [800,80,true,false],[1440,160,false,false],[1440,80,false,true],
   ]) {
@@ -546,7 +547,86 @@ try {
     await expect(page.locator("[data-reader-current-message]:visible")).toContainText("/"+count);
     await page.close();
   }
-  if(!touchOnly&&!requestOnly&&!retentionOnly) for(const [width,locale,theme] of [
+  // Controlled coordinate regression, not an alternative capacity workload:
+  // execute the actual collector against the mounted Reader. A quiet pause
+  // makes reclamation deterministic; neither that pause nor the negative
+  // injections exist in reader-capacity.spec.ts's original release workload.
+  if(!touchOnly&&!requestOnly&&!retentionOnly) {
+    const ts=require("typescript"),capacity=readFileSync(join(web,"e2e/reader-capacity.spec.ts"),"utf8");
+    const ast=ts.createSourceFile("reader-capacity.spec.ts",capacity,ts.ScriptTarget.ES2022,true);
+    const fn=ast.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==="runWheelTelemetry");
+    assert.ok(fn);
+    const compiled=ts.transpileModule(`export ${fn.getText(ast)}`,{compilerOptions:{
+      target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,
+    }}).outputText;
+    const telemetry={};new Function("exports",compiled)(telemetry);
+    for(const scenario of ["quiet-reclamation","actual-reverse-wheel","actual-backward-jump"]) {
+      const page=await browser.newPage({viewport:{width:1280,height:720}});
+      current=page;page.on("pageerror",error=>errors.push(error.stack??error.message));
+      await page.addInitScript(()=>{window.fixtureKind="retention";window.fixtureCount=1000;window.fixtureOffline=false;});
+      await page.route("http://reader.synthetic/**",route=>{
+        const p=new URL(route.request().url()).pathname;
+        if(p.startsWith("/api/"))return route.fulfill({json:p.endsWith("/reading-position")?{position:null}:[]});
+        if(p.startsWith("/katex/"))return route.fulfill({body:readFileSync(join(katexRoot,p.slice(7))),contentType:p.endsWith(".css")?"text/css":"font/woff2"});
+        return route.fulfill({contentType:p==="/bundle.js"?"text/javascript":p==="/style.css"?"text/css":"text/html",body:p==="/bundle.js"?bundle:p==="/style.css"?styles.css:html});
+      });
+      await page.goto("http://reader.synthetic/");
+      const scroller=page.locator('[data-reader-scroll-root="true"]');
+      await expect(scroller.locator("article").first()).toBeVisible();
+      await scroller.evaluate(element=>{element.scrollTop=0;});await page.waitForTimeout(150);
+      let step=0;
+      const driver={
+        evaluate:page.evaluate.bind(page),
+        mouse:{wheel:async(x,y)=>{
+          assert.equal(y,120);
+          await page.mouse.wheel(x,step===18&&scenario==="actual-reverse-wheel"?-240:y);
+        }},
+        waitForTimeout:async ms=>{
+          assert.equal(ms,34);
+          await page.waitForTimeout(ms);
+          if(step===22&&scenario==="quiet-reclamation") {
+            // The ordinary edge owner may still be settling. Start the
+            // diagnostic quiet period only after it releases; don't change
+            // its timing or the product's 250ms reclamation policy.
+            await expect.poll(async()=>{
+              const stage=await scroller.getAttribute("data-reader-edge-stage");
+              return stage===null||/:(settled|failed|cancelled|mount-cancelled)(?::|$)/.test(stage);
+            },{timeout:15000}).toBe(true);
+            await page.waitForTimeout(400);
+          }
+          if(step===18&&scenario==="actual-backward-jump") {
+            await scroller.evaluate(element=>{element.scrollTop-=120;});
+            await page.waitForTimeout(34);
+          }
+          step++;
+        },
+      };
+      const result=await telemetry.runWheelTelemetry(driver,scroller,30);
+      results.push({capacityCoordinates:true,scenario,fixture:{messages:1000,profile:"plain",width:1280,height:720},
+        diagnosticOnly:true,releaseAcceptance:false,quietPauseMs:scenario==="quiet-reclamation"?400:0,...result});
+      writeFileSync(join(out,"result.json"),JSON.stringify({results,errors},null,2));
+      assert.equal(result.scrollSamples.length,30);
+      assert.equal(result.scrollWheelSamples.length,30);
+      assert.equal(result.scrollEvidenceComplete,true,"Every frame and wheel sample needs shared real DOM evidence.");
+      if(scenario==="quiet-reclamation") {
+        assert.equal(result.rawScrollMonotonic,false,"The old raw gate must still be visibly red.");
+        assert.equal(result.scrollMonotonic,true,"Legal coordinate rebasing must retain the real reading position.");
+        const removal=result.scrollFrames.flatMap((frame,i)=>i&&frame.scrollTop+2<result.scrollFrames[i-1].scrollTop
+          &&frame.mountedMessages<result.scrollFrames[i-1].mountedMessages?[frame]:[]);
+        assert.ok(removal.length>0);
+        assert.ok(removal.every(frame=>frame.anchorKey!==null&&Math.abs(frame.forwardPx)<=2));
+      } else {
+        assert.equal(result.scrollMonotonic,false,"Real reverse input and backwards jumps must remain failures.");
+        assert.ok(result.physicalScrollReversals.some(frame=>frame.phase==="frame"&&frame.forwardPx < -2));
+        if(scenario==="actual-backward-jump") {
+          assert.ok(result.scrollSamples[18]+2>=result.scrollSamples[17],
+            "The original wheel-only comparator misses this between-sample jump.");
+        }
+      }
+      await page.close();
+    }
+  }
+  if(!touchOnly&&!requestOnly&&!retentionOnly&&!coordinateOnly) for(const [width,locale,theme] of [
     [375,"en-US","light"],[800,"zh-CN","light"],[1440,"en-US","dark"],
   ]) {
     const page=await browser.newPage({viewport:{width,height:900},hasTouch:true});

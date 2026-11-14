@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { test } from "node:test";
+import { runInNewContext } from "node:vm";
 const read = file => readFileSync(new URL("../../" + file, import.meta.url), "utf8");
 const workflow = read(".github/workflows/reading-performance.yml");
 const harness = read("apps/web/e2e/reader-capacity.spec.ts");
@@ -78,4 +79,152 @@ test("historical baseline without a real parse probe is unmeasured, not zero or 
   const result = await warmCounters({ markdownRenderTotal: 10 }, { markdownRenderTotal: 30 });
   assert.equal(result.parseDelta, null);
   assert.equal(result.renderDelta, 20);
+});
+
+// Execute the real browser collector with deterministic geometry/clock inputs.
+// These controls are not a replacement for the mounted actual-Reader regression.
+async function coordinateFixture(kind, backwardPx = 120) {
+  const ts = require("typescript");
+  const ast = ts.createSourceFile("reader-capacity.spec.ts", harness, ts.ScriptTarget.ES2022, true);
+  const fn = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "runWheelTelemetry");
+  assert.ok(fn);
+  const compiled = ts.transpileModule(`export ${fn.getText(ast)}`, { compilerOptions: {
+    target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+  } }).outputText;
+  let now = 100, step = 0, nextFrameId = 1;
+  const scheduled = new Map();
+  const root = {
+    scrollTop: 0, scrollHeight: 20_000, isConnected: true,
+    // Compensation flags must never excuse a real backwards movement.
+    dataset: { readerEdgeStage: "next:settled", readerLayoutCompensating: "true", readerSurfaceCompensating: "true" },
+    getBoundingClientRect: () => ({ top: 40, bottom: 640, height: 600, width: 1280 }),
+    contains: node => node.isConnected,
+    hover: async () => {},
+    evaluate: async (fn, arg) => fn(root, arg),
+  };
+  let documentTop = 100;
+  let article = {
+    id: "message-synthetic", dataset: { messageId: "synthetic", messageVersionId: "version-1" }, isConnected: true,
+    getBoundingClientRect: () => ({ top: 40 + documentTop - root.scrollTop, bottom: 40 + documentTop - root.scrollTop + 5000, height: 5000 }),
+    closest: () => article,
+  };
+  const makeBlock = (owner = article) => ({
+    id: "block-synthetic-0", dataset: { blockId: "real-block", blockIndex: "0" }, isConnected: true,
+    getBoundingClientRect: owner.getBoundingClientRect, closest: () => owner,
+  });
+  let block = makeBlock();
+  root.querySelectorAll = selector => {
+    if (kind === "no-visible-anchor") return [];
+    if (selector === "article[data-message-id]") return [article];
+    if (selector === "[data-block-index]") return [block];
+    return [article, block];
+  };
+  const window = { innerWidth: 1280 };
+  const longTasks = [{ startTime: 101, duration: 213 }, { startTime: 102, duration: 60 }];
+  let observer;
+  class Observer {
+    static supportedEntryTypes = ["longtask"];
+    constructor(callback) { this.callback = callback; observer = this; }
+    observe() {}
+    takeRecords() { return []; }
+    disconnect() {}
+  }
+  const context = {
+    exports: {}, window, innerWidth: 1280,
+    document: { documentElement: { scrollWidth: 1280 }, getElementsByTagName: () => [root, article, block] },
+    performance: { now: () => now }, PerformanceObserver: Observer,
+    requestAnimationFrame: callback => { const id = nextFrameId++; scheduled.set(id, callback); return id; },
+    cancelAnimationFrame: id => scheduled.delete(id),
+  };
+  const tick = (elapsed = 16.7) => {
+    now += elapsed;
+    const callbacks = [...scheduled.values()]; scheduled.clear();
+    for (const callback of callbacks) callback(now);
+  };
+  const page = {
+    evaluate: async (fn, arg) => fn(arg),
+    mouse: { wheel: async (x, y) => {
+      assert.equal(x, 0); assert.equal(y, 120);
+      root.scrollTop += y;
+      tick();
+    } },
+    waitForTimeout: async ms => {
+      assert.equal(ms, 34, "The original wheel sampling delay is frozen.");
+      if (step === 3) {
+        if (kind === "coordinate-rebase") {
+          root.scrollTop -= 400; documentTop -= 400;
+        } else if (kind === "physical-reverse") {
+          root.scrollTop -= 120 + backwardPx;
+        } else if (kind === "between-sample-jump") {
+          root.scrollTop -= backwardPx;
+          tick();
+          root.scrollTop += backwardPx;
+        } else if (kind === "same-id-replacement") {
+          article.isConnected = false; block.isConnected = false;
+          article = { ...article, isConnected: true };
+          article.closest = () => article;
+          block = makeBlock();
+        } else if (kind === "changed-version") {
+          article.dataset.messageVersionId = "version-2";
+        }
+      }
+      tick(kind === "unfiltered-freeze" && step === 2 ? 1200 : 16.7);
+      if (step === 0) observer.callback({ getEntries: () => longTasks });
+      step++;
+    },
+  };
+  runInNewContext(compiled, context);
+  return context.exports.runWheelTelemetry(page, root, 6);
+}
+
+test("coordinate reclamation keeps raw reversals but measures the same real DOM reading anchor", async () => {
+  const result = await coordinateFixture("coordinate-rebase");
+  assert.equal(result.scrollMonotonic, true);
+  assert.equal(result.rawScrollMonotonic, false);
+  assert.equal(result.scrollEvidenceComplete, true);
+  assert.equal(result.scrollReversals.length, 1, "Original raw reversal evidence must not be dropped.");
+  assert.equal(result.physicalScrollReversals.length, 0);
+  assert.equal(result.scrollSamples.length, 6);
+  assert.equal(result.scrollWheelSamples.length, 6);
+});
+
+test("physical reverse movement still fails even with settled/compensating flags", async () => {
+  const result = await coordinateFixture("physical-reverse");
+  assert.equal(result.scrollMonotonic, false);
+  assert.equal(result.scrollEvidenceComplete, true);
+  assert.ok(result.physicalScrollReversals.some(sample => sample.forwardPx <= -120));
+});
+
+test("a backwards jump undone before the next wheel sample still fails on the unfiltered frame trace", async () => {
+  const result = await coordinateFixture("between-sample-jump");
+  assert.equal(result.scrollMonotonic, false);
+  assert.equal(result.rawScrollMonotonic, true, "The old wheel-only comparison misses this real movement.");
+  assert.ok(result.scrollFrames.some(sample => sample.forwardPx < -2));
+});
+
+for (const kind of ["no-visible-anchor", "same-id-replacement", "changed-version"]) {
+  test(`${kind} is unknown/failure, never invented zero movement or a pass`, async () => {
+    const result = await coordinateFixture(kind);
+    assert.equal(result.scrollMonotonic, false);
+    assert.equal(result.scrollEvidenceComplete, false);
+    assert.ok(result.scrollUnknowns.length > 0);
+  });
+}
+
+for (const [backwardPx, pass] of [[2, true], [2.001, false]]) {
+  test(`the physical reverse tolerance remains exactly 2px (${backwardPx}px)`, async () => {
+    const result = await coordinateFixture("between-sample-jump", backwardPx);
+    assert.equal(result.scrollMonotonic, pass);
+  });
+}
+
+test("every original frame and long task is retained, including a 1200ms freeze and 213ms failure", async () => {
+  const result = await coordinateFixture("unfiltered-freeze");
+  assert.deepEqual(Array.from(result.longTasks), [213, 60]);
+  assert.equal(result.longestTask, 213);
+  assert.equal(result.longTaskTotal, 273);
+  assert.ok(result.frameIntervals.includes(1200));
+  assert.equal(result.frameCount, result.frameIntervals.length);
+  assert.equal(result.p95FrameInterval, 1200);
+  assert.equal(result.scrollFrames.length, 12);
 });

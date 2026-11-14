@@ -1,0 +1,590 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T23:30:30.480854+00:00",
+  "workflow_run_id": 43514182245,
+  "source_revision": "74a1e8605bc00d64b543544041c3095566f2881f",
+  "attempt": 1,
+  "status": "completed_failure_diagnostic_only_not_release_acceptance",
+  "first_read_at": "2026-11-13T22:40:15.205718+00:00",
+  "monotonic_elapsed_seconds": 3000.015000000014,
+  "wall_and_monotonic_boundary_passed": true,
+  "cancellation_requests": 0,
+  "dispatch_receipt_sha256": "b52cc0a15b8a59d2c0431edb7f3133948c2b8550d5efe860c2b479ce24ea8601",
+  "official_artifact_id": 14079124436,
+  "official_zip_sha256": "33fbe97f51cc4376c47f8a5a32a1561f98d3ef81775105e4c35d1d10eb286b43",
+  "zip_bytes": 3429624,
+  "zip_members": 200,
+  "official_job_id": 132191781808,
+  "official_job_log_sha256": "f7e0634167218e3fa7e303ab9dae937a5c893d763cda710e57773c69f1dabba4",
+  "provenance_sha256": "d3e0c3d8892ca07bbc4cde7d0d06e6c7846df79da746f9b5f0b89080618ea9cd",
+  "all_case_analysis_sha256": "ffb0ff6b43190bdb2d93d717368f63a92cf63a9a8e69f1634aedaed439775330",
+  "phases": {
+    "baseline": {
+      "source": "43a714f2c13f6e6573eb02916c8ff8f78dd2d82e",
+      "original_result": "failed",
+      "measurement_count": 9,
+      "cold_profile_count": 27,
+      "assertion_failed_cases": 2,
+      "cases": [
+        {
+          "profile": "math",
+          "messages": 1000,
+          "measurement_sha256": "bdad3fca62c3f6cb85f1033ae6dfa60b698761b278e92040b47edfc6b36dcb27",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.700000000000273,
+            16.799999999999955,
+            16.700000000000273
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "math",
+          "messages": 10000,
+          "measurement_sha256": "5d3708083d3dd39d499d33f9794c4316acc42e33df88756ca6feb8bfef6eaf30",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.799999999999955,
+            16.799999999999955,
+            16.799999999999955
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "math",
+          "messages": 398,
+          "measurement_sha256": "f069dc89892e470e5736d2097a92aae5775ddb301efb77d22293d0a4df6fd8ed",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.700000000000273,
+            16.799999999999955,
+            16.700000000000273
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "mixed",
+          "messages": 1000,
+          "measurement_sha256": "d613138f2e11f0948643a9e2dfb4f3803cc198a43b954bdfc65b6ea618f6d019",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.799999999999727,
+            16.799999999999727,
+            16.799999999999955
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "mixed",
+          "messages": 10000,
+          "measurement_sha256": "e2c20085fb4e44f8ca9a1cda7f9cecf8549f9c5b3473d2b07867663d6c57e515",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.799999999999727,
+            16.799999999999955,
+            16.700000000000273
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "mixed",
+          "messages": 398,
+          "measurement_sha256": "46781ec22b2fae22f694da1cad856f3ba9e4f26cbd14dc7398bed9b11a26d4c4",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.700000000000273,
+            16.799999999999955,
+            16.799999999999955
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "plain",
+          "messages": 10000,
+          "measurement_sha256": "586862bc4e7fbbeadec982b4397e5614421327dc44ecef9827a443c796d807c8",
+          "original_assertions_passed": false,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.800000000000182,
+            16.700000000000273,
+            16.799999999999955
+          ],
+          "raw_scroll_failures": [
+            {
+              "run": "cold1",
+              "raw_scroll_samples": [
+                120,
+                240,
+                360,
+                480,
+                600,
+                720,
+                840,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720,
+                720
+              ],
+              "raw_reversals": [
+                {
+                  "step": 7,
+                  "from": 840,
+                  "to": 720,
+                  "scrollHeight": 2044,
+                  "edgeStage": "next:mounted",
+                  "navigationStage": null,
+                  "layoutCompensating": false,
+                  "surfaceCompensating": false,
+                  "visibleMessageTop": 17
+                }
+              ],
+              "real_dom_anchor_trace_available": false
+            }
+          ]
+        },
+        {
+          "profile": "plain",
+          "messages": 1000,
+          "measurement_sha256": "f0a3714d539ba1968b238fbb9fd0d87928a72f851c08714491b01d6658b1673d",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.799999999999727,
+            16.799999999999727,
+            16.799999999999727
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "plain",
+          "messages": 398,
+          "measurement_sha256": "f01cbc5f7675f53c94da474caa532902ae8b91c0f06d162bd3cdd70b9f73bada",
+          "original_assertions_passed": false,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.799999999999727,
+            16.799999999999955,
+            16.700000000000273
+          ],
+          "raw_scroll_failures": [
+            {
+              "run": "warm",
+              "raw_scroll_samples": [
+                120,
+                240,
+                360,
+                480,
+                600,
+                720,
+                840,
+                960,
+                1080,
+                1200,
+                1080,
+                1080
+              ],
+              "raw_reversals": [
+                {
+                  "step": 10,
+                  "from": 1200,
+                  "to": 1080,
+                  "scrollHeight": 2595,
+                  "edgeStage": "next:mounted",
+                  "navigationStage": null,
+                  "layoutCompensating": false,
+                  "surfaceCompensating": false,
+                  "visibleMessageTop": -68
+                }
+              ],
+              "real_dom_anchor_trace_available": false
+            }
+          ]
+        }
+      ]
+    },
+    "candidate": {
+      "source": "74a1e8605bc00d64b543544041c3095566f2881f",
+      "original_result": "failed",
+      "measurement_count": 9,
+      "cold_profile_count": 27,
+      "assertion_failed_cases": 1,
+      "cases": [
+        {
+          "profile": "math",
+          "messages": 1000,
+          "measurement_sha256": "3e086ee99f51782bd85cd5439a6aefea63f2c2fde8daed832eadd5141909e240",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.800000000000182,
+            16.799999999999955,
+            16.799999999999955
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "math",
+          "messages": 10000,
+          "measurement_sha256": "5d81987359e0f3bb3a99f0bf50e1b5538def9b58749e85d7164b30d6b3b0593b",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            58,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            114,
+            0
+          ],
+          "p95_frames_ms": [
+            16.800000000000182,
+            16.800000000000182,
+            16.799999999999955
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "math",
+          "messages": 398,
+          "measurement_sha256": "d098a1a95996f4aced7a93d3c3fbf27fd68793497b4910424e4ef023261e63a6",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.799999999999727,
+            16.799999999999955,
+            16.799999999999955
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "mixed",
+          "messages": 1000,
+          "measurement_sha256": "9b73cce4967ebe02465c1556c6962bfbba16b35ac0eeccbd5248afadb55d7a1f",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.700000000000273,
+            16.799999999999955,
+            16.700000000000273
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "mixed",
+          "messages": 10000,
+          "measurement_sha256": "c3dc3d2877ba21bd806d3d0deda3fc2d9157e65f55c584de44524955743595e0",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.800000000000182,
+            16.700000000000273,
+            16.700000000000273
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "mixed",
+          "messages": 398,
+          "measurement_sha256": "5869e79f81daeeda0a2add0f219651f58542942b8d7c6208925e5aa6c29b21d5",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.700000000000273,
+            16.799999999999955,
+            16.799999999999955
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "plain",
+          "messages": 10000,
+          "measurement_sha256": "be1605aed5d4c2dadb8af92da54016a55e3575832e0ffb20496a84cdeadec9af",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            0
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            0
+          ],
+          "p95_frames_ms": [
+            16.800000000000182,
+            16.700000000000273,
+            16.700000000000273
+          ],
+          "raw_scroll_failures": []
+        },
+        {
+          "profile": "plain",
+          "messages": 1000,
+          "measurement_sha256": "0d245e305f042fa120a1c6390ba6ce2d9759c87a0da866489c9abaa3bfcb8f22",
+          "original_assertions_passed": false,
+          "longest_tasks_ms": [
+            0,
+            59,
+            58
+          ],
+          "long_task_totals_ms": [
+            0,
+            114,
+            58
+          ],
+          "p95_frames_ms": [
+            16.799999999999727,
+            16.799999999999955,
+            16.700000000000273
+          ],
+          "raw_scroll_failures": [
+            {
+              "run": "cold1",
+              "raw_scroll_samples": [
+                120,
+                240,
+                360,
+                480,
+                600,
+                720,
+                840,
+                960,
+                1080,
+                1200,
+                1320,
+                1440,
+                1560,
+                1680,
+                1800,
+                1920,
+                2040,
+                2160,
+                2280,
+                2400,
+                2520,
+                2640,
+                2760,
+                677,
+                797,
+                917,
+                1037,
+                1157,
+                1277,
+                1397
+              ],
+              "raw_reversals": [
+                {
+                  "step": 23,
+                  "from": 2760,
+                  "to": 677,
+                  "scrollHeight": 1729,
+                  "edgeStage": "next:settled",
+                  "navigationStage": null,
+                  "layoutCompensating": false,
+                  "surfaceCompensating": false,
+                  "visibleMessageTop": -76
+                }
+              ],
+              "real_dom_anchor_trace_available": false
+            }
+          ]
+        },
+        {
+          "profile": "plain",
+          "messages": 398,
+          "measurement_sha256": "f60e02bf6c5f174337f44e785b3678501c8509af20fc63e51abf33a06b0dbee6",
+          "original_assertions_passed": true,
+          "longest_tasks_ms": [
+            0,
+            0,
+            76
+          ],
+          "long_task_totals_ms": [
+            0,
+            0,
+            76
+          ],
+          "p95_frames_ms": [
+            16.700000000000273,
+            16.700000000000273,
+            16.700000000000273
+          ],
+          "raw_scroll_failures": []
+        }
+      ]
+    }
+  },
+  "interpretation": {
+    "original_unprofiled_213ms_failure_preserved": true,
+    "unprofiled_213ms_root_cause_or_fix_proved": false,
+    "candidate_math10000_diagnostic_longest_ms": [
+      0,
+      58,
+      0
+    ],
+    "candidate_plain1000_cold1_long_task_self_frames": [
+      "(program)",
+      "(program)"
+    ],
+    "native_program_samples_not_attributed_to_toc_gc_or_katex": true,
+    "original_raw_scroll_failures_require_real_dom_followup": true,
+    "cpu_timestamp_method": "Absolute reconstructed timestamps sorted with all samples retained; original ZIP/negative deltas unchanged."
+  },
+  "failed_method_logs_sha256": {
+    "cpu-analysis-01.log": "a8ed7b225d91a5495d03f39ac4816fb921e4b31f68ecb43ae4d42646ef783707"
+  },
+  "release_acceptance": false,
+  "production_operations": false
+}

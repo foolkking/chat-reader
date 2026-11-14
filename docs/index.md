@@ -5,7 +5,28 @@
 11月13日最新指示：验收由用户完成，本任务负责选择性提交/推送、等待完整
 精确CI，成功后按安全流程备份/迁移/部署。既有自动门禁不放宽，
 不清理生产、不重放用户资料；下方较早的“未授权再次提交”是历史边界。
-当前修复`7f8a642`已选择性提交/推送十九个任务文件，十三个无关文件保全；
+当前修复`74a1e86`选择性提交/推送十九个白名单文件，十三个无关文件保全。
+完整精确CI`43503483829`首次读取**05:28:55.244142 +08:00**满足50分钟
+双边界，**05:39:07**独立确认失败结束，取消请求0次。API6656通过、
+Settings470+独立restore1通过；Web五项旧交互测试失败，阅读math10000
+cold0真实213ms超过原150ms门槛，两发布job跳过，未部署。
+[独立失败回执](evidence/reliability-2026-11-14/ci-probe-pagination-failure.json)
+保留四份官方日志/三份诊断ZIP，均非可部署制品。Web挂载117及Files15
+本地通过，不替代真实API网络或完整新CI；性能根因未定，不能宣称已修。
+精确失败SHA的完整九例CPU诊断`43514182245`已失败结束，首次读取
+**06:40:15.205718 +08:00**满足新50分钟wall-clock及3000.015秒monotonic边界；
+[诊断派发回执](evidence/reliability-2026-11-14/ci-runtime-frame-diagnostic-dispatch.json)
+及[诊断结果](evidence/reliability-2026-11-14/ci-runtime-frame-diagnostic-result.json)
+保留18份测量/54份冷CPU证据。raw scrollTop回收误判和轮间真实回跳漏检已用
+实际Reader正负对照区分；[测量v4合同](system/PERFORMANCE_CAPACITY_CONTRACT.md#reading-coordinates--measurement-v4)
+以每帧/每wheel共享真实DOM锚点判断，原输入/预算、raw失败和全部帧保留。
+最终Reader42（原39保留）、Node2519/CI64/PWA20、静态和新548输入构建通过；
+[本地最终回执](evidence/reliability-2026-11-14/ci-runtime-frame-verification.json)
+及1391项最终输入不冒充完整精确CI、Linux或生产验收。原213ms未复现，不称已修；
+必须新完整CI全绿和fresh发布检查，不创建安排或改变生产。
+[独立派发回执](evidence/reliability-2026-11-14/ci-probe-pagination-dispatch.json)
+不代表通过、不覆盖旧失败/事件回执；下方7f8a642及其CI失败属于前一检查点。
+前次修复`7f8a642`已选择性提交/推送十九个任务文件，十三个无关文件保全；
 完整精确CI`43483733253`在**02:33:11.802991 +08:00**确认派发，
 首次读取**03:23:11.814857 +08:00**满足50分钟边界；API触及原45分钟
 full-suite上限，Web比较恢复用例等待不存在的嵌套footer `contentinfo` 超时。

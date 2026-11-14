@@ -225,8 +225,14 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
     await expect(page.getByTestId("conversation-files-workspace")).toHaveCount(0);
 
     await openSourceEditor(page, messageId);
+    // The opening caret can be on the existing image reference. Choosing a
+    // file there deliberately replaces that occurrence; move to ordinary
+    // source text when this test intends to insert a second attachment.
+    await page.getByTestId("source-editor-codemirror").locator(".cm-content").click();
+    await page.keyboard.press("Control+End");
     await page.getByRole("button", { name: /Choose conversation file|选择当前对话文件/ }).click();
     await expect(page.getByTestId("source-editor-attachment-picker")).toBeVisible();
+    await expect(page.getByLabel(/Replace all references in this message|替换本条消息中全部引用/)).toHaveCount(0);
     await page.getByRole("button", { name: /Insert later-file\.txt at cursor|在光标处插入 later-file\.txt/ }).click();
     await saveNewVersion(page, messageId);
     await expect(page.getByTestId("source-editor-create-version")).toContainText(/v4/);
@@ -366,7 +372,7 @@ test("keeps completed unsaved uploads as unplaced conversation files on close", 
   }
 });
 
-test("drags an existing conversation file into source and confirms removed references", async ({ page }) => {
+test("drags an existing conversation file into source, keeps removed references' files, and explicitly detaches", async ({ page }) => {
   const { conversationId, messageId } = await createConversation(page.request);
   try {
     await page.goto(`/conversations/${conversationId}`);
@@ -413,14 +419,15 @@ test("drags an existing conversation file into source and confirms removed refer
     await page.getByTestId("conversation-files-workspace").getByRole("button", { name: /Close|关闭/ }).click();
 
     await replaceSourceText(page, "Attachment reference removed but file retained.");
-    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
-    await page.getByTestId("source-editor-create-version").click();
+    const removalRequest = page.waitForRequest((request) =>
+      request.method() === "PATCH" && new URL(request.url()).pathname === `/api/messages/${messageId}`,
+    );
+    await saveNewVersion(page, messageId);
     const removalDialog = page.getByRole("dialog", { name: /Attachment references were removed|已从正文移除附件引用/ });
-    await expect(removalDialog).toBeVisible();
-    await expect(removalDialog.getByLabel(/Keep in conversation|保留在当前对话文件/)).toBeChecked();
-    const removalSaved = waitForMessagePatch(page, messageId);
-    await removalDialog.getByRole("button", { name: /Confirm and save|确认并保存/ }).click();
-    await expectSaveSettled(page, removalSaved);
+    await expect(removalDialog).toHaveCount(0);
+    expect((await removalRequest).postDataJSON().removed_attachment_actions).toEqual([
+      { attachment_id: attachment.id, action: "keep_in_conversation" },
+    ]);
     await expect.poll(async () => {
       const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
       return ((await response.json()).items as Array<{ is_used: boolean }>).map((item) => item.is_used);
@@ -430,13 +437,25 @@ test("drags an existing conversation file into source and confirms removed refer
     await page.getByRole("button", { name: /Insert existing-file\.txt at cursor|在光标处插入 existing-file\.txt/ }).click();
     await saveNewVersion(page, messageId);
     await replaceSourceText(page, "Attachment detached from active conversation files.");
-    await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
-    await page.getByTestId("source-editor-create-version").click();
-    const detachDialog = page.getByRole("dialog", { name: /Attachment references were removed|已从正文移除附件引用/ });
-    await detachDialog.getByLabel(/Detach from conversation|同时从当前对话文件移除/).check();
-    const detachSaved = waitForMessagePatch(page, messageId);
-    await detachDialog.getByRole("button", { name: /Confirm and save|确认并保存/ }).click();
-    await expectSaveSettled(page, detachSaved);
+    await saveNewVersion(page, messageId);
+    await expect.poll(async () => {
+      const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
+      return ((await response.json()).items as Array<{ id: string; is_used: boolean }>)
+        .map((item) => ({ id: item.id, is_used: item.is_used }));
+    }).toEqual([{ id: attachment.id, is_used: false }]);
+    // Source removal is not file-deletion authority. Detachment is a separate,
+    // explicit Files action after the last current reference has been saved.
+    await page.getByRole("button", { name: /Reading mode|阅读模式/ }).click();
+    await openConversationFiles(page);
+    const filesPanel = page.getByTestId("conversation-files-panel");
+    await filesPanel.getByTestId("conversation-file-row").filter({ hasText: "existing-file.txt" })
+      .getByRole("checkbox", { name: /Select existing-file\.txt|选择 existing-file\.txt/ }).check();
+    await filesPanel.getByRole("button", { name: /Detach selected|移除所选/ }).click();
+    const detachDialog = page.getByRole("dialog", {
+      name: /Detach 1 files from this conversation|从当前对话文件中移除 1 个文件/,
+    });
+    await expect(detachDialog).toBeVisible();
+    await detachDialog.getByRole("button", { name: /^(Detach|移除)$/ }).click();
     await expect.poll(async () => {
       const response = await page.request.get(`/api/conversations/${conversationId}/attachments`);
       return ((await response.json()).items as unknown[]).length;

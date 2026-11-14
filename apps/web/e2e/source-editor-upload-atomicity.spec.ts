@@ -14,6 +14,9 @@ type CreatedFixture = {
 
 type MessagePatchPayload = {
   content_markdown?: string;
+  operation_id?: string;
+  base_version_id?: string;
+  base_content_hash?: string;
 };
 
 function createDeferred() {
@@ -73,18 +76,31 @@ function captureMessagePatches(page: Page) {
 async function installFinalizeBarrier(page: Page, conversationId: string) {
   const seen = createDeferred();
   const release = createDeferred();
+  const drained = createDeferred();
   let holding = false;
 
   await page.route(`**/api/conversations/${conversationId}/attachments`, async (route) => {
-    if (route.request().method() === "POST" && !holding) {
-      holding = true;
-      seen.resolve();
-      await release.promise;
+    const held = route.request().method() === "POST" && !holding;
+    try {
+      if (held) {
+        holding = true;
+        seen.resolve();
+        await release.promise;
+      }
+      await route.continue();
+    } finally {
+      if (held) drained.resolve();
     }
-    await route.continue();
   });
 
-  return { seen: seen.promise, release: release.resolve };
+  return {
+    seen: seen.promise,
+    release: release.resolve,
+    drain: async () => {
+      release.resolve();
+      if (holding) await drained.promise;
+    },
+  };
 }
 
 async function installLazyEditorChunkBarrier(page: Page) {
@@ -372,15 +388,27 @@ test.describe("Release I source editor upload-token atomicity", () => {
     }
   });
 
-  test("I-RACE-004 out-of-order completion keeps save blocked until both uploads resolve", async ({
+  test("I-RACE-004 ordered uploads keep save blocked until both canonical references resolve", async ({
     page,
   }) => {
     let fixture: CreatedFixture | undefined;
+    let barrier: Awaited<ReturnType<typeof installFinalizeBarrier>> | undefined;
     try {
       fixture = await createConversation(page.request);
       await openSourceEditor(page, fixture.conversationId, fixture.messageId);
       const payloads = captureMessagePatches(page);
-      const barrier = await installFinalizeBarrier(page, fixture.conversationId);
+      barrier = await installFinalizeBarrier(page, fixture.conversationId);
+      const uploads: string[] = [];
+      const finalizations: string[][] = [];
+      page.on("request", (request) => {
+        if (request.method() !== "POST") return;
+        const url = new URL(request.url());
+        if (/\/attachment-upload-sessions\/[^/]+\/items$/.test(url.pathname)) {
+          uploads.push(request.postDataBuffer()?.toString() ?? "");
+        } else if (url.pathname === `/api/conversations/${fixture?.conversationId}/attachments`) {
+          finalizations.push(request.postDataJSON().upload_item_ids as string[]);
+        }
+      });
 
       await page.getByTestId("source-editor-attachment-input").setInputFiles([
         {
@@ -391,24 +419,34 @@ test.describe("Release I source editor upload-token atomicity", () => {
         {
           name: "ordered-b.txt",
           mimeType: "text/plain",
-          buffer: Buffer.from("second upload allowed to finish first"),
+          buffer: Buffer.from("second upload starts only after the first finalize"),
         },
       ]);
       await barrier.seen;
       await expect(
         page.getByTestId("source-editor-attachment-drafts")
           .locator("[data-testid^='source-editor-upload-'][data-upload-status='uploading']"),
-      ).toHaveCount(1);
+      ).toHaveCount(2);
+      expect(uploads).toHaveLength(1);
+      expect(uploads[0]).toContain('filename="ordered-a.txt"');
+      expect(finalizations).toHaveLength(1);
       await expect(page.getByTestId("source-editor-create-version")).toBeDisabled();
       await submitEditorProgrammatically(page);
       expect(payloads).toHaveLength(0);
+      expect(uploads).toHaveLength(1);
 
       barrier.release();
       await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
+      expect(uploads).toHaveLength(2);
+      expect(uploads[1]).toContain('filename="ordered-b.txt"');
+      expect(finalizations).toHaveLength(2);
+      expect(finalizations.every((ids) => ids.length === 1)).toBe(true);
+      expect(finalizations[0]).not.toEqual(finalizations[1]);
       const source = await saveAndReadPatch(page, payloads);
       expect(source.match(/cr-asset:\/\//g) ?? []).toHaveLength(2);
       expect(source).not.toContain("cr-upload://");
     } finally {
+      await barrier?.drain();
       await deleteConversation(page, fixture?.conversationId);
     }
   });
@@ -482,11 +520,28 @@ test.describe("Release I source editor upload-token atomicity", () => {
       });
       const retry = page.getByRole("button", { name: /Retry|\u91cd\u8bd5/ });
       await expect(retry).toBeVisible();
+      const checkedUpload = page.waitForResponse((response) =>
+        response.request().method() === "GET"
+        && /\/api\/attachment-upload-sessions\/[^/]+$/.test(new URL(response.url()).pathname),
+      );
       await retry.evaluate((button: HTMLButtonElement) => {
         button.click();
         button.click();
       });
 
+      // A 500 does not establish whether finalization committed. The first
+      // action reads the original attachment/session receipt, without POST.
+      expect((await checkedUpload).ok()).toBeTruthy();
+      await expect(page.getByTestId("source-editor-attachment-drafts")
+        .locator("[data-testid^='source-editor-upload-']").filter({ hasText: "retry-once.txt" }))
+        .toHaveAttribute("data-upload-status", "error");
+      await expect(page.getByTestId("source-editor-create-version")).toBeDisabled();
+      expect(finalizeRequests).toBe(1);
+      expect(await readEditorDocument(page)).toContain("cr-upload://");
+      await retry.evaluate((button: HTMLButtonElement) => {
+        button.click();
+        button.click();
+      });
       await expect(page.getByTestId("source-editor-create-version")).toBeEnabled();
       await expect.poll(() => finalizeRequests).toBe(2);
       const source = await saveAndReadPatch(page, payloads);
@@ -723,17 +778,27 @@ test.describe("Release I source editor upload-token atomicity", () => {
 
       await page.getByTestId("source-editor-create-version").click();
       await expect(sourceEditorAlert(page)).toContainText(
-        /transport failure|temporarily unavailable|\u670d\u52a1\u6682\u65f6\u4e0d\u53ef\u7528/i,
+        /Save result is unknown|保存结果待确认/i,
       );
+      await expect(page.getByTestId("source-editor-create-version")).toBeDisabled();
+      expect(payloads).toHaveLength(2);
       expect(await readEditorDocument(page)).toContain("cr-asset://");
       expect(await readEditorDocument(page)).not.toContain("cr-upload://");
 
+      await page.getByRole("button", { name: /^(Check result|核对结果)$/ }).click();
+      await expect(page.getByRole("button", { name: /^(Retry original save|重试原保存)$/ })).toBeVisible();
+      expect(payloads).toHaveLength(2);
       const response = page.waitForResponse(
         (candidate) => candidate.request().method() === "PATCH" && /\/api\/messages\/[^/]+$/.test(candidate.url()),
       );
-      await page.getByTestId("source-editor-create-version").click();
+      await page.getByRole("button", { name: /^(Retry original save|重试原保存)$/ }).click();
       expect((await response).ok()).toBeTruthy();
       expect(payloads).toHaveLength(3);
+      expect(payloads[2]).toEqual(payloads[1]);
+      expect(payloads[2].operation_id).toBeTruthy();
+      expect(payloads[2].operation_id).not.toBe(payloads[0].operation_id);
+      expect(payloads[2].base_version_id).toBeTruthy();
+      expect(payloads[2].base_content_hash).toMatch(/^[0-9a-f]{64}$/);
       for (const payload of payloads) {
         expect(payload.content_markdown).toContain("cr-asset://");
         expect(payload.content_markdown).not.toContain("cr-upload://");

@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-13T22:16:25.326769+00:00",
+  "workflow_run_id": 43503483829,
+  "source_revision": "74a1e8605bc00d64b543544041c3095566f2881f",
+  "attempt": 1,
+  "status": "completed_failure_not_deployable",
+  "first_read": {
+    "inherited_task": "reliability-ci-timeout-conflict-fix-20261114-06",
+    "file": "ci-probe-pagination-first-read.json",
+    "sha256": "7c384baa59482d7ff54c161f764d3354b21145a6b824e604d32f7d0b92054c61",
+    "read_at": "2026-11-13T21:28:55.244142+00:00",
+    "fifty_minute_boundary_respected": true
+  },
+  "independently_confirmed_completed_at": "2026-11-13T21:39:07.011716+00:00",
+  "final_state": {
+    "task_relative_path": "ci-run-43503483829-failure/final.json",
+    "sha256": "3fe023c9b315e5920864cc0e28803c12ca9a4a192da250a1c07c666b9e32a5b7",
+    "bytes": 31071
+  },
+  "cancellation": {
+    "requests": 0,
+    "receipt": {
+      "task_relative_path": "ci-run-43503483829-failure/cancellation.json",
+      "sha256": "6f82ab9e006486e0ab299f9f20b5447468f86fd52b448fc49abe3ef4e13be59b",
+      "bytes": 471
+    }
+  },
+  "job_conclusions": {
+    "api-quality": "success",
+    "web-quality": "failure",
+    "settings-quality": "success",
+    "reading-performance-comparison / compare": "failure",
+    "build-images": "skipped",
+    "inspect-release-artifact": "skipped"
+  },
+  "retained_logs": {
+    "task_relative_path": "ci-run-43503483829-failure/job-log-provenance.json",
+    "sha256": "0b1a7b95ff612aefbc7d4c561931d57bb8c44d649a7d248cce4d49fc5c8ddd35",
+    "bytes": 1245
+  },
+  "official_diagnostic_artifacts": {
+    "schema_version": 1,
+    "recorded_at": "2026-11-13T21:40:55.925682+00:00",
+    "workflow_run_id": 43503483829,
+    "source_revision": "74a1e8605bc00d64b543544041c3095566f2881f",
+    "attempt": 1,
+    "artifacts": [
+      {
+        "id": 14078860842,
+        "name": "release-a-quality-evidence-74a1e8605bc00d64b543544041c3095566f2881f-1",
+        "official_zip_sha256": "18e098fbc702826f219e0e6d6c898b0379efefe916aac86276357c0f375de018",
+        "zip_bytes": 56121960,
+        "members": 630,
+        "directory": "E:\\chat-reader-temp\\reliability-ci-runtime-frame-fix-20261114-07\\ci-run-43503483829-failure\\official-artifacts\\14078860842",
+        "created_at": "2026-11-13T21:26:05Z",
+        "updated_at": "2026-11-13T21:26:05Z"
+      },
+      {
+        "id": 14078673044,
+        "name": "settings-quality-evidence-74a1e8605bc00d64b543544041c3095566f2881f-1",
+        "official_zip_sha256": "3bbb285f95bf90d7aec6bbf376f31c2ae2f284f67c5c4df63bf84ac1ac51a0af",
+        "zip_bytes": 15738519,
+        "members": 209,
+        "directory": "E:\\chat-reader-temp\\reliability-ci-runtime-frame-fix-20261114-07\\ci-run-43503483829-failure\\official-artifacts\\14078673044",
+        "created_at": "2026-11-13T21:38:56Z",
+        "updated_at": "2026-11-13T21:38:56Z"
+      },
+      {
+        "id": 14076504574,
+        "name": "reading-performance-comparison",
+        "official_zip_sha256": "bafa26575cd7a5dcb5a1c4caae9a75fc24deb4021cb7d4c54c2851209cf7db31",
+        "zip_bytes": 122956,
+        "members": 85,
+        "directory": "E:\\chat-reader-temp\\reliability-ci-runtime-frame-fix-20261114-07\\ci-run-43503483829-failure\\official-artifacts\\14076504574",
+        "created_at": "2026-11-13T21:25:00Z",
+        "updated_at": "2026-11-13T21:25:00Z"
+      }
+    ],
+    "deployable": false,
+    "production_touched": false
+  },
+  "official_metadata": {
+    "task_relative_path": "ci-run-43503483829-failure/official-artifacts-metadata.json",
+    "sha256": "0a141d7122f2d52f5560469218df2a87e51defa297840a44509df470c34f5735",
+    "bytes": 2788
+  },
+  "api": {
+    "passed": 6656,
+    "skipped": 3,
+    "warnings": 5,
+    "duration_seconds": 2009.9
+  },
+  "settings": {
+    "passed": 470,
+    "independent_system_restore_passed": 1
+  },
+  "web": {
+    "failed": 5,
+    "official_traces": [
+      {
+        "task_relative_path": "ci-run-43503483829-failure/official-artifacts/14078860842/chat-reader/chat-reader/apps/web/test-results/upload-token-atomicity/attachment-upload-flow-dra-a3e69-confirms-removed-references/trace.zip",
+        "sha256": "df43500623e307d1237769b45793b732d45cd07704e8c04fe7ce1c6134628743",
+        "bytes": 1905101
+      },
+      {
+        "task_relative_path": "ci-run-43503483829-failure/official-artifacts/14078860842/chat-reader/chat-reader/apps/web/test-results/upload-token-atomicity/attachment-upload-flow-upl-cc88e-es-conversation-attachments/trace.zip",
+        "sha256": "ce02093df9c60cc1f7100ee8a61d1d41851622fa4fbf2c57420aaf8978044ec1",
+        "bytes": 9564476
+      },
+      {
+        "task_relative_path": "ci-run-43503483829-failure/official-artifacts/14078860842/chat-reader/chat-reader/apps/web/test-results/upload-token-atomicity/source-editor-upload-atomi-0cc3e--save-failures-before-retry/trace.zip",
+        "sha256": "dc3e629e0b6a975423fdc3519fb57599d4cc1a035ea99d7e7da1275c829d0b0f",
+        "bytes": 1157892
+      },
+      {
+        "task_relative_path": "ci-run-43503483829-failure/official-artifacts/14078860842/chat-reader/chat-reader/apps/web/test-results/upload-token-atomicity/source-editor-upload-atomi-3efe8--until-both-uploads-resolve/trace.zip",
+        "sha256": "c38ec41dc69e7ccd37861de4960c445b0752a311274c76217f4142320bcc179f",
+        "bytes": 7873682
+      },
+      {
+        "task_relative_path": "ci-run-43503483829-failure/official-artifacts/14078860842/chat-reader/chat-reader/apps/web/test-results/upload-token-atomicity/source-editor-upload-atomi-ed372--is-activated-twice-rapidly/trace.zip",
+        "sha256": "7c73c09010c6da4a667a0f5aebb64af24253bbe150baf8c69e37931c38e75535",
+        "bytes": 4808925
+      }
+    ],
+    "localized_causes": [
+      "Reopening source restores a caret on a real attachment; that picker offers replacement, not insertion.",
+      "Removing the last source reference automatically keeps the file; only explicit Files detachment removes it.",
+      "Selected files are sequential; a held first finalization keeps both drafts pending and prevents the second upload.",
+      "Unknown finalization must first read the original session/item receipt; a later explicit retry reuses it.",
+      "An unknown save must be checked before explicitly retrying the exact original snapshot and operation UUID."
+    ],
+    "product_cache_or_input_corruption_established": false
+  },
+  "reading": {
+    "baseline_cases": 9,
+    "baseline_passed": 9,
+    "candidate_cases": 9,
+    "candidate_passed": 8,
+    "candidate_failed": 1,
+    "failure": {
+      "profile": "math",
+      "messages": 10000,
+      "cold_run": 0,
+      "longest_task_ms": 213,
+      "unchanged_budget_ms": 150
+    },
+    "measurement": {
+      "task_relative_path": "ci-run-43503483829-failure/official-artifacts/14076504574/_temp/reading-comparison/candidate/reader-capacity-math-10000-33dd2--cold-runs-and-warm-revisit/reader-capacity-math-10000.json",
+      "sha256": "a7c60158fb726610fc71596b592824b1dddbcc79e06db8c8d0d0f160076dd548",
+      "bytes": 4534
+    },
+    "cpu_stack_in_original_failure": false,
+    "root_cause_or_product_fix_claimed": false,
+    "full_sequence_cpu_diagnostic": {
+      "workflow_run_id": 43514182245,
+      "exact_source": "74a1e8605bc00d64b543544041c3095566f2881f",
+      "diagnostic_only": true,
+      "release_acceptance": false,
+      "dispatch": {
+        "task_relative_path": "cpu-diagnostic-dispatch.json",
+        "sha256": "b52cc0a15b8a59d2c0431edb7f3133948c2b8550d5efe860c2b479ce24ea8601",
+        "bytes": 749
+      }
+    }
+  },
+  "first_local_mounted_failure": {
+    "scenario_bodies_passed": 117,
+    "overall_passed": false,
+    "final_console_check_failed": true,
+    "deliberately_injected_http_500_count": 3,
+    "original_script": {
+      "task_relative_path": "mounted-01-source-editor-table-browser.mjs",
+      "sha256": "e2df6d7aaa3826981f54fcddab09b02f347e7fa1d0dc8cc77ec2d4a861cfc90d",
+      "bytes": 212006
+    },
+    "log": {
+      "task_relative_path": "mounted-01/mounted.log",
+      "sha256": "644f5db581a46c053ddcf8152cb54207f8856dae9a0ba06baad5413121a05840",
+      "bytes": 11542
+    },
+    "result": {
+      "task_relative_path": "mounted-01/table-browser/result.json",
+      "sha256": "e1af5fc6362823807703d4cd2c004f416a7090870cea878c00f548ed317acf6d",
+      "bytes": 98
+    },
+    "fix_boundary": "Match only the three deliberate HTTP 500 messages, exact request URLs and multiplicity; no blanket error suppression."
+  },
+  "preservation": {
+    "unrelated_files": 13,
+    "unrelated_drift": [],
+    "production_operations": false,
+    "old_production_cancellations_repeated": false,
+    "original_import_bytes_replayed_or_removed": false,
+    "scheduler_created": false,
+    "old_postgres_restarted_or_stopped_again": false,
+    "prior_evidence_overwritten": false
+  },
+  "privacy": "Source-code paths, CI identifiers and evidence hashes only; no real business IDs, content, source fingerprints or credentials."
+}
