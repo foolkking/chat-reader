@@ -20,28 +20,10 @@ from app.models.content_cleanup import ContentCleanupScan
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.project import Project
-from app.services.editing.message_edit_service import (
-    MessageEditError,
-    auto_clean_conversation,
-    merge_conversations,
-)
-from app.services.exporting.cr_archive import CrArchiveError, create_cr_archive
-from app.services.exporting.context_package import ContextPackageError, create_context_package
-from app.services.exporting.export_service import ExportError
-from app.services.exporting.attachment_bundle import create_attachment_bundle, MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT
-from app.services.exporting.system_archive import create_system_archive
-from app.services.exporting.archive_jobs import PERSONAL_JOB_TYPES, archive_job_error, process_personal_archive_job
-from app.services.exporting.system_archive_jobs import SYSTEM_JOB_TYPES, process_system_archive_job, sync_system_archive_record
-from app.services.exporting.attachment_download import AttachmentDownloadError, create_attachment_download, validate_attachment_download
+from app.services.editing.errors import MessageEditError
+from app.services.exporting.archive_task_status import PERSONAL_JOB_TYPES, SYSTEM_JOB_TYPES, sync_system_archive_record
 from app.schemas.export import ExportOptions
-from app.services.offline_packages import OfflinePackageError, build_offline_package, changed_conversations, select_conversations
 from app.services.artifact_lifecycle import cleanup_committed_artifacts
-from app.services.derived_rebuild import rebuild_conversation_derived_data
-from app.services.toc.toc_refresh import refresh_toc_data
-from app.services.assets.derivatives import AssetDerivativeError, build_asset_derivative
-from app.services.content_cleanup import process_scan_chunk
-from app.services.conversations.conversation_deletion import delete_conversation_record
-from app.services.user_deletion import cleanup_deleted_account_assets, execute_user_account_delete, mark_user_deletion_failed, mark_user_deletion_queued
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.services.feature_policies import effective_limits
 from app.core.observability import structured_event
@@ -56,6 +38,33 @@ ProgressCallback = Callable[[str, int, int, int], None]
 
 class BackgroundJobCancelled(RuntimeError):
     pass
+
+
+# Keep the existing worker instrumentation seams without importing every
+# handler into each fresh execution/recovery process.
+def process_scan_chunk(*args, **kwargs):
+    from app.services.content_cleanup import process_scan_chunk as process
+    return process(*args, **kwargs)
+
+
+def rebuild_conversation_derived_data(*args, **kwargs):
+    from app.services.derived_rebuild import rebuild_conversation_derived_data as rebuild
+    return rebuild(*args, **kwargs)
+
+
+def delete_conversation_record(*args, **kwargs):
+    from app.services.conversations.conversation_deletion import delete_conversation_record as delete
+    return delete(*args, **kwargs)
+
+
+def execute_user_account_delete(*args, **kwargs):
+    from app.services.user_deletion import execute_user_account_delete as execute
+    return execute(*args, **kwargs)
+
+
+def cleanup_deleted_account_assets(*args, **kwargs):
+    from app.services.user_deletion import cleanup_deleted_account_assets as cleanup
+    return cleanup(*args, **kwargs)
 
 
 def find_conversation_merge_request(
@@ -293,6 +302,7 @@ def queue_attachment_download(
     conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
     if conversation is None or conversation.deleted_at is not None:
         raise MessageEditError("Conversation not found.", 404)
+    from app.services.exporting.attachment_download import validate_attachment_download
     validate_attachment_download(db, conversation_id=conversation_id, attachment_ids=attachment_ids)
     attachment_ids = sorted(set(attachment_ids), key=str)
     if db.get_bind().dialect.name == "postgresql":
@@ -635,6 +645,7 @@ def queue_offline_package(
     subject_key: str = "local:default",
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
+    from app.services.offline_packages import OfflinePackageError, changed_conversations, select_conversations
     conversations = select_conversations(
         db,
         scope=scope,
@@ -965,6 +976,7 @@ def process_background_job(
 
             report("validating", 5, 0, job.total_items)
             if job.job_type == "conversation_merge":
+                from app.services.editing.message_edit_service import merge_conversations
                 conversation_ids = [uuid.UUID(value) for value in payload.get("conversation_ids", [])]
                 project_value = payload.get("project_id")
                 project_id = uuid.UUID(project_value) if project_value else None
@@ -993,14 +1005,17 @@ def process_background_job(
                 processed_items = result.message_count
                 report("publishing", 99, processed_items, processed_items)
             elif job.job_type in PERSONAL_JOB_TYPES:
+                from app.services.exporting.archive_jobs import process_personal_archive_job
                 job_result = process_personal_archive_job(db, job, report)
                 processed_items = int((job_result.get("counts") or {}).get("conversations", job.total_items))
                 report("publishing", 99, processed_items, processed_items)
             elif job.job_type in {"system_archive_preflight", "system_archive_restore"}:
+                from app.services.exporting.system_archive_jobs import process_system_archive_job
                 job_result = process_system_archive_job(db, job, report)
                 processed_items = int((job_result.get("counts") or {}).get("conversations", 0))
                 report("publishing", 99, processed_items, processed_items)
             elif job.job_type == "system_archive_export":
+                from app.services.exporting.system_archive import create_system_archive
                 artifact = create_system_archive(
                     db,
                     job_id=job.id,
@@ -1029,6 +1044,7 @@ def process_background_job(
                     from app.services.exporting.plain_export import create_plain_export
                     artifact = create_plain_export(db, job=job, ownership_scope=job_scope, progress_callback=report)
                 elif payload.get("export_format") == "context_package":
+                    from app.services.exporting.context_package import create_context_package
                     artifact = create_context_package(
                         db,
                         ownership_scope=job_scope,
@@ -1046,6 +1062,7 @@ def process_background_job(
                         subject_key=str(payload.get("subject_key") or (str(job.owner_user_id) if job.owner_user_id else "local:default")),
                     )
                 elif payload.get("export_format") in {"markdown_bundle", "canjson_bundle"}:
+                    from app.services.exporting.attachment_bundle import create_attachment_bundle, MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT
                     export_format = str(payload.get("export_format"))
                     artifact = create_attachment_bundle(
                         db,
@@ -1069,6 +1086,7 @@ def process_background_job(
                         progress_callback=report,
                     )
                 else:
+                    from app.services.exporting.cr_archive import create_cr_archive
                     artifact = create_cr_archive(
                         db,
                         conversation_id=conversation_id,
@@ -1088,6 +1106,7 @@ def process_background_job(
                 }
                 processed_items = job.total_items
             elif job.job_type == "conversation_auto_clean":
+                from app.services.editing.message_edit_service import auto_clean_conversation
                 conversation_id = uuid.UUID(payload["conversation_id"])
                 result = auto_clean_conversation(db, conversation_id, progress_callback=report)
                 job_result = {
@@ -1349,6 +1368,7 @@ def process_background_job(
                 }
                 processed_items = result.rebuilt_versions
             elif job.job_type == "toc_refresh":
+                from app.services.toc.toc_refresh import refresh_toc_data
                 conversation_id = uuid.UUID(payload["conversation_id"])
                 result = refresh_toc_data(
                     db,
@@ -1370,6 +1390,7 @@ def process_background_job(
                 }
                 processed_items = max(result.section_conversation_count, 1)
             elif job.job_type == "offline_package":
+                from app.services.offline_packages import build_offline_package
                 package = build_offline_package(
                     db,
                     job_id=job.id,
@@ -1404,6 +1425,7 @@ def process_background_job(
                 }
                 processed_items = package.conversation_count
             elif job.job_type == "attachment_batch_download":
+                from app.services.exporting.attachment_download import create_attachment_download
                 conversation_id = uuid.UUID(payload["conversation_id"])
                 attachment_ids = [uuid.UUID(value) for value in payload.get("attachment_ids", [])]
                 artifact = create_attachment_download(
@@ -1422,6 +1444,7 @@ def process_background_job(
                 }
                 processed_items = len(attachment_ids)
             elif job.job_type == "attachment_derivative":
+                from app.services.assets.derivatives import build_asset_derivative
                 derivative = build_asset_derivative(
                     db,
                     attachment_id=uuid.UUID(payload["attachment_id"]),
@@ -1638,11 +1661,14 @@ def process_background_job(
                         # Canonical deletion succeeded; durable cleanup remains
                         # retryable even if its subsequent checkpoint failed.
                         return
+                    from app.services.user_deletion import mark_user_deletion_failed
                     mark_user_deletion_failed(db, job.id)
                 now = datetime.now(timezone.utc)
                 cancelled = job.status in {"cancelling", "cancelled"}
                 job.status = "cancelled" if cancelled else "failed"
                 job.phase = "cancelled" if cancelled else "failed"
+                if job.job_type in {*PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}:
+                    from app.services.exporting.archive_jobs import archive_job_error
                 job.error_message = None if cancelled else "DELETION_FAILED" if job.job_type == "user_account_delete" else archive_job_error(exc) if job.job_type in {*PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES} else _safe_error(exc)
                 if not cancelled and job.job_type == "adaptive_import_analysis":
                     from app.services.task_errors import import_failure_from_exception
@@ -1737,6 +1763,7 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
     if job.job_type in SYSTEM_JOB_TYPES and (db := object_session(job)) is not None:
         sync_system_archive_record(db, job, status="QUEUED")
     if job.job_type == "user_account_delete" and (db := object_session(job)) is not None:
+        from app.services.user_deletion import mark_user_deletion_queued
         mark_user_deletion_queued(db, job)
     structured_event(logger, logging.INFO, "background_job_manual_retry", job_id=str(job.id), job_type=job.job_type)
     return job
@@ -1778,6 +1805,12 @@ def request_background_job_cancellation(job: BackgroundJob, *, source_dispositio
 
 
 def _safe_error(exc: Exception) -> str:
+    from app.services.exporting.cr_archive import CrArchiveError
+    from app.services.exporting.context_package import ContextPackageError
+    from app.services.exporting.export_service import ExportError
+    from app.services.exporting.attachment_download import AttachmentDownloadError
+    from app.services.offline_packages import OfflinePackageError
+    from app.services.assets.derivatives import AssetDerivativeError
     from app.services.adaptive_import.contracts import AdaptiveImportError
     from app.services.assets.scanner import AssetScanError
     from app.services.continuation_candidates import ContinuationError

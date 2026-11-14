@@ -32,6 +32,23 @@ release. Empty queues, unavailable leases/reconciliation and scheduling errors
 retain the configured idle poll (default1 second). Fresh interpreters, the
 single execution slot and bounded rotating maintenance are unchanged.
 
+Local November14 cold-start follow-up: the shared task dispatcher imports
+models, lightweight archive type/status contracts and editing validation errors,
+not every handler. Selected task/format branches load their existing services.
+Noise scanning defers version-writing and search-index services until applying
+cleanup; the existing fault-injection/deletion seams still delegate unchanged
+arguments, results and exceptions. `MessageEditError` is reexported from its
+original editor-service path with the same class identity and public detail.
+No process pool, inherited connections, parser reuse or additional slot is added.
+
+Maintenance starts its unchanged two-second cooperative deadline before
+selected cleanup imports, loads only an eligible lane and rechecks stop/time
+after that import. An import failure is isolated to its category, like an
+operation failure. A stopped/exhausted pass does not import later families;
+the four first-lane rotation and20-item limits are unchanged. An individual
+import/OS call can still block; the supervisor's existing five-second helper
+wait and execution-lease check remain the independent hard boundary.
+
 Task reads expose optional execution_state/business_progress_at/stop_requested_at.
 Local November13 follow-up shares that read-only projection with bound noise-scan
 detail/pending reads. Canonical processing/SCANNING can coexist with independent

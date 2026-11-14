@@ -5,6 +5,35 @@
 11月13日最新指示：验收由用户完成，本任务负责选择性提交/推送、等待完整
 精确CI，成功后按安全流程备份/迁移/部署。既有自动门禁不放宽，
 不清理生产、不重放用户资料；下方较早的“未授权再次提交”是历史边界。
+冷启动最小修复已本地验证：按任务/格式加载原处理器，扫描不加载应用写回/
+索引服务，保留原错误与委托接口，维护原2秒预算包含导入。最终46模块
+API **591通过/65跳过**（含新增23项）、CI脚本64、lint/typecheck/单head通过；
+1395输入/十三保护文件无漂移。Windows纯导入诊断不冒充Linux或整次CI提速。
+[本地验证](evidence/reliability-2026-11-14/ci-worker-startup-verification.json) /
+[导入诊断](evidence/reliability-2026-11-14/ci-worker-startup-import-diagnosis.json)；
+待选择性提交和新完整CI，不提高60分钟/并发，不继承旧结果。
+此前修复`9a084146`已选择性提交/推送十四文件，十三保护文件无漂移；
+完整精确[CI43543975636](https://github.com/foolkking/chat-reader/actions/runs/43543975636)
+在**10:01:44.250642 +08:00**确认派发。wall-clock边界10:51:44.250642；
+原等待器10:03:18.450682启动，须另满足新3000秒monotonic等待，实际首读
+UTC预计**10:53:18.450682**。实际请求**10:53:18.448494**、结果收到
+**10:53:21.276186**，派发wall-clock3094.197852秒/新monotonic3000秒通过；
+首次快照API/阅读比较成功，Web/Settings执行中；**11:04:21.516068**独立确认
+整次completed/cancelled，Settings触及原60分钟上限，取消请求0次。
+API/Web/阅读比较成功，两发布job跳过；451项打印通过、三项终止窗口失败，
+470矩阵/独立restore未完成，整次CI/制品/部署未验收。
+[独立失败/耗时回执](evidence/reliability-2026-11-14/ci-settings-scheduling-failure.json)
+保留正式注解、实际未完成gate及四日志/三ZIP；尾部失败与API关闭时序尚未定性。
+同名344项打印耗时少440.5秒仍超时，当前调研fresh-child冷启动成本，
+不提高超时/并发、不重启本机PG或完整站点。
+[首读实际时钟回执](evidence/reliability-2026-11-14/ci-settings-scheduling-first-read.json)
+保留UTC预计的2.188ms差异，未改写原时间；
+[本次派发回执](evidence/reliability-2026-11-14/ci-settings-scheduling-dispatch.json)
+不覆盖下方失败/事件回执，不继承旧run的局部成功。
+[等待期最终核验](evidence/reliability-2026-11-14/ci-settings-scheduling-consumer-final-preparation.json)
+仅为本地消费者/安全控制：83项通过，要求新官方日志的17唯一监督场景、
+真实PG的poll1/poll20及原Settings470+restore1通过；不冒充新CI、应用重测
+或fresh生产准入，不继承旧制品诊断。
 基线候选`b2d3a65`已选择性提交/推送二十文件，十三保护文件无漂移。
 完整精确[CI43531859718](https://github.com/foolkking/chat-reader/actions/runs/43531859718)
 首读**08:56:06.772164 +08:00**满足新3000秒双边界；**09:09:01**独立确认

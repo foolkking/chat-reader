@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T03:23:57.654762+00:00",
+  "status": "failed-incomplete-no-deployable-artifact",
+  "source_revision": "9a0841461671dfdabd5d50a56f55e68f8ffde227",
+  "workflow_run_id": 43543975636,
+  "attempt": 1,
+  "first_read_receipt_sha256": "154e8e0a860c3aea75409dc3d4d009fcf01916aabe8949ab88568e72b10d5a83",
+  "independently_confirmed_terminal_at": "2026-11-14T03:04:21.516068+00:00",
+  "jobs": {
+    "api-quality": "success",
+    "web-quality": "success",
+    "settings-quality": "cancelled",
+    "reading-performance-comparison / compare": "success",
+    "inspect-release-artifact": "skipped",
+    "build-images": "skipped"
+  },
+  "official_logs": [
+    {
+      "job": "api-quality",
+      "job_id": 132290753462,
+      "conclusion": "success",
+      "filename": "api-quality.log",
+      "bytes": 1406616,
+      "sha256": "0693ab39956135b4e987986b99241cd1e743da60d0956e95022c96594e6e1ddc",
+      "retained_at": "2026-11-14T03:06:51.500795+00:00"
+    },
+    {
+      "job": "web-quality",
+      "job_id": 132290753753,
+      "conclusion": "success",
+      "filename": "web-quality.log",
+      "bytes": 1377935,
+      "sha256": "8ca87870ae74223e9663f9c51a2ff9de47d9500a24c2db55b94c57b2b735da13",
+      "retained_at": "2026-11-14T03:06:55.437622+00:00"
+    },
+    {
+      "job": "settings-quality",
+      "job_id": 132290753866,
+      "conclusion": "cancelled",
+      "filename": "settings-quality.log",
+      "bytes": 192318,
+      "sha256": "d293812ec4e311504ec702b4f3e1b0376f4bb36126fa77ebf0e542af5716d7dc",
+      "retained_at": "2026-11-14T03:06:58.631692+00:00"
+    },
+    {
+      "job": "reading-performance-comparison / compare",
+      "job_id": 132300978201,
+      "conclusion": "success",
+      "filename": "reading-performance-comparison-compare.log",
+      "bytes": 21798092,
+      "sha256": "f04423023d09c0538ebfd43b2d0062dbac067876044d2842bb12a2164edb94d5",
+      "retained_at": "2026-11-14T03:07:09.462347+00:00"
+    }
+  ],
+  "official_artifacts": [
+    {
+      "id": 14095445487,
+      "name": "reading-performance-comparison",
+      "official_zip_sha256": "f799863fec03c8d5f7e2f2400f069ea247bebb99202923a4c4916e19ff39a207",
+      "zip_bytes": 4109710,
+      "members": 101
+    },
+    {
+      "id": 14095247848,
+      "name": "release-a-quality-evidence-9a0841461671dfdabd5d50a56f55e68f8ffde227-1",
+      "official_zip_sha256": "cf78be8b45440e6c1e4732428eed80bef09c9ab96fb9441f0501258f523ef3f9",
+      "zip_bytes": 40519902,
+      "members": 848
+    },
+    {
+      "id": 14094888284,
+      "name": "settings-quality-evidence-9a0841461671dfdabd5d50a56f55e68f8ffde227-1",
+      "official_zip_sha256": "49a1a11d4402ae54a17cb96f405027a6b69a368ef8a781ff89fefe531c11f30f",
+      "zip_bytes": 22419228,
+      "members": 203
+    }
+  ],
+  "settings": {
+    "official_failure": "The job has exceeded the maximum execution time of 1h0m0s",
+    "matrix_expected": 470,
+    "printed_passes": 451,
+    "printed_tail_failures": [
+      {
+        "timestamp": "2026-11-14T03:01:59.1023106Z",
+        "outcome": "✘",
+        "index": 452,
+        "location": "e2e/settings-offline-recovery.spec.ts:175:9",
+        "title": "first-copy OFFLINE_ASSET_IO does not claim a retained copy (unrelated copy)",
+        "printed_seconds": 9.6
+      },
+      {
+        "timestamp": "2026-11-14T03:02:00.3700042Z",
+        "outcome": "✘",
+        "index": 453,
+        "location": "e2e/settings-offline-recovery.spec.ts:248:7",
+        "title": "task center routes OFFLINE_ASSET_IO to a real download on this device",
+        "printed_seconds": 0.07100000000000001
+      },
+      {
+        "timestamp": "2026-11-14T03:02:01.2315849Z",
+        "outcome": "✘",
+        "index": 454,
+        "location": "e2e/settings-offline-recovery.spec.ts:323:7",
+        "title": "offline failures survive reload, rebuild and cancel without a connection at 375",
+        "printed_seconds": 0.052000000000000005
+      }
+    ],
+    "uncompleted_matrix_cases": 16,
+    "fresh_instance_restore": "not-run",
+    "last_printed_pass_at": "2026-11-14T03:01:48.2204839Z",
+    "actual_gate_evidence": {
+      "schema_version": 2,
+      "gate_id": "settings-stages-1-4",
+      "status": "running",
+      "started_at": "2026-11-14T02:04:22.412Z",
+      "test_count": 470
+    },
+    "actual_gate_evidence_sha256": "20a9ae32da18612fe0c6d7812d5920a7133278ae123b81b5cbe5429ba8a092e5",
+    "complete_result_counts_available": false,
+    "tail_failure_classification": "termination-window; detailed cause/shutdown timing not established",
+    "api_shutdown_line_has_original_timestamp": false
+  },
+  "matched_timing": {
+    "previous_run": 43531859718,
+    "matched_printed_passes": 344,
+    "previous_printed_seconds": 3415.803,
+    "current_printed_seconds": 2975.303,
+    "difference_seconds": -440.5,
+    "precision": "Rounded Playwright print durations; not exact handlers or complete causal attribution."
+  },
+  "worker_events": {
+    "counts": {
+      "worker_heartbeat_started": 1,
+      "background_job_committed": 479,
+      "background_job_failed": 25,
+      "artifact_staging": 114,
+      "artifact_validated": 114,
+      "artifact_published": 114,
+      "artifact_db_committed": 114,
+      "export_reclamation": 30,
+      "import_committed": 1
+    },
+    "maintenance_deferred_lines": 0,
+    "scheduling_paused_lines": 0,
+    "note": "Transition counts include deliberate business failures; not test counts."
+  },
+  "api_supervisor_evidence": {
+    "unique_unit_cases": 17,
+    "real_pg_poll_parameters": [
+      1,
+      20
+    ],
+    "status": "previously independently verified PASSED in this run's official API log"
+  },
+  "unchanged_source_inputs": 1392,
+  "protected_files": 13,
+  "cancellation_requested": false,
+  "production_touched": false,
+  "deployable_artifact_available": false,
+  "automation_created": false,
+  "original_diagnostics_modified": false
+}

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from app.models.administration import SystemBackupRecord
 
 SYSTEM_JOB_TYPES = ("system_archive_export", "system_archive_preflight", "system_archive_restore")
+PERSONAL_JOB_TYPES = ("personal_archive_export", "personal_archive_preflight", "personal_archive_restore")
 
 def sync_system_archive_record(db, job, *, result=None, status=None):
     record = db.query(SystemBackupRecord).filter_by(background_job_id=job.id).one_or_none()

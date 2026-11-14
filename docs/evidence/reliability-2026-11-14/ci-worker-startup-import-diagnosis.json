@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T03:59:17.281065+00:00",
+  "status": "local-diagnostic-not-linux-handler-or-ci-acceptance",
+  "base_revision": "9a0841461671dfdabd5d50a56f55e68f8ffde227",
+  "platform": "win32",
+  "python": "3.11.7",
+  "measurement": "Fresh-interpreter pure imports with -X importtime; common bootstrap measured separately.",
+  "source_snapshots": {
+    "previous_application_files": 307,
+    "candidate_application_files": 308,
+    "previous_manifest_sha256": "bd35da793123abf7e319bcf5e25807774f63205cba8fbae2f50d2cb6e416394f",
+    "candidate_manifest_sha256": "812090bddc666cf0cf498f1c9e5dea100073d3820dfe28f88e5b16af29b00d78",
+    "candidate_raw_working_inputs_match": true,
+    "layout_and_line_endings": "Same application layout and canonical LF in disposable copies only."
+  },
+  "selected_import_bundles": {
+    "noise_scan": {
+      "samples_per_revision": 3,
+      "previous_median_additional_import_seconds": 1.0805401999969035,
+      "candidate_median_additional_import_seconds": 0.09823220001999289,
+      "previous_median_wall_seconds": 3.468999999924563,
+      "candidate_median_wall_seconds": 1.7809999999590218,
+      "previous_modules": 974,
+      "candidate_modules": 654
+    },
+    "user_delete": {
+      "samples_per_revision": 3,
+      "previous_median_additional_import_seconds": 0.9800809000153095,
+      "candidate_median_additional_import_seconds": 0.1642509000375867,
+      "previous_median_wall_seconds": 3.109000000054948,
+      "candidate_median_wall_seconds": 1.827999999979511,
+      "previous_modules": 974,
+      "candidate_modules": 671
+    },
+    "offline": {
+      "samples_per_revision": 3,
+      "previous_median_additional_import_seconds": 0.8615523999324068,
+      "candidate_median_additional_import_seconds": 0.3975317000877112,
+      "previous_median_wall_seconds": 2.625,
+      "candidate_median_wall_seconds": 2.202999999979511,
+      "previous_modules": 974,
+      "candidate_modules": 827
+    },
+    "personal_archive": {
+      "samples_per_revision": 3,
+      "previous_median_additional_import_seconds": 0.8253821999533102,
+      "candidate_median_additional_import_seconds": 0.6830536000197753,
+      "previous_median_wall_seconds": 2.562999999965541,
+      "candidate_median_wall_seconds": 2.390999999945052,
+      "previous_modules": 974,
+      "candidate_modules": 917
+    },
+    "adaptive_analysis": {
+      "samples_per_revision": 3,
+      "previous_median_additional_import_seconds": 0.9405999999726191,
+      "candidate_median_additional_import_seconds": 0.19355810002889484,
+      "previous_median_wall_seconds": 2.702999999979511,
+      "candidate_median_wall_seconds": 1.922000000020489,
+      "previous_modules": 995,
+      "candidate_modules": 680
+    },
+    "plain_export": {
+      "samples_per_revision": 3,
+      "previous_median_additional_import_seconds": 0.876353699946776,
+      "candidate_median_additional_import_seconds": 0.061743299942463636,
+      "previous_median_wall_seconds": 2.5780000000959262,
+      "candidate_median_wall_seconds": 1.75,
+      "previous_modules": 975,
+      "candidate_modules": 653
+    }
+  },
+  "raw_summary_sha256": {
+    "cold-import-before-selected01-summary.json": "a8f4cce60bad3b74756682f141e0ee8aa3d13e44efe5bc21d915f741c01bacc3",
+    "cold-import-after-selected01-summary.json": "3857305481bd68c1cd61c8c3159feb8b30f09f667ff57ad5732d58c48e9df78c",
+    "cold-import-before03-summary.json": "aed6fb56d569481b7c8c3c5f65a497bb73601de9e80c50b867261c5402322de9",
+    "cold-import-after01-summary.json": "095b25d88b11b40a20acab3947c9c1b94f35ea10f89c0b4707345cbf05e6c870"
+  },
+  "preserved_probe_harness_failures": [
+    {
+      "label": "before-bootstrap-01",
+      "cause": "Replacing subprocess.Popen broke asyncio's Windows subclass import.",
+      "log_sha256": "22833bf2e080bef4a07859c25abcec3920b3f2a7f0f2d2e0de70e55f65298421"
+    },
+    {
+      "label": "before02-bootstrap-01",
+      "cause": "External-work guard rejected standard-library read-only Windows OS detection.",
+      "log_sha256": "5f048934f9580e7ec0d7c68c6227d477168a39fb21a1d1d4fc811461afeebbad"
+    }
+  ],
+  "limits": [
+    "No handlers, PostgreSQL, API, worker or Web stack were started by these probes.",
+    "No inherited connections, parser/process reuse, larger budgets or CI concurrency.",
+    "Filesystem cache, scheduling and instrumentation overhead can affect three-sample timings.",
+    "These bundles exclude real business work and do not prove an exact Linux/whole-CI saving.",
+    "Fresh full CI must retain all 470 Settings cases plus independent restore, frame, memory and signal gates."
+  ]
+}

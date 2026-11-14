@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T02:57:17.388304+00:00",
+  "source_revision": "9a0841461671dfdabd5d50a56f55e68f8ffde227",
+  "workflow_run_id": 43543975636,
+  "first_request_at": "2026-11-14T02:53:18.448494+00:00",
+  "first_result_received_at": "2026-11-14T02:53:21.276186+00:00",
+  "dispatch_wall_elapsed_seconds": 3094.197852,
+  "fresh_waiter_monotonic_elapsed_seconds": 3000.0,
+  "user_dispatch_50_minutes_and_fresh_monotonic_boundary_passed": true,
+  "waiter_wall_elapsed_seconds": 2999.997812,
+  "prior_waiter_wall_estimate": "2026-11-14T02:53:18.450682+00:00",
+  "request_minus_waiter_wall_estimate_ms": -2.188,
+  "clock_note": "Preserve the -2.188ms difference from the UTC estimate; no timestamp was adjusted. The actual dispatch wall-clock and fresh monotonic gates both passed.",
+  "original_first_read_receipt_sha256": "7cd9b542f02ef1433a75fbfa04154cd07a2ee4d454b9703867fd5a2e9158948d",
+  "dispatch_receipt_sha256": "9b957a8e42fbcfc02148d806ce5a5c341162d75824f232ff52f964be680ab2cd",
+  "reservation_receipt_sha256": "6257724f805bdf174d4bec007fb607834d04786904d2930bae6c90b0f95606e1",
+  "status": "in_progress",
+  "conclusion": "",
+  "jobs": {
+    "api-quality": {
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "web-quality": {
+      "status": "in_progress",
+      "conclusion": ""
+    },
+    "settings-quality": {
+      "status": "in_progress",
+      "conclusion": ""
+    },
+    "reading-performance-comparison / compare": {
+      "status": "completed",
+      "conclusion": "success"
+    }
+  },
+  "entire_ci_complete": false,
+  "artifacts_accepted": false,
+  "deployed": false,
+  "cancellation_requested": false,
+  "new_scheduler_created": false,
+  "production_touched": false
+}

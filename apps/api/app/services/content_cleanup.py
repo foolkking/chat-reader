@@ -28,15 +28,31 @@ from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.import_record import utc_now
-from app.services.editing.message_edit_service import (
-    _create_version,
-    _get_current_version,
-    _write_event,
-)
 from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
 from app.services.cleanup_normalization import normalized_shadow, source_span
-from app.services.search.search_indexer import rebuild_search_and_toc_for_conversation
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
+
+# Scanning does not write versions or rebuild indexes. Keep the existing
+# application/fault-injection seams, but load their services only when applying.
+def _create_version(*args, **kwargs):
+    from app.services.editing.message_edit_service import _create_version as create
+    return create(*args, **kwargs)
+
+
+def _get_current_version(*args, **kwargs):
+    from app.services.editing.message_edit_service import _get_current_version as current
+    return current(*args, **kwargs)
+
+
+def _write_event(*args, **kwargs):
+    from app.services.editing.message_edit_service import _write_event as write
+    return write(*args, **kwargs)
+
+
+def rebuild_search_and_toc_for_conversation(*args, **kwargs):
+    from app.services.search.search_indexer import rebuild_search_and_toc_for_conversation as rebuild
+    return rebuild(*args, **kwargs)
+
 
 BUILTIN_RULES = (
     ("openai-private-citation-v1", "ChatGPT 私有引用标记", "citation", "PRIVATE_CITATION"),

@@ -52,35 +52,12 @@ from app.services.assets.scanner import scan_status_allows_use
 from app.services.database.bulk_insert import insert_rows
 from app.services.editing.transient_upload_references import find_transient_upload_references
 from app.services.editing.markdown_attachment_references import attachment_references
+from app.services.editing.errors import MessageEditError
 
 MAX_EDIT_TEXT_LENGTH = 200_000
 MESSAGE_ORDER_SCALE = Decimal("1000000")
 MESSAGE_ORDER_INTEGER_WIDTH = 18
 MergeProgressCallback = Callable[[str, int, int, int], None]
-
-
-class MessageEditError(ValueError):
-    def __init__(
-        self,
-        message: str,
-        status_code: int = HTTPStatus.BAD_REQUEST,
-        *,
-        code: str | None = None,
-        line_number: int | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.status_code = status_code
-        self.code = code
-        self.line_number = line_number
-
-    @property
-    def detail(self) -> str | dict[str, str | int]:
-        if self.code is None:
-            return str(self)
-        detail: dict[str, str | int] = {"code": self.code, "message": str(self)}
-        if self.line_number is not None:
-            detail["line_number"] = self.line_number
-        return detail
 
 
 @dataclass(frozen=True)

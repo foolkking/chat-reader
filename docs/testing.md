@@ -6,6 +6,26 @@ fixtures retain **5432**. `postgres-service.sh` still fences ownership by
 run/attempt/job; no seeder admission, timeout, memory or test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
+## Selected cold imports and maintenance import budget — local 2026-11-14
+
+`test_worker_import_boundaries.py` imports the dispatcher, maintenance,
+reconciliation, child entry module and noise scanner in fresh interpreters.
+Guards reject unselected editing/export/offline/account/asset/index handlers,
+database connections, networking and subprocess work after read-only Windows
+OS detection. The child entry module is only imported, never run as a worker.
+Additional controls retain worker/cleanup instrumentation delegates and the
+original `MessageEditError` import identity, status and detail representation.
+
+`test_worker_maintenance_import_budget.py` covers stopped passes without
+imports, deadline/stop changes during import, sanitized per-family import
+failure and all four rotating first lanes under the same two-second/20-item
+limits. Existing real version-write rollback/cancellation, handlers, supervisor,
+PostgreSQL and resource tests remain required; no test/job budget is increased.
+Pure-import profiling uses exact old code and a same-layout candidate copy,
+fresh interpreters and the same installed dependencies. Windows timings and
+module counts are diagnostic, not completed Linux handlers or CI acceptance.
+The stopped local PostgreSQL/application stack remains stopped.
+
 ## Busy-queue scheduling without an idle penalty — local 2026-11-14
 
 `test_worker_supervisor.py` invokes the actual supervisor loop with controlled

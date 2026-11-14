@@ -115,6 +115,45 @@ API关闭后五项打印失败、未完成gate JSON及同名耗时对照，不�
 新增`ci-settings-scheduling-verification.json`及1392输入保留循环红8/9、
 最终API153/43、CI64和静态/单head；PG慢poll20检查交新完整CI，旧548 Web
 输入不变不称新build。十三保护文件保全，不改规则/记忆/旧资料或部署门槛。
+修复9a084146已选择性提交/推送十四文件；新增独立
+`ci-settings-scheduling-dispatch.json`绑定完整CI43543975636及
+10:01:44.250642 +08:00确认派发。同步唯一台账、Project State、导航和证据入口
+为等待中：dispatch边界10:51:44.250642，原等待器10:03:18.450682启动后的
+新3000秒monotonic边界使实际首读不得早于10:53:18.450682。未读结果、不继承
+旧成功、不覆盖历史回执，不重整文档结构、改规则/记忆或操作生产。
+新增同日`ci-settings-scheduling-waiting-preparation.json`登记改绑后的本地
+77项独立消费者/安全控制、13份已有输出schema与3份DOM对照；同一台账及
+必要入口链接该脱敏回执，不创建另一状态页。新消费要求精确17唯一监督单测
+和PG两参数通过，不用函数名/重复/跳过填数；1392输入及十三保护文件保全。
+原等待器仍运行，未查新CI/下载/操作生产，不冒称新应用或完整发布验收。
+追加`ci-settings-scheduling-consumer-final-preparation.json`保留最终83项控制
+及最终helper SHA：原470全通过/0跳过+restore1及摘要/实际计数一致不放宽。
+旧b2官方Web/性能ZIP及提取字节的独立内容核验仅登记为方法诊断；不继承
+给新CI或覆盖前77项/失败回执，同步唯一台账与必要入口，不改业务和生产。
+新增`ci-settings-scheduling-first-read.json`保存实际请求10:53:18.448494及
+收到10:53:21.276186、派发wall-clock3094.197852秒/新monotonic3000秒通过。
+不改写原等待器时间或掩盖UTC预计的2.188ms差异；同步唯一台账和必要入口为
+API/阅读比较成功、Web/Settings在首次快照仍执行，整次CI/制品/部署未接受。
+原首读等待器结束后有界等待整次完成，不重复派发或建立安排，生产未动。
+完整43543975636在11:04:21.516068 +08:00独立确认Settings原60分钟超时；
+同步唯一台账及五个必要入口，不再把run写为等待中。追加独立
+`ci-settings-scheduling-failure.json`登记451打印通过、三终止窗口失败、
+未完成470/restore、实际running gate、四官方日志/三核验ZIP及同名344项
+打印耗时少440.5秒；不冒称精确handler耗时或已修复全部根因。
+API6674/3及17唯一监督单测/PG两参数、Web/阅读比较成功只属于失败run诊断；
+发布job跳过，无取消请求/生产操作，原等待器和原制品保持不变。
+冷启动修复继续沿用同一台账：`OBSERVABILITY_CONTRACT.md`维护按任务/格式
+加载现有处理器、扫描/应用写回隔离及包含导入的维护预算；`testing.md`维护
+新鲜解释器导入护栏、原错误身份/委托接口和四维护lane预算控制。
+`app/services/editing/errors.py`是现有MessageEditError的轻量定义，原service
+路径继续reexport；个人/系统归档类型共用既有`archive_task_status.py`。
+不新增服务、执行池、migration、测试/CI预算或第二套状态入口；本机纯导入
+观测不等于Linux整链修复或发布通过，旧资料/规则/记忆与无关修改保留。
+新增`ci-worker-startup-import-diagnosis.json`登记同布局307/308代码副本、
+每路径三次Windows纯导入及两次方法错误；不记录正文/ID/配置值或外推CI时长。
+`ci-worker-startup-verification.json`和1395输入维护最后一次46模块API591/65
+（包含新增23项）、CI64、静态/单head、十一项消费者拒绝控制和十三文件保全。
+同一台账及必要入口只登记本地已证/新CI待派发，不继承旧run，不新增另一账本。
 
 ## 用户任务中断恢复 — 2026-11-13（本地，未发布）
 

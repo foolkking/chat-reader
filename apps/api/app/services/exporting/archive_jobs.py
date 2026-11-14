@@ -21,9 +21,9 @@ from app.services.exporting.archive_transaction import track_archive_object
 from app.services.exporting.personal_archive import create_personal_archive
 from app.services.exporting.personal_restore import restore_personal_archive
 from app.services.exporting.system_archive import SystemArchiveError
+from app.services.exporting.archive_task_status import PERSONAL_JOB_TYPES
 
 
-PERSONAL_JOB_TYPES = ("personal_archive_export", "personal_archive_preflight", "personal_archive_restore")
 ACTIVE = ("queued", "processing", "cancelling")
 UPLOAD_SCOPE = "archive_upload"
 

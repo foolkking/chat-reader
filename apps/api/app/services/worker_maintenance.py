@@ -27,24 +27,36 @@ def run_worker_maintenance(
     exports_first: bool = True,
     start_lane: int = 0,
 ) -> None:
-    from app.services.export_retention import reclaim_exports
-    from app.services.sharing.share_service import reclaim_expired_frozen_snapshots
-    from app.services.assets.upload_service import cleanup_finished_uploads
-    from app.services.assets.lifecycle import cleanup_deleted_assets
-
     deadline = monotonic() + 2.0
 
     def permitted() -> bool:
         return should_continue() and monotonic() < deadline
 
+    def cleanup_exports():
+        from app.services.export_retention import reclaim_exports
+        if permitted():
+            reclaim_exports(session_factory, export_root, limit=20, should_continue=permitted)
+
+    def cleanup_shares():
+        from app.services.sharing.share_service import reclaim_expired_frozen_snapshots
+        if permitted():
+            reclaim_expired_frozen_snapshots(session_factory, limit=20, should_continue=permitted)
+
+    def cleanup_uploads():
+        from app.services.assets.upload_service import cleanup_finished_uploads
+        if permitted():
+            cleanup_finished_uploads(session_factory, limit=20, should_continue=permitted)
+
     def cleanup_assets():
-        with session_factory() as db:
-            cleanup_deleted_assets(db, limit=20, should_continue=permitted)
+        from app.services.assets.lifecycle import cleanup_deleted_assets
+        if permitted():
+            with session_factory() as db:
+                cleanup_deleted_assets(db, limit=20, should_continue=permitted)
 
     operations = (
-        ("export", lambda: reclaim_exports(session_factory, export_root, limit=20, should_continue=permitted)),
-        ("expired_share", lambda: reclaim_expired_frozen_snapshots(session_factory, limit=20, should_continue=permitted)),
-        ("upload_staging", lambda: cleanup_finished_uploads(session_factory, limit=20, should_continue=permitted)),
+        ("export", cleanup_exports),
+        ("expired_share", cleanup_shares),
+        ("upload_staging", cleanup_uploads),
         ("deleted_assets", cleanup_assets),
     )
     ordered = operations if exports_first else tuple(reversed(operations))

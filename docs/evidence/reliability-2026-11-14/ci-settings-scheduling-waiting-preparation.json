@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-14T02:23:26.187930+00:00",
+  "revision": "9a0841461671dfdabd5d50a56f55e68f8ffde227",
+  "workflow_run_id": 43543975636,
+  "scope": "Local exact-run evidence consumer/operator preparation, not release or product acceptance",
+  "control_groups": {
+    "ordered_oci_layers_whiteouts_diff_ids": {
+      "tests": 8,
+      "passed": true,
+      "receipt_sha256": "f84a3b2b3d281fdec5629f02bae5b0d931ab7eb19338e18f36d5fa1e6abfce24"
+    },
+    "shared_filesystem_original_capacity_headroom": {
+      "tests": 6,
+      "passed": true,
+      "receipt_sha256": "847bb524637e249fd9c886a3a1b9d6937bd9496c3a2684f0c7c52c8eb93528a7"
+    },
+    "source_hash_identity_missing_and_privacy": {
+      "tests": 8,
+      "passed": true,
+      "receipt_sha256": "0c6e53df65b0f9677ecf9e7822d8687281d631ff3fde38a4c941cd8d799742d6"
+    },
+    "pg_fixture_and_actual_ts_callbacks": {
+      "tests": 8,
+      "passed": true,
+      "receipt_sha256": "ba54b95da211dd6228871c43574b416e031d14ee81d55b985142035a5894ce9e"
+    },
+    "required_exact_pg_and_posix_modules": {
+      "tests": 6,
+      "passed": true,
+      "receipt_sha256": "5c9573b95ba4a462b8ef13a32e8f30ce0768731dd1cd2f24b7c019578032d49a"
+    },
+    "mounted_schemas_and_full_v4_records": {
+      "tests": 21,
+      "passed": true,
+      "receipt_sha256": "b039d29617e9a4332c878ed1ee0beaab13e2218f175347529b3e4208a69f7d6e"
+    },
+    "exact_17_supervisor_cases_and_both_pg_polls": {
+      "tests": 20,
+      "passed": true,
+      "receipt_sha256": "fb9def9c2ff62624fc5e70d0b5c5a2450b1c8dee9553f58962ca5dd63c2f8781"
+    }
+  },
+  "synthetic_control_tests": 77,
+  "real_output_schema_controls": 13,
+  "retained_actual_dom_coordinate_controls": 3,
+  "real_output_controls_receipt_sha256": "36e518db3f925a5ff3c7a89012f9b49ad27b20e86a2def358a14b1ae0c3b57a1",
+  "final_helper_sha256": {
+    "collect_scheduling_failure.py": "57dd29a572706ba3d4ca4a1275e1dfdce6c47ddc042c3bf2fc645881deec7298",
+    "download_artifacts.py": "7c0d18ddc97c8007996ced398df5f318c30e1e15147c2b9ae2e805679667d20c",
+    "gh_release.py": "70fd60b1cf6a0d6a7103e2bba6af9fe07124832ad0ece5a17b3a242acbe18a60",
+    "prepare_settings_release_helpers.py": "3982a880842a233c1d5cb561701828c23e0aac0bfaeeade38bed10f21493bf99",
+    "quality_evidence_contracts.py": "829a07c66bbdc3dde032dea5769ff29d0d8cbd6a8c606c74b24287c0b0828070",
+    "record_settings_waiting_preparation.py": "9b13211eabeb44b8d1f236448e6688ef8f6689642eebe78ce2739fff31376f3a",
+    "supervisor_evidence_contracts.py": "37e287121fa08ea3f8cabf658d32cc9ba9ebecc189f6e82a49ff2613314a22a8",
+    "support/backup.sh": "54e69d9f16be61de37671d46fe94387a9107a8234101fc4d4aeb142d10d65634",
+    "support/backup_housekeeping.py": "6c9dd2738fc5bf928cce2b54f48050f59384efdfd09a15b64d7cb0cc19661cc4",
+    "support/backup_volume_reader.sh": "fc1d18beea98032baf82c8d21be6b541a47ff5fea8938f258ea22d475c15df74",
+    "support/preflight_release_space.sh": "52b64862b6a576745d30cf7c2bbb15753fdbbcf1408be8e718491d7aaf7294f0",
+    "support/production_capacity_probe.py": "cb8d082961c7e461078b2effb119f3db5405423d8d23019a2b89ec66044b634b",
+    "support/production_snapshot.py": "1f86000c4bbc28f1cd4bd1e30777e7840def9ec2b1cc5c65e4797699ad9b2b93",
+    "support/production_source_guard.py": "9a28b8c5cd1b13feb8e16a88724df10afe06363117003ebe95139448e6a122d4",
+    "support/release_oneoff.py": "7d790ab62ae5d78a7a688032b4ed6fa356b2774f567eb773d8a8c0524894384e",
+    "support/verify_backup.sh": "fd86acbf8a17910c0a55132c42b866fb49c71b489131e7ed084c0a5d35ed70a9",
+    "support/verify_release_state.sh": "2aef1c331bca107fd31624a59974c037a5a301724c66308f9bfa151a55fe73ae",
+    "test_capacity_probe.py": "3bc14dd3befc10e52d8bef009c17c9162bc09e172a937070bb4a61b10f87bc94",
+    "test_oci_verifier.py": "ddb9c23449327dc77bcfe55383cbbfd6e286d056f55da2244fed706fa4da8f09",
+    "test_quality_verifier_guards.py": "10ef1b64362126347ecbd30f182464446af3da85ecc957a6fda6899493061089",
+    "test_required_api_verifier_guards.py": "faef16214820612686e0776586adc13db6c836059ebcf09cbff281d721579135",
+    "test_runtime_evidence_contracts.py": "24cc3d11c44804657e785fe0fcbcbfa3347c8a69cb743c54b336d59c791d3126",
+    "test_source_guard.py": "50a8cb84ed0e23a9abd3b3f317167f0b9ee253c1a104010ecf969318d7f2081c",
+    "test_supervisor_evidence_guards.py": "f8430dbc3f010178b72c3a4e6ed1b3532550d64dcfec3ace957ad35f8c6d19e9",
+    "verify_evidence_consumer_positive.py": "1d3432b83b43a28aa576e9df8a740297bba9c99a648ff2dc6bfef691f13b4189",
+    "verify_oci_application.py": "99912f0e650ca9138fe75eeca7731eef31b302d675d49da4188fd131bd2171a9",
+    "verify_quality_contents.py": "49c412c13793f4be5905877e7625ca434872bf75c883cadf67024f504450f2ef",
+    "wait_ci_completion.py": "dca7b8314fcd1e39b642e087289c43d58608c473670eaa6dde1462e0faa2a63e"
+  },
+  "reviewed_failure_collector_source_sha256": "b065b43bee380db41c732a1a9c9ad9e71c6af5b9f26402b719889b02e365dce7",
+  "source_manifest_sha256": "58300b3e80883c504ec862fd7e2e321a8d59eb69297a841e4cc30e517f061c0b",
+  "source_inputs_rechecked": 1392,
+  "protected_unrelated_files_rechecked": 13,
+  "empty_git_index": true,
+  "updated_current_documentation_files": [
+    "PROJECT_STATE.md",
+    "docs/documentation-inventory.md",
+    "docs/evidence/README.md",
+    "docs/index.md",
+    "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md"
+  ],
+  "documentation_restructured_or_history_overwritten": false,
+  "ci_queried": false,
+  "production_touched": false,
+  "new_scheduler_created": false,
+  "old_cancel_helpers_copied_or_replayed": false,
+  "exact_supervisor_unit_cases_required": 17,
+  "exact_pg_poll_cases_required": [
+    "1",
+    "20"
+  ],
+  "mandatory_original_gates_and_fresh_production_checks_not_waived": true
+}

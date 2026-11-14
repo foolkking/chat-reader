@@ -1,12 +1,52 @@
 # Project State
 
-## Reliability candidate — 2026-11-14 (Settings scheduling repair; not deployed)
+## Reliability candidate — 2026-11-14 (Settings timeout; cold-start repair locally verified)
 
 The latest November13 instruction authorizes selective commit/push, the full
 exact-source CI and deployment after CI success. The user owns acceptance of
 the remaining product/device/recovery scenarios. This does not waive automated
 release gates, stopped-writer backup, migration or runtime-health safeguards,
 and does not authorize cleanup or replay of user inputs.
+
+The next local repair defers unselected task/format handlers and scan write/index
+services, preserves editing-error reexports and includes imports in the original
+two-second maintenance budget. Final46-module API regression passes
+**591/65 skipped**, including23 new controls; CI scripts64, lint/typecheck and
+single head0061 pass. All1395 inputs/thirteen protected files remain stable.
+Three-sample Windows pure-import bundles improve locally, not proof of Linux
+or whole-CI timing. [Import diagnosis](docs/evidence/reliability-2026-11-14/ci-worker-startup-import-diagnosis.json)
+and [local verification](docs/evidence/reliability-2026-11-14/ci-worker-startup-verification.json)
+require a new full exact CI before deployment; no local PostgreSQL/serving stack
+or production operation is added.
+
+Last dispatched repair **`9a0841461671dfdabd5d50a56f55e68f8ffde227`** is selectively
+committed/pushed: fourteen owned files, thirteen unrelated files byte-preserved.
+Full exact [CI `43543975636`](https://github.com/foolkking/chat-reader/actions/runs/43543975636)
+was confirmed dispatched at **10:01:44.250642 +08:00**. Its dispatch wall-clock
+boundary is **10:51:44.250642**; the existing waiter started at **10:03:18.450682**
+and completed a fresh3000 monotonic seconds. The first request was
+**10:53:18.448494**, with the result received at **10:53:21.276186**:
+dispatch wall-clock3094.197852 seconds and fresh monotonic3000 seconds both pass.
+At that snapshot API/reading comparison succeeded; Web/Settings were running.
+The run was independently confirmed **completed/cancelled at11:04:21.516068
++08:00**: API/Web/reading comparison succeeded; Settings exceeded its unchanged
+60-minute job limit and both release jobs were skipped. It printed451 passes
+and three termination-window failures; the470-case matrix and independent
+restore remain incomplete. The actual gate is still `running/test_count470`,
+without final result counts. The tail failure causes and untimestamped API
+shutdown timing are not yet established. No cancellation request was sent.
+[Independent failure/timing receipt](docs/evidence/reliability-2026-11-14/ci-settings-scheduling-failure.json)
+preserves four official logs/three digest-verified diagnostic ZIPs, not
+deployable artifacts. The entire CI, artifacts and deployment remain unaccepted.
+[First-read receipt](docs/evidence/reliability-2026-11-14/ci-settings-scheduling-first-read.json)
+preserves the actual clocks, including the2.188ms difference from the prior UTC
+estimate. [Dispatch receipt](docs/evidence/reliability-2026-11-14/ci-settings-scheduling-dispatch.json)
+does not inherit the preceding run's partial success.
+Waiting-period [final consumer/operator preparation](docs/evidence/reliability-2026-11-14/ci-settings-scheduling-consumer-final-preparation.json)
+passes83 local controls and rechecks1392 inputs/thirteen protected files. It
+requires all17 exact supervisor unit cases and both real-PG poll1/poll20 cases
+in the new official log, plus the unchanged470+restore1 Settings matrix;
+retained failed-run schema/frame/performance outputs are not inherited CI acceptance.
 
 Base candidate **`b2d3a653f9655a6480d4f669cc12446030655037`** was selectively
 committed/pushed with twenty owned files and thirteen unrelated files preserved.
@@ -28,7 +68,12 @@ unavailable boundaries and errors retain the configured1-second poll; fresh-chil
 maintenance, stall/grace, signal and memory limits are unchanged. Matched344-case
 printed timings increased22.9% despite1138 unchanged exact application/Settings/
 workflow inputs; this does not establish a code regression or prove the whole
-slowdown fixed. A fresh full exact CI is still required. Production remains3564cbf/schema0060.
+slowdown fixed. In9a's official logs, matched344-case printed timings fell
+3415.803→2975.303 seconds (440.5 seconds less), but the run still timed out.
+Worker logs contain zero maintenance-deferred/scheduling-paused lines; this
+does not measure helper cold-import cost. The new pure-import/local regression
+above does not inherit this failed CI or establish a Linux throughput result.
+Production remains3564cbf/schema0060.
 Final selected API regression **153 passed/43 skipped**, CI script tests **64**,
 lint/typecheck and single migration head0061 pass. All1392 final inputs are
 unchanged across the final regression; thirteen protected files and all548

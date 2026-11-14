@@ -1,6 +1,42 @@
 # 事实证据索引
 
-## 修复CI失败、前次失败及生产导入定点恢复 — 2026-11-14
+## 冷启动最小修复本地回归 — 2026-11-14（非发布验收）
+
+[导入诊断](reliability-2026-11-14/ci-worker-startup-import-diagnosis.json)记录9a
+307文件/候选308文件同布局同依赖的Windows纯导入对照，每路径三次；
+不运行服务/PG，不外推Linux或整个CI节省时间，两次探针方法失败仍保留。
+[本地验证](reliability-2026-11-14/ci-worker-startup-verification.json)与
+[1395输入](reliability-2026-11-14/ci-worker-startup-inputs.json)登记完整46模块
+591通过/65跳过（含新增23项，不累加）、CI64、静态/单head及十三文件保全。
+按需原处理器/扫描写回、旧错误reexport和维护导入预算不改变单槽/原60分钟/
+内存/逐帧门槛；必须新完整精确CI，不继承下方失败run，没有部署或生产操作。
+
+## 新修复CI再次超时、前次失败及生产导入定点恢复 — 2026-11-14
+
+[忙队列修复CI派发回执](reliability-2026-11-14/ci-settings-scheduling-dispatch.json)
+绑定9a084146/43543975636，**10:01:44.250642 +08:00**确认派发；十四文件
+选择性提交/推送、十三文件保全。dispatch wall-clock边界10:51:44.250642；
+原等待器10:03:18.450682启动，须新完整3000秒monotonic等待，实际首读不得
+早于**10:53:18.450682**。尚未读取结果，不代表CI/制品/部署通过；不继承
+旧局部成功，不覆盖下方失败/诊断/事件回执、不创建安排或操作生产。
+[实际首读回执](reliability-2026-11-14/ci-settings-scheduling-first-read.json)保留
+请求10:53:18.448494、收到10:53:21.276186、派发wall-clock3094.197852秒及
+新monotonic3000秒；先前10:53:18.450682为UTC预计，2.188ms差异不抹去。
+首读API/阅读比较成功、Web/Settings执行中；派发回执的“未读”只描述派发时点，
+首读只是当时快照。整次在**11:04:21.516068 +08:00**确认completed/cancelled：
+Settings原60分钟超时，取消请求0次；API/Web/阅读比较成功，两发布job跳过。
+[独立失败/耗时回执](reliability-2026-11-14/ci-settings-scheduling-failure.json)
+保留451项打印通过、三项终止窗口失败、未完成470/restore及实际running gate。
+四官方日志/三digest核验ZIP只作诊断，没有可部署镜像；API关闭时序和尾部原因
+尚未完整归因。同名344项打印少440.5秒仍不等于整个超时已修；不改原证据。
+[等待期独立消费者/安全核验](reliability-2026-11-14/ci-settings-scheduling-waiting-preparation.json)
+保留77项本地控制、13份既有schema/3份DOM对照、1392输入和十三保护文件
+复核及最终helper SHA。新官方日志须17唯一监督单测、真实PG的`[1]`/`[20]`
+均通过；本回执不是新CI、产品重测或生产准入，不继承旧制品。
+[最终消费者核验](reliability-2026-11-14/ci-settings-scheduling-consumer-final-preparation.json)
+追加原Settings470/0跳过+restore1、摘要/实际计数一致的六项控制，完整最终
+83项通过；不累加重复用例。旧b2两份官方ZIP/提取字节及13schema、原全部帧、
+18测量/54 cold已在本机独立验证，仅为消费者诊断，不继承给新release。
 
 [坐标修复CI派发回执](reliability-2026-11-14/ci-runtime-frame-dispatch.json)绑定
 b2d3a65及43531859718，08:06:06.651342 +08:00确认、首读不得早于08:56:06.651342，
