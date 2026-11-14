@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 const read = file => readFileSync(new URL("../../" + file, import.meta.url), "utf8");
@@ -119,18 +120,34 @@ async function coordinateFixture(kind, backwardPx = 120) {
     if (selector === "[data-block-index]") return [block];
     return [article, block];
   };
-  const window = { innerWidth: 1280 };
+  const window = { innerWidth: 1280, location: { href: "http://reader.synthetic/", origin: "http://reader.synthetic" } };
   const longTasks = [{ startTime: 101, duration: 213 }, { startTime: 102, duration: 60 }];
-  let observer;
+  const nativeFrame = {
+    startTime: 103, duration: 151, blockingDuration: 101, renderStart: 110, styleAndLayoutStart: 120,
+    scripts: [
+      { startTime: 104, duration: 140, executionStart: 105, forcedStyleAndLayoutDuration: 90, pauseDuration: 0,
+        invokerType: "event-listener", invoker: "private synthetic event", sourceCharPosition: 321,
+        sourceURL: "http://reader.synthetic/_next/static/chunks/synthetic.js?private=query#private-fragment",
+        sourceFunctionName: "syntheticHandler" },
+      { startTime: 105, duration: 3, invokerType: "private synthetic invoker",
+        sourceURL: "https://foreign.invalid/_next/static/chunks/foreign.js?private=query",
+        sourceFunctionName: "private synthetic body" },
+      { startTime: 106, duration: 2, sourceURL: "http://reader.synthetic/conversations/private-synthetic-id?private=query",
+        sourceFunctionName: "<private synthetic inline source>", sourceCharPosition: Number.NaN },
+    ],
+  };
+  let observer, animationObserver;
+  const observers = [];
   class Observer {
-    static supportedEntryTypes = ["longtask"];
-    constructor(callback) { this.callback = callback; observer = this; }
-    observe() {}
-    takeRecords() { return []; }
-    disconnect() {}
+    static supportedEntryTypes = kind === "unsupported-longtasks" ? []
+      : kind.startsWith("native-") ? ["longtask", "long-animation-frame"] : ["longtask"];
+    constructor(callback) { this.callback = callback; this.pending = []; observers.push(this); }
+    observe({ type }) { this.type = type; if (type === "longtask") observer = this; else animationObserver = this; }
+    takeRecords() { const result = this.pending; this.pending = []; return result; }
+    disconnect() { this.disconnected = true; }
   }
   const context = {
-    exports: {}, window, innerWidth: 1280,
+    exports: {}, window, innerWidth: 1280, URL,
     document: { documentElement: { scrollWidth: 1280 }, getElementsByTagName: () => [root, article, block] },
     performance: { now: () => now }, PerformanceObserver: Observer,
     requestAnimationFrame: callback => { const id = nextFrameId++; scheduled.set(id, callback); return id; },
@@ -169,12 +186,23 @@ async function coordinateFixture(kind, backwardPx = 120) {
         }
       }
       tick(kind === "unfiltered-freeze" && step === 2 ? 1200 : 16.7);
-      if (step === 0) observer.callback({ getEntries: () => longTasks });
+      if (step === 0) {
+        observer?.callback({ getEntries: () => longTasks });
+        animationObserver?.callback({ getEntries: () => [nativeFrame] });
+        if (kind === "native-drain") {
+          observer.pending = [{ startTime: 104, duration: 80 }];
+          animationObserver.pending = [{ startTime: 104, duration: 80 }];
+        }
+      }
       step++;
     },
   };
   runInNewContext(compiled, context);
-  return context.exports.runWheelTelemetry(page, root, 6);
+  const result = await context.exports.runWheelTelemetry(page, root, 6);
+  assert.ok(observers.every(item => item.disconnected && item.pending.length === 0),
+    "All native observers must be drained and disconnected.");
+  assert.equal(scheduled.size, 0, "The collector must cancel its animation frame.");
+  return result;
 }
 
 test("coordinate reclamation keeps raw reversals but measures the same real DOM reading anchor", async () => {
@@ -227,4 +255,148 @@ test("every original frame and long task is retained, including a 1200ms freeze 
   assert.equal(result.frameCount, result.frameIntervals.length);
   assert.equal(result.p95FrameInterval, 1200);
   assert.equal(result.scrollFrames.length, 12);
+});
+
+test("ordinary unprofiled runs retain every native long-task start time and duration", async () => {
+  const result = await coordinateFixture("ordinary");
+  assert.equal(result.longTaskObserverSupported, true);
+  assert.deepEqual(Array.from(result.longTaskSpans, span => ({ ...span })), [
+    { startTime: 101, duration: 213 }, { startTime: 102, duration: 60 },
+  ]);
+  assert.equal(result.longestTask, 213);
+  assert.equal(result.longTaskTotal, 273);
+  assert.equal(result.diagnosticTiming, undefined, "Ordinary evidence must not enable the CPU diagnostic mode.");
+});
+
+test("unsupported native long-task measurement is explicit and cannot satisfy the required cold-run assertion", async () => {
+  const result = await coordinateFixture("unsupported-longtasks");
+  assert.equal(result.longTaskObserverSupported, false);
+  assert.equal(result.longTaskSpans.length, 0);
+  assert.match(harness, /expect\(run\.longTaskObserverSupported,[^;]*\)\.toBe\(true\)/);
+});
+
+test("long animation frames retain native script, render and forced-layout durations without changing the budget", async () => {
+  const result = await coordinateFixture("native-attribution");
+  assert.equal(result.longAnimationFrameDiagnostics.supported, true);
+  const [frame] = result.longAnimationFrameDiagnostics.frames;
+  assert.equal(frame.duration, 151);
+  assert.equal(frame.blockingDuration, 101);
+  assert.equal(frame.renderStart, 110);
+  assert.equal(frame.styleAndLayoutStart, 120);
+  assert.equal(frame.scripts.length, 3, "Opaque script entries remain present, not filtered out.");
+  assert.equal(frame.scripts[0].duration, 140);
+  assert.equal(frame.scripts[0].forcedStyleAndLayoutDuration, 90);
+  assert.equal(frame.scripts[0].sourceFunctionName, "syntheticHandler");
+  assert.equal(frame.scripts[0].sourceCharPosition, 321);
+  assert.equal(result.longestTask, 213, "Native frame attribution must not replace the original long-task gate.");
+});
+
+test("native diagnostics never persist query/fragment, foreign URLs, conversation paths or inline/event text", async () => {
+  const result = await coordinateFixture("native-privacy");
+  const [frame] = result.longAnimationFrameDiagnostics.frames;
+  assert.equal(frame.scripts[0].sourcePath, "/_next/static/chunks/synthetic.js");
+  assert.equal(frame.scripts[1].sourcePath, null);
+  assert.equal(frame.scripts[1].sourceFunctionName, null);
+  assert.equal(frame.scripts[1].invokerType, null);
+  assert.equal(frame.scripts[2].sourcePath, null);
+  assert.equal(frame.scripts[2].sourceFunctionName, null);
+  assert.equal(frame.scripts[2].sourceCharPosition, null);
+  assert.doesNotMatch(JSON.stringify(result.longAnimationFrameDiagnostics), /private|foreign|sourceURL|invoker"/);
+});
+
+test("undelivered native records are drained once and remain in the original task totals", async () => {
+  const result = await coordinateFixture("native-drain");
+  assert.deepEqual(Array.from(result.longTasks), [213, 60, 80]);
+  assert.deepEqual(Array.from(result.longTaskSpans, span => ({ ...span })), [
+    { startTime: 101, duration: 213 }, { startTime: 102, duration: 60 }, { startTime: 104, duration: 80 },
+  ]);
+  assert.equal(result.longestTask, 213);
+  assert.equal(result.longTaskTotal, 353);
+  assert.equal(result.longAnimationFrameDiagnostics.frames.length, 2);
+  assert.equal(result.longAnimationFrameDiagnostics.frames[1].blockingDuration, null, "Missing attribution is unknown, not zero.");
+});
+
+test("missing long-animation-frame support is unknown supplemental evidence, not fabricated zero browser cost", async () => {
+  const result = await coordinateFixture("ordinary");
+  assert.equal(result.longAnimationFrameDiagnostics.supported, false);
+  assert.equal(result.longAnimationFrameDiagnostics.frames.length, 0);
+  assert.equal(result.longTaskObserverSupported, true);
+  assert.equal(result.longestTask, 213);
+});
+
+// Execute the actual nine-case callback's assertions and publish ordering.
+// Only import/browser/FS transport is adapted; Playwright's real expect is used.
+async function coldBudget({ longest = 151, total = 231, supported = true } = {}) {
+  const ts = require("typescript");
+  const ast = ts.createSourceFile("reader-capacity.spec.ts", harness, ts.ScriptTarget.ES2022, true);
+  let callback;
+  const find = node => {
+    if (ts.isCallExpression(node) && node.expression.getText(ast) === "test"
+      && node.arguments[0]?.getText(ast).includes("three cold runs and warm revisit")) callback = node.arguments[1];
+    ts.forEachChild(node, find);
+  };
+  find(ast);
+  assert.ok(callback);
+  const compiled = ts.transpileModule(`exports.run = ${callback.getText(ast)};`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  const exported = {}, phases = [], written = [];
+  new Function("exports", "profile", "messages", "diagnostic", "seedConversation", "measureReader",
+    "measureWarmRevisit", "mkdir", "writeFile", "dirname", "expect", "console", compiled)(
+    exported, "math", 10000, false,
+    async () => { phases.push("seed"); return "synthetic-cold-gate"; },
+    async (_page, _id, run) => {
+      phases.push(`cold-${run}`);
+      return { run, scrollMonotonic: true, pageHorizontalOverflow: false,
+        longTaskObserverSupported: supported, mountedMessagesMax: 22, mountedBlocksMax: 77,
+        p95FrameInterval: 16.8, longestTask: run === 2 ? longest : 0,
+        longTaskTotal: run === 2 ? total : 0,
+        longTaskSpans: run === 2 ? [{ startTime: 2000, duration: 80 }, { startTime: 2100, duration: longest }] : [] };
+    },
+    async () => { phases.push("warm"); return { scrollMonotonic: true }; },
+    async () => { phases.push("mkdir"); },
+    async (_path, value) => { phases.push("write"); written.push(JSON.parse(value)); },
+    dirname, require("@playwright/test").expect, { info: () => { phases.push("log"); } },
+  );
+  let failure;
+  try {
+    await exported.run({ page: { addInitScript: async () => {} }, request: {} }, {
+      outputPath: name => join(process.env.RUNNER_TEMP ?? process.env.TEMP, "cold-budget-control", name),
+      attach: async () => { phases.push("attach"); },
+    });
+  } catch (error) { failure = error; }
+  assert.deepEqual(phases, ["seed", "cold-0", "cold-1", "cold-2", "warm", "mkdir", "write", "attach", "log"]);
+  assert.equal(written.length, 1);
+  assert.equal(written[0].runs.length, 3, "A failed cold run cannot remove another raw measurement.");
+  assert.equal(written[0].measurement.diagnosticOnly, false);
+  return { failure, payload: written[0] };
+}
+
+test("the actual capacity assertion rejects the official 151ms cold-2 pattern after retaining all raw evidence", async () => {
+  const result = await coldBudget();
+  assert.ok(result.failure);
+  assert.match(result.failure.message, /cold run 2/);
+  assert.match(result.failure.message, /Expected:.*<=.*150/);
+  assert.equal(result.payload.runs[2].longestTask, 151);
+  assert.equal(result.payload.runs[2].longTaskTotal, 231);
+});
+
+test("150ms still passes the same actual assertion without rounding or a new tolerance", async () => {
+  const result = await coldBudget({ longest: 150, total: 230 });
+  assert.equal(result.failure, undefined);
+  assert.equal(result.payload.runs[2].longestTask, 150);
+});
+
+test("251ms total still fails independently of a passing maximum task", async () => {
+  const result = await coldBudget({ longest: 100, total: 251 });
+  assert.ok(result.failure);
+  assert.match(result.failure.message, /total long tasks/);
+  assert.equal(result.payload.runs[2].longTaskTotal, 251);
+});
+
+test("missing native task support cannot turn unknown zero-duration evidence into a capacity pass", async () => {
+  const result = await coldBudget({ longest: 0, total: 0, supported: false });
+  assert.ok(result.failure);
+  assert.match(result.failure.message, /missing long-task evidence/);
+  assert.equal(result.payload.runs[0].longTaskObserverSupported, false);
 });

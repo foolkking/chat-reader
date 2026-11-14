@@ -1,6 +1,6 @@
 # 小机器优化目标：收尾总览与剩余路线
 
-更新时间：**2026-11-14，Asia/Shanghai**。本页是本目标的状态入口；
+更新时间：**2026-11-15，Asia/Shanghai**。本页是本目标的状态入口；
 详细方案、历次失败和实验记录保留在原账本，不再把每个检查点重复当作“当前状态”。
 
 ## 新授权：可靠性整块治理（发布准备中，用户负责验收）
@@ -12,7 +12,58 @@
 资料、不清理生产、不建立自动安排；未验收项不能因委托用户而改标通过。
 11月12日的一次本地检查点与随后本地工作限制保留为历史，不覆盖最新授权。
 
-### 11月14日最新：整次CI仅Web失败，严格发布合同修正本地通过
+### 11月15日最新：候选长任务151ms失败，补原生取证，不宣称产品根因已修
+
+用户报告compare失败后，正式attempt1确认2495fb1/43613433508为completed/failure，
+整次55分42秒、compare job7分50秒，不是job总超时。API6751通过/3显式跳过/
+5 warnings；Web14门禁全部PASS（focused78、default223/826原环境跳过、
+reading-stability35）；Settings470矩阵及独立restore1通过。候选8通过/1失败：
+math10000冷2原生任务[80,151]ms，最大151超过原150，总231仍不超过250；
+p95约16.8ms、mounted22/77、真实阅读锚点方向通过。历史baseline9失败只是
+characterization，不算候选失败或改标通过。两发布job跳过，无镜像/内存/消费者验收。
+[独立失败](../evidence/reliability-2026-11-15/ci-reading-capacity-failure.json)
+重新验证四日志和三官方size/digest/CRC/安全路径ZIP，不覆盖旧派发。
+
+失败普通样本没有任务起点、CPU profile或原生script/layout归因，无法定位151ms
+属于哪段工作。前次3d8f77f使用相同Reader产品/依赖，math10000冷任务最大值
+[0,80,0]ms；不同CI运行不能当同环境before/after，也不能据此归为runner、GC、
+KaTeX或dialogue-index偶发。没有证据支持的产品/字体/布局优化不继续扩张。
+
+仅改四个既有harness/workflow文件和新增一个CI控制：普通原生long-task跨度
+在callback和drain中完整保留；不支持观测必须失败，不能靠假零通过。
+可选原生long-animation-frame保留script/render/layout数值及未知字段，
+仅允许同源Next静态JS路径和identifier-shaped函数名，不保存任意URL/query/
+正文或event/container标识。原v4真实DOM方向、三冷+warm、30×120px/34ms及
+2/34/150/250/40/120全部不变，不删除断言或新增skip。
+
+真实原两阶段主循环仍baseline→candidate且普通运行先清除CPU profile flag；
+只有普通candidate已失败，才用共享phase helper另跑一次同源码完整9用例/
+27冷CPU诊断。独立storage/gate/result和对应client chunks保留，主FAIL不因
+诊断PASS改变；手工exact-SHA诊断仍原两阶段/54 profiles，不追加第三阶段。
+gate id先于`--list`设置，避免诊断报告覆盖主结果；不复制server/env文件。
+Git/PG/build/browser/信号为明确适配器的12项控制执行真实Bash，证明来源、
+失败保持及基础设施失败闭合；原release source用例及两阶段循环断言未改。
+
+最终本地mounted43＝原42＋一个有意>200ms原生负对照；真实记录211ms任务/
+约222.9ms frame，证明失败能被采集，不算性能PASS。原六gesture最大/总任务
+皆0；这是Windows小夹具，不是Linux10k或整站验收。Reader Node379含capacity23
+（原13＋新增10），CI Node89含新12，Python100、源码36/collect41、lint/typecheck、
+Actionlint1.7.12及Bash78通过；五个原runtime安全用例仍交新完整CI。
+初次CRLF/门禁身份控制失败、直接CDP注入漏计、原循环/新正则拒绝及昂贵
+profiling失败均保留，不把重测或未复现改写为产品修复。
+[本地验证](../evidence/reliability-2026-11-15/ci-reading-diagnostics-verification.json) /
+[1410输入](../evidence/reliability-2026-11-15/ci-reading-diagnostics-inputs.json)；
+其余1405原输入、62历史回执和13无关文件实际哈希不变，用户tsbuildinfo保全。
+
+下一步仍选择性提交/正常推送，只派发一次原空quality source普通完整CI；
+新独立`ci-reading-diagnostics-dispatch.json`登记实际candidate/run，确认即暂停，
+不重复派发、读取结果、等待、安排、取消或部署。原六job、全部新质量/镜像/
+无swap320/640MiB及独立制品门禁重新执行，不复用旧结果或扩大image-only链。
+项目job/step总限时仍无，原生预算和GitHub六小时平台上限保留。
+生产旧3564cbf/schema0060仅为此前验证指针，本轮未复查/操作来源、配置、
+volume或唯一备份；151ms根因与新完整CI仍待确认，剩余验收仍归用户。
+
+### 前一11月14日检查点（历史）：整次CI仅Web失败，严格发布合同修正本地通过
 
 用户反馈整次失败后，正式attempt1确认3d8f77f/43604634535为completed/failure。
 API6751通过/3显式跳过/5 warnings，17监督及真实PG poll1/poll20均通过；

@@ -1,6 +1,29 @@
 # Markdown 文档台账
 
-## 普通CI最终失败与严格安全合同修正 — 2026-11-14
+## Reader原生取证与主失败保持 — 2026-11-15
+
+项目仍为Next前端＋Python服务的monorepo；仅定点同步，不重整文档架构。
+README、AGENTS、Web CLAUDE、全局记忆和旧历史证据保持原样。
+
+| 所有者 | 本次处理与唯一职责 |
+| --- | --- |
+| Project State / docs index |短入口更新，明确151ms产品根因未修明及提交后暂停；原检查点标历史 |
+| Small Host Status |唯一当前台账，保存正式8/1与本地诊断/验收边界 |
+| Performance / Release Safety / Testing |原门槛、真实两阶段主循环、可选归因及失败后独立诊断不替代主FAIL |
+| Evidence index |链接三份独立机器证据，不覆写旧派发或失败 |
+| 本台账 |记录本轮职责/边界，不新增另一状态总览 |
+
+新增`ci-reading-capacity-failure.json`负责四日志/三ZIP、原151/150失败及其他
+质量成功/发布skip；`ci-reading-diagnostics-verification.json`负责原生控制、
+全部失败尝试及最终43/379/89/100/源码36/静态证明；
+`ci-reading-diagnostics-inputs.json`负责1410原始工作文件输入和保全。
+只改四个既有harness/workflow及新增一个CI控制，原其他1405输入、62历史回执/
+13无关文件不变，不删除旧断言/skip或放宽资源预算，不改变业务/依赖/migration。
+原`ci-release-contract-dispatch.json`仅按原字节随本次归档；新独立
+`ci-reading-diagnostics-dispatch.json`登记唯一空quality source普通完整CI，
+确认即暂停，不等待/回查/安排/取消/部署，不把未复现当产品修复。
+
+## 前一普通CI最终失败与严格安全合同修正（历史）— 2026-11-14
 
 定点同步Project State、导航、唯一台账、Testing、Release Safety及两证据入口；
 不重整全仓、不改AGENTS/全局记忆、旧回执或无关资料。

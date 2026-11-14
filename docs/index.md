@@ -1,6 +1,21 @@
 # 文档导航
 
-## 当前候选：可靠性整块治理 — 2026-11-14
+## 当前候选：Reader 失败取证，性能根因仍未确认 — 2026-11-15
+
+2495fb1/43613433508仅候选math10000冷2失败：原生长任务151ms超过原150ms，
+总计231ms仍在250ms内。API6751、Web14门禁、Settings470+restore1通过；
+候选8/1，历史baseline0/9，两发布job跳过，无镜像。
+[正式失败](evidence/reliability-2026-11-15/ci-reading-capacity-failure.json) /
+[本地验证](evidence/reliability-2026-11-15/ci-reading-diagnostics-verification.json) /
+[1410输入](evidence/reliability-2026-11-15/ci-reading-diagnostics-inputs.json) /
+[性能合同](system/PERFORMANCE_CAPACITY_CONTRACT.md) /
+[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+补普通原生时间跨度/归因和失败后的独立全序列CPU诊断，不放宽原门槛；
+诊断通过不能抹掉主失败，也不宣称151ms产品根因已修复。
+选择性提交/正常推送，仅派发一次空quality source普通完整CI；实际身份由
+随后`ci-reading-diagnostics-dispatch.json`登记，确认即暂停，不回查/安排/取消/部署。
+
+## 前一候选：可靠性整块治理（历史）— 2026-11-14
 
 普通完整CI3d8f77f/43604634535最终仅Web失败，API6751、Settings470+restore1、
 候选阅读比较9通过；后十项Web及两发布job未执行，不能继承为新发布验收。

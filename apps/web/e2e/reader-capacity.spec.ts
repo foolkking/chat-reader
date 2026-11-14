@@ -34,10 +34,32 @@ type CapacityTelemetryState = {
   frames: number[];
   longTasks: number[];
   longTaskSpans: Array<{ startTime: number; duration: number }>;
+  longTaskObserverSupported: boolean;
+  longAnimationFrameObserverSupported: boolean;
+  longAnimationFrames: Array<{
+    startTime: number;
+    duration: number;
+    blockingDuration: number | null;
+    renderStart: number | null;
+    styleAndLayoutStart: number | null;
+    scripts: Array<{
+      startTime: number;
+      duration: number;
+      executionStart: number | null;
+      forcedStyleAndLayoutDuration: number | null;
+      pauseDuration: number | null;
+      invokerType: string | null;
+      sourcePath: string | null;
+      sourceFunctionName: string | null;
+      sourceCharPosition: number | null;
+    }>;
+  }>;
   includeTiming: boolean;
   startedAt: number;
   frameId: number;
   observer: PerformanceObserver | null;
+  animationFrameObserver: PerformanceObserver | null;
+  collectAnimationFrames: (entries: PerformanceEntry[]) => void;
   initialScroll: CapacityScrollSample;
   scrollFrames: CapacityScrollSample[];
   scrollWheelSamples: CapacityScrollSample[];
@@ -81,14 +103,15 @@ for (const profile of profiles) {
       for (const run of runs) {
         expect(run.scrollMonotonic).toBe(true);
         expect(run.pageHorizontalOverflow).toBe(false);
+        expect(run.longTaskObserverSupported, `cold run ${run.run}: missing long-task evidence`).toBe(true);
         // The historical far-target fixture retains its stricter <=6 settled
         // budget. Default first-window capacity is a separate bounded workload.
         expect(run.mountedMessagesMax, "virtualized message working set grew with the fixture").toBeLessThanOrEqual(40);
         expect(run.mountedBlocksMax, "virtual block working set grew without bound").toBeLessThanOrEqual(120);
         expect(run.p95FrameInterval).not.toBeNull();
         expect(run.p95FrameInterval!).toBeLessThanOrEqual(34);
-        expect(run.longestTask).toBeLessThanOrEqual(150);
-        expect(run.longTaskTotal).toBeLessThanOrEqual(250);
+        expect(run.longestTask, `cold run ${run.run}: longest task, spans=${JSON.stringify(run.longTaskSpans)}`).toBeLessThanOrEqual(150);
+        expect(run.longTaskTotal, `cold run ${run.run}: total long tasks`).toBeLessThanOrEqual(250);
       }
       expect(warm.scrollMonotonic).toBe(true);
     });
@@ -295,10 +318,16 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     };
     const initial = readScroll(null);
     let framePrevious = initial, wheelPrevious = initial;
+    const supported = PerformanceObserver.supportedEntryTypes;
     const state: CapacityTelemetryState & { lastFrame: number } = {
       frames: [] as number[], longTasks: [] as number[], lastFrame: 0,
       longTaskSpans: [] as Array<{ startTime: number; duration: number }>, includeTiming,
+      longTaskObserverSupported: supported.includes("longtask"),
+      longAnimationFrameObserverSupported: supported.includes("long-animation-frame"),
+      longAnimationFrames: [],
       startedAt, frameId: 0, observer: null as PerformanceObserver | null,
+      animationFrameObserver: null as PerformanceObserver | null,
+      collectAnimationFrames: () => {},
       initialScroll: initial.sample, scrollFrames: [] as CapacityScrollSample[], scrollWheelSamples: [] as CapacityScrollSample[],
       captureWheel: () => {
         const next = readScroll(wheelPrevious);
@@ -317,15 +346,68 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
       state.frameId = requestAnimationFrame(frame);
     };
     state.frameId = requestAnimationFrame(frame);
-    if (PerformanceObserver.supportedEntryTypes.includes("longtask")) {
+    if (state.longTaskObserverSupported) {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) if (entry.startTime >= state.startedAt) {
           state.longTasks.push(entry.duration);
-          if (state.includeTiming) state.longTaskSpans.push({ startTime: entry.startTime, duration: entry.duration });
+          // Native timestamps are cheap evidence, not a CPU profiler. Retain
+          // them in ordinary failures too; a max duration alone cannot locate
+          // the frame or tell application work from native/browser scheduling.
+          state.longTaskSpans.push({ startTime: entry.startTime, duration: entry.duration });
         }
       });
       observer.observe({ type: "longtask" });
       state.observer = observer;
+    }
+    if (state.longAnimationFrameObserverSupported) {
+      const numberOrUnknown = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value : null;
+      const projectFrame = (entry: PerformanceEntry) => {
+        const frame = entry as PerformanceEntry & {
+          blockingDuration?: number; renderStart?: number; styleAndLayoutStart?: number;
+          scripts?: Array<PerformanceEntry & {
+            executionStart?: number; forcedStyleAndLayoutDuration?: number; pauseDuration?: number;
+            invokerType?: string; sourceURL?: string; sourceFunctionName?: string; sourceCharPosition?: number;
+          }>;
+        };
+        return {
+          startTime: frame.startTime, duration: frame.duration,
+          blockingDuration: numberOrUnknown(frame.blockingDuration),
+          renderStart: numberOrUnknown(frame.renderStart),
+          styleAndLayoutStart: numberOrUnknown(frame.styleAndLayoutStart),
+          scripts: (frame.scripts ?? []).map((script) => {
+            // Never persist arbitrary URLs, query strings, inline script text
+            // or event/container identifiers. Only our static script path and
+            // an identifier-shaped function name can identify the code.
+            let sourcePath: string | null = null;
+            try {
+              const source = new URL(script.sourceURL ?? "", window.location.href);
+              if (source.origin === window.location.origin && /^\/_next\/static\/[A-Za-z0-9_./-]+\.js$/.test(source.pathname)) {
+                sourcePath = source.pathname;
+              }
+            } catch { /* Missing or opaque native attribution stays unknown. */ }
+            const functionName = script.sourceFunctionName ?? "";
+            return {
+              startTime: script.startTime, duration: script.duration,
+              executionStart: numberOrUnknown(script.executionStart),
+              forcedStyleAndLayoutDuration: numberOrUnknown(script.forcedStyleAndLayoutDuration),
+              pauseDuration: numberOrUnknown(script.pauseDuration),
+              invokerType: ["user-callback", "event-listener", "resolve-promise", "reject-promise", "classic-script", "module-script"]
+                .includes(script.invokerType ?? "") ? script.invokerType! : null,
+              sourcePath,
+              sourceFunctionName: functionName.length <= 120 && /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(functionName) ? functionName : null,
+              sourceCharPosition: numberOrUnknown(script.sourceCharPosition),
+            };
+          }),
+        };
+      };
+      state.collectAnimationFrames = (entries) => {
+        for (const entry of entries) if (entry.startTime >= state.startedAt) {
+          state.longAnimationFrames.push(projectFrame(entry));
+        }
+      };
+      const observer = new PerformanceObserver((list) => state.collectAnimationFrames(list.getEntries()));
+      observer.observe({ type: "long-animation-frame" });
+      state.animationFrameObserver = observer;
     }
   }, includeTiming);
   const samples: number[] = [];
@@ -399,11 +481,15 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     for (const entry of state.observer?.takeRecords() ?? []) {
       if (entry.startTime >= state.startedAt) {
         state.longTasks.push(entry.duration);
-        if (state.includeTiming) state.longTaskSpans.push({ startTime: entry.startTime, duration: entry.duration });
+        state.longTaskSpans.push({ startTime: entry.startTime, duration: entry.duration });
       }
     }
     state.observer?.disconnect();
+    state.collectAnimationFrames(state.animationFrameObserver?.takeRecords() ?? []);
+    state.animationFrameObserver?.disconnect();
     return { frames: state.frames, longTasks: state.longTasks, durationMs: performance.now() - state.startedAt,
+      longTaskSpans: state.longTaskSpans, longTaskObserverSupported: state.longTaskObserverSupported,
+      longAnimationFrameDiagnostics: { supported: state.longAnimationFrameObserverSupported, frames: state.longAnimationFrames },
       initialScroll: state.initialScroll, scrollFrames: state.scrollFrames, scrollWheelSamples: state.scrollWheelSamples,
       ...(state.includeTiming ? { diagnosticTiming: { startedAt: state.startedAt, longTaskSpans: state.longTaskSpans } } : {}) };
   });
@@ -445,6 +531,9 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     pageHorizontalOverflow: false,
     frameIntervals: value.frames,
     longTasks: value.longTasks,
+    longTaskSpans: value.longTaskSpans,
+    longTaskObserverSupported: value.longTaskObserverSupported,
+    longAnimationFrameDiagnostics: value.longAnimationFrameDiagnostics,
     p95FrameInterval: frames[Math.max(0, Math.ceil(frames.length * 0.95) - 1)] ?? null,
     longestTask: value.longTasks.length ? Math.max(...value.longTasks) : 0,
     longTaskTotal: value.longTasks.reduce((sum, item) => sum + item, 0),

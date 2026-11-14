@@ -1,6 +1,36 @@
 # Project State
 
-## Latest full-CI contract repair and retained incident — 2026-11-14
+## Latest: Reader failure diagnostics, not a proven performance fix — 2026-11-15
+
+Exact2495fb1/43613433508 completed/failure solely in candidate math10000,
+cold2: native tasks80/151ms, exceeding the unchanged150ms maximum; total231ms
+passes250ms. API6751/3 skips/5 warnings, Web14 gates and Settings470+restore1
+pass. Candidate8/1, historical baseline0/9; both release jobs skipped, no images.
+[Official failure](docs/evidence/reliability-2026-11-15/ci-reading-capacity-failure.json)
+reverifies four logs/three ZIPs. Task start times/profiles were absent; the151ms
+product root cause remains unresolved, not attributed to runner/GC/KaTeX.
+
+Only four existing harness/workflow files and one new CI control change.
+Ordinary native task spans and optional privacy-projected animation attribution
+are retained. The ordinary original two-phase primary loop stays unprofiled.
+After an ordinary candidate failure, one independent exact-source nine-case/
+27-cold CPU phase collects evidence; even a passing replay leaves primary FAIL.
+Original v4 inputs, assertions and resource/native bounds remain.
+[Verification](docs/evidence/reliability-2026-11-15/ci-reading-diagnostics-verification.json):
+mounted43, Reader Node379 (including23 capacity controls), CI Node89
+(including12 executed-shell controls), Python100, source-only36, lint/typecheck,
+Actionlint1.7.12/Bash78 pass locally. No fresh production Next build, serving
+stack, PG or Linux capacity acceptance. Other1405 of1410 inputs,62 historical receipts and13
+unrelated files remain byte-identical; user tsbuildinfo is preserved.
+[Inputs](docs/evidence/reliability-2026-11-15/ci-reading-diagnostics-inputs.json).
+
+Selectively commit/normal push and dispatch ordinary full CI once with empty
+quality source; confirm identity, then pause. `ci-reading-diagnostics-dispatch.json`
+owns that new run once present; do not resubmit, poll results, wait, cancel,
+schedule or deploy. Production3564cbf/schema0060 is only the earlier verified
+pointer, not rechecked or modified; remaining acceptance belongs to the user.
+
+## Earlier full-CI contract repair and retained incident — 2026-11-14
 
 Exact3d8f77f/43604634535 is completed/failure: API6751/3 skips/5 warnings,
 Settings470+independent restore1 and candidate reading comparison9 pass.

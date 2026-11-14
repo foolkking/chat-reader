@@ -560,7 +560,7 @@ try {
       target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,
     }}).outputText;
     const telemetry={};new Function("exports",compiled)(telemetry);
-    for(const scenario of ["quiet-reclamation","actual-reverse-wheel","actual-backward-jump"]) {
+    for(const scenario of ["quiet-reclamation","actual-reverse-wheel","actual-backward-jump","native-long-task"]) {
       const page=await browser.newPage({viewport:{width:1280,height:720}});
       current=page;page.on("pageerror",error=>errors.push(error.stack??error.message));
       await page.addInitScript(()=>{window.fixtureKind="retention";window.fixtureCount=1000;window.fixtureOffline=false;});
@@ -598,6 +598,17 @@ try {
             await scroller.evaluate(element=>{element.scrollTop-=120;});
             await page.waitForTimeout(34);
           }
+          if(step===18&&scenario==="native-long-task") {
+            // Deliberate native timing failure in this diagnostic control
+            // only. Never add the busy wait to the release capacity workload.
+            // CDP's immediate evaluation is not a native long-task boundary.
+            // Schedule real browser animation work; never fabricate an entry.
+            await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(function syntheticNativeLongTask() {
+              const started=performance.now();
+              while(performance.now()-started<210) { /* deterministic main-thread work */ }
+              resolve();
+            })));
+          }
           step++;
         },
       };
@@ -615,6 +626,16 @@ try {
           &&frame.mountedMessages<result.scrollFrames[i-1].mountedMessages?[frame]:[]);
         assert.ok(removal.length>0);
         assert.ok(removal.every(frame=>frame.anchorKey!==null&&Math.abs(frame.forwardPx)<=2));
+      } else if(scenario==="native-long-task") {
+        assert.equal(result.scrollMonotonic,true);
+        assert.equal(result.longTaskObserverSupported,true);
+        assert.ok(result.longestTask>=200,"The real native observer must retain the deliberate >150ms failure.");
+        assert.ok(result.longTaskSpans.some(span=>span.duration>=200));
+        assert.deepEqual(result.longTaskSpans.map(span=>span.duration),result.longTasks);
+        assert.equal(result.longAnimationFrameDiagnostics.supported,true);
+        assert.ok(result.longAnimationFrameDiagnostics.frames.some(frame=>frame.duration>=200),
+          "Native frame attribution must be collected without enabling a CPU profiler.");
+        assert.equal(result.diagnosticTiming,undefined);
       } else {
         assert.equal(result.scrollMonotonic,false,"Real reverse input and backwards jumps must remain failures.");
         assert.ok(result.physicalScrollReversals.some(frame=>frame.phase==="frame"&&frame.forwardPx < -2));

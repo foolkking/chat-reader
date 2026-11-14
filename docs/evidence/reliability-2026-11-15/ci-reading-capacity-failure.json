@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T02:40:28.402565+08:00",
+  "status": "official_candidate_capacity_failure_other_quality_succeeded_no_images",
+  "ci": {
+    "id": 43613433508,
+    "run_attempt": 1,
+    "head_sha": "2495fb1c282dbfaac0c293d98c4b3a5487eb0b91",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-14T16:02:48Z",
+    "updated_at": "2026-11-14T16:58:30Z",
+    "path": ".github/workflows/build-release-images.yml"
+  },
+  "reported_job_id": 132513610417,
+  "reported_job_url": "https://github.com/foolkking/chat-reader/actions/runs/43613433508/job/132513610417#logs",
+  "jobs": [
+    {
+      "id": 132503246859,
+      "name": "api-quality",
+      "head_sha": "2495fb1c282dbfaac0c293d98c4b3a5487eb0b91",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T16:02:52Z",
+      "completed_at": "2026-11-14T16:39:51Z"
+    },
+    {
+      "id": 132503247138,
+      "name": "web-quality",
+      "head_sha": "2495fb1c282dbfaac0c293d98c4b3a5487eb0b91",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T16:02:52Z",
+      "completed_at": "2026-11-14T16:58:30Z"
+    },
+    {
+      "id": 132503247221,
+      "name": "settings-quality",
+      "head_sha": "2495fb1c282dbfaac0c293d98c4b3a5487eb0b91",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T16:02:52Z",
+      "completed_at": "2026-11-14T16:55:51Z"
+    },
+    {
+      "id": 132513610417,
+      "name": "reading-performance-comparison / compare",
+      "head_sha": "2495fb1c282dbfaac0c293d98c4b3a5487eb0b91",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-14T16:39:54Z",
+      "completed_at": "2026-11-14T16:47:44Z"
+    },
+    {
+      "id": 132518763101,
+      "name": "inspect-release-artifact",
+      "head_sha": "2495fb1c282dbfaac0c293d98c4b3a5487eb0b91",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T16:58:30Z",
+      "completed_at": "2026-11-14T16:58:30Z"
+    },
+    {
+      "id": 132518763377,
+      "name": "build-images",
+      "head_sha": "2495fb1c282dbfaac0c293d98c4b3a5487eb0b91",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T16:58:30Z",
+      "completed_at": "2026-11-14T16:58:30Z"
+    }
+  ],
+  "official_quality": {
+    "api": {
+      "passed": 6751,
+      "skipped": 3,
+      "warnings": 5
+    },
+    "web": {
+      "gate_counts": {
+        "PASS": 14,
+        "FAIL": 0,
+        "NOT_VERIFIED": 0,
+        "SKIPPED": 0
+      },
+      "individual_gate_result_counts": {
+        "adaptive-import-recovery": {
+          "passed": 14,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 1,
+          "interrupted": 0
+        },
+        "csp-enforcement": {
+          "passed": 4,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "context-files": {
+          "passed": 38,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "focused-online-security": {
+          "passed": 78,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "share-focus": {
+          "passed": 2,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "source-editor-mutation": {
+          "passed": 121,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "source-editor-cleanup": {
+          "passed": 6,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "upload-token-atomicity": {
+          "passed": 18,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "markdown-image-viewer": {
+          "passed": 31,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "reading-stability": {
+          "passed": 35,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "pdfjs-maintained-line": {
+          "passed": 13,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "default-pwa": {
+          "passed": 223,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 826,
+          "interrupted": 0
+        },
+        "single-owner-auth": {
+          "passed": 24,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "pwa-negative": {
+          "passed": 28,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      "focused_passed": 78,
+      "default_pwa_passed": 223,
+      "default_pwa_existing_environment_skips": 826,
+      "reading_stability_passed": 35
+    },
+    "settings": {
+      "matrix_passed": 470,
+      "independent_restore_passed": 1
+    },
+    "candidate_reader": {
+      "passed": 8,
+      "failed": 1,
+      "cold_measurements_retained": 27,
+      "warm_measurements_retained": 9
+    },
+    "historical_baseline": {
+      "passed": 0,
+      "failed": 9,
+      "characterization_not_candidate_failure": true
+    },
+    "build_images_and_independent_consumer": "skipped_no_deployable_images"
+  },
+  "failed_measurement": {
+    "fixture": {
+      "version": "release-d-reader-capacity-v1",
+      "seed": 20260814,
+      "profile": "math",
+      "messages": 10000
+    },
+    "measurement": {
+      "version": 4,
+      "trace": false,
+      "wheelSteps": 30,
+      "wheelDelta": 120,
+      "sampleDelayMs": 34,
+      "scrollDirection": "shared-real-dom-anchor",
+      "reverseTolerancePx": 2,
+      "diagnosticOnly": false
+    },
+    "run": 2,
+    "longTasks": [
+      80,
+      151
+    ],
+    "longestTask": 151,
+    "longTaskTotal": 231,
+    "p95FrameInterval": 16.799999999999727,
+    "mountedMessagesMax": 22,
+    "mountedBlocksMax": 77,
+    "scrollMonotonic": true,
+    "pageHorizontalOverflow": false,
+    "native_long_task_spans_available": false,
+    "native_frame_attribution_available": false,
+    "cpu_profile_available": false
+  },
+  "matched_previous_source_observation": {
+    "head_sha": "3d8f77fa54330e2fc8998a9329d4bdfe796f694b",
+    "workflow_run_id": 43604634535,
+    "reader_product_and_locked_dependencies_identical": true,
+    "math_10000_cold_longest_tasks": [
+      0,
+      80,
+      0
+    ],
+    "separate_ci_runs_not_same_environment_before_after_benchmark": true
+  },
+  "reader_product_root_cause_established": false,
+  "runner_gc_katex_or_dialogue_index_cause_not_proven": true,
+  "official_evidence": [
+    {
+      "id": 132503246859,
+      "name": "api-quality",
+      "bytes": 1421548,
+      "sha256": "64ff96e73e13e2d9e34387fa552029a261def6dc75570b9b52de92f5e48d0ce5"
+    },
+    {
+      "id": 132503247138,
+      "name": "web-quality",
+      "bytes": 1393033,
+      "sha256": "8b63fcf0edfa1b632080680d292fed3cab057af1dda420973a1740cf3cee2463"
+    },
+    {
+      "id": 132503247221,
+      "name": "settings-quality",
+      "bytes": 212550,
+      "sha256": "e32e3f3f38d787c5dd9ce6b14c1875e1990fcb91c8466d5d83c95931211efa43"
+    },
+    {
+      "id": 132513610417,
+      "name": "reading-performance-comparison / compare",
+      "bytes": 19533391,
+      "sha256": "d9e162341873d1c292a3079a93193b3217cb133b264bfea3a61fbbd2315fc0e2"
+    },
+    {
+      "id": 14123215377,
+      "name": "settings-quality-evidence-2495fb1c282dbfaac0c293d98c4b3a5487eb0b91-1",
+      "bytes": 15705244,
+      "sha256": "2c4fe4207a344821cc933dfe3f49634cab5ae5589deb7d2e0d1dc8ae327ba10d",
+      "official_size_digest_crc_verified": true,
+      "files": 215,
+      "uncompressed_bytes": 21125901
+    },
+    {
+      "id": 14122853548,
+      "name": "release-a-quality-evidence-2495fb1c282dbfaac0c293d98c4b3a5487eb0b91-1",
+      "bytes": 40448471,
+      "sha256": "84cfe5c371b2514c25b3b1026dbd322876c58305ae316c064adf03b27b023bf7",
+      "official_size_digest_crc_verified": true,
+      "files": 848,
+      "uncompressed_bytes": 47528615
+    },
+    {
+      "id": 14122229727,
+      "name": "reading-performance-comparison",
+      "bytes": 3957645,
+      "sha256": "0204b6f1e062baa02eedeb6f07dc0f0448ff5eed83a79f50d5978eb2bff70422",
+      "official_size_digest_crc_verified": true,
+      "files": 103,
+      "uncompressed_bytes": 116087097
+    }
+  ],
+  "official_snapshot_sha256": "a45f6a74e9d66df646ac5a9b755ab4b30f512dac19b9d6a7473522f2da947ce2",
+  "all_official_logs_and_zip_size_digest_crc_path_safety_reverified": true,
+  "initial_reader_zip_get_error_class_not_retained_no_network_root_cause_claim": true,
+  "no_fresh_quality_or_image_acceptance_inherited": true,
+  "production_not_rechecked_or_modified": true
+}

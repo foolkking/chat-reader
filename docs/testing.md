@@ -7,6 +7,59 @@ run/attempt/job; no seeder admission, native operation deadline, memory or
 test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
+## Native Reader failure evidence — local 2026-11-15
+
+The official2495fb1 comparison failed math10000 cold2 at151ms against the
+unchanged150ms maximum; total231ms passed250ms. API/Web/Settings succeeded,
+but release jobs skipped. Four logs/three official ZIPs are verified in the
+[independent failure](evidence/reliability-2026-11-15/ci-reading-capacity-failure.json).
+Native task spans/profiles were absent; product/runner/GC/KaTeX cause is unproven.
+
+Only the capacity harness, mounted diagnostic control, reusable comparison and
+their additive controls change. Original v4 direction/inputs/budgets and actual
+two-phase primary loop remain. Ordinary native spans/support and privacy-projected
+animation attribution are retained; a failed ordinary candidate gets one separate
+full-sequence CPU evidence phase, never a failure-to-pass retry.
+
+| Final local scope | Result and boundary |
+| --- | --- |
+| Mounted Reader |43 groups: original42 plus native negative control1; synthetic routing/HTTP/preferences/assistant-ui adapters, real Reader/virtualizer/Markdown/KaTeX |
+| Reader Node |379 across22 files, including capacity23 (original13/new10); actual collector/callback assertions, not live10k |
+| CI Node |89 including12 real-shell controls with explicit Git/PG/build/browser/signal adapters; original77/assertions retained |
+| Release Python |Original100 passed; no image-only policy extension |
+| Security source-only |36 passed, full spec collects41; five runtime cases retained for fresh CI |
+| Static |lint/typecheck, Actionlint1.7.12 and78 Bash parses passed; optional shellcheck/pyflakes disabled |
+
+Set the approved task TEMP/TMP/RUNNER_TEMP first. Windows Node20 does not expand
+Bash globs; use explicit file arrays:
+
+```powershell
+$readerTests = @(Get-ChildItem scripts/ux -File -Filter '*reader*.test.mjs' | ForEach-Object FullName)
+node --test @readerTests
+$ciTests = @(Get-ChildItem scripts/ci -File -Filter '*.test.mjs' | ForEach-Object FullName)
+node --test @ciTests
+node scripts/ux/reader-interaction-browser.mjs
+python -m unittest discover -s scripts/ci -p 'test_image_only_*.py' -v
+corepack pnpm run lint
+corepack pnpm run typecheck --tsBuildInfoFile "$env:TEMP/typecheck.tsbuildinfo"
+```
+
+The mounted negative control schedules real animation work: immediate CDP
+evaluation did not emit a native long-task entry on local Chrome. Its211ms task
+and about222.9ms frame are intentionally above the release budget, proof of
+failure capture, not performance acceptance. No CPU profiler runs in the final
+43-group probe; original six gesture maximum/total tasks are0. This does not
+establish Linux10000 timing or a matched before/after improvement.
+
+All initial parser/gate-identity/injection/control failures remain saved.
+[Verification](evidence/reliability-2026-11-15/ci-reading-diagnostics-verification.json) /
+[1410 inputs](evidence/reliability-2026-11-15/ci-reading-diagnostics-inputs.json)
+retain unchanged1405 inherited inputs,62 old receipts and13 unrelated files.
+Incremental typecheck output stays in task TEMP; user tsbuildinfo is unchanged.
+No fresh production Next build/full-PWA/API/PG/image/memory acceptance is claimed.
+One ordinary empty-quality-source full dispatch is required; confirm identity
+then pause without result polling, waiting, scheduling, cancellation or deployment.
+
 ## Release workflow contract and rejection controls — local 2026-11-14
 
 The unchanged full workflow's failed3d8f77f CI exposed two old header/condition

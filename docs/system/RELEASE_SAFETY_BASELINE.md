@@ -119,6 +119,39 @@ This contract defines the Release A security and provenance gate. It does not ch
 
 ## Release gate
 
+### Reader native diagnostic follow-up — 2026-11-15
+
+The ordinary2495fb1/43613433508 run failed only candidate math10000 cold2:
+151ms exceeds the unchanged150ms task maximum, although total231ms passes250ms.
+API6751, all14 Web gates and Settings470+restore1 succeeded; candidate8/1,
+historical baseline0/9, both release jobs skipped. Four logs/three ZIPs are
+verified, not deployable artifacts or proof that the151ms cause is fixed.
+[Official failure](../evidence/reliability-2026-11-15/ci-reading-capacity-failure.json).
+
+The comparison's actual original primary baseline/candidate loop and all native/
+resource bounds remain. Ordinary timing clears ambient CPU profiling, retains
+native task spans/support and optional private-safe animation attribution.
+Only after an ordinary candidate failure, one independent exact-source complete
+nine-case/27-cold CPU phase collects evidence and exact client chunks. Its PASS
+cannot replace the saved primary FAIL or admit image construction. Manual
+exact-SHA diagnostics remain two phases/54 profiles, never release acceptance.
+
+The full release workflow itself, all six jobs/selectors, unconditional producer
+source proof, five original real-memory cases and independent consumer remain
+unchanged. Empty input requires every fresh exact-source quality success; old
+quality results, diagnostic successes and image-only lineage are not substitutes.
+Local mounted43/Reader379/CI89/Python100/source36/static checks are selected
+regression, not new Linux/image or release acceptance.
+[Verification](../evidence/reliability-2026-11-15/ci-reading-diagnostics-verification.json).
+
+Selectively commit/normal push and dispatch ordinary full CI once with empty
+`quality_source_run_id`. Confirm identity then pause; the new independent
+`ci-reading-diagnostics-dispatch.json` owns that run once present. No result
+poll/waiter/automation/cancellation/deployment; do not repeat submission.
+No project job/step total timeout is added; native bounds and GitHub's six-hour
+job cap remain. Production is only the earlier3564cbf/schema0060 pointer,
+not rechecked or changed.
+
 ### Ordinary full CI after image-only failure — 2026-11-14
 
 The subsequent full3d8f77f/43604634535 completed/failure solely in the Web

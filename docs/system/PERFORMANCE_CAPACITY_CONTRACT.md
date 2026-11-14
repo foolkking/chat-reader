@@ -84,6 +84,23 @@ and stability matrix; their deliberate quiet pause is not in the release
 capacity workload. Older v3 diagnostic evidence remains unchanged and does not
 prove that an unexplained cold long task has been fixed.
 
+### Native failure evidence — additive v4
+
+Ordinary, unprofiled measurements retain every native long-task start time and
+duration, including the final observer drain. Native long-task support is a
+required assertion: unsupported measurement must not pass as a fabricated zero.
+The original150ms maximum and250ms total still apply without rounding or retries.
+
+Optional native long-animation-frame evidence records script, render and
+style/layout durations without enabling CDP CPU profiling. Unsupported observation/missing numeric
+supplementary fields stay false/null, not invented zero browser cost. Projection
+retains only same-origin `/_next/static/*.js` paths without query/fragment and
+identifier-shaped function names; arbitrary URLs, inline text and event/container
+identifiers are not persisted. All observed frames/scripts remain represented.
+This is test-only evidence, not product telemetry or a proven151ms performance fix.
+Mounted controls include deliberately slow native animation work, separate from
+every original release wheel input and budget.
+
 ## Same-runner release gate
 
 The candidate must pass every listed Reader assertion and unchanged budget.
@@ -101,9 +118,23 @@ an optional full lowercase `diagnostic_ref` SHA. It runs the same baseline and
 that exact failed source through all nine cases in original order, adding per-cold-run CPU
 profiles and browser metric snapshots. The artifact and payload explicitly say
 **diagnostic only**. Profiling affects timing; no result from this opt-in run is
-release acceptance or replaces the original failure. The normal reusable
-workflow has no diagnostic input, runs all nine cases, and retains every
-original threshold/assertion. No profiling is installed in the product.
+release acceptance or replaces the original failure.
+
+The normal reusable workflow has no diagnostic input. Its actual original
+baseline/candidate loop runs all nine cases unprofiled with every original
+threshold/assertion; an ambient CPU profiling flag is cleared first. Only after
+an ordinary primary candidate failure does a separate exact-source phase run
+the full nine-case sequence/27 cold profiles once, using the same phase helper
+and measurement harness. Its storage, gate and result are independent; even a
+passing diagnostic leaves the primary failure and job failure intact. It is not
+an acceptance retry, isolated10k shortcut, source substitution or quality reuse.
+Manual exact-SHA diagnostics retain the original two phases/54 cold profiles,
+without this additional replay.
+
+The gate identity is set before diagnostic test listing. Failed primary and
+supplementary phases retain their own exact client chunks for native offsets
+and sampled stacks, not server bundles/environment. Diagnostic build/service
+failure remains fail-closed. No profiling is installed in the product.
 
 ## Cache interpretation
 

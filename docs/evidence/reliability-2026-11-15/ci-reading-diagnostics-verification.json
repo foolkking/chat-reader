@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T02:40:28.402565+08:00",
+  "status": "local_failure_diagnostics_verified_product_root_cause_unresolved_fresh_full_ci_required",
+  "precommit_head_sha": "2495fb1c282dbfaac0c293d98c4b3a5487eb0b91",
+  "changed_existing_code_files": [
+    ".github/workflows/reading-performance.yml",
+    "apps/web/e2e/reader-capacity.spec.ts",
+    "scripts/ux/reader-capacity-diagnostic.test.mjs",
+    "scripts/ux/reader-interaction-browser.mjs"
+  ],
+  "new_control_file": "scripts/ci/reader-comparison-diagnostics.test.mjs",
+  "application_dependencies_migrations_existing_other_tests_and_release_resource_inputs_unchanged": true,
+  "repair": {
+    "ordinary_native_long_task_start_and_duration_callback_and_drain_retained": true,
+    "unknown_native_task_support_cannot_pass_as_zero": true,
+    "optional_native_animation_script_render_layout_evidence_no_cpu_profile_in_primary": true,
+    "only_same_origin_next_static_js_path_and_identifier_shaped_function_name_no_arbitrary_url_query_or_text": true,
+    "original_real_two_phase_primary_loop_preserved": true,
+    "one_separate_exact_candidate_full_nine_case_27_cold_cpu_replay_only_after_ordinary_primary_failure": true,
+    "manual_exact_sha_diagnostics_retain_original_two_phases_without_third_replay": true,
+    "primary_failure_never_replaced_by_diagnostic_success": true,
+    "gate_id_assigned_before_list_to_prevent_primary_report_overwrite": true,
+    "failed_primary_and_diagnostic_exact_client_chunks_only_retained": true,
+    "ambient_primary_cpu_profile_flag_unset": true,
+    "original_2_34_150_250_40_120_budgets_and_30_120_34_inputs_unchanged": true
+  },
+  "tests": {
+    "node_ci": {
+      "tests": 89,
+      "pass": 89,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "new_executed_bash_controls_included": 12
+    },
+    "node_reader": {
+      "tests": 379,
+      "pass": 379,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "capacity_controls_included": 23,
+      "new_capacity_controls_included": 10
+    },
+    "python_release_controls": {
+      "passed": 100,
+      "skipped": 0
+    },
+    "playwright_source_only": {
+      "passed": 36,
+      "skipped": 0,
+      "all_spec_cases_collected": 41,
+      "five_runtime_cases_preserved_deferred_to_fresh_ci_not_deleted_or_skipped_by_patch": true
+    },
+    "mounted_reader": {
+      "passed_groups": 43,
+      "original_groups": 42,
+      "new_negative_control_groups": 1,
+      "cpu_profiling_enabled": false,
+      "adapters": [
+        "routing",
+        "preferences",
+        "workspace",
+        "synthetic_http_and_data",
+        "assistant_ui_wrapper"
+      ],
+      "real_reader_virtualizer_markdown_and_katex": true,
+      "six_original_gesture_metrics": [
+        {
+          "kind": "dense",
+          "gesture": "pointer",
+          "p95": 13.600000000000364,
+          "longest": 0,
+          "longTotal": 0
+        },
+        {
+          "kind": "dense",
+          "gesture": "wheel",
+          "p95": 13.600000000000364,
+          "longest": 0,
+          "longTotal": 0
+        },
+        {
+          "kind": "dense",
+          "gesture": "combined",
+          "p95": 13.600000000000364,
+          "longest": 0,
+          "longTotal": 0
+        },
+        {
+          "kind": "short",
+          "gesture": "pointer",
+          "p95": 13.599999999999909,
+          "longest": 0,
+          "longTotal": 0
+        },
+        {
+          "kind": "short",
+          "gesture": "wheel",
+          "p95": 13.599999999999454,
+          "longest": 0,
+          "longTotal": 0
+        },
+        {
+          "kind": "short",
+          "gesture": "combined",
+          "p95": 13.600000000000364,
+          "longest": 0,
+          "longTotal": 0
+        }
+      ],
+      "native_negative_control": {
+        "scenario": "native-long-task",
+        "longTasks": [
+          211
+        ],
+        "longTaskSpans": [
+          {
+            "startTime": 2511.7999999523163,
+            "duration": 211
+          }
+        ],
+        "longAnimationFrameDiagnostics": {
+          "supported": true,
+          "frames": [
+            {
+              "startTime": 2500.2999999523163,
+              "duration": 222.90000009536743,
+              "blockingDuration": 161.3,
+              "renderStart": 2511.899999976158,
+              "styleAndLayoutStart": 2723,
+              "scripts": [
+                {
+                  "startTime": 2512.899999976158,
+                  "duration": 210,
+                  "executionStart": 2512.899999976158,
+                  "forcedStyleAndLayoutDuration": 0,
+                  "pauseDuration": 0,
+                  "invokerType": "user-callback",
+                  "sourcePath": null,
+                  "sourceFunctionName": null,
+                  "sourceCharPosition": -1
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "actual_reader_sources_unchanged_after_run": true,
+      "later_changes_only_workflow_phase_helper_and_new_ci_control_assertion": true,
+      "not_linux_10000_capacity_or_before_after_performance_acceptance": true
+    },
+    "actionlint": {
+      "version": "1.7.12",
+      "passed": true,
+      "optional_shellcheck_and_pyflakes_disabled": true
+    },
+    "bash_syntax": {
+      "passed": 78,
+      "workflow_commands_executed": false
+    },
+    "lint": "passed",
+    "typecheck": "passed",
+    "user_tsbuildinfo_preserved_incremental_output_in_task_temp": true
+  },
+  "failed_attempts_retained_not_relabelled": [
+    {
+      "path": "reader-workflow-controls-01.log",
+      "cause": "new_control_CRLF_split_startup_error"
+    },
+    {
+      "path": "reader-workflow-controls-02.log",
+      "cause": "diagnostic_list_inherited_primary_gate_id_control_rejected"
+    },
+    {
+      "path": "mounted-final-01/reader-mounted-final.log",
+      "cause": "new_direct_CDP_injection_not_a_native_long_task"
+    },
+    {
+      "path": "native-injection-probe.log",
+      "cause": "timer_and_animation_tasks_recorded_210ms_but_about_blank_supplementary_frames_not_recorded"
+    },
+    {
+      "path": "controls-final/node-ci-controls-final.log",
+      "cause": "original_two_phase_literal_assertion_rejected_new_loop_old_assertion_not_removed"
+    },
+    {
+      "path": "controls-final-02/node-ci-controls-final.log",
+      "cause": "new_static_control_expected_indent_before_top_level_done"
+    }
+  ],
+  "earlier_small_or_profiled_diagnostics_not_final_acceptance": [
+    "bundled Chromium launch unavailable in mounted-baseline",
+    "expensive CPU/invalidation profiling run failed timing; not actual CI151ms root-cause proof",
+    "earlier 42-group and compact probes overlapped; no matched before/after timing claim"
+  ],
+  "local_evidence_sha256": {
+    "controls-final-03/node-ci-controls-final.log": "1dd83fe3ff7a6a706b26420d8c7639960bc9cb2f3ab3dd36322ff402db3f51b2",
+    "controls-final-03/node-reader-controls-final.log": "a3f8a173f3ac7155ac934a54192f62044394d23cc49226af66bf4bcaa605cc8f",
+    "controls-final-03/python-release-controls-final.log": "a5abda08fe8a125ad581351389ff05225e9c0c98569fd13bfebcf88ff07f44ee",
+    "controls-final-03/web-lint-final.log": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+    "controls-final-03/web-typecheck-final.log": "f4b8e096e2349e6049f2d1b332d1eab1c89733870826179b493870694eb44460",
+    "controls-final-03/release-source-collect-final.log": "ac98cd0657c20f8a0f848ecddc77309afeb5ac5f26d446bb425b2d2ae4fa4857",
+    "controls-final-03/release-source-final.log": "b51e163bdcbbb251ee5f8ccf6a89cdaae9361c298a70ec7751833bbe52debd39",
+    "controls-final-03/source-report-final.json": "4e3adbc86ff4e674ddb2f018c2b36f6d0759be8805f88531d48f0685ca64165a",
+    "controls-final-03/playwright-source.config.cjs": "d9dfbfa4f55b7fb087ad704a89f0159f589e1b1ed804c35d212189bbbb0cbaae",
+    "workflow-static-final-02/workflow-syntax-final.json": "95b66d646724b7da8ccfc4bf25b6b55373b4e4b99f297215834917219299deb4",
+    "mounted-final-02/reader-mounted-final.log": "15e0d9241341503097d4af14f1c47ede45caea5e847ec4ed541bf1cf76fcecb7",
+    "mounted-final-02/reader-interaction-browser/result.json": "1fe1ae179708b59f9266f39847bd1dad02747c1acffcc780939423726bf69af4",
+    "mounted-coordinate-02/reader-coordinates.log": "af2c9d8280c72e0190dd325590c03f55d10b6a25c64096f799003f2ec6729d2f",
+    "reader-workflow-controls-01.log": "7dded2161d7d8ab715694126f834a7c8257ec033531242aac868032ced93ab86",
+    "reader-workflow-controls-02.log": "48e2e1686d41c07077bff362f20c43c1dbed94888a034e944b1c7355674fa2ad",
+    "reader-workflow-controls-03.log": "49ce0e0805708457bda3014fa8305a96215a293ce88eef9c1faa121f7bbe537a",
+    "mounted-final-01/reader-mounted-final.log": "e1fb6c845ab1ead57220b32ca3c615074defd3cd8c9a9fa74da84f8389397dd0",
+    "native-injection-probe.log": "8d568376f1d82547257a4020b05d7328cdce4ca7c9a918b75ec907d476c2c7b1",
+    "native-injection-probe.json": "e8205f6e0e8f33a5d82796200a58c99fed571440dc405868f4da75285256a749",
+    "controls-final/node-ci-controls-final.log": "e111bd165ff92f0ce7e4fca1ba14f433d749bfe2a7086cb364e927aa44b0281b",
+    "controls-final-02/node-ci-controls-final.log": "8946b1af451b043b4f0df7b97a79828e154cad3173291e0a1ea2883dc672d294"
+  },
+  "selected_input_count": 1410,
+  "unchanged_inherited_inputs": 1405,
+  "protected_unrelated_files": 13,
+  "historical_receipts_byte_preserved": 62,
+  "old_dispatch_receipt_byte_preserved": true,
+  "local_node": "20.13.1",
+  "local_python": "3.11.7",
+  "local_chrome": "156.0.8078.80",
+  "ci_node": "22.13.1",
+  "reader_151ms_product_root_cause_not_proven_fixed": true,
+  "fresh_full_web_pwa_api_pg_build_image_and_memory_acceptance_not_claimed": true,
+  "no_skip_assertion_removal_rounding_tolerance_or_original_deadline_relaxation": true,
+  "core_autocrlf_true_preserved": true,
+  "production_last_verified_pointer_only": {
+    "source": "3564cbf",
+    "schema": "20261108_0060",
+    "rechecked_this_task": false
+  },
+  "temporary_directory_name": "reliability-ci-reading-failure-20261115-19",
+  "next_step": "selective_commit_normal_push_one_ordinary_full_ci_empty_quality_source_identity_confirmation_then_pause",
+  "new_dispatch_receipt": "ci-reading-diagnostics-dispatch.json",
+  "image_only_lineage_not_extended": true,
+  "no_custom_ci_job_or_step_total_timeout_native_bounds_and_platform_six_hour_cap_preserved": true,
+  "ci_result_poll_wait_cancel_automation_and_production_operations_this_repair": 0,
+  "remaining_product_device_disaster_recovery_acceptance_owned_by_user": true
+}

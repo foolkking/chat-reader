@@ -54,6 +54,8 @@ jobs:
           set -euo pipefail
           candidate="${{ github.sha }}"
           diagnostic_args=()
+          # Never accept profiled timings inherited from a runner environment.
+          unset E2E_READER_CAPACITY_PROFILE
           if [ -n "$READER_DIAGNOSTIC_REF" ]; then
             [[ "$READER_DIAGNOSTIC_REF" =~ ^[0-9a-f]{40}$ ]]
             git cat-file -e "$READER_DIAGNOSTIC_REF^{commit}"
@@ -81,12 +83,14 @@ jobs:
           }
           trap 'cleanup || true' EXIT
           candidate_failed=0
-          for phase in baseline candidate; do
-            ref="$baseline"; if [ "$phase" = candidate ]; then ref="$candidate"; fi
+          run_phase() {
+            local phase="$1"
+            ref="$baseline"; if [ "$phase" != baseline ]; then ref="$candidate"; fi
+            export PLAYWRIGHT_GATE_ID="reader-capacity-$phase"
             git checkout --detach "$ref"
             # Apply only the identical measurement harness, never candidate app code.
             cp "$RUNNER_TEMP/reading-comparison/harness.ts" apps/web/e2e/reader-capacity.spec.ts
-            if [ -n "$READER_DIAGNOSTIC_REF" ]; then
+            if [ -n "$READER_DIAGNOSTIC_REF" ] || [ "$phase" = diagnostic-candidate ]; then
               pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reader-capacity.spec.ts --list "${diagnostic_args[@]}" \
                 | tee "$RUNNER_TEMP/reading-comparison/$phase-selection.txt"
               grep -q 'Total: 9 tests in 1 file' "$RUNNER_TEMP/reading-comparison/$phase-selection.txt"
@@ -95,7 +99,6 @@ jobs:
             export EXPORT_STORAGE_DIR="$RUNNER_TEMP/perf-$phase/exports"
             export OFFLINE_STORAGE_DIR="$RUNNER_TEMP/perf-$phase/offline"
             export ASSET_STORAGE_DIR="$RUNNER_TEMP/perf-$phase/assets"
-            export PLAYWRIGHT_GATE_ID="reader-capacity-$phase"
             mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR"
             bash scripts/ci/postgres-service.sh start
             (cd apps/api && python -m alembic upgrade head)
@@ -123,10 +126,27 @@ jobs:
               if [ "$phase" = candidate ]; then candidate_failed=1; fi
             fi
             cp -a "apps/web/test-results/reader-capacity-$phase" "$RUNNER_TEMP/reading-comparison/$phase"
+            if [ "$phase" != baseline ] && [ "$candidate_failed" = 1 ]; then
+              # Exact build input for native script offsets / sampled stacks.
+              # Client chunks only: no server bundle, environment or user data.
+              cp -a apps/web/.next/static/chunks "$RUNNER_TEMP/reading-comparison/$phase-browser-chunks"
+            fi
             cleanup
             # The copied harness is a tracked file on both revisions.
             git restore -- apps/web/e2e/reader-capacity.spec.ts
+          }
+          for phase in baseline candidate; do
+            run_phase "$phase"
           done
+          if [ "$candidate_failed" = 1 ] && [ -z "$READER_DIAGNOSTIC_REF" ]; then
+            # One evidence-only replay after the unchanged primary loop.
+            # A passing replay can never release the failed primary.
+            # Explicit manual diagnostics already profile both phases.
+            export E2E_READER_CAPACITY_PROFILE=1
+            printf 'diagnostic-only; failed primary retained; not release acceptance\n' \
+              > "$RUNNER_TEMP/reading-comparison/diagnostic-candidate-only.txt"
+            run_phase diagnostic-candidate
+          fi
           exit "$candidate_failed"
       - name: Preserve comparison measurements
         if: always()

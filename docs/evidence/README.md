@@ -1,6 +1,20 @@
 # 事实证据索引
 
-## 普通完整CI最终失败与安全合同修正 — 2026-11-14
+## Reader原生失败取证与主失败保持 — 2026-11-15
+
+[正式失败](reliability-2026-11-15/ci-reading-capacity-failure.json)：
+2495fb1/43613433508仅math10000冷2长任务151ms失败；总231ms、其他质量通过，
+两发布job跳过；四日志/三官方ZIP重新验证，不证明runner/GC/KaTeX根因。
+[本地验证](reliability-2026-11-15/ci-reading-diagnostics-verification.json) /
+[1410输入](reliability-2026-11-15/ci-reading-diagnostics-inputs.json)：
+普通原生跨度/可选归因、独立失败后CPU诊断及主FAIL保持；原门槛、两阶段
+主循环和旧断言保留。mounted43、Reader379、CI89、Python100、源码36及静态
+通过，含有意211ms原生负对照；不是151ms产品修复或新完整CI/镜像验收。
+62旧回执/13无关文件保全，原派发只按原字节归档。随后独立
+`ci-reading-diagnostics-dispatch.json`登记唯一普通空quality-source完整CI，
+确认即暂停，不重复派发、轮询、安排、取消或操作生产。
+
+## 前一普通完整CI最终失败与安全合同修正（历史）— 2026-11-14
 
 [最终失败](reliability-2026-11-14/ci-full-quality-final-failure.json)：
 3d8f77f/43604634535仅Web旧字面断言失败，API6751、Settings470+restore1、
