@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "policy": "null-failure-control-plane-2026-11-14",
+  "base_workflow_sha256": "68528675e886a5247dfd813e180e0f8f092c32a493cbf24a3cfb41c370ac4636",
+  "replacements": [
+    {
+      "before": "on:\n  workflow_dispatch:\n\npermissions:\n  contents: read\n",
+      "after": "on:\n  workflow_dispatch:\n    inputs:\n      quality_source_run_id:\n        description: 'One-off image-only repair: 43578495558; empty runs every quality job'\n        required: false\n        default: ''\n        type: string\n\npermissions:\n  contents: read\n  actions: read\n",
+      "count": 1
+    },
+    {
+      "before": "  api-quality:\n    runs-on: ubuntu-latest\n",
+      "after": "  api-quality:\n    if: ${{ inputs.quality_source_run_id == '' }}\n    runs-on: ubuntu-latest\n",
+      "count": 1
+    },
+    {
+      "before": "  web-quality:\n    runs-on: ubuntu-latest\n",
+      "after": "  web-quality:\n    if: ${{ inputs.quality_source_run_id == '' }}\n    runs-on: ubuntu-latest\n",
+      "count": 1
+    },
+    {
+      "before": "  settings-quality:\n    runs-on: ubuntu-latest\n",
+      "after": "  settings-quality:\n    if: ${{ inputs.quality_source_run_id == '' }}\n    runs-on: ubuntu-latest\n",
+      "count": 1
+    },
+    {
+      "before": "  reading-performance-comparison:\n    needs: [api-quality]\n",
+      "after": "  reading-performance-comparison:\n    if: ${{ inputs.quality_source_run_id == '' }}\n    needs: [api-quality]\n",
+      "count": 1
+    },
+    {
+      "before": "    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' && needs.settings-quality.result == 'success' && needs.reading-performance-comparison.result == 'success' }}\n",
+      "after": "    if: ${{ !cancelled() && ((inputs.quality_source_run_id == '' && needs.api-quality.result == 'success' && needs.web-quality.result == 'success' && needs.settings-quality.result == 'success' && needs.reading-performance-comparison.result == 'success') || (inputs.quality_source_run_id != '' && needs.api-quality.result == 'skipped' && needs.web-quality.result == 'skipped' && needs.settings-quality.result == 'skipped' && needs.reading-performance-comparison.result == 'skipped')) }}\n",
+      "count": 1
+    },
+    {
+      "before": "    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n\n      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0\n",
+      "after": "    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n        with:\n          fetch-depth: 2\n\n      - name: Image-only release policy negative controls\n        if: ${{ inputs.quality_source_run_id != '' }}\n        run: |\n          python3 -m unittest discover -s scripts/ci -p 'test_image_only_quality_reuse.py' -v\n          node --test scripts/ci/*.test.mjs\n\n      - name: Record verified release quality provenance\n        env:\n          GH_TOKEN: ${{ github.token }}\n          QUALITY_JOB_RESULTS: ${{ toJSON(needs) }}\n          QUALITY_SOURCE_RUN_ID: ${{ inputs.quality_source_run_id }}\n        run: >-\n          python3 scripts/ci/image-only-quality-reuse.py\n          --source-run \"$QUALITY_SOURCE_RUN_ID\"\n          --head \"$GITHUB_SHA\"\n          --output \"$RUNNER_TEMP/quality-verification.json\"\n\n      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0\n",
+      "count": 1
+    },
+    {
+      "before": "          retention-days: 3\n\n      - name: Build Web image\n",
+      "after": "          retention-days: 3\n\n      - name: Verify real ORM memory-control-plane status and source guards\n        run: >-\n          docker run --rm --env APP_ENV=test --env TEMP=/data\n          chat-reader-api:${GITHUB_SHA}\n          python -m unittest scripts.test_verify_small_zip_memory -v\n\n      - name: Build Web image\n",
+      "count": 1
+    },
+    {
+      "before": "      - name: Package images and provenance\n        run: |\n          docker save \\\n",
+      "after": "      - name: Package images and provenance\n        run: |\n          cp \"$RUNNER_TEMP/quality-verification.json\" quality-verification.json\n          docker save \\\n",
+      "count": 1
+    },
+    {
+      "before": "          jq -n \\\n            --arg commit \"$GITHUB_SHA\" \\\n",
+      "after": "          jq -n \\\n            --slurpfile quality quality-verification.json \\\n            --arg commit \"$GITHUB_SHA\" \\\n",
+      "count": 1
+    },
+    {
+      "before": "images: {api: $api_image_id, web: $web_image_id}, diagnostics_gateway:",
+      "after": "images: {api: $api_image_id, web: $web_image_id}, quality_verification: $quality[0], diagnostics_gateway:",
+      "count": 1
+    },
+    {
+      "before": "            release-manifest.json\n            image-inspection.json\n",
+      "after": "            release-manifest.json\n            quality-verification.json\n            image-inspection.json\n",
+      "count": 1
+    },
+    {
+      "before": "      ARTIFACT_PRODUCER_ATTEMPT: ${{ needs.build-images.outputs.producer_attempt }}\n    steps:\n      - name: Require the successful producer's artifact reference\n",
+      "after": "      ARTIFACT_PRODUCER_ATTEMPT: ${{ needs.build-images.outputs.producer_attempt }}\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n        with:\n          fetch-depth: 2\n\n      - name: Require the successful producer's artifact reference\n",
+      "count": 1
+    },
+    {
+      "before": "      - name: Inspect downloaded release archive independently\n        working-directory: release-artifact\n        run: |\n          set -euo pipefail\n",
+      "after": "      - name: Inspect downloaded release archive independently\n        working-directory: release-artifact\n        env:\n          GH_TOKEN: ${{ github.token }}\n          QUALITY_SOURCE_RUN_ID: ${{ inputs.quality_source_run_id }}\n        run: |\n          set -euo pipefail\n          test -s quality-verification.json\n          python3 ../scripts/ci/image-only-quality-reuse.py \\\n            --source-run \"$QUALITY_SOURCE_RUN_ID\" --head \"$GITHUB_SHA\" \\\n            --producer-attempt \"$ARTIFACT_PRODUCER_ATTEMPT\" \\\n            --verify-report quality-verification.json --manifest release-manifest.json \\\n            --output \"$RUNNER_TEMP/quality-verification-consumer.json\"\n",
+      "count": 1
+    }
+  ]
+}

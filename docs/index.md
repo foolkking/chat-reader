@@ -2,6 +2,21 @@
 
 ## 当前候选：可靠性整块治理 — 2026-11-14
 
+最新授权：修正4481fa3/CI43578495558的镜像验证脚本，并只补跑镜像路径。
+正式结果确认四项质量job成功，Settings470+独立restore1完整通过；
+build-images在正常`failure:null`状态读取时崩溃，资源报告不完整，不是内存通过。
+默认完整六job保留；只有指定该run且应用/依赖/原测试/资源输入字节未变、
+精确一行脚本修正和受保护workflow补丁才可复用质量结果。内存五例、
+镜像及独立制品门禁全部新跑，失败/过期/未知来源拒绝，不自动绕过或回退。
+[发布合同](system/RELEASE_SAFETY_BASELINE.md#authorized-image-only-control-plane-repair--2026-11-14) /
+[失败回执](evidence/reliability-2026-11-14/ci-build-images-failure.json) /
+[本轮验证](evidence/reliability-2026-11-14/ci-image-only-verification.json) /
+[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+选择性提交/推送并仅派发一次；确认后暂停，由用户反馈，不轮询/安排/部署。
+原回执字节保留，新`ci-image-only-dispatch.json`只记录本轮实际提交与run。
+
+### 前一离线依赖修复（历史）
+
 11月14日本轮最新指示：修复、选择性提交/推送、只派发一次完整精确CI，
 不设项目job/step总限时；确认后立即暂停，不等待/轮询、建安排或部署，
 由用户反馈结果。GitHub每job仍有六小时平台上限，原用例/worker/PG/

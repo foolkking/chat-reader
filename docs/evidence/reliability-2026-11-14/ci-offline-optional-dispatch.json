@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "status": "dispatched-confirmed-paused-user-will-report-result",
+  "recorded_at": "2026-11-14T09:00:59.132834+00:00",
+  "head_sha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+  "workflow_run_id": 43578495558,
+  "workflow_url": "https://github.com/foolkking/chat-reader/actions/runs/43578495558",
+  "workflow": "build-release-images.yml",
+  "ref": "master",
+  "inputs": {},
+  "selectively_committed_file_count": 19,
+  "force_push": false,
+  "dispatch_call_count": 1,
+  "dispatch_requested_at": "2026-11-14T09:00:51.541690+00:00",
+  "dispatch_requested_at_local": "2026-11-14T17:00:51.541690+08:00",
+  "dispatch_response": {
+    "requested_at": "2026-11-14T09:00:51.542690+00:00",
+    "received_at": "2026-11-14T09:00:54.488526+00:00",
+    "exit_code": 0
+  },
+  "official_confirmation_read": {
+    "requested_at": "2026-11-14T09:00:57.489729+00:00",
+    "received_at": "2026-11-14T09:00:59.131837+00:00",
+    "exit_code": 0
+  },
+  "official_run_confirmation": {
+    "conclusion": "",
+    "createdAt": "2026-11-14T09:00:56Z",
+    "databaseId": 43578495558,
+    "event": "workflow_dispatch",
+    "headBranch": "master",
+    "headSha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+    "status": "queued",
+    "url": "https://github.com/foolkking/chat-reader/actions/runs/43578495558",
+    "workflowName": "Build release images"
+  },
+  "predispatch_dedup_read": {
+    "requested_at": "2026-11-14T09:00:49.526309+00:00",
+    "received_at": "2026-11-14T09:00:51.540687+00:00",
+    "exit_code": 0
+  },
+  "confirmation_only_not_ci_result_waiting": true,
+  "custom_job_step_timeout_fields": 0,
+  "github_hosted_job_cap_hours": 6,
+  "original_native_test_worker_pg_resource_frame_gates_preserved": true,
+  "verification_sha256": "7f8da28aa1fff36a3e6b752c0eb4e96a2d68d3bc18c0b74ebf6bf246b3b59a3c",
+  "frozen_verification_inputs": 1399,
+  "protected_files_preserved": 13,
+  "prior_task_files_preserved": 2103,
+  "previous_dispatch_original_bytes_preserved": true,
+  "status_polls_after_confirmation": 0,
+  "waiter_started": false,
+  "automation_created": false,
+  "cancellation_requests": 0,
+  "production_operations": false,
+  "deployment_performed": false,
+  "ci_or_release_accepted": false,
+  "after_confirmation": "Pause immediately. User will report CI result; no polling, waiter, automation, cancellation or deployment."
+}

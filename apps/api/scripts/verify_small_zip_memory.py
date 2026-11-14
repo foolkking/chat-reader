@@ -96,7 +96,7 @@ def main() -> None:
                 result = {
                     "analysis": job.status, "state": record.session_state,
                     "import": record.status,
-                    "failure_code": (record.analysis_summary or {}).get("failure", {}).get("code"),
+                    "failure_code": ((record.analysis_summary or {}).get("failure") or {}).get("code"),
                 }
             elif args.action == "queue-commit":
                 receipt = (record.analysis_summary or {}).get("small_zip_profile") or {}

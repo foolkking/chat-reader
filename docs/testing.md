@@ -7,6 +7,35 @@ run/attempt/job; no seeder admission, native operation deadline, memory or
 test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
+## Image-only control-plane repair — 2026-11-14
+
+The observed4481fa3 image job failed while reading valid `failure:null`, before
+the full real-memory verification. `verify_small_zip_memory.py` changes only
+that expression, matching the existing bounded-helper semantics. The seven
+runtime-dependency-only `scripts.test_verify_small_zip_memory` unittests use
+actual in-memory SQLite ORM status reads, preserve failure/terminal results
+and reject wrong environment/database, missing task and nonempty malformed
+failure. Subcases are not counted as extra tests. They run in the actual new
+API image after all original memory cases, without prewarming the measured
+worker; they do not establish Linux/cgroup acceptance.
+
+`scripts/ci/test_image_only_quality_reuse.py` adds offline source/policy,
+immutable evidence, full-versus-reuse branch and independent producer/consumer
+negative controls. A SHA-pinned byte patch also proves all original quality
+commands/environments/order and memory/inspection gates remain. No existing
+API/Node/browser case, concurrency or deadline is removed or modified.
+
+The user-approved one-off path reuses only the officially checked4481fa3
+quality source: API6751/3 skips/5 warnings, supervisor17 plus real-PG poll1/
+poll20, Web14 gates, Settings470+independent restore1 and Reader candidate9.
+The new candidate keeps all application/dependency/existing-test inputs;
+extra code/workflow/resource changes are refused. All five real memory cases
+and artifact checks run anew. See [release policy](system/RELEASE_SAFETY_BASELINE.md#authorized-image-only-control-plane-repair--2026-11-14)
+and [local evidence](evidence/reliability-2026-11-14/ci-image-only-verification.json).
+This is explicit quality reuse, not a new full-quality execution or inherited
+memory/production acceptance. Empty input remains the original full CI.
+After the sole dispatch confirmation, the agent pauses for user feedback.
+
 ## Offline child optional HTTP dependencies — local 2026-11-14
 
 `test_worker_optional_dependency_imports.py` adds29 cases: ten passive fresh
@@ -40,7 +69,8 @@ earlier partial job success is not inherited.
 
 The release workflow and its reusable reading comparison omit every custom
 job/step `timeout-minutes` field. There is no project-configured 60/360-minute
-mode, zero/null workaround or additional dispatch input. GitHub-hosted jobs
+mode or zero/null workaround. The separate one-off quality-source input above
+does not alter CI/test timing. GitHub-hosted jobs
 still have the platform's six-hour execution cap; this is not unlimited CI.
 Earlier dated job/step timeout statements below describe their old checkpoints
 and are superseded by this policy, not by relaxed test acceptance.

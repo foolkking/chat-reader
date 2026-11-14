@@ -1,6 +1,44 @@
 # Project State
 
-## Reliability candidate — 2026-11-14 (offline child imports; pause after dispatch)
+## Reliability candidate — 2026-11-14 (authorized image-only repair; pause after dispatch)
+
+The user reported **4481fa3 / CI43578495558** failed only at build-images.
+Official attempt1 confirms API/Web/Settings/reading comparison succeeded;
+Settings completed **470+independent restore1**. The image job failed because
+its control-plane status helper called `.get()` on the valid `failure:null`.
+The 320MiB report is incomplete/false; no memory pass or deployable image exists.
+[Independent failure](docs/evidence/reliability-2026-11-14/ci-build-images-failure.json).
+
+The latest explicit approval permits this one-line helper repair and **one
+protected image-only dispatch**, not another hour-long full quality matrix.
+The existing workflow retains all six jobs and defaults to the full gate.
+Only `quality_source_run_id=43578495558` opts in; a direct repair child of4481fa3
+must keep every application/dependency/existing-test/resource input unchanged.
+A pinned byte-exact workflow patch adds qualification/proof checks; arbitrary
+source or workflow changes fail rather than fall back or skip acceptance.
+Producer and independent consumer both check official source jobs/evidence and
+Git inputs. New images retain the candidate's exact OCI revision and manifest;
+quality provenance separately names4481fa3/attempt1. All five real memory cases,
+no-swap320/640MiB, image inspection and immutable artifact checks still run anew.
+See [release policy](docs/system/RELEASE_SAFETY_BASELINE.md#authorized-image-only-control-plane-repair--2026-11-14)
+and [local verification](docs/evidence/reliability-2026-11-14/ci-image-only-verification.json).
+
+Final local controls pass: policy37, real ORM7, original API80/2 explicit
+Windows symlink skips, CI scripts72, lint/typecheck and single head0061.
+Actionlint1.7.12 and78 Bash syntax checks pass without executing CI shells.
+The frozen1404 inputs include the prior1399, the previously uninventoried
+existing status helper and four additive controls; full Git-tree equivalence
+separately protects every other tracked input. This is not fresh Linux memory,
+full Web/PWA, real-PG or production acceptance.
+
+Selectively commit/push, confirm the sole dispatch, then pause immediately.
+No agent status polling, waiter, automation, cancellation or deployment.
+No custom CI job/step timeout; GitHub's six-hour cap and native bounds remain.
+Production only retains the previously verified3564cbf/schema0060 pointer.
+The original offline dispatch receipt stays byte-identical historical evidence;
+the new `ci-image-only-dispatch.json` will record the actual candidate/run.
+
+### Earlier offline child import repair (history)
 
 The latest November14 instruction authorizes this repair, selective commit/push
 and one full exact-source CI with no custom job/step total timeout. Confirm the

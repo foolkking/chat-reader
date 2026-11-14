@@ -2,9 +2,16 @@ name: Build release images
 
 on:
   workflow_dispatch:
+    inputs:
+      quality_source_run_id:
+        description: 'One-off image-only repair: 43578495558; empty runs every quality job'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 env:
   APP_ENV: test
@@ -21,6 +28,7 @@ env:
 
 jobs:
   api-quality:
+    if: ${{ inputs.quality_source_run_id == '' }}
     runs-on: ubuntu-latest
     env:
       # The exact browser scan helper is also exercised by disposable PG tests.
@@ -66,6 +74,7 @@ jobs:
         run: bash scripts/ci/postgres-service.sh stop
 
   web-quality:
+    if: ${{ inputs.quality_source_run_id == '' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -515,6 +524,7 @@ jobs:
         run: bash scripts/ci/postgres-service.sh stop
 
   settings-quality:
+    if: ${{ inputs.quality_source_run_id == '' }}
     runs-on: ubuntu-latest
     # No custom CI job/step timeouts; the hosted runner's platform cap applies.
     # Serial tests, native case deadlines and worker/resource bounds stay.
@@ -662,12 +672,13 @@ jobs:
         run: bash scripts/ci/postgres-service.sh stop
 
   reading-performance-comparison:
+    if: ${{ inputs.quality_source_run_id == '' }}
     needs: [api-quality]
     uses: ./.github/workflows/reading-performance.yml
 
   build-images:
     needs: [api-quality, web-quality, settings-quality, reading-performance-comparison]
-    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' && needs.settings-quality.result == 'success' && needs.reading-performance-comparison.result == 'success' }}
+    if: ${{ !cancelled() && ((inputs.quality_source_run_id == '' && needs.api-quality.result == 'success' && needs.web-quality.result == 'success' && needs.settings-quality.result == 'success' && needs.reading-performance-comparison.result == 'success') || (inputs.quality_source_run_id != '' && needs.api-quality.result == 'skipped' && needs.web-quality.result == 'skipped' && needs.settings-quality.result == 'skipped' && needs.reading-performance-comparison.result == 'skipped')) }}
     runs-on: ubuntu-latest
     # Same Docker Official Image indexes as Hub; independently verified before pinning.
     # See docs/execution/CI_REGISTRY_SOURCE_2026-10-10.md for provenance/update rules.
@@ -679,6 +690,25 @@ jobs:
       producer_attempt: ${{ steps.provenance.outputs.attempt }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 2
+
+      - name: Image-only release policy negative controls
+        if: ${{ inputs.quality_source_run_id != '' }}
+        run: |
+          python3 -m unittest discover -s scripts/ci -p 'test_image_only_quality_reuse.py' -v
+          node --test scripts/ci/*.test.mjs
+
+      - name: Record verified release quality provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUALITY_JOB_RESULTS: ${{ toJSON(needs) }}
+          QUALITY_SOURCE_RUN_ID: ${{ inputs.quality_source_run_id }}
+        run: >-
+          python3 scripts/ci/image-only-quality-reuse.py
+          --source-run "$QUALITY_SOURCE_RUN_ID"
+          --head "$GITHUB_SHA"
+          --output "$RUNNER_TEMP/quality-verification.json"
 
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
         with:
@@ -732,6 +762,12 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
 
+      - name: Verify real ORM memory-control-plane status and source guards
+        run: >-
+          docker run --rm --env APP_ENV=test --env TEMP=/data
+          chat-reader-api:${GITHUB_SHA}
+          python -m unittest scripts.test_verify_small_zip_memory -v
+
       - name: Build Web image
         run: |
           docker build \
@@ -753,6 +789,7 @@ jobs:
 
       - name: Package images and provenance
         run: |
+          cp "$RUNNER_TEMP/quality-verification.json" quality-verification.json
           docker save \
             chat-reader-api:${GITHUB_SHA} \
             chat-reader-import-worker:${GITHUB_SHA} \
@@ -760,6 +797,7 @@ jobs:
             chat-reader-web:${GITHUB_SHA} \
             | gzip -1 > chat-reader-images.tar.gz
           jq -n \
+            --slurpfile quality quality-verification.json \
             --arg commit "$GITHUB_SHA" \
             --arg run_id "$GITHUB_RUN_ID" \
             --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
@@ -767,7 +805,7 @@ jobs:
             --arg archive "chat-reader-images.tar.gz" \
             --arg api_image_id "$(docker image inspect -f '{{.Id}}' chat-reader-api:${GITHUB_SHA})" \
             --arg web_image_id "$(docker image inspect -f '{{.Id}}' chat-reader-web:${GITHUB_SHA})" \
-            '{schema_version: 2, commit: $commit, workflow_run_id: $run_id, workflow_run_attempt: $run_attempt, built_at: $built_at, archive: $archive, images: {api: $api_image_id, web: $web_image_id}, diagnostics_gateway: {path: "deploy/nginx-internal-diagnostics.location.conf"}}' \
+            '{schema_version: 2, commit: $commit, workflow_run_id: $run_id, workflow_run_attempt: $run_attempt, built_at: $built_at, archive: $archive, images: {api: $api_image_id, web: $web_image_id}, quality_verification: $quality[0], diagnostics_gateway: {path: "deploy/nginx-internal-diagnostics.location.conf"}}' \
             > release-manifest.json
 
       - name: Upload deployable release artifact
@@ -778,6 +816,7 @@ jobs:
           path: |
             chat-reader-images.tar.gz
             release-manifest.json
+            quality-verification.json
             image-inspection.json
             small-zip-memory.json
             bounded-zip-memory.json
@@ -793,6 +832,10 @@ jobs:
       RELEASE_ARTIFACT_ID: ${{ needs.build-images.outputs.artifact_id }}
       ARTIFACT_PRODUCER_ATTEMPT: ${{ needs.build-images.outputs.producer_attempt }}
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 2
+
       - name: Require the successful producer's artifact reference
         run: |
           case "$RELEASE_ARTIFACT_ID" in ''|*[!0-9]*) exit 1 ;; esac
@@ -808,8 +851,17 @@ jobs:
 
       - name: Inspect downloaded release archive independently
         working-directory: release-artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUALITY_SOURCE_RUN_ID: ${{ inputs.quality_source_run_id }}
         run: |
           set -euo pipefail
+          test -s quality-verification.json
+          python3 ../scripts/ci/image-only-quality-reuse.py \
+            --source-run "$QUALITY_SOURCE_RUN_ID" --head "$GITHUB_SHA" \
+            --producer-attempt "$ARTIFACT_PRODUCER_ATTEMPT" \
+            --verify-report quality-verification.json --manifest release-manifest.json \
+            --output "$RUNNER_TEMP/quality-verification-consumer.json"
           test -s chat-reader-images.tar.gz
           test -s release-manifest.json
           test -s image-inspection.json

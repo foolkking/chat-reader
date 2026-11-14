@@ -119,6 +119,71 @@ This contract defines the Release A security and provenance gate. It does not ch
 
 ## Release gate
 
+### Authorized image-only control-plane repair — 2026-11-14
+
+The user expressly approved avoiding a repeated full quality matrix for the
+`4481fa3 / 43578495558` image-control-plane failure. This is a narrow exception,
+not generic changed-area release admission. The six original jobs and commands
+remain; empty `quality_source_run_id` still runs all four quality jobs.
+There is no custom job/step timeout or change to native/resource bounds.
+
+The only accepted opt-in is `quality_source_run_id=43578495558`. The candidate
+must be one direct non-merge repair child of
+`4481fa37c355a296ce878c214525d3273a8bfe20`. Whole-tree Git mode/blob comparison
+rejects application, dependency, existing test, fixture, migration, resource
+sensor and other configuration changes. The sole old-helper change is the
+exact null-safe `failure_code` expression; synthetic ZIP bytes/semantics do
+not change. New helper/policy controls and an explicit list of owned docs/
+evidence are additive. A SHA-pinned patch contract derives the new workflow
+from the exact source workflow, preserving every original command and gate.
+Unknown input/source, extra changes, missing/expired evidence or failed lookup
+fail closed; they do not start image construction or automatically run a
+different/partial quality path.
+
+Before buildx/image construction the producer independently reads the original
+official attempt1: all four quality jobs must be completed/success, the old
+builder must have failed only at the reviewed320MiB control-plane step, and
+the old consumer must be skipped. Three exact immutable quality ZIP IDs are
+bound by source/run, size, SHA-256 and CRC. They retain Web14 gates, the complete
+Settings470+independent restore1 and Reader candidate9. The API log retains
+6751 passes/3 skips/5 warnings, all17 supervisor unit cases and real-PG poll1/
+poll20. Original explicit skips remain reported, not relabeled as passes.
+These are accepted quality-source results only; the old incomplete memory
+report is false and no old image/resource result is inherited.
+
+Both original Docker builds, all five real worker memory cases, no-swap320/
+640MiB and64MiB growth limits, image inspection, packaging and immutable
+artifact checks still execute against the new candidate image. Additive
+control-plane ORM unittests run inside that actual API image **after** all
+original memory cases, so additional ORM controls do not prewarm their worker.
+No test dependency install, memory sensor override, worker concurrency
+change or business-source replay is introduced.
+
+`quality-verification.json` records full-exact versus authorized-image-only
+mode, the new candidate/run/producer attempt, original quality SHA/run/attempt,
+verified evidence and source-equivalence fingerprint. Manifest schema2 embeds
+the same report as an additive `quality_verification` field; the standalone
+report is included in the deployable artifact. OCI labels and image IDs still
+identify the actual new candidate, not4481fa3. The consumer downloads the exact
+successful producer artifact ID, checks its original producer attempt and
+independently rechecks official source evidence/Git inputs before accepting
+the report/manifest. All original archive/OCI/memory checks remain. A later
+consumer-only retry uses the producer's attempt, not its own attempt.
+
+Read-only local preflight is available after the repair is committed:
+
+```text
+python scripts/ci/image-only-quality-reuse.py --source-run 43578495558 --head <full-candidate-sha> --preflight --output <task-temp>/quality-preflight.json
+```
+
+This does not build images or claim CI/memory acceptance. The actual dispatch
+uses the existing workflow with that one explicit input. Confirm dispatch,
+then pause for the user's result: no agent status polling, waiter, automation,
+cancellation or deployment. Subsequent source changes require full quality CI
+unless separately reviewed/authorized; this one-off policy is not extended
+by changing an input. Current progress/evidence belong to the
+[single ledger](SMALL_HOST_IMPROVEMENT_STATUS.md).
+
 2026-10-06 independent inspection update: the successful builder exports the
 immutable upload artifact ID and producer attempt. Consumers download that exact
 ID, including on a later consumer-only rerun, and verify source/run/producer

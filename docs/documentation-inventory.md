@@ -1,5 +1,20 @@
 # Markdown 文档台账
 
+## 受保护镜像补跑与null状态修正 — 2026-11-14
+
+按用户明确批准，仅定点同步Project State、导航、唯一台账、Release Safety、
+Testing、Deployment/环境和事实证据索引；不整理全仓、改AGENTS/全局记忆
+或旧证据。4481fa3/43578495558四质量成功、470+restore1完整，旧镜像门禁
+在正常null失败字段读取时崩溃，未有可部署制品或资源通过。
+新增独立`ci-build-images-failure.json`、`ci-image-only-verification.json`及
+`ci-image-only-inputs.json`分担正式失败、实际本地回归/保全、源码冻结。
+原`ci-offline-optional-dispatch.json`按原字节保留历史时点。
+默认完整六job保留；一次性已通过质量来源、直接修复parent、原应用/依赖/
+测试输入不变、SHA绑定workflow补丁和生产者/消费者同证核验属于当前发布合同。
+原五例内存、镜像与制品门禁全部新跑；不是新完整质量CI或任意跳过开关。
+随后`ci-image-only-dispatch.json`登记唯一新候选/run，确认即暂停，不回查/
+等待器/安排/取消/部署，旧两次导入终止授权不复用，生产/唯一备份不动。
+
 ## 离线子进程可选依赖与独立CI失败 — 2026-11-14
 
 用户报告4a943ea的43566365014失败后，定点同步Project State、导航、唯一台账、

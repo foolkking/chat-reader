@@ -1,5 +1,17 @@
 # 事实证据索引
 
+## null状态修正与受保护镜像补跑 — 2026-11-14
+
+[独立镜像失败](reliability-2026-11-14/ci-build-images-failure.json)保留
+4481fa3/43578495558 attempt1的四项质量成功、Settings470+restore1、
+五日志/四诊断ZIP与320MiB控制平面null异常；旧资源报告false，不可部署。
+[本地验证](reliability-2026-11-14/ci-image-only-verification.json) /
+[输入冻结](reliability-2026-11-14/ci-image-only-inputs.json)保存真实状态红测、
+发布策略/消费者负对照、SHA绑定workflow添加和保全；不冒充新Linux资源/
+完整质量CI验收。只按用户批准复用该次正式质量来源，全部内存/制品门禁新跑。
+原离线派发回执字节保留，随后`ci-image-only-dispatch.json`登记唯一提交/run；
+确认后立即暂停，由用户反馈，不轮询/安排/取消/部署，生产和资料不动。
+
 ## 离线子进程可选依赖修复 — 2026-11-14（新CI确认后暂停）
 
 [独立失败回执](reliability-2026-11-14/ci-offline-optional-failure.json)登记

@@ -1,0 +1,617 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T11:25:52.518801+00:00",
+  "status": "official_failure_not_release_acceptance",
+  "repository": "foolkking/chat-reader",
+  "source_sha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+  "workflow_run_id": "43578495558",
+  "workflow_run_attempt": 1,
+  "workflow_url": "https://github.com/foolkking/chat-reader/actions/runs/43578495558",
+  "read_trigger": "User reported build-images failed while other quality jobs succeeded.",
+  "fresh_waiter_or_3000_second_monotonic_wait_claimed": false,
+  "official_metadata_reads": [
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/runs/43578495558",
+      "requested_at": "2026-11-14T10:05:25.893592+00:00",
+      "received_at": "2026-11-14T10:05:27.894297+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "ad8452eaed295b20f6e483d8183de27653e051dfc33aa8a95a4ec0f8e5a834f3",
+      "stdout_bytes": 12495
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/runs/43578495558/attempts/1/jobs?per_page=100",
+      "requested_at": "2026-11-14T10:05:27.896292+00:00",
+      "received_at": "2026-11-14T10:05:29.328879+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "92321d4e10fe8eba84311229380fb2fab7ab4976e07ff0729dee25ecba616547",
+      "stdout_bytes": 28157
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/runs/43578495558/artifacts?per_page=100",
+      "requested_at": "2026-11-14T10:05:29.329871+00:00",
+      "received_at": "2026-11-14T10:05:30.585755+00:00",
+      "exit_code": 0,
+      "stdout_sha256": "395f234ff520eea1873c7bcedea7aa10c0f8398611b8bf25eaecb81015eace26",
+      "stdout_bytes": 2951
+    }
+  ],
+  "official_jobs": [
+    {
+      "name": "web-quality",
+      "job_id": 132397936888,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T09:01:00Z",
+      "completed_at": "2026-11-14T09:57:22Z",
+      "elapsed_seconds": 3382.0
+    },
+    {
+      "name": "api-quality",
+      "job_id": 132397937119,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T09:01:00Z",
+      "completed_at": "2026-11-14T09:40:11Z",
+      "elapsed_seconds": 2351.0
+    },
+    {
+      "name": "settings-quality",
+      "job_id": 132397937257,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T09:01:00Z",
+      "completed_at": "2026-11-14T09:53:33Z",
+      "elapsed_seconds": 3153.0
+    },
+    {
+      "name": "reading-performance-comparison / compare",
+      "job_id": 132407431650,
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T09:40:14Z",
+      "completed_at": "2026-11-14T09:50:29Z",
+      "elapsed_seconds": 615.0
+    },
+    {
+      "name": "build-images",
+      "job_id": 132411398463,
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-14T09:57:25Z",
+      "completed_at": "2026-11-14T09:58:34Z",
+      "elapsed_seconds": 69.0
+    },
+    {
+      "name": "inspect-release-artifact",
+      "job_id": 132411657235,
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T09:58:34Z",
+      "completed_at": "2026-11-14T09:58:34Z",
+      "elapsed_seconds": 0.0
+    }
+  ],
+  "quality_source": {
+    "repository": "foolkking/chat-reader",
+    "sha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+    "workflow_run_id": "43578495558",
+    "workflow_run_attempt": 1,
+    "workflow_path": ".github/workflows/build-release-images.yml",
+    "url": "https://github.com/foolkking/chat-reader/actions/runs/43578495558",
+    "quality_jobs": [
+      {
+        "name": "api-quality",
+        "job_id": 132397937119,
+        "source_attempt": 1,
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-11-14T09:01:00Z",
+        "completed_at": "2026-11-14T09:40:11Z",
+        "elapsed_seconds": 2351.0
+      },
+      {
+        "name": "web-quality",
+        "job_id": 132397936888,
+        "source_attempt": 1,
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-11-14T09:01:00Z",
+        "completed_at": "2026-11-14T09:57:22Z",
+        "elapsed_seconds": 3382.0
+      },
+      {
+        "name": "settings-quality",
+        "job_id": 132397937257,
+        "source_attempt": 1,
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-11-14T09:01:00Z",
+        "completed_at": "2026-11-14T09:53:33Z",
+        "elapsed_seconds": 3153.0
+      },
+      {
+        "name": "reading-performance-comparison / compare",
+        "job_id": 132407431650,
+        "source_attempt": 1,
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-11-14T09:40:14Z",
+        "completed_at": "2026-11-14T09:50:29Z",
+        "elapsed_seconds": 615.0
+      }
+    ],
+    "verified_evidence": [
+      {
+        "id": 14109396218,
+        "name": "release-a-quality-evidence-4481fa37c355a296ce878c214525d3273a8bfe20-1",
+        "size_in_bytes": 40483492,
+        "digest": "sha256:9e383624f101cd6ae1a154e46c2816156361cb29f9eb74d8aa0e22c7866efefc",
+        "crc_verified": true,
+        "entries": 848,
+        "quality_summary": {
+          "schema_version": 1,
+          "source_sha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+          "generated_at": "2026-11-14T09:57:13.522Z",
+          "overall_status": "PASS",
+          "counts": {
+            "PASS": 14,
+            "FAIL": 0,
+            "NOT_VERIFIED": 0,
+            "SKIPPED": 0
+          },
+          "gates": [
+            {
+              "gate_id": "adaptive-import-recovery",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 15,
+              "result_counts": {
+                "passed": 14,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 1,
+                "interrupted": 0
+              },
+              "duration_ms": 91575
+            },
+            {
+              "gate_id": "csp-enforcement",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 4,
+              "result_counts": {
+                "passed": 4,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 6872
+            },
+            {
+              "gate_id": "context-files",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 38,
+              "result_counts": {
+                "passed": 38,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 332403
+            },
+            {
+              "gate_id": "focused-online-security",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 45,
+              "result_counts": {
+                "passed": 45,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 121964
+            },
+            {
+              "gate_id": "share-focus",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 2,
+              "result_counts": {
+                "passed": 2,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 9112
+            },
+            {
+              "gate_id": "source-editor-mutation",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 121,
+              "result_counts": {
+                "passed": 121,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 676281
+            },
+            {
+              "gate_id": "source-editor-cleanup",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 6,
+              "result_counts": {
+                "passed": 6,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 57869
+            },
+            {
+              "gate_id": "upload-token-atomicity",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 18,
+              "result_counts": {
+                "passed": 18,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 68914
+            },
+            {
+              "gate_id": "markdown-image-viewer",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 31,
+              "result_counts": {
+                "passed": 31,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 125156
+            },
+            {
+              "gate_id": "reading-stability",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 35,
+              "result_counts": {
+                "passed": 35,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 181555
+            },
+            {
+              "gate_id": "pdfjs-maintained-line",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 13,
+              "result_counts": {
+                "passed": 13,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 88527
+            },
+            {
+              "gate_id": "default-pwa",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 1016,
+              "result_counts": {
+                "passed": 190,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 826,
+                "interrupted": 0
+              },
+              "duration_ms": 322400
+            },
+            {
+              "gate_id": "single-owner-auth",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 24,
+              "result_counts": {
+                "passed": 24,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 117196
+            },
+            {
+              "gate_id": "pwa-negative",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 28,
+              "result_counts": {
+                "passed": 28,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 89252
+            }
+          ]
+        }
+      },
+      {
+        "id": 14108604966,
+        "name": "settings-quality-evidence-4481fa37c355a296ce878c214525d3273a8bfe20-1",
+        "size_in_bytes": 15746661,
+        "digest": "sha256:33e40743dbfd32c34307d21790e2f12f26353366f98953a4892d51e3c1d1ed96",
+        "crc_verified": true,
+        "entries": 215,
+        "quality_summary": {
+          "schema_version": 1,
+          "source_sha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+          "generated_at": "2026-11-14T09:53:28.332Z",
+          "overall_status": "PASS",
+          "counts": {
+            "PASS": 2,
+            "FAIL": 0,
+            "NOT_VERIFIED": 0,
+            "SKIPPED": 0
+          },
+          "gates": [
+            {
+              "gate_id": "settings-stages-1-4",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 470,
+              "result_counts": {
+                "passed": 470,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 2988344
+            },
+            {
+              "gate_id": "system-archive-new-instance",
+              "status": "PASS",
+              "evidence_status": "passed",
+              "test_count": 1,
+              "result_counts": {
+                "passed": 1,
+                "failed": 0,
+                "timedOut": 0,
+                "skipped": 0,
+                "interrupted": 0
+              },
+              "duration_ms": 39184
+            }
+          ]
+        }
+      },
+      {
+        "id": 14108609489,
+        "name": "reading-performance-comparison",
+        "size_in_bytes": 4063272,
+        "digest": "sha256:9cacfb3003151f57d09142a1d7139d4b2dd2c455893d8a263481714fe0e55671",
+        "crc_verified": true,
+        "entries": 101,
+        "quality_summary": {
+          "schema_version": 2,
+          "gate_id": "reader-capacity-candidate",
+          "status": "passed",
+          "started_at": "2026-11-14T09:47:16.789Z",
+          "test_count": 9,
+          "completed_at": "2026-11-14T09:50:20.798Z",
+          "duration_ms": 185422,
+          "result_counts": {
+            "passed": 9,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        }
+      },
+      {
+        "kind": "api-log",
+        "sha256": "4280ea2c5b74f2032843fac0fbcc8bcbd6e342e7e3de96f3cf83166a5442657f",
+        "bytes": 1421531,
+        "passed": 6751,
+        "skipped": 3,
+        "warnings": 5,
+        "supervisor_unit_cases_passed": 17,
+        "real_pg_poll_cases_passed": [
+          1,
+          20
+        ]
+      }
+    ]
+  },
+  "failed_step": "Verify real 320 MiB worker ZIP analysis and commit without swap",
+  "root_cause": {
+    "path": "apps/api/scripts/verify_small_zip_memory.py",
+    "line": 99,
+    "valid_failure_value": null,
+    "exception": "AttributeError: 'NoneType' object has no attribute 'get'",
+    "old_expression": "(record.analysis_summary or {}).get(\"failure\", {}).get(\"code\")",
+    "fixed_expression": "((record.analysis_summary or {}).get(\"failure\") or {}).get(\"code\")",
+    "bounded_helper_already_has_same_null_failure_semantics": true
+  },
+  "incomplete_memory_diagnostic": {
+    "revision": "4481fa37c355a296ce878c214525d3273a8bfe20",
+    "passed": false,
+    "real_sensor": true,
+    "memory_limit_bytes": 335544320,
+    "memory_swap_limit_bytes": 335544320
+  },
+  "absence_of_oom_or_complete_memory_success_inferred": false,
+  "download_requests": [
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/jobs/132411398463/logs",
+      "requested_at": "2026-11-14T10:06:39.436253+00:00",
+      "received_at": "2026-11-14T10:06:42.463075+00:00",
+      "exit_code": 0,
+      "file": "build-images.log",
+      "bytes": 83085,
+      "sha256": "7d8bade5a35c10446f59a7870ed98aebec37f92a8670bde2bedf67a5f8e6a871"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/check-runs/132411398463",
+      "requested_at": "2026-11-14T10:06:42.464077+00:00",
+      "received_at": "2026-11-14T10:06:43.630822+00:00",
+      "exit_code": 0,
+      "file": "build-images-check.json",
+      "bytes": 3066,
+      "sha256": "cad1ec78b6016b37f28e8640fa192ff4bba2c74ae3accddd43c701574a496ef5"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/check-runs/132411398463/annotations?per_page=100",
+      "requested_at": "2026-11-14T10:06:43.631823+00:00",
+      "received_at": "2026-11-14T10:06:44.784321+00:00",
+      "exit_code": 0,
+      "file": "build-images-annotations.json",
+      "bytes": 1409,
+      "sha256": "5ae52bc42b4ca6739e7e5cd2fa4e25afce59511ee5887d083f8a50a6dc4e591a"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/jobs/132397936888/logs",
+      "requested_at": "2026-11-14T10:06:44.786306+00:00",
+      "received_at": "2026-11-14T10:06:48.879503+00:00",
+      "exit_code": 0,
+      "file": "web-quality.log",
+      "bytes": 1383386,
+      "sha256": "154274dc09f01212a74791e4800bb75b6f13c995a5a90f7dec77caaae1e445c2"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/jobs/132397937119/logs",
+      "requested_at": "2026-11-14T10:06:48.881106+00:00",
+      "received_at": "2026-11-14T10:06:53.193506+00:00",
+      "exit_code": 0,
+      "file": "api-quality.log",
+      "bytes": 1421531,
+      "sha256": "4280ea2c5b74f2032843fac0fbcc8bcbd6e342e7e3de96f3cf83166a5442657f"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/jobs/132397937257/logs",
+      "requested_at": "2026-11-14T10:06:53.195498+00:00",
+      "received_at": "2026-11-14T10:06:56.341529+00:00",
+      "exit_code": 0,
+      "file": "settings-quality.log",
+      "bytes": 214988,
+      "sha256": "fce885ee320476f6dc077d485a6d289cf1298ae5834c0e595312fc319f6bc685"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/jobs/132407431650/logs",
+      "requested_at": "2026-11-14T10:06:56.342518+00:00",
+      "received_at": "2026-11-14T10:07:04.192320+00:00",
+      "exit_code": 0,
+      "file": "reading-performance-comparison-compare.log",
+      "bytes": 21434940,
+      "sha256": "4dcedbdf8f848b4f6bec241fe6f74f55600884b97baec8e9549e372b76ed8126"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/artifacts/14109396218/zip",
+      "requested_at": "2026-11-14T10:07:04.217928+00:00",
+      "received_at": "2026-11-14T10:07:15.317706+00:00",
+      "exit_code": 0,
+      "file": "artifact-14109396218.zip",
+      "bytes": 40483492,
+      "sha256": "9e383624f101cd6ae1a154e46c2816156361cb29f9eb74d8aa0e22c7866efefc"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/artifacts/14109027874/zip",
+      "requested_at": "2026-11-14T10:07:15.621689+00:00",
+      "received_at": "2026-11-14T10:07:18.328126+00:00",
+      "exit_code": 0,
+      "file": "artifact-14109027874.zip",
+      "bytes": 282,
+      "sha256": "e9d2357966cbe3d6ef6ce2c8c029f69d98e94837b9d9a787556167fe138f4680"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/artifacts/14108609489/zip",
+      "requested_at": "2026-11-14T10:07:18.340147+00:00",
+      "received_at": "2026-11-14T10:07:23.188298+00:00",
+      "exit_code": 0,
+      "file": "artifact-14108609489.zip",
+      "bytes": 4063272,
+      "sha256": "9cacfb3003151f57d09142a1d7139d4b2dd2c455893d8a263481714fe0e55671"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/artifacts/14108604966/zip",
+      "requested_at": "2026-11-14T10:07:23.397720+00:00",
+      "received_at": "2026-11-14T10:07:29.837791+00:00",
+      "exit_code": 0,
+      "file": "artifact-14108604966.zip",
+      "bytes": 15746661,
+      "sha256": "33e40743dbfd32c34307d21790e2f12f26353366f98953a4892d51e3c1d1ed96"
+    }
+  ],
+  "verified_diagnostic_zips": [
+    {
+      "id": 14109396218,
+      "name": "release-a-quality-evidence-4481fa37c355a296ce878c214525d3273a8bfe20-1",
+      "bytes": 40483492,
+      "sha256": "sha256:9e383624f101cd6ae1a154e46c2816156361cb29f9eb74d8aa0e22c7866efefc",
+      "official_size_and_digest_verified": true,
+      "crc_verified": true,
+      "entry_count": 848,
+      "local_file": "artifact-14109396218.zip"
+    },
+    {
+      "id": 14109027874,
+      "name": "small-zip-memory-4481fa37c355a296ce878c214525d3273a8bfe20-1",
+      "bytes": 282,
+      "sha256": "sha256:e9d2357966cbe3d6ef6ce2c8c029f69d98e94837b9d9a787556167fe138f4680",
+      "official_size_and_digest_verified": true,
+      "crc_verified": true,
+      "entry_count": 1,
+      "local_file": "artifact-14109027874.zip"
+    },
+    {
+      "id": 14108609489,
+      "name": "reading-performance-comparison",
+      "bytes": 4063272,
+      "sha256": "sha256:9cacfb3003151f57d09142a1d7139d4b2dd2c455893d8a263481714fe0e55671",
+      "official_size_and_digest_verified": true,
+      "crc_verified": true,
+      "entry_count": 101,
+      "local_file": "artifact-14108609489.zip"
+    },
+    {
+      "id": 14108604966,
+      "name": "settings-quality-evidence-4481fa37c355a296ce878c214525d3273a8bfe20-1",
+      "bytes": 15746661,
+      "sha256": "sha256:33e40743dbfd32c34307d21790e2f12f26353366f98953a4892d51e3c1d1ed96",
+      "official_size_and_digest_verified": true,
+      "crc_verified": true,
+      "entry_count": 215,
+      "local_file": "artifact-14108604966.zip"
+    }
+  ],
+  "official_job_log_count": 5,
+  "diagnostic_zip_count": 4,
+  "deployable_image_artifact_exists": false,
+  "cancellation_requests": 0,
+  "production_accessed": false
+}

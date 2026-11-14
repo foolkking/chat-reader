@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T11:25:52.518801+00:00",
+  "status": "final_local_checks_passed_not_yet_committed_pushed_or_dispatched",
+  "parent_revision": "4481fa37c355a296ce878c214525d3273a8bfe20",
+  "latest_authorization": {
+    "one_line_image_control_plane_fix": true,
+    "reuse_only_official_quality_source_run": "43578495558",
+    "selective_commit_and_non_force_push": true,
+    "single_image_only_dispatch": true,
+    "pause_immediately_after_dispatch_confirmation": true,
+    "wait_status_polling_automation_cancellation_or_deployment": false
+  },
+  "checks": [
+    {
+      "exit_code": 0,
+      "elapsed_seconds": 0.9444616,
+      "log": "image-only-policy-final.log",
+      "passed": 37,
+      "skipped": 0,
+      "evidence": {
+        "task_temp_file": "image-only-policy-final.log",
+        "bytes": 7011,
+        "sha256": "1dd9b0a15d6ca9f06adf5bd01e48d8a387cdc3e6149080d4de4fc9b77f3800d2",
+        "boundary": "37 independent offline policy/evidence/producer-consumer controls."
+      },
+      "elapsed_is_process_wall_clock_not_test_framework_clock": true
+    },
+    {
+      "exit_code": 0,
+      "elapsed_seconds": 5.2783827,
+      "log": "memory-helper-final.log",
+      "passed": 7,
+      "skipped": 0,
+      "evidence": {
+        "task_temp_file": "memory-helper-final.log",
+        "bytes": 1358,
+        "sha256": "75468fcbb43e6e8a13da544a713f8e4feabe49d5f38de3e535fbe4d4e4cd2047",
+        "boundary": "7 actual in-memory SQLite ORM controls; subcases are not extra tests."
+      },
+      "elapsed_is_process_wall_clock_not_test_framework_clock": true
+    },
+    {
+      "exit_code": 0,
+      "elapsed_seconds": 3.7390089,
+      "log": "ci-source-final.log",
+      "test_files": 5,
+      "passed": 72,
+      "skipped": 0,
+      "evidence": {
+        "task_temp_file": "ci-source-final.log",
+        "bytes": 17693,
+        "sha256": "88f9035b29283bf7687276f040418c0d6d4ac240c455ff47c148ba0d76aa0ded",
+        "boundary": "All original scripts/ci Node test files; no existing case changed."
+      },
+      "elapsed_is_process_wall_clock_not_test_framework_clock": true
+    },
+    {
+      "exit_code": 0,
+      "elapsed_seconds": 81.2971583,
+      "log": "api-memory-final.log",
+      "passed": 80,
+      "skipped": 2,
+      "evidence": {
+        "task_temp_file": "api-memory-final.log",
+        "bytes": 387,
+        "sha256": "38fe69d3b2c6408f955a793b2b60bd23d26e8d4bdc68712daa84b438727a0d4a",
+        "boundary": "Two unchanged API modules; 2 explicit Windows unavailable-symlink skips."
+      },
+      "elapsed_is_process_wall_clock_not_test_framework_clock": true
+    },
+    {
+      "check": "lint",
+      "exit_code": 0,
+      "log": "lint-final.log",
+      "elapsed_seconds": 36.5800491,
+      "evidence": {
+        "task_temp_file": "lint-final.log",
+        "bytes": 173,
+        "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+        "boundary": "Local static check, not fresh CI or running database."
+      }
+    },
+    {
+      "check": "typecheck",
+      "exit_code": 0,
+      "log": "typecheck-final.log",
+      "incremental_output": "task-temp/typecheck-final.tsbuildinfo",
+      "elapsed_seconds": 54.1900977,
+      "evidence": {
+        "task_temp_file": "typecheck-final.log",
+        "bytes": 431,
+        "sha256": "9e677e0d011d3dcb44e4af0b2dc57506455fc72085420f5c6eeac771107b678f",
+        "boundary": "Local static check, not fresh CI or running database."
+      }
+    },
+    {
+      "check": "migration_head",
+      "exit_code": 0,
+      "log": "alembic-head-final.log",
+      "elapsed_seconds": 1.3228231,
+      "evidence": {
+        "task_temp_file": "alembic-head-final.log",
+        "bytes": 22,
+        "sha256": "73423f8cc296997f4c5fa5d11c6fbcf544629c61e9b90c2257f86f00f0243af5",
+        "boundary": "Local static check, not fresh CI or running database."
+      }
+    },
+    {
+      "check": "actionlint-1.7.12",
+      "exit_code": 0,
+      "elapsed_seconds": 1.4017384,
+      "log": "actionlint-final.log",
+      "shellcheck": "not_installed_disabled",
+      "pyflakes": "not_installed_disabled",
+      "evidence": {
+        "task_temp_file": "actionlint-final.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "boundary": "Actions YAML/expression checks; shellcheck/pyflakes unavailable."
+      },
+      "official_tool_download": {
+        "schema_version": 1,
+        "recorded_at": "2026-11-14T11:20:12.887632+00:00",
+        "official_release": "https://github.com/rhysd/actionlint/releases/tag/v1.7.12",
+        "downloaded_files": [
+          {
+            "name": "actionlint_1.7.12_checksums.txt",
+            "bytes": 1130,
+            "sha256": "433028cf0ba3c42163ea1a668dedce30fcdbe84fe912b1a5e288c006eab8a4f5",
+            "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_checksums.txt"
+          },
+          {
+            "name": "actionlint_1.7.12_windows_amd64.zip",
+            "bytes": 2479065,
+            "sha256": "6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9",
+            "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_windows_amd64.zip"
+          }
+        ],
+        "checksums_match": true,
+        "zip_crc_passed": true,
+        "extracted_only": "actionlint.exe",
+        "executable_sha256": "54ca21be3de4c7cfa26914aa8b61bd76bf573ef3caac5f80d110558cdf241718"
+      }
+    },
+    {
+      "check": "yaml-and-bash-syntax",
+      "workflow_count": 2,
+      "bash_run_steps": 78,
+      "executed_ci_shell_commands": false,
+      "evidence": {
+        "task_temp_file": "workflow-syntax-final.json",
+        "bytes": 27982,
+        "sha256": "70ebd9454c19e183463e6b3bfd160c5731a489673de45a8bfd2c4c71ca9f0c3a",
+        "boundary": "PyYAML6.0.3 and Git Bash -n, Actions expressions substituted for parse only."
+      }
+    }
+  ],
+  "tests_not_summed_as_coverage": true,
+  "changed_python_ast_passed": true,
+  "helper_exact_null_failure_change_only": true,
+  "full_default_quality_and_all_existing_native_resource_bounds_preserved": true,
+  "additive_orm_tests_run_after_original_memory_cases_without_prewarming": true,
+  "source_quality_live_read": {
+    "requested_at": "2026-11-14T10:54:53.583535+00:00",
+    "received_at": "2026-11-14T10:55:26.784175+00:00",
+    "source_sha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+    "source_run": "43578495558",
+    "attempt": 1,
+    "actual_guard_validated_source": true,
+    "evidence": {
+      "task_temp_file": "source-quality-check-receipt.json",
+      "bytes": 11552,
+      "sha256": "c7c27686924feab27fe0bce662e83658713c9e5ffc501b62baf76ccb9f2a9dc8",
+      "boundary": "Read-only official quality-source check, not new CI/memory acceptance."
+    }
+  },
+  "input_manifest": {
+    "path": "ci-image-only-inputs.json",
+    "input_count": 1404
+  },
+  "preserved_failed_checkpoints": [
+    {
+      "task_temp_file": "memory-helper-red.log",
+      "bytes": 6457,
+      "sha256": "98c4b69ebb2ee91493fa9ab4a66bc1d630fb6c97f2b48167d7ac786228c1b0f9",
+      "boundary": "First additive test fixture incorrectly treated Settings as a dataclass."
+    },
+    {
+      "task_temp_file": "memory-helper-red-valid-fixture.log",
+      "bytes": 6888,
+      "sha256": "83c7acce6f7821d4e23b377783f6f6d1dcde48e0092190b9ea44710803402d2a",
+      "boundary": "Correct real ORM fixture reproduces the original null-failure helper error."
+    },
+    {
+      "task_temp_file": "image-only-policy-unit1.log",
+      "bytes": 7361,
+      "sha256": "78fe3239b5eff6d9b662071a362c9ce0d7551b29f0cec6afd26e60ad6f07fe38",
+      "boundary": "Additive CRC negative control initially expected the wrong exception; real CRC rejection retained."
+    },
+    {
+      "task_temp_file": "ci-source-regression1.log",
+      "bytes": 64,
+      "sha256": "7405d213e792be7df2926d2f53fa096aee7ecbec2d0fda501f43f7c77ab3a8bb",
+      "boundary": "Windows did not expand a Node glob; no test ran. Explicit enumeration subsequently passes all72."
+    },
+    {
+      "task_temp_file": "workflow-patch-generation.log",
+      "bytes": 364,
+      "sha256": "d16d762447faeaca4e42c9f2d58b4e880bd2fc5f869d40feefe1a256cd467d3b",
+      "boundary": "Initial generator anchor used needs: api-quality; actual needs: [api-quality]. Failed before file writes."
+    },
+    {
+      "task_temp_file": "input-freeze-method-correction.json",
+      "bytes": 287,
+      "sha256": "e85c13f5276b9914fb3e840b46b59a1ad945b98bb4a846ad2a6a8f0d3f2c926f",
+      "boundary": "First inventory assertion wrongly assumed the helper was in the prior1399; add its existing bytes explicitly, without changing source or tests."
+    }
+  ],
+  "preservation": {
+    "unrelated_file_count": 13,
+    "unrelated_file_sha256": {
+      "apps/web/tsconfig.tsbuildinfo": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135",
+      "docs/evidence/storage-cleanup-2026-11-08/summary.json": "8b624607e694868172c18e4808a92cf98173e7b54b490926bd034ab482f36c5a",
+      "docs/execution/KING_STORAGE_CLEANUP_2026-11-08.md": "2d6018dec2b89bae43f13af8d8e72439165d20caf310f7a2c7be54283e754adc",
+      "ux-audit-next-optimization-2026-11-05-evidence/audit_api_probe.py": "f4bac752276ca0ef25978a91888d00eef0c44ad778d939914f4419aec41d1a29",
+      "ux-audit-next-optimization-2026-11-05-evidence/manifest.json": "6ca614bf037280869433c351040a379a04390c2b1ef309ee95a64b4c0825d166",
+      "ux-audit-next-optimization-2026-11-05-evidence/prior-ci-accepted.json": "7ef7c00ff491204c171425e61221c4c6747b132d47ed230ff4a6771b059acbd2",
+      "ux-audit-next-optimization-2026-11-05-evidence/probe-api-results.txt": "9a80791059e222c3cd9106339f08e21e8b5155a410183e06f359650208e63ff7",
+      "ux-audit-next-optimization-2026-11-05-evidence/probe-web-results.json": "eec1d7fe183a19027ecdbfb2ac0d1db7b929943dcdf78e1c35ae4111c9a70cf7",
+      "ux-audit-next-optimization-2026-11-05-evidence/probe-web.cjs": "74302fb726494855263bbd82ec7084e5085e8e518a90cf74f9e45fd87b34bf57",
+      "ux-audit-next-optimization-2026-11-05.md": "f1ce4a6e4aa69be69bcff3112b129419ef9a9dbe5e233340f7f82bd02f02e6f0",
+      "ux-audit-next-optimization-2026-11-06-evidence/manifest.json": "9db05b47ea562f8c727e69c54ed2bcec0b69b7eb4d4d0c6738b3bb058c7acedb",
+      "ux-audit-next-optimization-2026-11-06-evidence/source-evidence.json": "f4a23f2fabfa7a494e5e8736ea5c433eb0ebf702f3323dd8119efb320934de41",
+      "ux-audit-next-optimization-2026-11-06.md": "4405f861e5fb520669d72a165269622d624ff9aedc74c62d5d0ef9a46e0fe111"
+    },
+    "all_unrelated_bytes_preserved": true,
+    "unrelated_files_staged": false,
+    "old_task_directories": {
+      "previous_task_directory_10": {
+        "file_count": 2103,
+        "all_file_hashes_unchanged": true,
+        "relative_path_sha256_fingerprint": "fd7401e685e3afd58bf5ec78539a460086a5e99266c5c41127e8cd265cb56b5e"
+      },
+      "previous_task_directory_11": {
+        "file_count": 2580,
+        "all_file_hashes_unchanged": true,
+        "relative_path_sha256_fingerprint": "02a8a56409f6f18574d8662bdb43977d784fbdec2ebd4daa046bf805c19687d7"
+      }
+    },
+    "original_dispatch": {
+      "path": "docs/evidence/reliability-2026-11-14/ci-offline-optional-dispatch.json",
+      "sha256": "2e77c121c3a719b77d048808cfeb76f0329d7e0b501796bb97cd101fce4cc757",
+      "previous_task_original_copy_identical": true
+    },
+    "original_dispatch_worktree_crlf_lines": 59,
+    "original_dispatch_must_be_staged_without_newline_normalization": true,
+    "index_empty_at_final_evidence_capture": true
+  },
+  "not_run_or_claimed": [
+    "New complete Web build/PWA or full API suite locally.",
+    "New actual PostgreSQL integration, Linux no-swap/cgroup/signals or memory acceptance locally.",
+    "New full four-quality execution; opt-in explicitly reuses the user-approved official source.",
+    "Fresh production capacity/runtime check, backup/restore, migration or deployment.",
+    "Physical tablet/production-authenticated UI/product acceptance owned by the user.",
+    "No production import termination, user-source replay, source deletion, config/volume/backup change."
+  ],
+  "next_required": [
+    "Verify the exact selectively staged whole-tree repair and direct4481 parent before commit.",
+    "After commit, actual CLI read-only source/Git preflight; then fresh remote check and non-force push.",
+    "Deduplicate and dispatch once with quality_source_run_id43578495558; write actual independent receipt and pause."
+  ]
+}
