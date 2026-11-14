@@ -1,6 +1,29 @@
 # 事实证据索引
 
-## null状态修正与受保护镜像补跑 — 2026-11-14
+## 精确selector来源链的新授权与本地验证 — 2026-11-14
+
+[新独立验证](reliability-2026-11-14/ci-image-only-selector-lineage-verification.json) /
+[新输入冻结](reliability-2026-11-14/ci-image-only-selector-lineage-inputs.json)记录
+已单独批准的固定4481→74f→直系候选、精确selector测试SHA和必要控制/
+检出补丁。原37/新增34、干净与合成脏Node77、实际depth3准入/depth2及
+十项Git/checkout拒绝、静态语法均通过，不冒充新CI/内存/镜像/生产验收。
+四份前一诊断/派发证据保留原字节/时点，不能覆写为新授权；实际新提交/run
+由随后独立`ci-image-only-selector-dispatch.json`登记，确认即暂停、不回查/
+等待器/安排/取消/部署；回执出现后禁止重复派发。
+
+## 前一控制测试失败与独立Git夹具诊断（历史）— 2026-11-14
+
+[独立失败](reliability-2026-11-14/ci-image-only-failure.json)保存
+74f4636/CI43591310367：正式六job、九秒builder、策略37/Node71-1、
+镜像/内存未执行、制品0及原始GET/日志指纹，不覆写派发或旧null失败。
+[本地核验](reliability-2026-11-14/ci-image-only-selector-verification.json) /
+[1406输入冻结](reliability-2026-11-14/ci-image-only-selector-inputs.json)记录
+精确干净检出红测、独立Git夹具7项、干净/脏Node77及策略37；不冒充新完整CI。
+旧一次授权已用，现有来源门禁仍拒绝新parent/旧测试修改，待单独审核/授权，
+没有再次提交/派发、安排、取消或生产操作；原派发和旧现场字节保全。
+1406只补记两现有selector文件，旧1404全部不变；初版清单方法失败如实保留。
+
+## 前一null状态修正与受保护镜像补跑（历史）— 2026-11-14
 
 [独立镜像失败](reliability-2026-11-14/ci-build-images-failure.json)保留
 4481fa3/43578495558 attempt1的四项质量成功、Settings470+restore1、

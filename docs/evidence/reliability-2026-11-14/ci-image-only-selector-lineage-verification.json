@@ -1,0 +1,281 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T12:57:46.593542+00:00",
+  "status": "separately_authorized_exact_selector_lineage_repair_locally_verified_pending_single_submission",
+  "latest_explicit_user_approval": {
+    "exact_selector_fixture_repair_and_fixed_lineage": true,
+    "necessary_policy_checkout_controls_and_scoped_documents": true,
+    "selective_commit_normal_push_and_one_image_only_dispatch": true,
+    "confirm_dispatch_then_immediately_pause": true,
+    "wait_poll_cancel_deploy_or_create_automation": false,
+    "original_used_dispatch_authorization_not_reused": true
+  },
+  "user_repository_pre_submission_head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+  "quality_source": {
+    "sha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+    "run_id": "43578495558",
+    "attempt": 1
+  },
+  "required_lineage": [
+    "4481fa37c355a296ce878c214525d3273a8bfe20",
+    "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+    "<new-single-direct-candidate>"
+  ],
+  "fixed_previous_tree_files": 4618,
+  "fixed_previous_tree_sha256": "3c086ec82a03eca4a0f8d67c55a9268f76b1a8c61f39923ebfaf6be9264b9c8e",
+  "original_strict_repair_proof_recomputed": true,
+  "original_direct_parent_allowlist_not_broadened": true,
+  "approved_selector_test_git_lf_sha256": "8bb1a861309ebb92bae29ea36c29e92a38b56d25d416ba09cab4d712daf1ffdd",
+  "original_selector_test_git_blob_sha256": "1fe0ebb0ae537ae481b3f8b2a7b3451e49148d1117edea4451731faaa1880d38",
+  "original_selector_implementation_git_blob_sha256": "8cd2cb8c7636fd2d9fde05139ae27673df449fbf8026987b5de87d846f6df106",
+  "original_two_selector_scenarios_and_five_new_fixture_controls_preserved": true,
+  "only_existing_selector_test_has_a_new_approved_exception": true,
+  "application_dependency_api_web_reader_settings_fixture_migration_or_memory_input_changes": 0,
+  "original37_controls_original_patch_orm7_helper_and_old_policy_constants_unchanged": true,
+  "preserved_original_policy_functions": [
+    "require",
+    "digest",
+    "canonical_json",
+    "git",
+    "tree",
+    "approved_workflow",
+    "verify_equivalence",
+    "verified_jobs",
+    "api",
+    "validate_artifact_metadata",
+    "json_member",
+    "valid_counts",
+    "validate_quality_zip",
+    "source_proof",
+    "validate_needs",
+    "verify_report",
+    "validate_checkout",
+    "main"
+  ],
+  "original_main_cli_ast_unchanged": true,
+  "workflow_change": {
+    "original_workflow_patch_sha256": "7c64c286ccb658c6c4f80a2868744c843fe3a036f51d66c41fbd155e02b47d01",
+    "new_pinned_workflow_patch_sha256": "c73ffa3cc3d1dd9e046be767522eb7071a3ed4f9f90665cd86f835f2d224144f",
+    "new_workflow_git_lf_sha256": "2d57174de064a79526b43f97f66cc8e83029b2d9ab8172bdd69d677616300916",
+    "producer_and_consumer_fetch_depth": 3,
+    "only_two_depth_changes_and_one_additive_control_command": true,
+    "original_four_quality_job_bodies_commands_and_order_unchanged": true,
+    "default_empty_input_still_full_six_job_gate": true,
+    "unique_quality_source_input": "43578495558",
+    "original_memory_orm_image_package_and_consumer_order_unchanged": true,
+    "all_five_real_memory_cases_320_640_mib_no_swap_and_64_mib_growth_run_anew": true,
+    "orm7_after_all_memory_measurements_no_prewarming": true,
+    "new_custom_job_or_step_timeouts": 0,
+    "native_resource_and_platform_bounds_not_relaxed": true
+  },
+  "local_controls": {
+    "original_policy": {
+      "passed": 37,
+      "failed": 0
+    },
+    "additive_selector_lineage": {
+      "passed": 34,
+      "failed": 0
+    },
+    "package_selector": {
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    "all_node": {
+      "passed": 77,
+      "failed": 0,
+      "skipped": 0
+    },
+    "depth3_clean_original_policy": {
+      "passed": 37,
+      "failed": 0
+    },
+    "depth3_clean_selector_lineage": {
+      "passed": 34,
+      "failed": 0
+    },
+    "depth3_clean_node": {
+      "passed": 77,
+      "failed": 0,
+      "skipped": 0
+    },
+    "depth3_dirty_node": {
+      "passed": 77,
+      "failed": 0,
+      "skipped": 0
+    },
+    "repeated_runs_and_subset_package_not_added_to_unique_case_counts": true,
+    "actual_git_checkout_rejections": [
+      {
+        "case": "original-direct4481-policy",
+        "error": "Image-only reuse requires one direct, non-merge repair commit."
+      },
+      {
+        "case": "missing-source-at-depth2",
+        "error": "Git source verification failed; no fallback source is allowed."
+      },
+      {
+        "case": "untracked-drift-consumer-False",
+        "error": "Untracked image-source files are not allowed."
+      },
+      {
+        "case": "untracked-drift-consumer-True",
+        "error": "Untracked image-source files are not allowed."
+      },
+      {
+        "case": "producer-consumer-download-directory",
+        "error": "Untracked image-source files are not allowed."
+      },
+      {
+        "case": "tracked-index-drift",
+        "error": "Tracked/index drift is not an accepted image source."
+      },
+      {
+        "case": "wrong-selector-bytes",
+        "candidate_sha": "585c490307f61e80a728ff9946cc7b3fc0f40c51",
+        "error": "Only the exact approved selector Git-fixture test bytes may change."
+      },
+      {
+        "case": "unapproved-workflow-depth",
+        "candidate_sha": "12e803813dd2ca22c852e1a25253af884c4ba4aa",
+        "error": "Workflow changes exceed the byte-exact selector checkout/control contract."
+      },
+      {
+        "case": "application-change",
+        "candidate_sha": "3df8433180465237d0b7e14e1ff973034e939102",
+        "error": "Application/dependency/quality-test/resource or unapproved selector-repair file changed: apps/web/app/layout.tsx"
+      },
+      {
+        "case": "extra-commit",
+        "candidate_sha": "e7bbb8467fae60fb17f1669a6501f428aabe40d5",
+        "error": "Selector repair requires one direct, non-merge child of the fixed74f repair."
+      }
+    ],
+    "depth3_actual_qualification": true,
+    "depth2_missing_ancestor_refused": true,
+    "synthetic_candidate_sha": "fca838d9a996c9f32dc659631ff33ecc5a8ee46f",
+    "synthetic_clone_commits_are_not_user_repository_commits_or_release_acceptance": true
+  },
+  "actionlint": {
+    "version": "1.7.12",
+    "exit_code": 0,
+    "elapsed_seconds": 0.375,
+    "shellcheck": "not_installed_disabled",
+    "pyflakes": "not_installed_disabled",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "static_bash_syntax_step_count": 78,
+  "workflow_shell_commands_executed": false,
+  "local_log_receipts": [
+    {
+      "task_temp_relative_path": "original37-controls.log",
+      "bytes": 7011,
+      "sha256": "b9428486cea77aeac7071e8b0aacdb85720c407d08fde2031372b1a908340c48"
+    },
+    {
+      "task_temp_relative_path": "selector-lineage-controls-first.log",
+      "bytes": 6622,
+      "sha256": "f235c531c22a9769372660448ca87b281f6dfdf24d43e0348ae6c3cf50e59312"
+    },
+    {
+      "task_temp_relative_path": "package-selector7.log",
+      "bytes": 1627,
+      "sha256": "2c69d3f0d2f0bdffb4b8351a7a845ddaddcfc88b49d962b6af94fe5900106e8b"
+    },
+    {
+      "task_temp_relative_path": "all-node77.log",
+      "bytes": 17331,
+      "sha256": "8161371f55291b6111da11b97da82c68963c3fb2f762c5d006351cf2f1796a2b"
+    },
+    {
+      "task_temp_relative_path": "real-lineage-verification.json",
+      "bytes": 19636,
+      "sha256": "73a6ce0f3ee13b80a8b52dacc24c593e620ffa96d45f5886a015f7d8dee46f07"
+    },
+    {
+      "task_temp_relative_path": "workflow-and-scope-verification.json",
+      "bytes": 40113,
+      "sha256": "da8ea5e1aeb598530b623121fc60d3532c91c6590a9d7797be895c7163e01912"
+    }
+  ],
+  "frozen_inputs": {
+    "path": "docs/evidence/reliability-2026-11-14/ci-image-only-selector-lineage-inputs.json",
+    "bytes": 174015,
+    "sha256": "e62c4518a05ae9feb987b85fb8ac35890419dabcf0038a153c467d653ec2a866",
+    "selected_input_count": 1408,
+    "code_git_lf_sha256": {
+      ".github/workflows/build-release-images.yml": "2d57174de064a79526b43f97f66cc8e83029b2d9ab8172bdd69d677616300916",
+      "scripts/ci/image-only-quality-reuse.py": "82153beebaf5b0192e1db5d677e0a9ef3a18e8d159ebb05d052a1cb10a09df1d",
+      "scripts/ci/changed-area-selector.test.mjs": "8bb1a861309ebb92bae29ea36c29e92a38b56d25d416ba09cab4d712daf1ffdd",
+      "scripts/ci/image-only-selector-workflow-patch.json": "c73ffa3cc3d1dd9e046be767522eb7071a3ed4f9f90665cd86f835f2d224144f",
+      "scripts/ci/test_image_only_selector_lineage.py": "79c4040f05f8f8189814f104d5cbf9d8ba11c0dd6f19d49e3f3367e9c8862d03"
+    }
+  },
+  "preservation": {
+    "protected_file_count": 14,
+    "protected_drift": [],
+    "historical_evidence_count": 5,
+    "historical_evidence_drift": [],
+    "historical_evidence_sha256": {
+      "ci-image-only-dispatch.json": "35fbb8b5ac69714f9a75ef0313c46efe4ad60a16de21cdf7ad3a7328bdf1c608",
+      "ci-image-only-failure.json": "87caeb3feea4cbbe75f66dc505b3c105759b7dc0b19bf3bacb735aea1e12d5b7",
+      "ci-image-only-selector-verification.json": "a014566d7400e1aa6c23fe19940cadb4732ba1a4db6d1bab7ba1acde4744efb8",
+      "ci-image-only-selector-inputs.json": "6b5ddfd7cfbf1818b788d1f12cc1fdd57385d30fda3a79d138d45a21a04b7325",
+      "ci-offline-optional-dispatch.json": "2e77c121c3a719b77d048808cfeb76f0329d7e0b501796bb97cd101fce4cc757"
+    },
+    "previous_task_file_counts": {
+      "reliability-ci-build-images-failure-fix-20261114-12": 739,
+      "reliability-ci-image-only-failure-20261114-13": 208
+    },
+    "previous_task_drift": [],
+    "user_repository_head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+    "git_index_empty": true
+  },
+  "post_commit_actual_cli_official_source_and_git_preflight_still_required": true,
+  "prior_official_source_proof_not_claimed_as_a_fresh_read_this_turn": true,
+  "new_api_web_pwa_real_pg_linux_memory_image_product_or_production_acceptance": false,
+  "new_user_repository_commit_push_dispatch_cancel_wait_or_production_operations_at_this_checkpoint": 0,
+  "documentation_profile": "Existing Next.js/FastAPI monorepo; nine targeted updates, no global audit",
+  "documentation_paths": [
+    "PROJECT_STATE.md",
+    "docs/index.md",
+    "docs/documentation-inventory.md",
+    "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md",
+    "docs/system/RELEASE_SAFETY_BASELINE.md",
+    "docs/system/DEPLOYMENT_AND_ENVIRONMENT.md",
+    "docs/deployment.md",
+    "docs/testing.md",
+    "docs/evidence/README.md"
+  ],
+  "production_pointer_not_rechecked": "previously verified3564cbf/schema0060 only",
+  "product_physical_device_and_disaster_recovery_acceptance_remains_user_owned_and_unverified": true,
+  "retained_new_evidence_encoding_method": {
+    "reason": "Path.write_text defaulted to Windows CRLF for these two newly generated records. The strict cached whitespace check rejected their raw staged CR bytes. Correct only this batch's new JSON and its internal digest pointer to LF; do not normalize captured/historical records or relax any whitespace rule.",
+    "initial_method_and_generated_record_snapshots": [
+      {
+        "task_temp_relative_path": "initial-encoding-ci-image-only-selector-lineage-inputs.json",
+        "bytes": 175483,
+        "sha256": "36da99e1ef73175494fd4c1444edc75f63d545074264efa46a3ce47660d79fd4"
+      },
+      {
+        "task_temp_relative_path": "initial-encoding-ci-image-only-selector-lineage-verification.json",
+        "bytes": 10876,
+        "sha256": "0c0a60d6b014664518848677663d0fb7c2ab8f907e8d5dbc71f496fa1a4f09c5"
+      },
+      {
+        "task_temp_relative_path": "initial-encoding-write-selector-lineage-evidence.py",
+        "bytes": 10607,
+        "sha256": "608795449ce59352a00ad95cbc6775a1297b97ace829475acfda3b9b069e1fc1"
+      },
+      {
+        "task_temp_relative_path": "initial-encoding-stage-exact-selector-repair.py",
+        "bytes": 4763,
+        "sha256": "467bab3052d5a3d33b6bb748e7da56fc7da4270e7e9ebee8bfb25f329e37ecbd"
+      }
+    ],
+    "failed_cached_whitespace_stdout_sha256": "87a3c336fd874dbda19e6b44a261f623211002b80b8ec74c679495c981cfb75f",
+    "old_source_historical_evidence_and_git_configuration_changed": false
+  }
+}

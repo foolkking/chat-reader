@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T12:20:51.055496+00:00",
+  "status": "local_fixture_repair_verified_new_image_only_scope_not_yet_authorized",
+  "submitted_failed_head": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+  "independent_failure": {
+    "path": "docs/evidence/reliability-2026-11-14/ci-image-only-failure.json",
+    "bytes": 8988,
+    "sha256": "87caeb3feea4cbbe75f66dc505b3c105759b7dc0b19bf3bacb735aea1e12d5b7"
+  },
+  "frozen_local_inputs": {
+    "path": "docs/evidence/reliability-2026-11-14/ci-image-only-selector-inputs.json",
+    "bytes": 173038,
+    "sha256": "6b5ddfd7cfbf1818b788d1f12cc1fdd57385d30fda3a79d138d45a21a04b7325"
+  },
+  "input_count": 1406,
+  "unchanged_selected_inputs": 1405,
+  "changed_existing_control_test": "scripts/ci/changed-area-selector.test.mjs",
+  "implementation_changed": false,
+  "inherited_input_count": 1404,
+  "inherited_inputs_all_unchanged": true,
+  "newly_inventoried_existing_sources": [
+    {
+      "path": "scripts/ci/changed-area-selector.mjs",
+      "already_tracked_existing_source_not_a_new_file": true,
+      "submitted_git_blob_sha256": "8cd2cb8c7636fd2d9fde05139ae27673df449fbf8026987b5de87d846f6df106",
+      "current_worktree_sha256": "8cd2cb8c7636fd2d9fde05139ae27673df449fbf8026987b5de87d846f6df106",
+      "normalized_content_unchanged": true
+    },
+    {
+      "path": "scripts/ci/changed-area-selector.test.mjs",
+      "already_tracked_existing_source_not_a_new_file": true,
+      "submitted_git_blob_sha256": "1fe0ebb0ae537ae481b3f8b2a7b3451e49148d1117edea4451731faaa1880d38",
+      "current_worktree_sha256": "8bb1a861309ebb92bae29ea36c29e92a38b56d25d416ba09cab4d712daf1ffdd",
+      "normalized_content_unchanged": false
+    }
+  ],
+  "two_original_scenarios_and_assertions_retained": true,
+  "additional_controls": 5,
+  "local_node_version": "v20.13.1",
+  "local_python_version": "Python 3.11.7",
+  "local_git_version": "git version 2.45.1.windows.1",
+  "original_minimal_clean_dirty_reproduction": {
+    "task_temp_relative_path": "original-selector-clean-dirty-reproduction.json",
+    "bytes": 2704,
+    "sha256": "833b6a9bf896ab548d9601a28ae7a5fb6984b981ccc1eea9fc87aa74f36dee9c"
+  },
+  "full_clean_controls_verification": {
+    "task_temp_relative_path": "clean-controls-verification.json",
+    "bytes": 21634,
+    "sha256": "a378c47789dd3f28faa2bcbacae05212ddde6f86e15dee6282f0a9670466b6a6"
+  },
+  "retained_failed_evidence_method": {
+    "script": {
+      "task_temp_relative_path": "write_failure_evidence.failed-v1.py",
+      "bytes": 12005,
+      "sha256": "e3c8d7de0eefcd0ec569689afa556f9ff65c2fc234cc235d5dbf98db43c92304"
+    },
+    "log": {
+      "task_temp_relative_path": "write-failure-evidence-1.log",
+      "bytes": 358,
+      "sha256": "80f6186292e8b5b399d1798bc88881cc57edd51a4524de985cce897b5d887c72"
+    },
+    "reason": "The previous selected1404 manifest did not include either existing selector file. Both were still protected by the full Git tree. The initial inventory assertion failed before writing any new repository receipt. Add the two existing sources to the local manifest instead of inventing drift in inherited1404 inputs."
+  },
+  "original_clean_node": {
+    "passed": 71,
+    "failed": 1,
+    "skipped": 0
+  },
+  "fixed_clean_node": {
+    "passed": 77,
+    "failed": 0,
+    "skipped": 0
+  },
+  "fixed_dirty_node": {
+    "passed": 77,
+    "failed": 0,
+    "skipped": 0
+  },
+  "policy_unittests": {
+    "passed": 37,
+    "failed": 0
+  },
+  "repeated_context_runs_are_not_additional_unique_case_counts": true,
+  "current_policy_actual_qualification": {
+    "accepted": false,
+    "error": "Image-only reuse requires one direct, non-merge repair commit.",
+    "unchanged_current_policy_rejects_new_lineage": true
+  },
+  "current_policy_and_pinned_workflow_patch_changed": false,
+  "new_lineage_or_existing_test_edit_also_requires_separate_scope_review": true,
+  "proposed_next_scope_not_implemented_or_authorized": "Review/pin only this exact control-test fixture repair, the fixed74f-to-new-candidate lineage and complete original4481 quality-input equivalence before any one-off image-only dispatch. Preserve every original quality/resource/artifact gate; ensure checkout can read both ancestors, and recheck official source evidence.",
+  "new_full_api_web_pwa_real_pg_linux_memory_image_or_production_acceptance": false,
+  "selectively_committed_or_pushed_in_user_repository": false,
+  "new_dispatch_rerun_cancel_waiter_automation_or_production_operations": 0,
+  "temporary_clone_commit_is_only_synthetic_local_test_data": true,
+  "documentation_profile": "Existing Next.js/FastAPI monorepo; targeted current-state/evidence update only",
+  "documentation_paths": [
+    "PROJECT_STATE.md",
+    "docs/index.md",
+    "docs/documentation-inventory.md",
+    "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md",
+    "docs/system/RELEASE_SAFETY_BASELINE.md",
+    "docs/system/DEPLOYMENT_AND_ENVIRONMENT.md",
+    "docs/deployment.md",
+    "docs/testing.md",
+    "docs/evidence/README.md"
+  ],
+  "unrelated_docs_rules_or_global_memory_changed": false,
+  "preservation": {
+    "protected_file_count": 14,
+    "protected_drift": [],
+    "previous_task_12_file_count": 739,
+    "previous_task_12_drift": [],
+    "earlier_task_file_counts": {
+      "reliability-ci-timeout-diagnosis-fix-20261114-10": 2103,
+      "reliability-ci-platform-failure-fix-20261114-11": 2580
+    },
+    "earlier_task_drift": [],
+    "image_only_dispatch_receipt_sha256": "35fbb8b5ac69714f9a75ef0313c46efe4ad60a16de21cdf7ad3a7328bdf1c608",
+    "image_only_dispatch_original_bytes_preserved": true,
+    "offline_dispatch_original_sha256": "2e77c121c3a719b77d048808cfeb76f0329d7e0b501796bb97cd101fce4cc757",
+    "offline_dispatch_original_bytes_preserved": true,
+    "git_index_empty": true
+  }
+}

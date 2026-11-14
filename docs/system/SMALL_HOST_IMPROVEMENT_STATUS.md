@@ -12,7 +12,91 @@
 资料、不清理生产、不建立自动安排；未验收项不能因委托用户而改标通过。
 11月12日的一次本地检查点与随后本地工作限制保留为历史，不覆盖最新授权。
 
-### 11月14日本轮：验证脚本修正与受保护镜像补跑（确认后暂停）
+### 11月14日本轮新授权：精确selector修正与固定来源链（提交/单次派发准备）
+
+用户最新“可以”单独批准上一诊断提出的精确范围：selector夹具修正、必要的
+来源策略/检出证明、选择性提交并正常推送、只派发一次仅镜像CI。不是复用
+前次已经用完的授权。确认唯一派发后立即暂停，由用户告知结果；不读取结果、
+不等待/轮询/取消/创建安排/部署，不扩大到全仓治理或其他业务优化。
+
+当前策略固定质量来源
+`4481fa37c355a296ce878c214525d3273a8bfe20 / 43578495558 / attempt1`，
+先核验已提交修复
+`74f4636e9d29098fb9a30bb42bdb7ada696373f8`的单一4481 parent、
+完整4618文件mode/blob树及原严格helper/workflow证明。原策略37项、原
+SHA补丁、ORM7和helper原字节均保留；原18个策略函数、全部旧常量及main
+AST不变，仅Git准入入口调用追加的新链核验。不是给原parent/白名单追加
+另一任意来源，也不删除失败测试或制造CI脏目录。
+
+新候选必须是固定74f的**唯一单一直系非merge子提交**。唯一旧测试例外是
+`scripts/ci/changed-area-selector.test.mjs`的已审批Git/LF SHA256
+`8bb1a861309ebb92bae29ea36c29e92a38b56d25d416ba09cab4d712daf1ffdd`；
+selector实现仍为原`8cd2cb8c…`。其余旧API/Web/Reader/Settings用例、fixture、
+应用/依赖/migration/资源和原新增ORM控制不得变。明确列出的九份现有文档、
+四份历史诊断/派发字节和两份新独立验证回执属于本轮证据范围；四份旧回执
+的原SHA被策略固定，不能重写成新授权或CI通过。
+
+新增第二份SHA绑定workflow补丁只从精确74f工作流导出：生产者及消费者的
+`fetch-depth:2→3`，原negative-control步骤追加独立34项新链控制。原补丁/
+37项命令、Node命令、全部四质量job body、六job/default空input、唯一
+opt-in43578495558、全部内存/ORM/构建/包装/独立消费者命令和顺序保持。
+五例真实320/640MiB无swap、64MiB增长及镜像/制品门禁全部在新镜像上新跑；
+ORM7仍在所有资源测量之后，不预热worker，不改变任何原生/平台期限。
+
+本地原37/新增34、package7、Node77通过；独立三层浅克隆中的37/34以及
+干净/合成脏Node77均通过，重复运行不叠加覆盖。真实Git确认新链准入，
+拒绝原直系4481规则下的新child、depth2缺祖先、错误selector字节、工作流
+深度变更、业务变更、额外提交和tracked/index/untracked漂移，十项实际拒绝。
+Actionlint1.7.12及两workflow的78段Bash只解析通过；未执行CI shell。
+这些是本机控制证明，不冒充新完整质量、真实PG/Linux/cgroup/镜像或生产验收。
+[新独立验证](../evidence/reliability-2026-11-14/ci-image-only-selector-lineage-verification.json) /
+[新输入冻结](../evidence/reliability-2026-11-14/ci-image-only-selector-lineage-inputs.json)。
+
+提交后用实际CLI `--preflight`重新核验官方attempt、三个immutable质量ZIP、
+API监督/真实PG日志和已提交全Git链；过期/缺失/变attempt必须拒绝，不用
+旧缓存代替。正常推送后核对远端精确HEAD，去重后仅派发一次原工作流的
+`quality_source_run_id=43578495558`。实际candidate/run由随后独立
+`ci-image-only-selector-dispatch.json`登记；回执一旦存在即保持暂停，不沿用
+这里的“准备”重复提交/派发，不追加等待器或读取结果。
+
+基线1406输入与九文档已核对；仅策略入口/工作流改变，两新增控制输入另列，
+14保护文件及12目录739/13目录208旧文件保全，原三份诊断证据不改写。
+生产仅沿用先前3564cbf/schema0060记录，未复查/操作配置、资料、volume、
+唯一备份或长期5432 PostgreSQL。实体设备/产品/灾备剩余验收仍由用户完成。
+
+### 前一诊断：镜像补跑失败与独立Git夹具修正（历史，当时未获新授权）
+
+用户反馈“失败”后才读取[74f4636/CI43591310367](https://github.com/foolkking/chat-reader/actions/runs/43591310367)
+的正式attempt1；六job完整集合与精确SHA已核对。build-images在11:42:41Z–
+11:42:50Z的九秒job中失败，唯一失败step为新增的negative controls。
+Python策略37通过，Node72中71通过/1失败；四质量job按已批准模式明确skip，
+消费者skip。来源证明、Docker/base/build、五例真实内存、ORM和包装均未执行，
+正式制品列表0；不将本次失败归为null/OOM/超时或业务导入回归。
+[独立失败回执](../evidence/reliability-2026-11-14/ci-image-only-failure.json)
+保存六次正式GET、原日志/注解指纹和未执行边界；原派发字节不重写。
+
+失败是`changed-area-selector.test.mjs`将本机未提交docs/tooling当作必备数据。
+此前本机脏改动掩盖了新增镜像命令中的该问题。精确74f的干净隔离检出复现
+Node71/1；合成脏目录则使原两项通过。不是删除断言或制造CI脏目录来规避。
+本地仅改这一个测试：独立显式TEMP中的Git夹具、保留原两场景及分类/去重/
+完整门禁断言，再追加clean/staged/range/all-area/invalid-revision五项。
+夹具不继承用户Git配置/签名/hooks；清理仅限本测试直系目录并先核对绝对路径/
+链接边界。selector、应用/依赖、其他旧测试、workflow/helper/资源门禁未改。
+新隔离提交只属于临时克隆，不是本仓提交；干净/合成脏检出Node均77通过，
+原策略37通过。未运行新API/Web/PWA/PG/Linux资源或产品/生产验收。
+[本地核验](../evidence/reliability-2026-11-14/ci-image-only-selector-verification.json) /
+[输入冻结](../evidence/reliability-2026-11-14/ci-image-only-selector-inputs.json)。
+本轮1406＝旧1404（全部不变）＋此前未列入清单的两现有selector文件；
+不是新增两业务文件或全仓清单。初版清单假设错误在写回执前拒绝，方法/日志保留。
+
+原一次提交/派发授权已经使用；本轮没有再次commit/push/dispatch、等待器/
+安排/取消/部署。当前策略仍要求单一直系4481子提交且旧测试不变，真实调用
+明确拒绝新的74f子提交，即使37个策略单测通过也不构成新源码准入。
+若继续仅镜像路径，须先单独审核/获准精确测试修正、固定74f→新候选链和
+对4481原质量输入的证明（包含可取到两级祖先的checkout），不能简单放宽
+parent/白名单、改质量来源或自动改跑全套。生产仍只沿用旧3564cbf/schema0060。
+
+### 前一验证脚本修正与受保护镜像补跑（历史，唯一派发已失败）
 
 用户报告[4481fa3/43578495558](https://github.com/foolkking/chat-reader/actions/runs/43578495558)
 的build-images失败，随后明确批准避免重跑全套质量矩阵：

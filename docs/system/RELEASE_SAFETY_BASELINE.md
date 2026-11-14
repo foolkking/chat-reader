@@ -119,7 +119,69 @@ This contract defines the Release A security and provenance gate. It does not ch
 
 ## Release gate
 
+### Authorized selector-fixture repair — 2026-11-14
+
+The user's subsequent explicit approval permits the exact selector fixture
+repair, its source proof, selective commit/push and **one image-only dispatch**.
+This supersedes the pending-approval diagnostic checkpoint below, not the
+immutable failure/dispatch evidence. Confirm the sole dispatch and immediately
+pause; do not poll results, wait, cancel, schedule, deploy or repeat submission.
+The independent `ci-image-only-selector-dispatch.json` owns the actual new run.
+
+Quality source remains exact4481fa37/43578495558/attempt1. The new guard first
+proves the fixed74f4636 commit has the sole4481 parent and the SHA-bound complete
+4618-entry Git mode/blob tree. It reruns the original strict one-line helper and
+workflow proof; that old verifier/patch and37 controls are not broadened.
+Then it requires a **single direct non-merge child of that exact74f**, not any
+additional parent/source. The only existing-test exception is the reviewed
+selector Git-fixture test SHA256
+`8bb1a861309ebb92bae29ea36c29e92a38b56d25d416ba09cab4d712daf1ffdd`;
+the original selector implementation remains byte-identical. All other old
+API/Web/Reader/Settings tests, fixtures, application/dependency/migration,
+resource sensors, helper and ORM7 remain unchanged. Whole-tree comparison
+also protects tracked inputs outside the selected local manifest.
+
+Only the named policy/checkout controls, nine existing owned documents, four
+byte-pinned historical diagnosis/dispatch receipts and two new independent
+local verification receipts are in scope. A second immutable patch
+`scripts/ci/image-only-selector-workflow-patch.json` derives the final workflow
+from exact74f: producer/consumer fetch-depth2→3, plus34 additive lineage tests
+in the existing negative-control step. Original37/Node commands and every
+original quality/resource/build/package/consumer body and order remain.
+Empty input still runs the complete six-job workflow; the only opt-in remains
+43578495558. Arbitrary test/workflow bytes, extra commits, missing ancestors,
+deletion/mode drift, changed attempt or missing/expired evidence fail closed.
+
+Both producer and independent consumer recompute the fixed chain and the
+original official quality proof. The manifest/OCI revision still names the
+actual new candidate; quality source is separately recorded. All five real
+memory cases, no-swap320/640MiB,64MiB growth, new image construction and immutable
+artifact checks run anew. ORM7 stays after memory measurement. No new custom
+job/step timeout or relaxation of native/platform bounds is introduced.
+
+Local original37/new34, clean/dirty Node77, actual depth3 qualification and ten
+Git/checkout rejections pass. The18 original policy functions, old constants,
+CLI body and original controls are unchanged; actionlint and78 Bash parses are
+static evidence only. After committing, actual `--preflight` must recheck the
+official source and full Git chain before normal push and the single dispatch.
+These checks do not accept images, Linux memory, new full-quality execution or
+production. [Independent verification](../evidence/reliability-2026-11-14/ci-image-only-selector-lineage-verification.json) /
+[single ledger](SMALL_HOST_IMPROVEMENT_STATUS.md).
+
 ### Authorized image-only control-plane repair — 2026-11-14
+
+**Historical first admission (used by fixed74f; current admission is above):**
+74f4636/43591310367 failed at the added
+Node control suite before quality provenance or image construction. The local
+selector-test fixture repair is outside this already used authorization.
+This policy and its pinned workflow patch remain unchanged; actual source
+qualification rejects a new child of74f4636 and the existing-test edit.
+Passing policy unittests is not acceptance of that new source. Any further
+image-only admission requires separately reviewed/authorized exact test bytes,
+fixed source lineage and original-quality input equivalence; do not relax the
+parent/allowlist, remove the failed test, choose another source or auto-dispatch.
+See the [failure](../evidence/reliability-2026-11-14/ci-image-only-failure.json)
+and [single ledger](SMALL_HOST_IMPROVEMENT_STATUS.md).
 
 The user expressly approved avoiding a repeated full quality matrix for the
 `4481fa3 / 43578495558` image-control-plane failure. This is a narrow exception,
@@ -127,8 +189,8 @@ not generic changed-area release admission. The six original jobs and commands
 remain; empty `quality_source_run_id` still runs all four quality jobs.
 There is no custom job/step timeout or change to native/resource bounds.
 
-The only accepted opt-in is `quality_source_run_id=43578495558`. The candidate
-must be one direct non-merge repair child of
+The original accepted opt-in was `quality_source_run_id=43578495558`. That
+first candidate had to be one direct non-merge repair child of
 `4481fa37c355a296ce878c214525d3273a8bfe20`. Whole-tree Git mode/blob comparison
 rejects application, dependency, existing test, fixture, migration, resource
 sensor and other configuration changes. The sole old-helper change is the

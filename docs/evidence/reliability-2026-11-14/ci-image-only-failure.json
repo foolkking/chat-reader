@@ -1,0 +1,230 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T12:20:51.055496+00:00",
+  "status": "official_image_only_control_test_failure_no_images_or_memory_execution",
+  "head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+  "workflow_run_id": "43591310367",
+  "workflow_run_attempt": 1,
+  "workflow_url": "https://github.com/foolkking/chat-reader/actions/runs/43591310367",
+  "workflow_path": ".github/workflows/build-release-images.yml",
+  "official_run_status": "completed",
+  "official_run_conclusion": "failure",
+  "builder_started_at": "2026-11-14T11:42:41Z",
+  "builder_completed_at": "2026-11-14T11:42:50Z",
+  "builder_elapsed_seconds": 9,
+  "official_jobs": [
+    {
+      "id": 132436424929,
+      "name": "build-images",
+      "run_id": 43591310367,
+      "run_attempt": 1,
+      "head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-14T11:42:41Z",
+      "completed_at": "2026-11-14T11:42:50Z"
+    },
+    {
+      "id": 132436425607,
+      "name": "web-quality",
+      "run_id": 43591310367,
+      "run_attempt": 1,
+      "head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T11:42:39Z",
+      "completed_at": "2026-11-14T11:42:39Z"
+    },
+    {
+      "id": 132436425772,
+      "name": "reading-performance-comparison",
+      "run_id": 43591310367,
+      "run_attempt": 1,
+      "head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T11:42:39Z",
+      "completed_at": "2026-11-14T11:42:39Z"
+    },
+    {
+      "id": 132436456549,
+      "name": "settings-quality",
+      "run_id": 43591310367,
+      "run_attempt": 1,
+      "head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T11:42:48Z",
+      "completed_at": "2026-11-14T11:42:39Z"
+    },
+    {
+      "id": 132436456850,
+      "name": "api-quality",
+      "run_id": 43591310367,
+      "run_attempt": 1,
+      "head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T11:42:48Z",
+      "completed_at": "2026-11-14T11:42:39Z"
+    },
+    {
+      "id": 132436466127,
+      "name": "inspect-release-artifact",
+      "run_id": 43591310367,
+      "run_attempt": 1,
+      "head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-14T11:42:50Z",
+      "completed_at": "2026-11-14T11:42:50Z"
+    }
+  ],
+  "sole_failed_step": "Image-only release policy negative controls",
+  "python_policy_controls": {
+    "passed": 37,
+    "failed": 0
+  },
+  "node_controls": {
+    "passed": 71,
+    "failed": 1,
+    "skipped": 0,
+    "total": 72
+  },
+  "failed_test": {
+    "path": "scripts/ci/changed-area-selector.test.mjs",
+    "original_line": 25,
+    "name": "selector classifies the current worktree without duplicate commands",
+    "assertion": "assert.ok(result.areas.includes(\"tooling\") || result.areas.includes(\"docs\"))",
+    "cause": "The test assumes ambient uncommitted docs/tooling; a clean checkout correctly has no changed areas.",
+    "previous_local_dirty_worktree_masked_failure": true
+  },
+  "not_executed_builder_steps": [
+    "Record verified release quality provenance",
+    "Run docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+    "Prepare pinned image bases with official-source fallback",
+    "Record image build metadata",
+    "Record artifact producer attempt",
+    "Build API and worker image",
+    "Start disposable PostgreSQL for the real memory gate",
+    "Verify real 320 MiB worker ZIP analysis and commit without swap",
+    "Verify bounded ZIP 100 and 500 MiB sources and long Markdown",
+    "Stop memory-gate PostgreSQL",
+    "Verify real ORM memory-control-plane status and source guards",
+    "Build Web image",
+    "Inspect release images",
+    "Package images and provenance",
+    "Upload deployable release artifact"
+  ],
+  "new_quality_successes": 0,
+  "four_quality_jobs_deliberately_skipped": true,
+  "source_provenance_executed": false,
+  "docker_or_image_build_executed": false,
+  "real_memory_or_new_orm_gates_executed": false,
+  "independent_consumer_executed": false,
+  "artifact_count": 0,
+  "diagnostic_zip_download_count": 0,
+  "not_a_new_null_oom_timeout_or_application_import_failure": true,
+  "annotation_levels": {
+    "failure": 1,
+    "warning": 2,
+    "notice": 1
+  },
+  "official_get_reads": [
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/runs/43591310367",
+      "requested_at": "2026-11-14T11:55:35.861863+00:00",
+      "received_at": "2026-11-14T11:55:37.765317+00:00",
+      "exit_code": 0,
+      "file": "official-run.json",
+      "bytes": 12509,
+      "sha256": "b629bb18ab47bd338e235dc23d8fb6121b66717d9fbe7c3d8b0a2aba7111cd39",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/runs/43591310367/attempts/1/jobs?per_page=100",
+      "requested_at": "2026-11-14T11:55:37.766317+00:00",
+      "received_at": "2026-11-14T11:55:39.017574+00:00",
+      "exit_code": 0,
+      "file": "official-attempt1-jobs.json",
+      "bytes": 9122,
+      "sha256": "2a84bd544d26c477b970338e835f60508b868dae38e8cd7f9673803c434aa9b2",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/runs/43591310367/artifacts?per_page=100",
+      "requested_at": "2026-11-14T11:55:39.018574+00:00",
+      "received_at": "2026-11-14T11:55:40.160340+00:00",
+      "exit_code": 0,
+      "file": "official-artifacts.json",
+      "bytes": 32,
+      "sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/jobs/132436424929/logs",
+      "requested_at": "2026-11-14T11:56:10.727792+00:00",
+      "received_at": "2026-11-14T11:56:13.378186+00:00",
+      "exit_code": 0,
+      "file": "build-images-official.log",
+      "bytes": 35581,
+      "sha256": "7c72ac61ca0267cf74f89957606a758328544bc812171c1b33ccadb06e381fb0",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/check-runs/132436424929",
+      "requested_at": "2026-11-14T11:56:13.381184+00:00",
+      "received_at": "2026-11-14T11:56:14.548278+00:00",
+      "exit_code": 0,
+      "file": "build-images-check.json",
+      "bytes": 3066,
+      "sha256": "8477c007f0be5b339ff993ba8be2075d12d2b52b9a30682842c2006d71a74719",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/check-runs/132436424929/annotations?per_page=100",
+      "requested_at": "2026-11-14T11:56:14.549280+00:00",
+      "received_at": "2026-11-14T11:56:15.737641+00:00",
+      "exit_code": 0,
+      "file": "build-images-annotations.json",
+      "bytes": 1725,
+      "sha256": "91d84f3d79a44ff1c1d9403db5ad68d98e4054d5cb4646cac18bc8e6c3b25341",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "official_log": {
+    "task_temp_relative_path": "build-images-official.log",
+    "bytes": 35581,
+    "sha256": "7c72ac61ca0267cf74f89957606a758328544bc812171c1b33ccadb06e381fb0"
+  },
+  "official_annotations": {
+    "task_temp_relative_path": "build-images-annotations.json",
+    "bytes": 1725,
+    "sha256": "91d84f3d79a44ff1c1d9403db5ad68d98e4054d5cb4646cac18bc8e6c3b25341"
+  },
+  "task_temp_directory_name": "reliability-ci-image-only-failure-20261114-13",
+  "dispatch_receipt_unchanged": {
+    "protected_file_count": 14,
+    "protected_drift": [],
+    "previous_task_12_file_count": 739,
+    "previous_task_12_drift": [],
+    "earlier_task_file_counts": {
+      "reliability-ci-timeout-diagnosis-fix-20261114-10": 2103,
+      "reliability-ci-platform-failure-fix-20261114-11": 2580
+    },
+    "earlier_task_drift": [],
+    "image_only_dispatch_receipt_sha256": "35fbb8b5ac69714f9a75ef0313c46efe4ad60a16de21cdf7ad3a7328bdf1c608",
+    "image_only_dispatch_original_bytes_preserved": true,
+    "offline_dispatch_original_sha256": "2e77c121c3a719b77d048808cfeb76f0329d7e0b501796bb97cd101fce4cc757",
+    "offline_dispatch_original_bytes_preserved": true,
+    "git_index_empty": true
+  },
+  "new_workspace_commit_push_dispatch_cancel_or_deployment": false,
+  "user_feedback_allowed_diagnosis_not_another_dispatch": true
+}

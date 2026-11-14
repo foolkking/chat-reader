@@ -2,9 +2,10 @@
 """Fail-closed, one-off reuse of the November 14 *quality* results.
 
 The normal empty-input workflow still runs all four quality jobs. The opt-in
-permits only the exact null-failure control-plane repair, never application,
-dependency, old-test, resource-gate or arbitrary workflow changes. Both image
-producer and independent artifact consumer verify the same source/proof.
+now requires the fixed source -> null-repair -> selector-fixture-repair lineage.
+Only the separately approved, SHA-bound selector test may change; application,
+dependency, quality-test, resource-gate and arbitrary workflow changes fail.
+Both image producer and independent artifact consumer verify the same proof.
 Only stdlib and the runner's existing Git/GitHub CLIs are used.
 """
 from __future__ import annotations
@@ -79,6 +80,36 @@ ARTIFACTS = (
         "digest": "sha256:9cacfb3003151f57d09142a1d7139d4b2dd2c455893d8a263481714fe0e55671",
     },
 )
+
+# The first image-only authorization was used by this exact commit. Keep its
+# original contract/verifier intact, and prove it before admitting one child.
+REPAIR_SHA = "74f4636e9d29098fb9a30bb42bdb7ada696373f8"
+REPAIR_TREE_SHA256 = "3c086ec82a03eca4a0f8d67c55a9268f76b1a8c61f39923ebfaf6be9264b9c8e"
+SELECTOR_POLICY = "selector-fixture-exact-lineage-2026-11-14"
+SELECTOR = "scripts/ci/changed-area-selector.mjs"
+SELECTOR_TEST = "scripts/ci/changed-area-selector.test.mjs"
+BASE_SELECTOR_SHA256 = "8cd2cb8c7636fd2d9fde05139ae27673df449fbf8026987b5de87d846f6df106"
+BASE_SELECTOR_TEST_SHA256 = "1fe0ebb0ae537ae481b3f8b2a7b3451e49148d1117edea4451731faaa1880d38"
+SELECTOR_TEST_SHA256 = "8bb1a861309ebb92bae29ea36c29e92a38b56d25d416ba09cab4d712daf1ffdd"
+SELECTOR_PATCH = "scripts/ci/image-only-selector-workflow-patch.json"
+SELECTOR_PATCH_SHA256 = "c73ffa3cc3d1dd9e046be767522eb7071a3ed4f9f90665cd86f835f2d224144f"
+POLICY_SCRIPT = "scripts/ci/image-only-quality-reuse.py"
+SELECTOR_CONTROL_TEST = "scripts/ci/test_image_only_selector_lineage.py"
+SELECTOR_HISTORICAL_EVIDENCE = {
+    "docs/evidence/reliability-2026-11-14/ci-image-only-dispatch.json":
+        "35fbb8b5ac69714f9a75ef0313c46efe4ad60a16de21cdf7ad3a7328bdf1c608",
+    "docs/evidence/reliability-2026-11-14/ci-image-only-failure.json":
+        "87caeb3feea4cbbe75f66dc505b3c105759b7dc0b19bf3bacb735aea1e12d5b7",
+    "docs/evidence/reliability-2026-11-14/ci-image-only-selector-verification.json":
+        "a014566d7400e1aa6c23fe19940cadb4732ba1a4db6d1bab7ba1acde4744efb8",
+    "docs/evidence/reliability-2026-11-14/ci-image-only-selector-inputs.json":
+        "6b5ddfd7cfbf1818b788d1f12cc1fdd57385d30fda3a79d138d45a21a04b7325",
+}
+SELECTOR_NEW_PATHS = {
+    SELECTOR_PATCH, SELECTOR_CONTROL_TEST, *SELECTOR_HISTORICAL_EVIDENCE,
+    "docs/evidence/reliability-2026-11-14/ci-image-only-selector-lineage-verification.json",
+    "docs/evidence/reliability-2026-11-14/ci-image-only-selector-lineage-inputs.json",
+}
 
 
 class GateError(RuntimeError):
@@ -172,10 +203,108 @@ def verify_equivalence(base_tree, candidate_tree, read_blob, parents, candidate_
     }
 
 
-def git_equivalence(head):
-    parents = git("rev-list", "--parents", "-n", "1", head).decode().strip().split()[1:]
-    return verify_equivalence(
-        tree(BASE_SHA), tree(head), lambda value: git("cat-file", "blob", value), parents, head,
+def tree_fingerprint(entries):
+    return digest("\n".join(
+        f"{name}\t{' '.join(entries[name])}" for name in sorted(entries)
+    ).encode())
+
+
+def approved_selector_workflow(previous, contract_bytes):
+    require(digest(contract_bytes) == SELECTOR_PATCH_SHA256,
+            "The reviewed selector workflow patch contract changed.")
+    contract = json.loads(contract_bytes)
+    require(contract["schema_version"] == 1 and contract["policy"] == SELECTOR_POLICY
+            and contract["base_sha"] == REPAIR_SHA, "Unknown selector workflow patch policy.")
+    require(digest(previous) == contract["base_workflow_sha256"],
+            "The selector patch requires the exact previous repair workflow.")
+    value = previous.decode("utf-8")
+    for operation in contract["replacements"]:
+        require(value.count(operation["before"]) == operation["count"],
+                "A reviewed selector workflow patch anchor is missing or duplicated.")
+        value = value.replace(operation["before"], operation["after"])
+    return value.encode("utf-8")
+
+
+def verify_selector_lineage(base_tree, repair_tree, candidate_tree, read_blob,
+                            repair_parents, parents, candidate_sha):
+    require(re.fullmatch(r"[0-9a-f]{40}", candidate_sha) and candidate_sha != REPAIR_SHA,
+            "A new full lowercase selector-repair candidate SHA is required.")
+    require(parents == [REPAIR_SHA],
+            "Selector repair requires one direct, non-merge child of the fixed74f repair.")
+    require(repair_parents == [BASE_SHA],
+            "The fixed74f repair must have the exact4481 quality-source parent.")
+    require(tree_fingerprint(repair_tree) == REPAIR_TREE_SHA256,
+            "The previous repair's complete Git mode/blob tree changed.")
+    # This is the original strict proof, not another parent added to its allowlist.
+    previous_proof = verify_equivalence(
+        base_tree, repair_tree, read_blob, repair_parents, REPAIR_SHA,
+    )
+    changes = sorted(
+        name for name in repair_tree.keys() | candidate_tree.keys()
+        if repair_tree.get(name) != candidate_tree.get(name)
+    )
+    allowed = DOC_PATHS | SELECTOR_NEW_PATHS | {WORKFLOW, POLICY_SCRIPT, SELECTOR_TEST}
+    require(not (set(changes) - allowed),
+            "Application/dependency/quality-test/resource or unapproved selector-repair file changed: "
+            + ", ".join(sorted(set(changes) - allowed)))
+    for name in changes:
+        require(name in candidate_tree and candidate_tree[name][0] == "100644",
+                f"Deletion, executable or link/mode change is not allowed: {name}")
+        if name in SELECTOR_NEW_PATHS:
+            require(name not in repair_tree and name not in base_tree,
+                    f"A new selector control/evidence path replaced existing source: {name}")
+    require({WORKFLOW, POLICY_SCRIPT, SELECTOR_TEST, SELECTOR_PATCH, SELECTOR_CONTROL_TEST}
+            <= set(changes), "All exact selector repair and lineage/workflow controls are required.")
+    require(digest(read_blob(base_tree[SELECTOR][1])) == BASE_SELECTOR_SHA256
+            and candidate_tree[SELECTOR] == repair_tree[SELECTOR] == base_tree[SELECTOR],
+            "The selector implementation must retain its original Git mode/blob.")
+    require(digest(read_blob(base_tree[SELECTOR_TEST][1])) == BASE_SELECTOR_TEST_SHA256
+            and repair_tree[SELECTOR_TEST] == base_tree[SELECTOR_TEST],
+            "The previous selector test is not the exact reviewed failure source.")
+    require(digest(read_blob(candidate_tree[SELECTOR_TEST][1])) == SELECTOR_TEST_SHA256,
+            "Only the exact approved selector Git-fixture test bytes may change.")
+    expected_workflow = approved_selector_workflow(
+        read_blob(repair_tree[WORKFLOW][1]), read_blob(candidate_tree[SELECTOR_PATCH][1]),
+    )
+    require(read_blob(candidate_tree[WORKFLOW][1]) == expected_workflow,
+            "Workflow changes exceed the byte-exact selector checkout/control contract.")
+    for name, expected_digest in SELECTOR_HISTORICAL_EVIDENCE.items():
+        require(name in candidate_tree and name not in repair_tree
+                and digest(read_blob(candidate_tree[name][1])) == expected_digest,
+                f"The historical selector diagnostic/dispatch bytes must be preserved: {name}")
+    final_changes = sorted(
+        name for name in base_tree.keys() | candidate_tree.keys()
+        if base_tree.get(name) != candidate_tree.get(name)
+    )
+    unchanged = {name: base_tree[name] for name in base_tree if name not in final_changes}
+    return {
+        "policy": SELECTOR_POLICY, "base_sha": BASE_SHA, "candidate_sha": candidate_sha,
+        "previous_repair_sha": REPAIR_SHA, "verified_lineage": [BASE_SHA, REPAIR_SHA, candidate_sha],
+        "direct_repair_parent_verified": True, "previous_repair_parent_verified": True,
+        "previous_repair_tree_sha256": REPAIR_TREE_SHA256,
+        "previous_repair_source_equivalence": previous_proof,
+        "changed_paths": final_changes, "selector_repair_changed_paths": changes,
+        "unchanged_tracked_files": len(unchanged),
+        "unchanged_tree_sha256": tree_fingerprint(unchanged),
+        "application_dependency_and_quality_test_changes": 0,
+        "approved_existing_selector_test_changes": 1,
+        "exact_selector_fixture_fix_verified": True, "selector_test_sha256": SELECTOR_TEST_SHA256,
+        "selector_implementation_sha256": BASE_SELECTOR_SHA256,
+        "exact_null_failure_fix_verified": True, "original_workflow_gates_preserved": True,
+        "workflow_patch_sha256": PATCH_SHA256,
+        "selector_workflow_patch_sha256": SELECTOR_PATCH_SHA256,
+        "historical_evidence_sha256": SELECTOR_HISTORICAL_EVIDENCE,
+    }
+
+
+def git_equivalence(head, *, cwd=REPO):
+    def parents(revision):
+        return git("rev-list", "--parents", "-n", "1", revision, cwd=cwd).decode().strip().split()[1:]
+
+    return verify_selector_lineage(
+        tree(BASE_SHA, cwd=cwd), tree(REPAIR_SHA, cwd=cwd), tree(head, cwd=cwd),
+        lambda value: git("cat-file", "blob", value, cwd=cwd),
+        parents(REPAIR_SHA), parents(head), head,
     )
 
 

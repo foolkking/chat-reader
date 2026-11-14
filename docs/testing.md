@@ -7,7 +7,61 @@ run/attempt/job; no seeder admission, native operation deadline, memory or
 test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
-## Image-only control-plane repair — 2026-11-14
+## Exact selector-repair lineage controls — local 2026-11-14
+
+The separately approved repair pins the fixture's exact Git/LF bytes and the
+4481→fixed74f→single-direct-candidate chain. The original37 controls/patch remain
+unchanged;34 additional controls reject wrong lineage, old/new test changes,
+workflow/resource drift and rewritten historical evidence. Every original
+policy function except the Git-entry wrapper, all old constants and CLI body
+retain their AST. Producer and consumer fetch three commits and independently
+verify the same chain and official quality source.
+
+Local original37/new34, package selector7 and Node77 pass. In an isolated real
+depth3 clone, original37/new34 and clean/dirty Node77 pass without skips; depth2
+is rejected rather than selecting another source. Ten actual Git/checkout
+negative checks include wrong fixture bytes, workflow, application, extra
+commit and index/untracked drift. Repeated runs are not additional unique cases.
+Actionlint1.7.12 and78 Bash parses pass without executing workflow commands.
+No new API/Web/PWA/real-PG/Linux/image or product acceptance is claimed.
+
+```text
+python -m unittest discover -s scripts/ci -p 'test_image_only_quality_reuse.py' -v
+python -m unittest discover -s scripts/ci -p 'test_image_only_selector_lineage.py' -v
+corepack pnpm run test:ci-tools
+```
+
+The CI Bash step also retains `node --test scripts/ci/*.test.mjs`. Set the
+explicit task/runner TEMP before local controls. All original five memory
+cases/ORM7/image/independent consumer gates run anew after the single dispatch;
+default empty input retains full quality. Confirm dispatch then pause, not
+wait for acceptance. [Current policy](system/RELEASE_SAFETY_BASELINE.md#authorized-selector-fixture-repair--2026-11-14) /
+[independent verification](evidence/reliability-2026-11-14/ci-image-only-selector-lineage-verification.json).
+
+## Earlier deterministic changed-area fixture diagnosis — local 2026-11-14
+
+The newly added image-only control command exposed an old selector test's
+dependency on uncommitted docs/tooling. CI43591310367 stopped with policy37
+passing and Node71/1; no provenance/image/memory operation ran.
+An exact clean local checkout reproduces the same Node71/1. The selector
+implementation is unchanged; only `changed-area-selector.test.mjs` now creates
+isolated synthetic Git fixtures under explicit task/runner TEMP.
+
+The two original scenarios keep their classification, duplicate-command and
+complete-release-gate assertions. Five added controls cover default clean
+checkout, staged-plus-unstaged deduplication, committed-range isolation, all
+feedback areas and invalid-revision exit2. Fixtures do not inherit user Git
+configuration/signing/hooks; recursive cleanup checks the fixture's absolute
+direct-child and link boundaries first. No real worktree data supplies a case.
+Clean and synthetic-dirty isolated suites both pass77 without skips, and
+unchanged policy unittests pass37. Neither is new full-quality/Linux acceptance.
+
+The existing direct4481 image-only policy is not widened and rejects the new
+local test/lineage. Another commit/dispatch requires separate scope approval.
+See [local verification](evidence/reliability-2026-11-14/ci-image-only-selector-verification.json)
+and the [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md).
+
+## Earlier image-only control-plane repair — 2026-11-14
 
 The observed4481fa3 image job failed while reading valid `failure:null`, before
 the full real-memory verification. `verify_small_zip_memory.py` changes only

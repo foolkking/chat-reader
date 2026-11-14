@@ -691,12 +691,13 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          fetch-depth: 2
+          fetch-depth: 3
 
       - name: Image-only release policy negative controls
         if: ${{ inputs.quality_source_run_id != '' }}
         run: |
           python3 -m unittest discover -s scripts/ci -p 'test_image_only_quality_reuse.py' -v
+          python3 -m unittest discover -s scripts/ci -p 'test_image_only_selector_lineage.py' -v
           node --test scripts/ci/*.test.mjs
 
       - name: Record verified release quality provenance
@@ -834,7 +835,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          fetch-depth: 2
+          fetch-depth: 3
 
       - name: Require the successful producer's artifact reference
         run: |

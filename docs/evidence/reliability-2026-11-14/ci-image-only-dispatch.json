@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "status": "image_only_dispatched_pause_until_user_feedback",
+  "recorded_at": "2026-11-14T11:42:39.425935+00:00",
+  "head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+  "parent_sha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+  "workflow_run_id": "43591310367",
+  "workflow_url": "https://github.com/foolkking/chat-reader/actions/runs/43591310367",
+  "workflow": "build-release-images.yml",
+  "ref": "master",
+  "inputs": {
+    "quality_source_run_id": "43578495558"
+  },
+  "mode": "authorized-image-only",
+  "selectively_committed_file_count": 19,
+  "force_push": false,
+  "dispatch_call_count": 1,
+  "dispatch_requested_at": "2026-11-14T11:42:33.655816+00:00",
+  "dispatch_response_received_at": "2026-11-14T11:42:35.700091+00:00",
+  "dispatch_response": {
+    "exit_code": 0,
+    "http_status": 204,
+    "stdout_bytes": 1434,
+    "stdout_sha256": "487b230df0c7d2513bba76c5ca504908b3ebbd79b032db60518b65bc66656c4a",
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "fresh_remote_head_read": {
+    "endpoint": "repos/foolkking/chat-reader/git/ref/heads/master",
+    "requested_at": "2026-11-14T11:42:31.640453+00:00",
+    "received_at": "2026-11-14T11:42:32.826589+00:00",
+    "exit_code": 0,
+    "response_bytes": 347,
+    "response_sha256": "986244e5a10e3c02e3d888191749bdf1c7911aca889fec7c24cef812da859fb2"
+  },
+  "predispatch_dedup_read": {
+    "endpoint": "repos/foolkking/chat-reader/actions/workflows/build-release-images.yml/runs?head_sha=74f4636e9d29098fb9a30bb42bdb7ada696373f8&event=workflow_dispatch&per_page=100",
+    "requested_at": "2026-11-14T11:42:32.826589+00:00",
+    "received_at": "2026-11-14T11:42:33.654816+00:00",
+    "exit_code": 0,
+    "response_bytes": 36,
+    "response_sha256": "a2790a384d7d281e7395679000c35d27768d89dbd7052f725b8f4688beb59915"
+  },
+  "official_creation_confirmation_reads": [
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/workflows/build-release-images.yml/runs?head_sha=74f4636e9d29098fb9a30bb42bdb7ada696373f8&event=workflow_dispatch&per_page=100",
+      "requested_at": "2026-11-14T11:42:35.701090+00:00",
+      "received_at": "2026-11-14T11:42:36.511862+00:00",
+      "exit_code": 0,
+      "response_bytes": 36,
+      "response_sha256": "a2790a384d7d281e7395679000c35d27768d89dbd7052f725b8f4688beb59915"
+    },
+    {
+      "endpoint": "repos/foolkking/chat-reader/actions/workflows/build-release-images.yml/runs?head_sha=74f4636e9d29098fb9a30bb42bdb7ada696373f8&event=workflow_dispatch&per_page=100",
+      "requested_at": "2026-11-14T11:42:38.513300+00:00",
+      "received_at": "2026-11-14T11:42:39.421939+00:00",
+      "exit_code": 0,
+      "response_bytes": 12537,
+      "response_sha256": "7818dca33dfeac4df1ac0a5e762c953424c950655d6428fdc263fb2551611e54"
+    }
+  ],
+  "official_run_confirmation": {
+    "id": 43591310367,
+    "head_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+    "head_branch": "master",
+    "event": "workflow_dispatch",
+    "run_attempt": 1,
+    "path": ".github/workflows/build-release-images.yml",
+    "created_at": "2026-11-14T11:42:37Z",
+    "html_url": "https://github.com/foolkking/chat-reader/actions/runs/43591310367"
+  },
+  "confirmation_only_not_ci_result_waiting": true,
+  "quality_source": {
+    "sha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+    "workflow_run_id": "43578495558",
+    "workflow_run_attempt": 1,
+    "verified_before_dispatch": true,
+    "actual_cli_preflight_sha256": "0c74a8d5ace1afcfacdca8a3fd43c9bf49df862bc78dee8eaa90f1b3e8a9de31",
+    "source_equivalence": {
+      "policy": "null-failure-control-plane-2026-11-14",
+      "base_sha": "4481fa37c355a296ce878c214525d3273a8bfe20",
+      "candidate_sha": "74f4636e9d29098fb9a30bb42bdb7ada696373f8",
+      "direct_repair_parent_verified": true,
+      "changed_paths": [
+        ".github/workflows/build-release-images.yml",
+        "PROJECT_STATE.md",
+        "apps/api/scripts/test_verify_small_zip_memory.py",
+        "apps/api/scripts/verify_small_zip_memory.py",
+        "docs/deployment.md",
+        "docs/documentation-inventory.md",
+        "docs/evidence/README.md",
+        "docs/evidence/reliability-2026-11-14/ci-build-images-failure.json",
+        "docs/evidence/reliability-2026-11-14/ci-image-only-inputs.json",
+        "docs/evidence/reliability-2026-11-14/ci-image-only-verification.json",
+        "docs/evidence/reliability-2026-11-14/ci-offline-optional-dispatch.json",
+        "docs/index.md",
+        "docs/system/DEPLOYMENT_AND_ENVIRONMENT.md",
+        "docs/system/RELEASE_SAFETY_BASELINE.md",
+        "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md",
+        "docs/testing.md",
+        "scripts/ci/image-only-quality-reuse.py",
+        "scripts/ci/image-only-workflow-patch.json",
+        "scripts/ci/test_image_only_quality_reuse.py"
+      ],
+      "unchanged_tracked_files": 4599,
+      "unchanged_tree_sha256": "14e29deed37218bb833a1bb65a7c08863f49fab1c0a5a40381c517c55a68947b",
+      "application_dependency_and_existing_test_changes": 0,
+      "exact_null_failure_fix_verified": true,
+      "original_workflow_gates_preserved": true,
+      "workflow_patch_sha256": "7c64c286ccb658c6c4f80a2868744c843fe3a036f51d66c41fbd155e02b47d01"
+    }
+  },
+  "original_images_or_memory_results_reused": false,
+  "all_five_original_real_memory_and_independent_artifact_gates_must_run_anew": true,
+  "custom_job_step_timeout_fields": 0,
+  "github_hosted_job_cap_hours": 6,
+  "original_native_test_worker_pg_resource_frame_gates_preserved": true,
+  "frozen_input_count": 1404,
+  "input_drift_before_dispatch": [],
+  "protected_file_count": 13,
+  "protected_files_preserved": true,
+  "previous_dispatch_original_sha256": "2e77c121c3a719b77d048808cfeb76f0329d7e0b501796bb97cd101fce4cc757",
+  "previous_dispatch_original_bytes_preserved": true,
+  "status_polls_after_confirmation": 0,
+  "waiter_started": false,
+  "automation_created": false,
+  "cancellation_requests": 0,
+  "production_operations": 0,
+  "deployment_performed": false,
+  "ci_images_memory_or_release_accepted": false,
+  "after_confirmation": "Paused immediately; wait for the user's result, never automatically resubmit."
+}

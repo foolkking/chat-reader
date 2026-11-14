@@ -2,6 +2,30 @@
 
 ## 当前候选：可靠性整块治理 — 2026-11-14
 
+用户已单独批准精确selector夹具及来源链修正、选择性提交/推送和一次仅镜像CI。
+当前准入固定4481→74f→单一直系候选，先验证74f全Git树及原严格修复证明，
+再绑定唯一测试SHA；原37控制和补丁不改，新增34控制及两处depth3检出。
+原37/新增34、干净与合成脏Node77、真实Git准入/十项拒绝、静态语法均通过；
+不等于新完整质量、Linux内存/镜像或生产验收。全部资源/制品门禁仍须新跑。
+确认唯一派发后立即暂停，不回查/安排/取消/部署，由用户反馈。
+新`ci-image-only-selector-dispatch.json`出现后禁止重复派发。
+[当前发布合同](system/RELEASE_SAFETY_BASELINE.md#authorized-selector-fixture-repair--2026-11-14) /
+[独立验证](evidence/reliability-2026-11-14/ci-image-only-selector-lineage-verification.json) /
+[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+### 前一镜像控制失败与本地诊断（历史）
+
+镜像补跑74f4636/CI43591310367已失败：新增控制步骤中策略37通过、Node71/1，
+镜像、内存和来源证明尚未执行，制品0。原selector测试依赖脏工作区；
+本地改为独立Git夹具，保留两原场景并追加五项，干净/脏检出均77项通过。
+原发布策略未扩大，拒绝后续新parent及旧测试变更；再次仅镜像提交/派发须
+单独审核并获准，不能直接重跑或绕过门禁。未提交/推送/派发或操作生产。
+[本次失败](evidence/reliability-2026-11-14/ci-image-only-failure.json) /
+[本地修正](evidence/reliability-2026-11-14/ci-image-only-selector-verification.json) /
+[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+### 前一受保护镜像补跑检查点（历史，原严格证明保留）
+
 最新授权：修正4481fa3/CI43578495558的镜像验证脚本，并只补跑镜像路径。
 正式结果确认四项质量job成功，Settings470+独立restore1完整通过；
 build-images在正常`failure:null`状态读取时崩溃，资源报告不完整，不是内存通过。

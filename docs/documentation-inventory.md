@@ -1,6 +1,34 @@
 # Markdown 文档台账
 
-## 受保护镜像补跑与null状态修正 — 2026-11-14
+## 精确selector来源链修正与单次派发授权 — 2026-11-14
+
+用户另行批准精确测试/来源策略/检出证明、选择性提交/推送和一次仅镜像CI。
+仅定点同步原九份文档的当前入口、唯一台账、发布/测试/环境合同及证据索引；
+不整理全仓、改AGENTS/全局记忆或重写旧回执。旧三份诊断和派发保留原时点/
+字节，新增独立`ci-image-only-selector-lineage-verification.json`与输入清单
+区分本轮授权、固定全Git链、原37/新增34、clean/dirty Node77、真实浅克隆
+及静态证明，不把它们当作新完整质量/Linux内存/镜像或生产验收。
+原SHA workflow补丁保留；新增第二份精确补丁只调整两处depth3和追加控制，
+正式来源/已提交Git的CLI预检在提交后重新执行，不用旧缓存充当官方核验。
+实际candidate/run另由`ci-image-only-selector-dispatch.json`登记；确认唯一
+派发即暂停，无结果轮询/等待器/安排/取消/部署，回执出现后禁止重复派发。
+其余应用/依赖/原质量用例、资源/制品门禁、资料/配置/唯一备份和无关文件保全。
+
+## 前一控制失败与独立Git夹具诊断（历史）— 2026-11-14
+
+用户反馈74f4636/43591310367失败后，定点同步Project State、导航、唯一台账、
+Release Safety、Testing、Deployment/环境和证据索引；不重整全仓、改AGENTS/
+全局记忆或旧证据。新增独立`ci-image-only-failure.json`保存正式九秒builder、
+策略37/Node71-1、镜像/来源证明未执行、制品0及六次GET/原始日志指纹。
+`ci-image-only-selector-verification.json`和输入清单保存干净精确红测、两原
+场景/五新增Git夹具、干净/脏Node77及原策略37，未运行新Linux资源/完整CI。
+只改selector测试、不改实现/业务/依赖/workflow/资源门禁；原直系parent/旧
+测试不变策略明确仍拒绝新候选。再次仅镜像范围须单独审核/批准，未commit/
+push/dispatch或部署；原派发/10–12目录现场和无关文件保全。
+1406清单＝原1404不变＋两现有selector文件，非新增业务源文件或全仓数量；
+清单初版方法拒绝在写回执前，原方法/日志保留，不掩盖或改写旧输入证明。
+
+## 前一受保护镜像补跑与null状态修正（历史）— 2026-11-14
 
 按用户明确批准，仅定点同步Project State、导航、唯一台账、Release Safety、
 Testing、Deployment/环境和事实证据索引；不整理全仓、改AGENTS/全局记忆

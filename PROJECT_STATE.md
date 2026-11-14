@@ -1,6 +1,59 @@
 # Project State
 
-## Reliability candidate — 2026-11-14 (authorized image-only repair; pause after dispatch)
+## Reliability candidate — 2026-11-14 (exact selector-lineage repair authorized)
+
+The user separately approved the exact selector fixture patch, source-lineage
+proof, selective commit/push and **one image-only dispatch**. Confirm the sole
+dispatch, then immediately pause: no result polling, waiter, automation,
+cancellation or deployment. The new independent
+`ci-image-only-selector-dispatch.json` will own the actual candidate/run;
+once present, do not repeat the pending submission.
+
+Admission now proves **4481fa3 → fixed74f4636 → one direct non-merge candidate**.
+The entire prior mode/blob tree and original strict repair proof are verified;
+only the SHA-bound selector test and necessary policy/checkout controls may
+change. The original37 controls/patch/helper/ORM7 and all application, dependency,
+API/Web/Reader/Settings, fixture and resource inputs remain unchanged.
+Producer and consumer fetch exactly three ancestry levels; the new pinned patch
+adds only those two depth changes and34 additive controls. Default empty input
+still runs all six jobs; only43578495558 is a quality source. All five memory
+cases, image builds and independent artifact gates must run anew.
+
+Local original37/new34, package7 and clean/dirty Node77 pass. Real depth3 Git
+qualification succeeds; depth2 and ten actual Git/checkout negative controls
+fail closed. Actionlint1.7.12 and78 Bash parses pass without shell execution.
+This is not new Linux/image/memory/full-quality or production acceptance.
+[Current release policy](docs/system/RELEASE_SAFETY_BASELINE.md#authorized-selector-fixture-repair--2026-11-14) /
+[independent verification](docs/evidence/reliability-2026-11-14/ci-image-only-selector-lineage-verification.json) /
+[single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md).
+
+### Earlier image-only failure and local fixture diagnosis (history)
+
+The sole image-only dispatch **74f4636 / CI43591310367** completed/failure.
+Its nine-second builder stopped at the added negative-control step: policy37
+passed, Node71/1 failed. Provenance, Docker construction, all memory/ORM gates
+and the consumer did not execute; there are zero artifacts. The four quality
+jobs were deliberately skipped, not new quality successes.
+[Independent failure](docs/evidence/reliability-2026-11-14/ci-image-only-failure.json).
+
+The unchanged local selector test assumed uncommitted docs/tooling existed.
+A clean exact checkout reproduces that failure; synthetic ambient changes
+make it pass. The local repair changes only that test to isolated Git fixtures,
+retains its two original scenarios/assertions and adds five controls. Selector,
+application, dependencies, workflows and resource inputs remain unchanged.
+Clean and dirty isolated Node suites both pass77; unchanged policy unittests
+pass37. This is local control verification, not Linux/images/release acceptance.
+[Verification](docs/evidence/reliability-2026-11-14/ci-image-only-selector-verification.json).
+
+The original direct4481/unchanged-existing-test policy is **not extended**:
+actual qualification rejects a new repair child of74f4636. Another image-only
+commit/dispatch needs separate review/approval of the exact fixture patch and
+source-lineage proof, not a relaxed parent/allowlist. No new workspace commit,
+push, CI dispatch, waiter, automation, cancellation or production operation.
+Progress and the pending authorization stay in the
+[single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md).
+
+### Earlier authorized image-only checkpoint (history; original proof preserved)
 
 The user reported **4481fa3 / CI43578495558** failed only at build-images.
 Official attempt1 confirms API/Web/Settings/reading comparison succeeded;
