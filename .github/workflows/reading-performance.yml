@@ -16,7 +16,6 @@ permissions:
 jobs:
   compare:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
     env:
       APP_ENV: test
       DATABASE_URL: postgresql+psycopg://chat_reader:chat_reader_ci@127.0.0.1:5432/chat_reader
@@ -50,7 +49,6 @@ jobs:
           mkdir -p "$RUNNER_TEMP/reading-comparison"
           cp apps/web/e2e/reader-capacity.spec.ts "$RUNNER_TEMP/reading-comparison/harness.ts"
       - name: Baseline then candidate on the same isolated runner
-        timeout-minutes: 105
         shell: bash
         run: |
           set -euo pipefail

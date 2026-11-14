@@ -2,6 +2,19 @@
 
 ## 当前候选：可靠性整块治理 — 2026-11-14
 
+11月14日本轮最新指示：修复、选择性提交/推送、只派发一次完整精确CI，
+不设项目job/step总限时；确认后立即暂停，不等待/轮询、建安排或部署，
+由用户反馈结果。GitHub每job仍有六小时平台上限，原用例/worker/PG/
+内存/逐帧与发布门禁不变。轻量核对修复最终API307/60跳过（含新增19项）、
+CI脚本72、静态/单head通过；1398输入及十三保护文件无漂移。
+[本批验证](evidence/reliability-2026-11-14/ci-settings-completion-verification.json) /
+[本机诊断](evidence/reliability-2026-11-14/ci-settings-completion-import-diagnosis.json) /
+[前次530a55b超时回执](evidence/reliability-2026-11-14/ci-settings-completion-failure.json)。
+当前执行以[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)及随后独立
+`ci-settings-completion-dispatch.json`为准；回执出现后不得根据旧“待派发”重提交。
+
+### 前一冷启动及发布检查点（历史）
+
 11月13日最新指示：验收由用户完成，本任务负责选择性提交/推送、等待完整
 精确CI，成功后按安全流程备份/迁移/部署。既有自动门禁不放宽，
 不清理生产、不重放用户资料；下方较早的“未授权再次提交”是历史边界。

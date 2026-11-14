@@ -1,5 +1,21 @@
 # 事实证据索引
 
+## 无项目CI总限时的完成观察 — 2026-11-14（派发后暂停）
+
+[前次530a55b超时](reliability-2026-11-14/ci-settings-completion-failure.json)
+保留CI43556068261的431打印通过、六项终止窗口失败及未完成470+restore1；
+正式四日志/三ZIP已核验，不是可部署制品或新CI验收，中止等待未伪称完成。
+[本机实际核对诊断](reliability-2026-11-14/ci-settings-completion-import-diagnosis.json)
+使用既有轻量归档投影，三路径各三次Windows内存SQLite前后对照；
+不冒充Linux/整次CI加速。[最终验证](reliability-2026-11-14/ci-settings-completion-verification.json)
+与[1398输入](reliability-2026-11-14/ci-settings-completion-inputs.json)登记
+API307通过/60显式集成或平台跳过（含新增19）、CI72、静态/单head，
+十三保护文件/09目录1790文件无漂移，旧548输入未变不称新构建。
+两个workflow取消39个自设job/step总限时，原门禁不变；每job仍受GitHub六小时
+平台上限。新CI精确身份/阶段计时不改变退出状态或替代完整矩阵。
+随后独立`ci-settings-completion-dispatch.json`登记唯一提交/派发；
+确认后立即暂停，不轮询/等待器/安排/部署，由用户反馈CI结果。
+
 ## 冷启动最小修复本地回归 — 2026-11-14（非发布验收）
 
 [导入诊断](reliability-2026-11-14/ci-worker-startup-import-diagnosis.json)记录9a

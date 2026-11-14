@@ -1,5 +1,22 @@
 # Markdown 文档台账
 
+## CI完成耗时观察与暂停边界 — 2026-11-14
+
+按用户最新明确授权，两个workflow移除39个自设job/step总限时字段；
+不是提高用例/worker/PG/资源/逐帧预算。GitHub每job六小时平台限制仍在，
+确认唯一派发后立即暂停，不等待/轮询、建立安排或部署。
+定点同步Project State、导航、唯一台账、Testing、Deployment/环境及
+Observability的轻量核对合同；不重整目录、改AGENTS/全局记忆或旧证据。
+原`ci-worker-startup-dispatch.json`按原字节纳入本次选择性提交，描述其旧时点。
+新增`ci-settings-completion-failure.json`保存530a55b的正式超时及431/六项
+尾部失败、不完整gate、四日志/三ZIP和中止等待的真实记录；
+`ci-settings-completion-import-diagnosis.json`保存Windows实际内存核对前后
+三路径各三样本，不外推Linux/整次CI。`ci-settings-completion-verification.json`
+及1398输入记录新最终API307/60、CI72、静态/单head、workflow/AST保留、
+十三保护文件及09目录1790文件保全。旧548构建输入未变，不称新build/PWA。
+随后独立`ci-settings-completion-dispatch.json`只登记实际提交及唯一run；
+其存在后保持暂停，由用户反馈结果，不继承任何旧run的局部成功。
+
 ## 可靠性发布授权 — 2026-11-13（CI失败，修复待发布）
 
 按最新“验收由用户做，提交/等待CI/部署由本任务做”更新同一状态台账、

@@ -1,0 +1,540 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T06:13:21.049797+00:00",
+  "parent_revision": "530a55b2a1d01162b9e7ddab1c9d4c555108dfc3",
+  "status": "Windows-in-memory-diagnostic-not-release-acceptance",
+  "same_layout_source_files": 308,
+  "only_changed_source": "app/services/execution_reconciliation.py",
+  "comparison": {
+    "content_noise_scan": {
+      "samples_per_source": 3,
+      "before_median_seconds": 0.7535691000521183,
+      "after_median_seconds": 0.05326710001099855,
+      "before_additional_module_counts": [
+        283,
+        283,
+        283
+      ],
+      "after_additional_module_counts": [
+        11,
+        11,
+        11
+      ],
+      "before_unselected_handlers": [
+        "app.services.exporting.system_archive_jobs",
+        "app.services.exporting.system_archive",
+        "app.services.exporting.system_archive_preflight",
+        "app.services.exporting.archive_jobs",
+        "app.services.exporting.personal_archive",
+        "app.services.exporting.personal_restore",
+        "app.services.editing.message_edit_service",
+        "app.services.search.search_indexer"
+      ],
+      "after_unselected_handlers": []
+    },
+    "conversation_export": {
+      "samples_per_source": 3,
+      "before_median_seconds": 0.8327014000387862,
+      "after_median_seconds": 0.0541343999793753,
+      "before_additional_module_counts": [
+        283,
+        283,
+        283
+      ],
+      "after_additional_module_counts": [
+        11,
+        11,
+        11
+      ],
+      "before_unselected_handlers": [
+        "app.services.exporting.system_archive_jobs",
+        "app.services.exporting.system_archive",
+        "app.services.exporting.system_archive_preflight",
+        "app.services.exporting.archive_jobs",
+        "app.services.exporting.personal_archive",
+        "app.services.exporting.personal_restore",
+        "app.services.editing.message_edit_service",
+        "app.services.search.search_indexer"
+      ],
+      "after_unselected_handlers": []
+    },
+    "system_archive_export": {
+      "samples_per_source": 3,
+      "before_median_seconds": 0.7722936000209302,
+      "after_median_seconds": 0.16395409998949617,
+      "before_additional_module_counts": [
+        284,
+        284,
+        284
+      ],
+      "after_additional_module_counts": [
+        26,
+        26,
+        26
+      ],
+      "before_unselected_handlers": [
+        "app.services.exporting.system_archive_jobs",
+        "app.services.exporting.system_archive",
+        "app.services.exporting.system_archive_preflight",
+        "app.services.exporting.archive_jobs",
+        "app.services.exporting.personal_archive",
+        "app.services.exporting.personal_restore",
+        "app.services.editing.message_edit_service",
+        "app.services.search.search_indexer"
+      ],
+      "after_unselected_handlers": []
+    }
+  },
+  "before": {
+    "recorded_at": "2026-11-14T05:41:30.073443+00:00",
+    "label": "before",
+    "source_files": 308,
+    "source_manifest_sha256": "a449f9dcb168cad421a64c5cec05e177608e0b405aee114faadf8e9f6c89d822",
+    "probe_sha256": "c663f4e46c3269c129201873008628269475ce6523355b533597c3c836c1d00c",
+    "fixture_test_sha256": "e19aa017f97fbf03950ea3cab4307ae0113ccd7976e8c77e37a45a18ddc054cb",
+    "samples": [
+      {
+        "reconcile_seconds": 1.1063741999678314,
+        "additional_module_count": 283,
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ],
+        "diagnostic_only": true,
+        "job_type": "conversation_export",
+        "reason": "user",
+        "status": "cancelled",
+        "unselected_archive_handlers_loaded": true,
+        "idempotent_archive_audit": true,
+        "sample": 1,
+        "process_seconds": 3.3372231000103056
+      },
+      {
+        "reconcile_seconds": 0.7977067000465468,
+        "additional_module_count": 283,
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ],
+        "diagnostic_only": true,
+        "job_type": "content_noise_scan",
+        "reason": "stalled",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": true,
+        "idempotent_archive_audit": true,
+        "sample": 1,
+        "process_seconds": 2.878718200023286
+      },
+      {
+        "reconcile_seconds": 0.7722936000209302,
+        "additional_module_count": 284,
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ],
+        "diagnostic_only": true,
+        "job_type": "system_archive_export",
+        "reason": "admin",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": true,
+        "idempotent_archive_audit": true,
+        "sample": 1,
+        "process_seconds": 2.8574030000017956
+      },
+      {
+        "reconcile_seconds": 0.7581191000062972,
+        "additional_module_count": 283,
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ],
+        "diagnostic_only": true,
+        "job_type": "conversation_export",
+        "reason": "user",
+        "status": "cancelled",
+        "unselected_archive_handlers_loaded": true,
+        "idempotent_archive_audit": true,
+        "sample": 2,
+        "process_seconds": 2.7502518000546843
+      },
+      {
+        "reconcile_seconds": 0.7535691000521183,
+        "additional_module_count": 283,
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ],
+        "diagnostic_only": true,
+        "job_type": "content_noise_scan",
+        "reason": "stalled",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": true,
+        "idempotent_archive_audit": true,
+        "sample": 2,
+        "process_seconds": 2.8105076999636367
+      },
+      {
+        "reconcile_seconds": 0.7449421999044716,
+        "additional_module_count": 284,
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ],
+        "diagnostic_only": true,
+        "job_type": "system_archive_export",
+        "reason": "admin",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": true,
+        "idempotent_archive_audit": true,
+        "sample": 2,
+        "process_seconds": 2.7982490999856964
+      },
+      {
+        "reconcile_seconds": 0.8327014000387862,
+        "additional_module_count": 283,
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ],
+        "diagnostic_only": true,
+        "job_type": "conversation_export",
+        "reason": "user",
+        "status": "cancelled",
+        "unselected_archive_handlers_loaded": true,
+        "idempotent_archive_audit": true,
+        "sample": 3,
+        "process_seconds": 2.888751000049524
+      },
+      {
+        "reconcile_seconds": 0.6980563999386504,
+        "additional_module_count": 283,
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ],
+        "diagnostic_only": true,
+        "job_type": "content_noise_scan",
+        "reason": "stalled",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": true,
+        "idempotent_archive_audit": true,
+        "sample": 3,
+        "process_seconds": 2.6804546000203118
+      },
+      {
+        "reconcile_seconds": 0.8203209000639617,
+        "additional_module_count": 284,
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ],
+        "diagnostic_only": true,
+        "job_type": "system_archive_export",
+        "reason": "admin",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": true,
+        "idempotent_archive_audit": true,
+        "sample": 3,
+        "process_seconds": 2.9595844000577927
+      }
+    ],
+    "summary": {
+      "content_noise_scan": {
+        "samples": 3,
+        "median_reconcile_seconds": 0.7535691000521183,
+        "additional_module_counts": [
+          283,
+          283,
+          283
+        ],
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ]
+      },
+      "conversation_export": {
+        "samples": 3,
+        "median_reconcile_seconds": 0.8327014000387862,
+        "additional_module_counts": [
+          283,
+          283,
+          283
+        ],
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ]
+      },
+      "system_archive_export": {
+        "samples": 3,
+        "median_reconcile_seconds": 0.7722936000209302,
+        "additional_module_counts": [
+          284,
+          284,
+          284
+        ],
+        "loaded_handlers": [
+          "app.services.exporting.system_archive_jobs",
+          "app.services.exporting.system_archive",
+          "app.services.exporting.system_archive_preflight",
+          "app.services.exporting.archive_jobs",
+          "app.services.exporting.personal_archive",
+          "app.services.exporting.personal_restore",
+          "app.services.editing.message_edit_service",
+          "app.services.search.search_indexer"
+        ]
+      }
+    },
+    "sqlite_only_in_memory": true,
+    "postgres_used": false,
+    "application_started": false,
+    "network_or_other_subprocess_work_permitted": false,
+    "importtime_enabled": true,
+    "linux_or_whole_ci_speedup_claimed": false
+  },
+  "after": {
+    "recorded_at": "2026-11-14T05:53:34.049936+00:00",
+    "label": "after",
+    "source_files": 308,
+    "source_manifest_sha256": "5b6b9333aad2b6845a293c463daa005d164fa8757abae8c541a23fcb285e4294",
+    "probe_sha256": "c663f4e46c3269c129201873008628269475ce6523355b533597c3c836c1d00c",
+    "fixture_test_sha256": "e19aa017f97fbf03950ea3cab4307ae0113ccd7976e8c77e37a45a18ddc054cb",
+    "samples": [
+      {
+        "reconcile_seconds": 0.07818869990296662,
+        "additional_module_count": 11,
+        "loaded_handlers": [],
+        "diagnostic_only": true,
+        "job_type": "conversation_export",
+        "reason": "user",
+        "status": "cancelled",
+        "unselected_archive_handlers_loaded": false,
+        "idempotent_archive_audit": true,
+        "sample": 1,
+        "process_seconds": 2.15787240001373
+      },
+      {
+        "reconcile_seconds": 0.046331900055520236,
+        "additional_module_count": 11,
+        "loaded_handlers": [],
+        "diagnostic_only": true,
+        "job_type": "content_noise_scan",
+        "reason": "stalled",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": false,
+        "idempotent_archive_audit": true,
+        "sample": 1,
+        "process_seconds": 2.0562951000174507
+      },
+      {
+        "reconcile_seconds": 0.16395409998949617,
+        "additional_module_count": 26,
+        "loaded_handlers": [],
+        "diagnostic_only": true,
+        "job_type": "system_archive_export",
+        "reason": "admin",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": false,
+        "idempotent_archive_audit": true,
+        "sample": 1,
+        "process_seconds": 2.1637710999930277
+      },
+      {
+        "reconcile_seconds": 0.05187690001912415,
+        "additional_module_count": 11,
+        "loaded_handlers": [],
+        "diagnostic_only": true,
+        "job_type": "conversation_export",
+        "reason": "user",
+        "status": "cancelled",
+        "unselected_archive_handlers_loaded": false,
+        "idempotent_archive_audit": true,
+        "sample": 2,
+        "process_seconds": 2.2614656999940053
+      },
+      {
+        "reconcile_seconds": 0.05326710001099855,
+        "additional_module_count": 11,
+        "loaded_handlers": [],
+        "diagnostic_only": true,
+        "job_type": "content_noise_scan",
+        "reason": "stalled",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": false,
+        "idempotent_archive_audit": true,
+        "sample": 2,
+        "process_seconds": 2.2499654000857845
+      },
+      {
+        "reconcile_seconds": 0.15143980004359037,
+        "additional_module_count": 26,
+        "loaded_handlers": [],
+        "diagnostic_only": true,
+        "job_type": "system_archive_export",
+        "reason": "admin",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": false,
+        "idempotent_archive_audit": true,
+        "sample": 2,
+        "process_seconds": 2.0921172000234947
+      },
+      {
+        "reconcile_seconds": 0.0541343999793753,
+        "additional_module_count": 11,
+        "loaded_handlers": [],
+        "diagnostic_only": true,
+        "job_type": "conversation_export",
+        "reason": "user",
+        "status": "cancelled",
+        "unselected_archive_handlers_loaded": false,
+        "idempotent_archive_audit": true,
+        "sample": 3,
+        "process_seconds": 2.1440291000762954
+      },
+      {
+        "reconcile_seconds": 0.06899179995525628,
+        "additional_module_count": 11,
+        "loaded_handlers": [],
+        "diagnostic_only": true,
+        "job_type": "content_noise_scan",
+        "reason": "stalled",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": false,
+        "idempotent_archive_audit": true,
+        "sample": 3,
+        "process_seconds": 2.0760881999740377
+      },
+      {
+        "reconcile_seconds": 0.17657000001054257,
+        "additional_module_count": 26,
+        "loaded_handlers": [],
+        "diagnostic_only": true,
+        "job_type": "system_archive_export",
+        "reason": "admin",
+        "status": "failed",
+        "unselected_archive_handlers_loaded": false,
+        "idempotent_archive_audit": true,
+        "sample": 3,
+        "process_seconds": 2.1379338999977335
+      }
+    ],
+    "summary": {
+      "content_noise_scan": {
+        "samples": 3,
+        "median_reconcile_seconds": 0.05326710001099855,
+        "additional_module_counts": [
+          11,
+          11,
+          11
+        ],
+        "loaded_handlers": []
+      },
+      "conversation_export": {
+        "samples": 3,
+        "median_reconcile_seconds": 0.0541343999793753,
+        "additional_module_counts": [
+          11,
+          11,
+          11
+        ],
+        "loaded_handlers": []
+      },
+      "system_archive_export": {
+        "samples": 3,
+        "median_reconcile_seconds": 0.16395409998949617,
+        "additional_module_counts": [
+          26,
+          26,
+          26
+        ],
+        "loaded_handlers": []
+      }
+    },
+    "sqlite_only_in_memory": true,
+    "postgres_used": false,
+    "application_started": false,
+    "network_or_other_subprocess_work_permitted": false,
+    "importtime_enabled": true,
+    "linux_or_whole_ci_speedup_claimed": false
+  },
+  "source_manifest_sha256": {
+    "before": "a449f9dcb168cad421a64c5cec05e177608e0b405aee114faadf8e9f6c89d822",
+    "after": "5b6b9333aad2b6845a293c463daa005d164fa8757abae8c541a23fcb285e4294"
+  },
+  "diagnostic_script_sha256": "7bb61e026172c3871c96eb0d016e34538cef10f6e6d120213e6513820aceae15",
+  "fresh_interpreters": true,
+  "same_installed_environment_no_dependency_install_between_probes": true,
+  "importtime_enabled": true,
+  "sqlite_in_memory_only": true,
+  "postgres_used": false,
+  "serving_stack_started": false,
+  "network_or_other_subprocess_work_permitted": false,
+  "linux_or_whole_ci_speedup_claimed": false,
+  "production_changed": false
+}

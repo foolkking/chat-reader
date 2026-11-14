@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T06:20:45.413863+00:00",
+  "parent_revision": "530a55b2a1d01162b9e7ddab1c9d4c555108dfc3",
+  "status": "locally-verified-fresh-full-ci-required-pause-after-one-dispatch",
+  "scope": "One lightweight reconciliation import; no custom CI job/step timeout; additive Settings diagnostics.",
+  "worktree_byte_input_count": 1398,
+  "input_manifest_sha256": "baae3b45a31591788c62f14f3373aa4d63110962109cd37e7e0b074eab5af648",
+  "inputs_unchanged_across_final_regression": true,
+  "source_manifest_new_entries": [
+    ".github/workflows/reading-performance.yml",
+    "apps/api/tests/test_execution_reconciliation_imports.py",
+    "scripts/ci/settings-completion-timing.test.mjs"
+  ],
+  "tests": {
+    "selected_api": {
+      "modules": [
+        "test_execution_reconciliation_imports.py",
+        "test_worker_import_boundaries.py",
+        "test_worker_maintenance_import_budget.py",
+        "test_worker_supervisor.py",
+        "test_worker_shutdown.py",
+        "test_worker_liveness.py",
+        "test_worker_maintenance_isolation.py",
+        "test_background_job_errors.py",
+        "test_admin_execution_recovery.py",
+        "test_task_execution_recovery.py",
+        "test_cleanup_execution.py",
+        "test_supervised_execution_postgres.py",
+        "test_worker_requeue_postgres.py",
+        "test_worker_maintenance_postgres.py",
+        "test_admin_users.py",
+        "test_user_deletion_postgres.py",
+        "test_personal_archive_jobs.py",
+        "test_personal_archive_jobs_postgres.py",
+        "test_system_archive_tasks.py",
+        "test_system_archive_tasks_postgres.py",
+        "test_plain_export_recovery.py",
+        "test_offline_task_recovery.py",
+        "test_tasks_api.py",
+        "test_support_requests.py",
+        "test_stale_recovery_bounds.py"
+      ],
+      "passed": 307,
+      "skipped": 60,
+      "failed": 0,
+      "reported_seconds": 573.36,
+      "new_reconciliation_cases_included": 19,
+      "log_sha256": "424f94eade8ff28c51bca2d94c7dc3afea62a1a97b911169937aa379b26f4bb9",
+      "limitations": "Local SQLite/TestClient/controlled-process checks; explicit PG/POSIX skips are not acceptance."
+    },
+    "ci_scripts": {
+      "passed": 72,
+      "failed": 0,
+      "skipped": 0,
+      "new_timing_controls": 8,
+      "log_sha256": "b729e2f98c756594a0f5938573a9836225432fe4b61c132dc6512e61b1837104"
+    },
+    "lint": {
+      "passed": true,
+      "log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+    },
+    "typecheck": {
+      "passed": true,
+      "task_local_build_info": true,
+      "log_sha256": "ee03cee6fc751cf2c9d76370dd93c98a377e1900339ca55be9d8e4efb514c48a"
+    },
+    "migration_head": {
+      "single_head": "20261112_0061",
+      "log_sha256": "73423f8cc296997f4c5fa5d11c6fbcf544629c61e9b90c2257f86f00f0243af5"
+    },
+    "changed_python_ast": {
+      "files": 2,
+      "passed": true
+    },
+    "workflow_and_business_preservation": {
+      "recorded_at": "2026-11-14T06:06:10.795801+00:00",
+      "parent_revision": "530a55b2a1d01162b9e7ddab1c9d4c555108dfc3",
+      "removed_timeout_fields": {
+        ".github/workflows/build-release-images.yml": 37,
+        ".github/workflows/reading-performance.yml": 2
+      },
+      "custom_timeout_fields_remaining": 0,
+      "original_jobs_steps_order_and_all_other_fields_preserved": true,
+      "original_settings_build_matrix_restore_commands_preserved": true,
+      "only_additive_settings_timing_and_source_controls": true,
+      "unchanged_comparison_except_timeouts": true,
+      "reconciliation_ast_only_one_import_module_change": true,
+      "git_bash_syntax_checks": 4,
+      "workflow_sha256": {
+        ".github/workflows/build-release-images.yml": "68528675e886a5247dfd813e180e0f8f092c32a493cbf24a3cfb41c370ac4636",
+        ".github/workflows/reading-performance.yml": "7bf4e4659666b1195ab358d7a4e95d1739cab2c84210a8e5479c70173def0027"
+      },
+      "bash_commands_executed_for_application_work": false
+    },
+    "previous_web_build": {
+      "input_count": 548,
+      "input_drift": [],
+      "rerun": false,
+      "input_manifest_sha256": "20da2cc1d9b180e1c998e2099d88981ec5f75ddb4648c2fbd56b6877ffc84a4a"
+    },
+    "new_web_mounted_pwa_rerun": false
+  },
+  "red_evidence": {
+    "api": {
+      "failed": 18,
+      "passed": 1,
+      "reported_seconds": 40.06,
+      "log_sha256": "33a89f3bc0e3adc58fa904b09b4e158849092e373fdd9358c086d6534a02473f"
+    },
+    "platform_timing_controls": {
+      "failed": 7,
+      "passed": 20,
+      "tests": 27,
+      "scope": "Reject the unused intermediate boolean/explicit-cap proposal and other custom timeout fields.",
+      "log_sha256": "eb571191ff5dc050f1189c67553a2fc02472d35060fcd6dbe6a65d27a8fae8ff"
+    }
+  },
+  "platform_limit": {
+    "custom_job_step_timeout_fields": 0,
+    "github_hosted_job_cap_hours": 6,
+    "not_unlimited_execution": true,
+    "official_url": "https://docs.github.com/en/actions/reference/limits",
+    "official_retrieved_at": "2026-11-14T05:28:32.558970+00:00",
+    "official_html_sha256": "f57eaa4c8ae06f3c6990915ab9e79620660c3299de1a4fb5bc29528395d38249"
+  },
+  "diagnosis_sha256": "5d8d47476af84347f9edcd0c7cdc30019c2ed7ad4dd6b5025b1969bcf304ad34",
+  "previous_failure_sha256": "3ec1aab372b1b2e3cea0e061b919cbac25d614c379a17c4ab223af2b3eda0edb",
+  "fact_surfaces_sha256": {
+    "PROJECT_STATE.md": "40368d42c99462ad19d0a2fc96b925fe2a9641258dd9d255d2e477f80d3ebb53",
+    "docs/index.md": "6d90beb78b3fbe3cc67e76764edc18c26178dd5c39f3b9e8d6a00533c5c4ca66",
+    "docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md": "2c70ddd31304bb3198dcea3b8513e7b470386b4f3a0fd67a83d6d37a569563b8",
+    "docs/testing.md": "0d2da9fd31264fc4c4a7fe3aea03965db9f66b66efa5f01da7f89bfb41701042",
+    "docs/system/OBSERVABILITY_CONTRACT.md": "e2bc3ad6ab2db7acb60ccf3cf4ab24e637418e4db44a162d8aa415678f1809c8",
+    "docs/deployment.md": "6faed98cfe3673b91981eb2fd20b3971882185507cf1c81cc9511e023a1ce64b",
+    "docs/system/DEPLOYMENT_AND_ENVIRONMENT.md": "9caece22bf94f2b34b339111484da8bb194e8a25c02f42ed370a7adc49d82a80",
+    "docs/documentation-inventory.md": "f205558ac2bf8f12db943629edace5efee3d715fe7cec2a3a2efd5973d56a047",
+    "docs/evidence/README.md": "3e67ec165fe281ac6e5d01bd1771de92ddf79f5b0b95c08ed00619c5c6ec3db8"
+  },
+  "new_local_link_count": 15,
+  "protected_files_unchanged": 13,
+  "previous_task_files_unchanged": 1790,
+  "old_test_postgresql_started_or_stopped_again": false,
+  "full_local_serving_stack_started": false,
+  "production_operations_performed": false,
+  "production_cancel_authorization_reused": false,
+  "user_input_replayed_or_removed": false,
+  "automation_created": false,
+  "new_ci_status_read_authorized_for_this_turn": false,
+  "after_confirmed_dispatch": "Pause immediately; user will report result; no waiter, polling or deployment.",
+  "remaining_product_device_disaster_recovery_acceptance_owner": "user"
+}

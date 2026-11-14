@@ -41,6 +41,14 @@ arguments, results and exceptions. `MessageEditError` is reexported from its
 original editor-service path with the same class identity and public detail.
 No process pool, inherited connections, parser reuse or additional slot is added.
 
+Interrupted-task reconciliation also imports the existing lightweight
+`archive_task_status` projection directly, not the full system/personal archive
+handlers and their editing/index dependencies. The heavy handler module still
+reexports the same objects. User/stalled/administrator outcomes, source
+disposition, execution fencing, backup status and idempotent audit remain
+unchanged. Fresh-interpreter, in-memory SQLite controls cover actual reconciliation;
+Windows timing is diagnostic, not Linux or whole-CI throughput acceptance.
+
 Maintenance starts its unchanged two-second cooperative deadline before
 selected cleanup imports, loads only an eligible lane and rechecks stop/time
 after that import. An import failure is isolated to its category, like an

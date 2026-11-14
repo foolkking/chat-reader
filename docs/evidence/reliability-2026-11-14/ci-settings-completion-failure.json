@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-14T06:13:21.036575+00:00",
+  "status": "failed-incomplete-no-deployable-artifact",
+  "source_revision": "530a55b2a1d01162b9e7ddab1c9d4c555108dfc3",
+  "workflow_run_id": 43556068261,
+  "attempt": 1,
+  "workflow_url": "https://github.com/foolkking/chat-reader/actions/runs/43556068261",
+  "first_failure_diagnosis": {
+    "requested_at": "2026-11-14T05:24:42.208529+00:00",
+    "received_at": "2026-11-14T05:24:45.086174+00:00",
+    "user_reported_timeout": true,
+    "prior_waiter_stopped_at_user_request": true,
+    "fresh_3000_second_monotonic_wait_completed": false,
+    "incomplete_wait_not_claimed_complete": true,
+    "receipt_sha256": "6d49f189dd0c4d46c93c2b717ea17d409a8ee57b775527c14330144c3533c129"
+  },
+  "jobs": {
+    "settings-quality": "cancelled",
+    "web-quality": "success",
+    "api-quality": "success",
+    "reading-performance-comparison / compare": "success",
+    "build-images": "skipped",
+    "inspect-release-artifact": "skipped"
+  },
+  "official_logs": [
+    {
+      "job": "settings-quality",
+      "job_id": 132329083451,
+      "conclusion": "cancelled",
+      "filename": "settings-quality.log",
+      "bytes": 192558,
+      "sha256": "486582657642c42de33df55e10764e91a60c73124cb6812971942e14a40cace6",
+      "retained_at": "2026-11-14T05:26:56.075055+00:00"
+    },
+    {
+      "job": "web-quality",
+      "job_id": 132329083677,
+      "conclusion": "success",
+      "filename": "web-quality.log",
+      "bytes": 1377781,
+      "sha256": "f4750b731d9d1154f3b50a29b11c8070c5a86a1b08d5de64f4f0335a3f3b5647",
+      "retained_at": "2026-11-14T05:27:03.901547+00:00"
+    },
+    {
+      "job": "api-quality",
+      "job_id": 132329083679,
+      "conclusion": "success",
+      "filename": "api-quality.log",
+      "bytes": 1412552,
+      "sha256": "812b6e88c1c685e85aa19296f5a90f2eefcbac4d046b648a6e036c18e9de0a1a",
+      "retained_at": "2026-11-14T05:27:08.032960+00:00"
+    },
+    {
+      "job": "reading-performance-comparison / compare",
+      "job_id": 132338180668,
+      "conclusion": "success",
+      "filename": "reading-performance-comparison-compare.log",
+      "bytes": 21544499,
+      "sha256": "e93861e45e4ed3f2d65b2601e4dac6104a149ec46f5232528bb54ef1abd3dd29",
+      "retained_at": "2026-11-14T05:27:17.075552+00:00"
+    }
+  ],
+  "official_artifacts": [
+    {
+      "id": 14099557228,
+      "name": "reading-performance-comparison",
+      "official_zip_sha256": "1bccaabe4e615271d844eb883eb74b53b196f59caf61068915364564e84b8b1c",
+      "zip_bytes": 4086981,
+      "members": 101
+    },
+    {
+      "id": 14099493835,
+      "name": "settings-quality-evidence-530a55b2a1d01162b9e7ddab1c9d4c555108dfc3-1",
+      "official_zip_sha256": "fea1eab4ad8a1b25c6d66126b450f1d92f1951c405043d92aca9c6227da51aed",
+      "zip_bytes": 12919005,
+      "members": 178
+    },
+    {
+      "id": 14099373078,
+      "name": "release-a-quality-evidence-530a55b2a1d01162b9e7ddab1c9d4c555108dfc3-1",
+      "official_zip_sha256": "e550ce1b1ab5f2ab76dfb3ed46d055b7baf1b6ef31c9d355b11274d72c80e721",
+      "zip_bytes": 40533462,
+      "members": 848
+    }
+  ],
+  "settings": {
+    "official_failure": "The job has exceeded the maximum execution time of 1h0m0s",
+    "job_started_at": "2026-11-14T04:19:31Z",
+    "job_completed_at": "2026-11-14T05:19:51Z",
+    "matrix_expected": 470,
+    "printed_passes": 431,
+    "printed_tail_failures": [
+      {
+        "timestamp": "2026-11-14T05:19:39.4075335Z",
+        "outcome": "✘",
+        "index": 432,
+        "printed_seconds": 0.14100000000000001
+      },
+      {
+        "timestamp": "2026-11-14T05:19:40.3948299Z",
+        "outcome": "✘",
+        "index": 433,
+        "printed_seconds": 0.047
+      },
+      {
+        "timestamp": "2026-11-14T05:19:41.2842380Z",
+        "outcome": "✘",
+        "index": 434,
+        "printed_seconds": 0.043000000000000003
+      },
+      {
+        "timestamp": "2026-11-14T05:19:42.1933439Z",
+        "outcome": "✘",
+        "index": 435,
+        "printed_seconds": 0.047
+      },
+      {
+        "timestamp": "2026-11-14T05:19:43.1061103Z",
+        "outcome": "✘",
+        "index": 436,
+        "printed_seconds": 0.055
+      },
+      {
+        "timestamp": "2026-11-14T05:19:44.0186986Z",
+        "outcome": "✘",
+        "index": 437,
+        "printed_seconds": 0.051000000000000004
+      }
+    ],
+    "unprinted_cases": 33,
+    "fresh_instance_restore": "not-run",
+    "passing_case_printed_seconds_sum": 3421.103,
+    "printed_duration_precision": "Rounded diagnostic prints, not exact phase or handler timing.",
+    "actual_gate_evidence": {
+      "schema_version": 2,
+      "gate_id": "settings-stages-1-4",
+      "status": "running",
+      "started_at": "2026-11-14T04:22:38.250Z",
+      "test_count": 470
+    },
+    "actual_gate_evidence_sha256": "4453c2d2635399444d38e04fa7e7cba6ac20f4ff55b1c7830b3f719a63745939",
+    "complete_result_counts_available": false,
+    "tail_failure_classification": "ECONNREFUSED in the termination window; not inherited as new-CI acceptance or a proven application root cause."
+  },
+  "api_diagnostic_result": {
+    "passed": 6697,
+    "skipped": 3,
+    "warnings": 5,
+    "reported_seconds": 1967.53,
+    "independently_verified_new_startup_cases": 23,
+    "success_not_inherited_by_new_ci": true
+  },
+  "cancellation_requested": false,
+  "production_changed": false,
+  "old_diagnostics_modified": false,
+  "automation_created": false,
+  "deployable_artifact_available": false
+}

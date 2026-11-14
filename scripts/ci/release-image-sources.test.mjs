@@ -34,7 +34,8 @@ for (const name of ["api-quality", "web-quality", "settings-quality"]) {
   test(`${name} starts the pinned PostgreSQL fixture with bounded official-source fallback`, () => {
     const body = job(name);
     assert.doesNotMatch(body, /^    services:/m);
-    assert.match(body, /id: postgres\n        timeout-minutes: 10\n        run: bash scripts\/ci\/postgres-service\.sh start/);
+    assert.match(body, /id: postgres\n        run: bash scripts\/ci\/postgres-service\.sh start/);
+    assert.doesNotMatch(body, /^\s*timeout-minutes:/m);
     assert.match(body, /if: \$\{\{ always\(\) && steps\.postgres\.outcome == 'success' \}\}\n        run: bash scripts\/ci\/postgres-service\.sh stop/);
     const checkout = pinnedAction(body, "actions/checkout");
     const postgres = body.indexOf("run: bash scripts/ci/postgres-service.sh start");
@@ -97,14 +98,15 @@ test("the registry source contract runs as an additive CI check", () => {
 test("both pinned bases are prepared before building without retrying application builds", () => {
   const build = job("build-images");
   const preparation = build.indexOf("run: bash scripts/ci/image-base-sources.sh");
-  assert.match(build, /- name: Prepare pinned image bases with official-source fallback\n        timeout-minutes: 15\n        run: bash scripts\/ci\/image-base-sources\.sh/);
+  assert.match(build, /- name: Prepare pinned image bases with official-source fallback\n        run: bash scripts\/ci\/image-base-sources\.sh/);
   assert.ok(preparation < build.indexOf("- name: Build API and worker image"));
   assert.ok(preparation < build.indexOf("- name: Build Web image"));
   assert.equal([...build.matchAll(/^          docker build \\/gm)].length, 2);
 });
 
-test("the complete API suite stays PostgreSQL-enabled, bounded and diagnosable", () => {
-  assert.match(job("api-quality"), /- name: API full suite\n        timeout-minutes: 45\n/);
+test("the complete API suite stays PostgreSQL-enabled and diagnosable with platform-default CI timing", () => {
+  assert.match(job("api-quality"), /- name: API full suite\n        env:\n/);
+  assert.doesNotMatch(job("api-quality"), /^\s*timeout-minutes:/m);
   assert.match(job("api-quality"), /SETTINGS_POSTGRES_INTEGRATION: "1"/);
   assert.match(job("api-quality"), /run: cd apps\/api && pytest -vv --capture=tee-sys -o faulthandler_timeout=120(?:\n|$)/);
 });

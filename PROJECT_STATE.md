@@ -1,14 +1,40 @@
 # Project State
 
-## Reliability candidate — 2026-11-14 (Settings timeout; cold-start repair locally verified)
+## Reliability candidate — 2026-11-14 (platform-default CI; pause after dispatch)
 
-The latest November13 instruction authorizes selective commit/push, the full
-exact-source CI and deployment after CI success. The user owns acceptance of
-the remaining product/device/recovery scenarios. This does not waive automated
-release gates, stopped-writer backup, migration or runtime-health safeguards,
-and does not authorize cleanup or replay of user inputs.
+The latest November14 instruction authorizes this repair, selective commit/push
+and one full exact-source CI with no custom job/step total timeout. Confirm the
+dispatch, then immediately pause: no status polling, waiter, automation or
+deployment; the user will report the result. This supersedes the earlier
+automatic waiting/deployment sequence for this turn. Native test/worker/PG,
+memory/frame and release-safety gates remain. Hosted jobs still have GitHub's
+six-hour platform cap, not unlimited execution.
 
-The next local repair defers unselected task/format handlers and scan write/index
+Reconciliation now directly imports the existing lightweight archive projection,
+preserving the heavy module's same-object reexports and all business outcomes.
+Final25-module API regression **307 passed/60 explicit integration or platform
+skips** includes19 new controls; CI scripts **72**, lint/typecheck and single
+head0061 pass. Parsed workflow comparison preserves original jobs, step order,
+commands and gates while removing39 timeout fields and adding Settings timing.
+All1398 verification inputs/thirteen protected files remain stable;548 prior
+Web build inputs are unchanged, not a new build/PWA claim. Windows actual
+in-memory reconciliation improves locally, not proof of Linux/whole-CI speedup.
+[Verification](docs/evidence/reliability-2026-11-14/ci-settings-completion-verification.json) /
+[diagnosis](docs/evidence/reliability-2026-11-14/ci-settings-completion-import-diagnosis.json).
+
+Preceding **530a55b / CI43556068261** is completed/cancelled: Settings exceeded
+its former60-minute job bound;431 printed passes/six termination-window failures
+are not the complete470+restore1 matrix. API/Web/comparison succeeded only in
+that failed run; both release jobs were skipped. [Independent failure receipt](docs/evidence/reliability-2026-11-14/ci-settings-completion-failure.json)
+retains four official logs/three verified diagnostic ZIPs and the stopped
+waiter's actual incomplete monotonic record. No cancellation or production action.
+The subsequent `ci-settings-completion-dispatch.json` receipt records the one
+actual submission; once present, do not redispatch or resume work before user
+feedback. Production remains the previously verified3564cbf/schema0060.
+
+### Earlier cold-start checkpoint (history)
+
+The preceding repair defers unselected task/format handlers and scan write/index
 services, preserves editing-error reexports and includes imports in the original
 two-second maintenance budget. Final46-module API regression passes
 **591/65 skipped**, including23 new controls; CI scripts64, lint/typecheck and
@@ -19,7 +45,7 @@ and [local verification](docs/evidence/reliability-2026-11-14/ci-worker-startup-
 require a new full exact CI before deployment; no local PostgreSQL/serving stack
 or production operation is added.
 
-Last dispatched repair **`9a0841461671dfdabd5d50a56f55e68f8ffde227`** is selectively
+Earlier dispatched repair **`9a0841461671dfdabd5d50a56f55e68f8ffde227`** is selectively
 committed/pushed: fourteen owned files, thirteen unrelated files byte-preserved.
 Full exact [CI `43543975636`](https://github.com/foolkking/chat-reader/actions/runs/43543975636)
 was confirmed dispatched at **10:01:44.250642 +08:00**. Its dispatch wall-clock

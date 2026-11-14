@@ -3,8 +3,40 @@
 The API and Settings quality jobs use their job-owned loopback PostgreSQL on
 port **65438**, matching the guarded synthetic scan helper. Web and image-memory
 fixtures retain **5432**. `postgres-service.sh` still fences ownership by
-run/attempt/job; no seeder admission, timeout, memory or test-skip relaxation.
+run/attempt/job; no seeder admission, native operation deadline, memory or
+test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
+
+## Platform-default CI completion timing — 2026-11-14
+
+The release workflow and its reusable reading comparison omit every custom
+job/step `timeout-minutes` field. There is no project-configured 60/360-minute
+mode, zero/null workaround or additional dispatch input. GitHub-hosted jobs
+still have the platform's six-hour execution cap; this is not unlimited CI.
+Earlier dated job/step timeout statements below describe their old checkpoints
+and are superseded by this policy, not by relaxed test acceptance.
+
+All six jobs, original selections, serial browser execution, native case and
+expect deadlines, worker stall/stop/lease/maintenance bounds, PostgreSQL safety,
+320/640MiB no-swap gates and Reader budgets remain. The new
+`settings-completion-timing.test.mjs` source gate checks both workflows and
+the unchanged Settings matrix plus independent fresh-instance restore.
+Settings artifacts additionally retain mode/source/run/attempt/UTC identity,
+build/matrix/restore elapsed time, maximum RSS and exit code, plus fixture
+start and cleanup-request times. Cleanup timestamps do not prove process exit.
+Timing wrappers/traps preserve the original command and failure status.
+
+`test_execution_reconciliation_imports.py` adds eighteen fresh-interpreter
+actual in-memory SQLite reconciliations (six task types × user/stalled/admin)
+and one identity check for the existing archive projection reexports. The
+fixtures reject networking, other subprocesses, non-memory SQLite and
+unselected archive/edit/index handlers; FK, terminal state, source retention,
+backup status, audit and repeated reconciliation are checked.
+
+For this dispatch the user's latest instruction is to pause immediately after
+confirmation: no status polling, waiter, automation or deployment. The user
+will report the CI result. Local evidence does not inherit earlier partial CI
+success or replace fresh complete exact-source release acceptance.
 
 ## Selected cold imports and maintenance import budget — local 2026-11-14
 

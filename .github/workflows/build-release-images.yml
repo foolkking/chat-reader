@@ -31,7 +31,6 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Start pinned disposable PostgreSQL with official-source fallback
         id: postgres
-        timeout-minutes: 10
         run: bash scripts/ci/postgres-service.sh start
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -54,7 +53,6 @@ jobs:
       # The full suite owns these same offline/cleanup tests. Keep capture=tee
       # for characterization output instead of running the tests twice.
       - name: API full suite
-        timeout-minutes: 45
         env:
           SETTINGS_POSTGRES_INTEGRATION: "1"
           AUTH_SESSION_SECRET: synthetic-settings-postgres-ci-secret-0123456789
@@ -74,7 +72,6 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Start pinned disposable PostgreSQL with official-source fallback
         id: postgres
-        timeout-minutes: 10
         run: bash scripts/ci/postgres-service.sh start
 
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
@@ -146,6 +143,9 @@ jobs:
       - name: Official release image source contract
         run: node --test scripts/ci/release-image-sources.test.mjs scripts/ci/postgres-service.test.mjs scripts/ci/image-base-sources.test.mjs
 
+      - name: Settings completion timing source controls
+        run: node --test scripts/ci/settings-completion-timing.test.mjs
+
       - name: Offline shell reconciliation regressions
         run: node --test scripts/pwa/offline-shell.test.mjs
 
@@ -187,79 +187,66 @@ jobs:
         run: pnpm --filter web exec playwright install --with-deps chromium
 
       - name: Mounted Viewer and retained mobile sheet regression
-        timeout-minutes: 5
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/attachment-modal-browser.mjs
 
       - name: Image size commit, recovery and responsive controls
-        timeout-minutes: 5
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/image-scale-slider-browser.mjs
 
       - name: Formula reading, focus tools and timed return regression
-        timeout-minutes: 10
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reader-interaction-browser.mjs
 
       - name: Cross-device reading handoff and conflict recovery
-        timeout-minutes: 5
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reading-position-browser.mjs
 
       - name: Retained import stop and per-task recovery controls
-        timeout-minutes: 5
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/import-recovery-browser.mjs
 
       - name: Minimal administrator runtime and bounded read recovery
-        timeout-minutes: 10
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/admin-runtime-browser.mjs
 
       - name: Failed and paused import source repair
-        timeout-minutes: 5
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/import-source-repair-browser.mjs
 
       - name: Reader table export and recovery controls
-        timeout-minutes: 5
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reader-table-actions-browser.mjs
 
       - name: Offline per-conversation recovery and capacity choices
-        timeout-minutes: 5
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/offline-recovery-browser.mjs
 
       - name: Export option continuity and unknown-result recovery
-        timeout-minutes: 5
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/export-recovery-browser.mjs
 
       - name: Attachment ordered uploads and original-request recovery
-        timeout-minutes: 5
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/attachment-recovery-browser.mjs
 
       - name: Source save snapshots, receipts and real editor transactions
-        timeout-minutes: 10
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/source-editor-table-browser.mjs
 
       - name: Reading success feedback and explicit copy recovery
-        timeout-minutes: 5
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reading-feedback-browser.mjs
@@ -271,7 +258,6 @@ jobs:
           python scripts/verify-context-upload-proxy.py
 
       - name: Adaptive Import recovery browser flow
-        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: adaptive-import-recovery
@@ -281,7 +267,6 @@ jobs:
           e2e/import-markdown.spec.ts
 
       - name: Release H enforced CSP browser matrix
-        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: csp-enforcement
@@ -290,7 +275,6 @@ jobs:
           e2e/csp-enforcement.spec.ts
 
       - name: Context files, export and reader recovery
-        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: context-files
@@ -308,7 +292,6 @@ jobs:
           e2e/context-skill-bundles.spec.ts
 
       - name: Focused online browser and security checks
-        timeout-minutes: 30
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: focused-online-security
@@ -325,7 +308,6 @@ jobs:
           e2e/release-stabilization-contract.spec.ts
 
       - name: Release H Share focus checks
-        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: share-focus
@@ -335,7 +317,6 @@ jobs:
           e2e/share-drawer-focus.spec.ts
 
       - name: Release H Source Editor and mutation cache checks
-        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: source-editor-mutation
@@ -349,7 +330,6 @@ jobs:
           e2e/manual-markdown-fidelity.spec.ts
 
       - name: Source Editor content cleanup browser gate
-        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: source-editor-cleanup
@@ -361,7 +341,6 @@ jobs:
           e2e/thinking-summary.spec.ts
 
       - name: Release I upload-token atomicity matrix
-        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: upload-token-atomicity
@@ -372,7 +351,6 @@ jobs:
           e2e/attachment-upload-flow.spec.ts
 
       - name: Release H Markdown and image Viewer checks
-        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: markdown-image-viewer
@@ -385,7 +363,6 @@ jobs:
           e2e/message-markdown-copy.spec.ts
 
       - name: Reading geometry, image snapshots and cross-module recovery
-        timeout-minutes: 25
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: reading-stability
@@ -395,7 +372,6 @@ jobs:
           node scripts/ci/verify-reading-stability.mjs
 
       - name: PDF.js maintained-line browser checks
-        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: pdfjs-maintained-line
@@ -407,7 +383,6 @@ jobs:
           e2e/pdfjs-share.spec.ts
 
       - name: Default PWA baseline
-        timeout-minutes: 30
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: default-pwa
@@ -415,7 +390,6 @@ jobs:
         run: pnpm --filter web exec playwright test --config=playwright.config.ts
 
       - name: Single-owner authentication browser gate
-        timeout-minutes: 20
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: single-owner-auth
@@ -458,7 +432,6 @@ jobs:
           done
 
       - name: Release E production-build PWA negative matrix
-        timeout-minutes: 30
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: pwa-negative
@@ -543,9 +516,8 @@ jobs:
 
   settings-quality:
     runs-on: ubuntu-latest
-    # The serial 439-case matrix took 41.8m in 37795767145; setup plus the
-    # passing fresh-instance restore exceeded 45m. Keep per-case bounds intact.
-    timeout-minutes: 60
+    # No custom CI job/step timeouts; the hosted runner's platform cap applies.
+    # Serial tests, native case deadlines and worker/resource bounds stay.
     env:
       DATABASE_URL: postgresql+psycopg://chat_reader:chat_reader_ci@127.0.0.1:65438/chat_reader
       # Keep the disposable fixture on a port allowed by the guarded seeders.
@@ -566,9 +538,19 @@ jobs:
       NEXT_PUBLIC_PWA_NEGATIVE_TESTS: "0"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Record Settings completion timing mode
+        shell: bash
+        run: |
+          printf 'mode=%s\njob_timeout_minutes=%s\nsource_sha=%s\nworkflow_run_id=%s\nworkflow_run_attempt=%s\nstarted_at=%s\n' \
+            'platform-default' \
+            'not-set' \
+            '${{ github.sha }}' \
+            '${{ github.run_id }}' \
+            '${{ github.run_attempt }}' \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            | tee "$RUNNER_TEMP/settings-completion-mode.txt"
       - name: Start pinned disposable PostgreSQL with official-source fallback
         id: postgres
-        timeout-minutes: 10
         run: bash scripts/ci/postgres-service.sh start
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
@@ -593,7 +575,8 @@ jobs:
           python -m alembic upgrade head
       - name: Build authenticated Web and install Chromium
         run: |
-          pnpm --filter web build
+          /usr/bin/time -f 'phase=authenticated-web-build\nelapsed_seconds=%e\nmax_rss_kb=%M\nexit_code=%x' \
+            -o "$RUNNER_TEMP/settings-build-timing.txt" pnpm --filter web build
           pnpm --filter web exec playwright install --with-deps chromium
       - name: Real settings, SMTP, offline and sync browser matrix
         env:
@@ -604,7 +587,8 @@ jobs:
           settings_api_pid=$!
           python -m app.workers.import_worker > "$RUNNER_TEMP/settings-worker.log" 2>&1 &
           settings_worker_pid=$!
-          trap 'kill "$settings_api_pid" "$settings_worker_pid" 2>/dev/null || true' EXIT
+          printf 'phase=settings-matrix\nfixture_start_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$RUNNER_TEMP/settings-fixture-lifecycle.txt"
+          trap 'status=$?; printf "fixture_stop_at=%s\nstep_exit_code=%s\n" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$status" >> "$RUNNER_TEMP/settings-fixture-lifecycle.txt" || true; kill "$settings_api_pid" "$settings_worker_pid" 2>/dev/null || true; exit "$status"' EXIT
           ready=0
           for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then ready=1; break; fi
@@ -612,7 +596,9 @@ jobs:
           done
           test "$ready" = 1
           cd ../..
-          pnpm --filter web exec playwright test --config=playwright.config.ts 'e2e/settings-.*\.spec\.ts' e2e/context-admin-bundles.spec.ts
+          /usr/bin/time -f 'phase=settings-matrix\nelapsed_seconds=%e\nmax_rss_kb=%M\nexit_code=%x' \
+            -o "$RUNNER_TEMP/settings-matrix-timing.txt" \
+            pnpm --filter web exec playwright test --config=playwright.config.ts 'e2e/settings-.*\.spec\.ts' e2e/context-admin-bundles.spec.ts
           PLAYWRIGHT_EXPECTED_GATES=settings-stages-1-4 node apps/web/e2e/gate-summary.mjs apps/web/test-results apps/web/test-results/settings-gate-summary.json
       - name: System archive restore into a fresh PostgreSQL instance
         run: |
@@ -640,7 +626,8 @@ jobs:
           archive_api_pid=$!
           python -m app.workers.import_worker > "$RUNNER_TEMP/archive-worker.log" 2>&1 &
           archive_worker_pid=$!
-          trap 'kill "$archive_api_pid" "$archive_worker_pid" 2>/dev/null || true' EXIT
+          printf 'phase=fresh-instance-restore\nfixture_start_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$RUNNER_TEMP/archive-fixture-lifecycle.txt"
+          trap 'status=$?; printf "fixture_stop_at=%s\nstep_exit_code=%s\n" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$status" >> "$RUNNER_TEMP/archive-fixture-lifecycle.txt" || true; kill "$archive_api_pid" "$archive_worker_pid" 2>/dev/null || true; exit "$status"' EXIT
           ready=0
           for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then ready=1; break; fi
@@ -648,7 +635,9 @@ jobs:
           done
           test "$ready" = 1
           cd ../..
-          PLAYWRIGHT_GATE_ID=system-archive-new-instance pnpm --filter web exec playwright test --config=playwright.config.ts e2e/system-archive-new-instance.spec.ts
+          PLAYWRIGHT_GATE_ID=system-archive-new-instance /usr/bin/time -f 'phase=fresh-instance-restore\nelapsed_seconds=%e\nmax_rss_kb=%M\nexit_code=%x' \
+            -o "$RUNNER_TEMP/settings-restore-timing.txt" \
+            pnpm --filter web exec playwright test --config=playwright.config.ts e2e/system-archive-new-instance.spec.ts
           PLAYWRIGHT_EXPECTED_GATES=settings-stages-1-4,system-archive-new-instance node apps/web/e2e/gate-summary.mjs apps/web/test-results apps/web/test-results/settings-gate-summary.json
       - name: Upload settings quality evidence
         if: always()
@@ -657,6 +646,12 @@ jobs:
           name: settings-quality-evidence-${{ github.sha }}-${{ github.run_attempt }}
           path: |
             apps/web/test-results
+            ${{ runner.temp }}/settings-completion-mode.txt
+            ${{ runner.temp }}/settings-build-timing.txt
+            ${{ runner.temp }}/settings-matrix-timing.txt
+            ${{ runner.temp }}/settings-restore-timing.txt
+            ${{ runner.temp }}/settings-fixture-lifecycle.txt
+            ${{ runner.temp }}/archive-fixture-lifecycle.txt
             ${{ runner.temp }}/settings-api.log
             ${{ runner.temp }}/settings-worker.log
             ${{ runner.temp }}/archive-api.log
@@ -690,7 +685,6 @@ jobs:
           driver: docker
 
       - name: Prepare pinned image bases with official-source fallback
-        timeout-minutes: 15
         run: bash scripts/ci/image-base-sources.sh
 
       - name: Record image build metadata
@@ -715,15 +709,12 @@ jobs:
 
       - name: Start disposable PostgreSQL for the real memory gate
         id: small_zip_postgres
-        timeout-minutes: 10
         run: bash scripts/ci/postgres-service.sh start
 
       - name: Verify real 320 MiB worker ZIP analysis and commit without swap
-        timeout-minutes: 10
         run: python3 scripts/ci/small-import-memory-gate.py
 
       - name: Verify bounded ZIP 100 and 500 MiB sources and long Markdown
-        timeout-minutes: 35
         run: python3 scripts/ci/bounded-import-memory-gate.py
 
       - name: Stop memory-gate PostgreSQL
@@ -798,7 +789,6 @@ jobs:
     needs: build-images
     if: ${{ needs.build-images.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     env:
       RELEASE_ARTIFACT_ID: ${{ needs.build-images.outputs.artifact_id }}
       ARTIFACT_PRODUCER_ATTEMPT: ${{ needs.build-images.outputs.producer_attempt }}

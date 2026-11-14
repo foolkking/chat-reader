@@ -43,7 +43,7 @@ def reconcile(kind, task_id, token, factory):
                         mark_user_deletion_failed(db, row.id)
                     row.payload = {**(row.payload or {}), "source_disposition": control.source_disposition or "retain"}
                     _sync_adaptive_import_record_after_job(db, row, status=row.status, now=now)
-                    from app.services.exporting.system_archive_jobs import SYSTEM_JOB_TYPES, sync_system_archive_record
+                    from app.services.exporting.archive_task_status import SYSTEM_JOB_TYPES, sync_system_archive_record
                     if row.job_type in SYSTEM_JOB_TYPES:
                         sync_system_archive_record(db, row, status="CANCELLED" if cancelled else "FAILED")
         # A canonical terminal result (including a resource deferral) wins over
