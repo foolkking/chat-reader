@@ -1,0 +1,301 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T16:43:19.711394+00:00",
+  "status": "scoped_cold_merge_repair_verified_with_retained_failures_not_exact_ci_acceptance",
+  "precommit_head_sha": "cd392195befb27dd64e7e0ce86c87145aac17559",
+  "input_manifest": "ci-cold-merge-inputs.json",
+  "input_manifest_sha256": "922f470358ef28464609ae28519af76470fedafbe9c0d88639c96975d657a019",
+  "formal_failure_sha256": "f83dc479e0a69de208c569aea2bd9dbfd37ec9ff8102ab96d36799157bf554c2",
+  "product_change": "only operation-local real effective_limits import",
+  "red": {
+    "phase": "windows-cold-merge-red-01",
+    "result_sha256": "39c618ba1d139beba51480b46ad7b8f3ecffedad41dd2b8562282855a75d2da8",
+    "log_sha256": "d17e43b56207a50b73c5be2d6f9edefc551989b74254a797309ef4b089ab0977",
+    "failed": 4,
+    "passed": 4,
+    "seconds": 13.56,
+    "same_NameError": true
+  },
+  "cold_import_scope": {
+    "phase": "windows-cold-merge-green-03",
+    "result_sha256": "25d0847d5dae202ccf3320d0b01a8ef25c98451da0078879806e5fa8e0f0d521",
+    "log_sha256": "0cee417f666b592a9da83e69887a55247d3029aba24726c1705290991e19fb9f",
+    "passed": 54,
+    "skipped": 0,
+    "seconds": 66.71,
+    "overlaps_linux_scope_not_additive": true
+  },
+  "linux_postgres_scope": {
+    "phase": "linux-merge-worker-06",
+    "result_sha256": "6d86f71dd7fd331ac3f9a1cfe1ba7b34fc29450478d530ae2ed95b9fdb77271c",
+    "log_sha256": "d5b47f6138c8b1dca4b03b3b191c6d2cca9c7ae3eabb2a87d7786cf6a0fcd814",
+    "passed": 244,
+    "skipped": 0,
+    "warnings": 1,
+    "pytest_seconds": 788.94,
+    "all_original_27_failed_ids_actually_passed": true,
+    "not_full_api_suite_or_ci_acceptance": true
+  },
+  "real_original_browser_merge_cases": [
+    {
+      "phase": "browser-web-merge-13",
+      "result_sha256": "daa5883b177a647cac03cee44364a65b1fe1e6cbddac4cc4527a4b5569be0545",
+      "log_sha256": "591e4d99158d834346558ff9123ef370c6c1a3fc20812cc7e5e2eb368c43b3b1",
+      "passed": 4,
+      "gate_seconds": 32.424,
+      "browser": "existing installed Chrome; bundled Chromium absent",
+      "not_full_matrix_linux_or_pwa_acceptance": true
+    },
+    {
+      "phase": "browser-settings-merge-14",
+      "result_sha256": "879677e30b6e3367aaf1125921f957cb4053dd776b74a5d2ffff13805118b1c8",
+      "log_sha256": "987a75b935e9101fc161421153c4d880ccbf7749916b5e27edf29244073b45a5",
+      "passed": 2,
+      "gate_seconds": 19.634,
+      "browser": "existing installed Chrome; bundled Chromium absent",
+      "not_full_matrix_linux_or_pwa_acceptance": true
+    }
+  ],
+  "fresh_windows_web_build": {
+    "result_sha256": "66fd09f36609ff3e9f9ae4fa5124a25d585a7020586c68253eb2cbae108d4d98",
+    "passed": true,
+    "input_count": 550,
+    "seconds": 171.295999999973,
+    "same_installed_dependencies": true,
+    "not_linux_release_or_full_pwa_acceptance": true
+  },
+  "local_memory": [
+    {
+      "phase": "memory-v1-10",
+      "result_sha256": "08a52f46b5819c57188ab180708d70dc389ed0d613c99cd50ed4931472ea9b3a",
+      "passed": true,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "combined_idle_bytes": 120360960,
+      "absolute_peak_bytes": 166338560,
+      "workspace_delta_bytes": 45977600,
+      "verified": {
+        "attachment_count": 14,
+        "conversation_count": 1,
+        "message_count": 4,
+        "passed": true,
+        "reference_count": 13,
+        "verified_asset_hashes": 14
+      },
+      "final_state": "COMPLETED",
+      "no_oom_or_restarts": true,
+      "synthetic_source_hashes_retained": true,
+      "native_analysis_deadline_seconds": 180
+    },
+    {
+      "phase": "memory-v2-11-small",
+      "result_sha256": "31aac7e9d57387763c210b940ffa47a0d8af86d44cf78ab393ae46ac6f6082ce",
+      "passed": true,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "combined_idle_bytes": 121208832,
+      "absolute_peak_bytes": 141193216,
+      "workspace_delta_bytes": 19984384,
+      "verified": {
+        "attachment_count": 14,
+        "block_count": 177,
+        "conversation_count": 1,
+        "draft_format": 2,
+        "message_count": 4,
+        "passed": true,
+        "reference_count": 13,
+        "verified_asset_hashes": 14
+      },
+      "final_state": "COMPLETED",
+      "no_oom_or_restarts": true,
+      "synthetic_source_hashes_retained": true,
+      "native_analysis_deadline_seconds": 600
+    },
+    {
+      "phase": "memory-v2-11-assets100",
+      "result_sha256": "d5475ff9828d8fcb10ad9c8bb7f2b802ee9db352628f4d21b4f0ba7e6a5fcb27",
+      "passed": true,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "combined_idle_bytes": 120938496,
+      "absolute_peak_bytes": 137658368,
+      "workspace_delta_bytes": 16719872,
+      "verified": {
+        "attachment_count": 4,
+        "block_count": 6484,
+        "conversation_count": 1,
+        "draft_format": 2,
+        "message_count": 36,
+        "passed": true,
+        "reference_count": 4,
+        "verified_asset_hashes": 4
+      },
+      "final_state": "COMPLETED",
+      "no_oom_or_restarts": true,
+      "synthetic_source_hashes_retained": true,
+      "native_analysis_deadline_seconds": 600
+    },
+    {
+      "phase": "memory-v2-11-assets500",
+      "result_sha256": "1d5611debee6421c04d275c368b16815610608b584462a5bc710c8e141336461",
+      "passed": true,
+      "memory_limit_bytes": 671088640,
+      "memory_swap_limit_bytes": 671088640,
+      "combined_idle_bytes": 121712640,
+      "absolute_peak_bytes": 139141120,
+      "workspace_delta_bytes": 17428480,
+      "verified": {
+        "attachment_count": 4,
+        "block_count": 6484,
+        "conversation_count": 1,
+        "draft_format": 2,
+        "message_count": 36,
+        "passed": true,
+        "reference_count": 4,
+        "verified_asset_hashes": 4
+      },
+      "final_state": "COMPLETED",
+      "no_oom_or_restarts": true,
+      "synthetic_source_hashes_retained": true,
+      "native_analysis_deadline_seconds": 600
+    },
+    {
+      "phase": "memory-v2-11-long",
+      "result_sha256": "ccaf1ab7657ef464b35887ac31e400ced5db7bbfa41a3069524722ed4f0c0782",
+      "passed": true,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "combined_idle_bytes": 121585664,
+      "absolute_peak_bytes": 137912320,
+      "workspace_delta_bytes": 16326656,
+      "verified": {
+        "attachment_count": 0,
+        "block_count": 21600,
+        "conversation_count": 1,
+        "draft_format": 2,
+        "message_count": 36,
+        "passed": true,
+        "reference_count": 0,
+        "verified_asset_hashes": 0
+      },
+      "final_state": "COMPLETED",
+      "no_oom_or_restarts": true,
+      "synthetic_source_hashes_retained": true,
+      "native_analysis_deadline_seconds": 600
+    }
+  ],
+  "diagnostic_image": {
+    "image_id": "sha256:6bed2a3646456a6ff1b5f9a342154b97ae4cbb68db6bfbbf212e87daaf28a6d9",
+    "source_count": 394,
+    "build_revision_empty": true,
+    "not_deployable": true,
+    "host_backed_not_ci_linux_volume_acceptance": true
+  },
+  "orm_original7_plus3": 10,
+  "failed_gate_projection": 5,
+  "static": {
+    "lint": "passed",
+    "typecheck": "passed",
+    "ci_node": 89,
+    "ci_python": 100,
+    "migration_head": "20261112_0061",
+    "result_sha256": "1a1a5d9520934e44d488808d35235dfab54854265bb223d70a8238248d793c62"
+  },
+  "consumer_parser_controls": {
+    "count": 11,
+    "result_sha256": "b0fcb8fe14846147b3d2ae32fc524b560cdb12872ba988d45e9877502c1fe810",
+    "actual_original_official17_plus2_positive_control_byte_verified": true
+  },
+  "collection_only_not_execution": {
+    "actual_collected": 6912,
+    "portable_cases": 115,
+    "old107_preserved": true,
+    "expected_new_full_ci_passes": 6909,
+    "original_linux_skips": 3,
+    "one_old_gzip_id_real_mtime_only": true,
+    "verification_sha256": "b8e16475029bfab67ad1d64123d5211f0d29b61562715c9a70ae84209b359f59"
+  },
+  "retained_local_browser_preparation_and_listing": {
+    "original_failed_result_sha256": "c4dd5bf9bec37f10d983103f13d12d35f086c8e9629c39f1f74b5b9105f1e30f",
+    "original_failed_log_sha256": "10430d4abdbd108757550247ef54aa526417db51010e4fcac2d0bf16fe54e830",
+    "original_failed_gate_snapshot_retained_in_result": {
+      "schema_version": 2,
+      "gate_id": "browser-web-merge-08",
+      "status": "failed",
+      "started_at": "2026-11-15T16:04:52.226Z",
+      "test_count": 0,
+      "completed_at": "2026-11-15T16:04:52.228Z",
+      "duration_ms": 687,
+      "result_counts": {
+        "passed": 0,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      }
+    },
+    "original_first_gate_raw_sha256_not_frozen_before_listing": null,
+    "original_executed_cases": 0,
+    "not_product_test_failure": true,
+    "cause": "Anchored local grep excludes Playwright's filename-prefixed full titles.",
+    "listing_selected_original_cases": 4,
+    "listing_executed_cases": 0,
+    "listing_reporter_replaced_local_gate_file": true,
+    "listing_gate_raw_sha256": "d4d69e6635aac389e70750361c708d4cf9fa300d03484e8191170603c3374e40",
+    "listing_not_accepted_even_though_reporter_status_passed": true,
+    "strict_retry_12_failed_before_creating_a_new_driver_or_fixture": true,
+    "strict_retry_12_source_sha256": "3f00990233bbf3ceb6037aa6761d28541892136e453021d2e517604426e88c18",
+    "new_driver_sha256": "3f056aaefce04d7d8c411e836eca7ef1213e961add954f22a6ef92dee03b69fa",
+    "new_unique_result_directories": [
+      "browser-web-merge-13",
+      "browser-settings-merge-14"
+    ],
+    "no_product_case_or_native_budget_change": true
+  },
+  "retained_parser_preparation_failures": [
+    {
+      "phase": "parser25",
+      "old_fixture_path_absent": true,
+      "synthetic_controls_completed": 10,
+      "original_positive_control_not_run": true
+    },
+    {
+      "phase": "fixture26",
+      "old_adapter_path_absent": true,
+      "github_requests": 0
+    }
+  ],
+  "available_cli_bridge": {
+    "preparation_sha256": "464ed13a45b56fada9b3df1ec02e199efac2e4b26b61c4bdffb6be9da42684e1",
+    "old_adapter_unavailable_not_claimed_verified": true,
+    "native_gh_existing_credentials_memory_only": true,
+    "original_full_dispatch_wait_transport_and_consumer_assertions_unchanged": true
+  },
+  "retained_prior_windows_matrix": {
+    "failed": 1,
+    "passed": 1079,
+    "skipped": 14,
+    "cause_not_proven_by_this_scoped_pass": true
+  },
+  "prior_linux_collection_interrupted_and_zip54_failures_not_erased": true,
+  "preservation": {
+    "source_inputs": 1423,
+    "unchanged_old_inputs": 1421,
+    "web_inputs": 550,
+    "api_snapshot_including_new_test": 701,
+    "historical_receipts": 74,
+    "unrelated_files": 13,
+    "protected_local_containers": 10,
+    "result_sha256": "ca1c83f8d077f7c3cf57cd608c03030d35bdfe49c2337c5876cc9d60c1e288ee"
+  },
+  "production_accessed_or_modified": false,
+  "web_search_used": false,
+  "automation_created": false,
+  "remaining": [
+    "Selective commit/normal push and ordinary full CI with empty quality source.",
+    "A new actual55-minute wait, self-check and continuation to terminal outcome.",
+    "Independent full-quality/resource/artifact proof before fresh safe0061 deployment.",
+    "Optimize CI duration only after deployment.",
+    "Product/device/real-user-import acceptance belongs to the user; no replay."
+  ]
+}

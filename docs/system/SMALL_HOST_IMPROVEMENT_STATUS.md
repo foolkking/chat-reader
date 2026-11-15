@@ -1,6 +1,6 @@
 # 小机器优化目标：收尾总览与剩余路线
 
-更新时间：**2026-11-15，Asia/Shanghai**。本页是本目标的状态入口；
+更新时间：**2026-11-16，Asia/Shanghai**。本页是本目标的状态入口；
 详细方案、历次失败和实验记录保留在原账本，不再把每个检查点重复当作“当前状态”。
 
 ## 新授权：可靠性整块治理（发布准备中，用户负责验收）
@@ -12,7 +12,72 @@
 资料、不清理生产、不建立自动安排；未验收项不能因委托用户而改标通过。
 11月12日的一次本地检查点与随后本地工作限制保留为历史，不覆盖最新授权。
 
-### 11月15日最新：小预算执行冷启动、真实单次待机及失败取证
+### 11月16日最新：冷合并准入真实故障修复，待新完整CI
+
+正式cd392195/43725701515 attempt1在新真实55分钟等待后确认completed/failure。
+API6904项实际执行：6874通过/27失败/3原跳过/5 warnings，1946.06秒；
+Web Source Editor121项为117通过/4失败，Settings470项为468通过/2失败，
+独立restore未执行。Reader及build-images/inspect-release-artifact全部SKIPPED；
+两诊断ZIP不是部署制品，本次无需取消，不继承此前任何质量通过。
+[独立正式失败](../evidence/reliability-2026-11-16/ci-cold-merge-failure.json)
+保存三正式日志、两ZIP完整性及原dispatch/first-read字节。
+
+已确认产品原因：模块`__getattr__`只保留外部兼容导出，函数内global查找不会
+调用它；首次`queue_conversation_merge`执行`effective_limits`抛NameError。
+API27项失败和浏览器三个相同merge路由500/NameError事件一致。Web首项
+失败后原finally中的closed-page unroute先于项目清理抛错，后三项同名合成
+项目创建400是连锁，不能据此另称前端缺陷或降低原断言。
+审计前次改动的22个既有Python文件，仅这一新增global未绑定。
+
+产品源码严格只增加调用前的函数内真实策略导入；receipt replay/conflict、
+源验证/非删除canonical Message计数仍先行。旧模块导出、worker冷路径、
+策略/owner override、接受限额快照、全部测试主体和预算不改。
+新增独立解释器8项覆盖默认/实例限制、本人/他人override、原receipt replay/
+conflict以及标准supervisor/execution passive不加载策略。
+[后端合同](BACKEND_AND_API.md#cold-merge-policy-resolution--source-2026-11-16)。
+
+独立红测4失败/4通过均为同一NameError，原字节保留；修复后cold54通过，
+Linux/PG16实际244通过/0skip/1原warning（788.94秒）包括原27个失败ID和
+prepared/真实supervised PG/关闭/health/ZIP冷控制。两范围重叠，不能相加。
+新隔离550输入Windows production Web构建通过，用户.next/tsbuildinfo保全。
+真实API、普通worker、PG17和该production Web下，原四Web合并恢复及两
+Settings申请/批准/恢复用例通过。仅本机bundled Chromium缺失，明确使用
+已安装Chrome；不是Linux/完整121或470/PWA验收，也没有改原浏览器主体。
+
+五项原memory在新394输入诊断镜像全部通过：180/600秒、320/640MiB无额外
+swap、真实counts/hash、≤64MiB增量和OOM/restart断言不变。combined idle
+约115–116MiB含单次待机child；绝对峰值约131–159MiB、增量约16–44MiB，
+高于旧单parent idle的代价必须一起报告。空revision、本机host-backed存储
+不是精确CI Linux volume或可部署镜像。仅本任务owned容器按ID/label移除，
+来源保留，测试PG已停止且data保留，其他10个容器保全。
+ORM10/失败投影5、CI Node89/Python100、lint/typecheck、head0061通过。
+
+初次本机grep含锚点，未匹配文件名前缀完整标题，0用例执行并保留失败；
+随后--list虽让reporter写passed/test_count4，但执行计数全0，绝不当通过。
+原首次gate raw SHA未冻结，保持未知；原result/log不改写。严格retry在该
+检查拒绝，改用独立13/14目录真正执行4+2通过，不覆写初次记录。
+旧Windows广泛1失败/1079通过/14skip、Linux收集/中断和ZIP54两失败继续
+由旧回执保存，本轮局部通过不把它们改标或声称其产品根因已解决。
+
+当前1423输入＝前次1422＋新测试，原输入仅background_jobs变化，其他1421
+raw SHA保全；550 Web、700既有API/schema快照明确区分该一项变化和新测试。
+69旧物理回执加前次五worker-budget回执、13无关文件和用户cache按raw核对。
+实际collect6912，七新增测试合计115个portable ID，旧107及6903稳定ID保留；
+唯一旧gzip参数ID仍为原builder真实mtime差异，正文/CRC/内容不变。
+新完整CI须实际6909通过/原3 Linux skip，收集或局部重叠通过不替代全量。
+[本轮定点验证](../evidence/reliability-2026-11-16/ci-cold-merge-verification.json) /
+[输入保全](../evidence/reliability-2026-11-16/ci-cold-merge-inputs.json)。
+
+接续选择性提交/正常推送，只派发普通完整CI，quality source为空；新独立
+ci-cold-merge-dispatch/first-read登记实际候选/run和新真实55分钟双时钟等待。
+自行追到结束，失败继续修；所有六job、原Web14/Settings470+restore1、
+Reader9/物理frames、五例memory和精确OCI/内嵌源码独立证明后才部署。
+届时fresh容量、停写备份、旧执行/lease释放、0061迁移、精确镜像和独立健康
+仍必需；部署成功后才优化CI耗时。未SSH/访问生产，不动唯一好备份、
+config/volume或用户imports，不重放用户ZIP、不创建automation或新任务。
+生产3564cbf/schema0060仅此前指针；旧151ms根因/产品及实体设备验收不改标。
+
+### 前一11月15日检查点（历史）：小预算执行冷启动、真实单次待机及失败取证
 
 正式4ca1ed5/43688838312 attempt1 completed/failure：API6794/3 skips/5 warnings、
 Web14、Settings470+独立restore1、候选Reader9均通过。builder失败于原

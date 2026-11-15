@@ -1,6 +1,21 @@
 # 事实证据索引
 
-## 小预算 worker 冷启动与原资源失败 — 2026-11-15
+## 冷合并准入正式失败与定点修复 — 2026-11-16
+
+[正式失败](reliability-2026-11-16/ci-cold-merge-failure.json)绑定
+cd392195/43725701515：API6874/27/3、Web编辑117/4、Settings468/2，
+同一merge NameError；三正式日志/两诊断ZIP哈希与完整性重验，无部署制品。
+原55分钟dispatch/first-read及红测4失败/4通过只按原字节保留。
+[验证](reliability-2026-11-16/ci-cold-merge-verification.json) /
+[1423输入](reliability-2026-11-16/ci-cold-merge-inputs.json)区分Linux244、
+重叠cold54、原浏览器4+2、五memory、静态和新Windows构建的局部范围。
+真实待机成本/绝对峰值/增量一起保留，不以诊断镜像冒充CI资源验收。
+首grep0执行和--list的假passed gate不得改标；初次gate SHA未知保持未知，
+旧广泛失败及74旧物理回执保全。6912/新增115是collection，不是全量通过。
+新ci-cold-merge-dispatch/first-read另记实际候选/run与新真实55分钟等待；
+当前进度/发布授权只见[唯一台账](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+## 前一小预算 worker 冷启动与原资源失败（历史）— 2026-11-15
 
 [正式失败](reliability-2026-11-15/ci-worker-budget-failure.json)绑定
 4ca1ed5/43688838312：API6794、Web14、Settings470+restore1及候选Reader9通过；

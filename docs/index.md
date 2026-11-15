@@ -1,6 +1,23 @@
 # 文档导航
 
-## 当前任务：小预算 worker 冷启动与持续发布闭环 — 2026-11-15
+## 当前任务：冷合并准入修复与完整CI发布闭环 — 2026-11-16
+
+cd392195/43725701515正式失败：API6874通过/27失败/3跳过，Web编辑117/4、
+Settings468/2；未预热的合并入口全局策略查找抛NameError，API/浏览器日志一致。
+Reader及两发布job跳过，没有可部署制品。
+[正式失败](evidence/reliability-2026-11-16/ci-cold-merge-failure.json) /
+[后端合同](system/BACKEND_AND_API.md#cold-merge-policy-resolution--source-2026-11-16) /
+[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+产品仅补业务调用前的真实策略导入，保留receipt先行、所有权、延迟导出和原门槛；
+新增8个独立解释器控制。Linux/PG244、冷导入54（重叠范围）、原浏览器4+2、
+新550输入Windows构建和原五项memory均通过，不等于完整CI/产品验收。
+真实idle约115–116MiB，峰值131–159MiB，不能只宣传增量降低；旧广泛失败保留。
+[验证](evidence/reliability-2026-11-16/ci-cold-merge-verification.json) /
+[1423输入](evidence/reliability-2026-11-16/ci-cold-merge-inputs.json)。
+6912/新增115只是实际收集；接续普通完整CI、全新真实等55分钟后自行查看，
+失败继续修，全绿并独立核验制品后部署，再优化CI耗时。剩余产品验收由用户做。
+
+## 前一检查点：小预算 worker 冷启动与持续发布闭环 — 2026-11-15
 
 4ca1ed5/43688838312四项质量全部通过，builder在原320MiB/no-swap、
 180秒v1 ZIP分析门禁失败；末态/OOM未保留，无可部署制品。

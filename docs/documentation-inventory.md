@@ -1,6 +1,23 @@
 # Markdown 文档台账
 
-## 小预算 worker 注册/单次待机与失败取证 — 2026-11-15
+## 冷合并准入修复及完整CI接续 — 2026-11-16
+
+仅定点同步原七知识入口，不重整README/AGENTS、旧历史或其他任务资料。
+Project State/导航给短失败与待验证入口；Small Host是唯一进度台账；
+Backend/API持有函数内真实策略解析、receipt先行和passive延迟边界；
+Testing区分Linux244、重叠cold54、原浏览器4+2、五memory/静态及collection，
+明确本机Chrome/host-backed诊断不替代新完整CI。证据入口保留全部失败，
+尤其0执行grep和--list虽写passed但执行计数为0，未知SHA不能补造。
+
+新增ci-cold-merge-failure保留三日志/两ZIP、27原失败ID和同一NameError；
+ci-cold-merge-verification负责定点验证与全部限制；ci-cold-merge-inputs负责
+1423输入（1421原输入不变/一处产品导入/一新测试）、550 Web、API快照、
+74旧物理回执和13无关文件保全。前次worker-budget派发/首读按原字节归档，
+新派发/首读另记实际candidate/run及新55分钟双时钟等待。只给本轮
+ci-cold-merge-*追加字节属性，原属性/证据不改。其余部署/迁移政策不变，
+不把局部通过、实际collection6912/新增115或产品委托用户改写成已验收。
+
+## 前一小预算 worker 注册/单次待机与失败取证（历史）— 2026-11-15
 
 仅定点同步现有知识入口，不重整README/AGENTS、旧历史或其他任务资料。
 `PROJECT_STATE.md`/`docs/index.md`给当前失败和待验证边界；唯一进度仍在

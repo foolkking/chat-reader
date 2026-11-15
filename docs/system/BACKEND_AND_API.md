@@ -4,6 +4,22 @@
 和[当前发布回执](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)为准。
 下方带日期的 local/源码检查点保留其原验证含义，不是当前未发布清单。
 
+## Cold merge policy resolution — source 2026-11-16
+
+Merge admission resolves the actual `feature_policies.effective_limits` inside
+`queue_conversation_merge`, immediately before its existing limit calculation.
+The module's lazy `__getattr__` preserves external compatibility exports but
+cannot resolve function-global names. Passive standard-worker loading remains
+policy-free; no eager import, proxy policy or new API/schema is introduced.
+Owned receipt replay/conflict still precedes source/policy validation. New
+admission still counts nondeleted canonical messages and snapshots the real
+owned limit; an unrelated owner's override cannot raise it.
+
+Eight fresh-interpreter controls cover cold admission, replay ordering and both
+standard worker roles. Scoped Linux/API/browser passes do not replace full
+exact CI or production acceptance. The [single ledger](SMALL_HOST_IMPROVEMENT_STATUS.md)
+owns the formal failure, retained evidence and pending release.
+
 ## Worker registration and single-use preparation — source 2026-11-15
 
 The ordinary `python -m app.workers.import_worker` launcher prepares one

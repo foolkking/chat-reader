@@ -1,5 +1,34 @@
 # Testing
 
+## Cold merge admission and scoped repair verification — 2026-11-16
+
+Exact cd392195/43725701515 fails API27, Web merge4 and Settings2 after the
+actual55-minute wait. The API and browser logs agree on unprimed merge policy
+`NameError`; Reader and release jobs skipped. [Formal failure](evidence/reliability-2026-11-16/ci-cold-merge-failure.json).
+Only the local policy import changes product code; no existing case or budget
+changes. `test_background_job_cold_merge_admission.py` adds8 genuine separate
+interpreter cases: four owned limit modes, replay/conflict ordering and two
+passive standard-worker roles. Its pre-repair4 failures/4 passes are retained.
+
+Linux/PG244 passes, including every original27 failed API ID; Windows cold54
+overlaps it and is not an additional coverage total. The original four Web/two
+Settings merge cases pass on real API/ordinary worker/PG17 and a fresh550-input
+Windows production Web build. Existing installed Chrome is explicitly used
+because bundled Chromium is absent. These are not full121/470/PWA/Linux gates.
+Five original real-memory cases pass with unchanged native deadlines, limits,
+hash/count/OOM/restart assertions. Report combined idle115–116MiB, absolute
+peak131–159MiB and delta16–44MiB together; no diagnostic-image release claim.
+ORM10, failed-gate projection5, CI Node89/Python100, lint/typecheck/head0061 pass.
+
+The first local browser grep executes zero tests. A later `--list` rewrites its
+reporter gate to passed but all result counts remain zero: this is not PASS.
+The original result/log and unknown pre-list gate SHA are retained; separate
+fresh directories execute the final4+2. Prior broad Windows/Linux failures
+remain failures. [Scoped verification](evidence/reliability-2026-11-16/ci-cold-merge-verification.json)
+does not substitute for the required new full CI. Collection6912/new115 is
+not execution; the new official log must prove6909 passes/3 original skips
+and every115 portable ID exactly once as PASSED.
+
 ## Current release loop — 2026-11-15
 
 The latest authorization supersedes historical “confirm dispatch then pause”:
@@ -10,7 +39,7 @@ gates and native deadlines remain. Deployment requires independent proof;
 product acceptance belongs to the user. The
 [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current results.
 
-The latest official4ca1ed5/43688838312 passes API6794, Web14,
+The earlier official4ca1ed5/43688838312 passes API6794, Web14,
 Settings470+restore1 and candidate Reader9. Only the original320-MiB/no-extra-swap
 v1 analysis wait failed at180 seconds; absent final status/OOM counters do not
 prove OOM. No deployable artifact/consumer acceptance exists.

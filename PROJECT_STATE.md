@@ -1,6 +1,40 @@
 # Project State
 
-## Latest: bounded worker startup and retained resource failure — 2026-11-15
+## Latest: cold merge admission repair and full-CI release loop — 2026-11-16
+
+Exact cd392195/43725701515 completed/failure after the real55-minute wait:
+API6874 passed/27 failed/3 skipped, Web Source Editor117/4 and Settings468/2.
+Module `__getattr__` does not resolve a function's global lookup; the unprimed
+merge admission raised `NameError: effective_limits`. Official API and browser
+logs agree. Reader and both release jobs skipped; no deployable artifacts.
+[Official failure](docs/evidence/reliability-2026-11-16/ci-cold-merge-failure.json).
+
+The only product change imports the real policy at merge admission, after
+receipt replay/conflict and canonical source validation. Lazy compatibility
+exports, passive worker imports, ownership and existing tests/budgets remain.
+Eight new independent-interpreter cases protect cold limits, owned overrides,
+replay/conflict ordering and passive standard-worker loading.
+[Contract](docs/system/BACKEND_AND_API.md#cold-merge-policy-resolution--source-2026-11-16).
+
+Local Linux/PG244, overlapping cold-import54, the original four Web/two Settings
+merge browser cases, a fresh550-input Windows production build and all five
+original memory cases pass. Combined idle about115–116MiB includes the standby
+child; absolute peaks131–159MiB and increments16–44MiB are reported together.
+Host-backed diagnostic images, installed Chrome and scoped checks are not
+Linux/full-PWA/release acceptance; prior broad failures remain retained.
+Actual API collection is6912/new115, not execution; new full CI must prove6909
+passes and the original3 Linux skips.
+[Verification](docs/evidence/reliability-2026-11-16/ci-cold-merge-verification.json) /
+[1423 inputs](docs/evidence/reliability-2026-11-16/ci-cold-merge-inputs.json).
+
+Continue selective commit/normal push, ordinary full CI with empty quality
+source, a new real55-minute wait and self-check; repair failures, prove artifacts
+before deployment, then optimize CI duration. User owns product acceptance.
+Production3564cbf/schema0060 is only the earlier verified pointer, not rechecked;
+the old151ms product cause remains unproven. Current progress belongs to the
+[single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md).
+
+## Earlier: bounded worker startup and retained resource failure — 2026-11-15
 
 Exact4ca1ed5/43688838312 completed/failure: API6794/3 skips/5 warnings,
 Web14, Settings470+independent restore1 and candidate Reader9 pass. The builder

@@ -154,6 +154,8 @@ def queue_conversation_merge(
         .scalar()
         or 0
     )
+    from app.services.feature_policies import effective_limits
+
     maximum_message_count = effective_limits(db, ownership_scope.owner_user_id)["merge_message_count"]
     if total_items > maximum_message_count:
         raise MessageEditError(

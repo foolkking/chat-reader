@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T16:20:36.197149+00:00",
+  "status": "official_full_ci_failed_in_cold_merge_admission_not_deployment_acceptance",
+  "run": {
+    "conclusion": "failure",
+    "created_at": "2026-11-15T14:41:13Z",
+    "event": "workflow_dispatch",
+    "head_branch": "master",
+    "head_sha": "cd392195befb27dd64e7e0ce86c87145aac17559",
+    "html_url": "https://github.com/foolkking/chat-reader/actions/runs/43725701515",
+    "id": 43725701515,
+    "path": ".github/workflows/build-release-images.yml",
+    "run_attempt": 1,
+    "status": "completed",
+    "updated_at": "2026-11-15T15:25:45Z",
+    "workflow_id": 328268956
+  },
+  "quality_source_run_id": "",
+  "actual_fresh55_wait_seconds": 3300.0,
+  "original_dispatch_raw_sha256": "c9b51a5787bafe52357466bbd38c1ec010459078b785067cf7e73443626b476b",
+  "original_first_read_raw_sha256": "2352a9bf421bced786bc2d90a07cbe3497cc56a72589f8b71b4def2565875803",
+  "official_logs": [
+    {
+      "id": 132847043944,
+      "name": "api-quality",
+      "bytes": 1595382,
+      "sha256": "791802e974bf186f4999f82a7e1ca411026e45af19e4196cc8d8a288672a1c6b"
+    },
+    {
+      "id": 132847044175,
+      "name": "web-quality",
+      "bytes": 1185453,
+      "sha256": "deab7c752e671bde8bf064bade0d03023dddf72bd37884482b88479e3cd52f9b"
+    },
+    {
+      "id": 132847044219,
+      "name": "settings-quality",
+      "bytes": 196508,
+      "sha256": "c4be4ec5a957205c93d7aa09c0125bd1dcf7036e9e3dae3e31f3ca7c248a934b"
+    }
+  ],
+  "official_non_deployable_artifacts": [
+    {
+      "id": 14167967198,
+      "name": "settings-quality-evidence-cd392195befb27dd64e7e0ce86c87145aac17559-1",
+      "size_in_bytes": 15693207,
+      "digest": "sha256:18b801566d31d7c4f5497e483b78472525b18f41fef10281ab1745f622592293",
+      "member_count": 211,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "id": 14167751612,
+      "name": "release-a-quality-evidence-cd392195befb27dd64e7e0ce86c87145aac17559-1",
+      "size_in_bytes": 33777923,
+      "digest": "sha256:239a7370f4b256030c491dd495720b9d50fa08df9e12f93ab8dcf29fbeabf4b5",
+      "member_count": 603,
+      "verified_size_digest_crc_safe_paths": true
+    }
+  ],
+  "jobs": [
+    {
+      "id": 132847043944,
+      "name": "api-quality",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-15T14:41:16Z",
+      "completed_at": "2026-11-15T15:17:04Z",
+      "failed_steps": [
+        "API full suite"
+      ]
+    },
+    {
+      "id": 132847044175,
+      "name": "web-quality",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-15T14:41:17Z",
+      "completed_at": "2026-11-15T15:17:30Z",
+      "failed_steps": [
+        "Release H Source Editor and mutation cache checks"
+      ]
+    },
+    {
+      "id": 132847044219,
+      "name": "settings-quality",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-15T14:41:17Z",
+      "completed_at": "2026-11-15T15:25:44Z",
+      "failed_steps": [
+        "Real settings, SMTP, offline and sync browser matrix"
+      ]
+    },
+    {
+      "id": 132857081999,
+      "name": "reading-performance-comparison",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-15T15:17:04Z",
+      "completed_at": "2026-11-15T15:17:04Z",
+      "failed_steps": []
+    },
+    {
+      "id": 132859592876,
+      "name": "inspect-release-artifact",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-15T15:25:45Z",
+      "completed_at": "2026-11-15T15:25:45Z",
+      "failed_steps": []
+    },
+    {
+      "id": 132859593196,
+      "name": "build-images",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-15T15:25:45Z",
+      "completed_at": "2026-11-15T15:25:45Z",
+      "failed_steps": []
+    }
+  ],
+  "api": {
+    "collected_and_executed": 6904,
+    "passed": 6874,
+    "failed": 27,
+    "skipped": 3,
+    "warnings": 5,
+    "pytest_elapsed_seconds": 1946.06,
+    "failed_case_ids": [
+      "tests/test_attachment_operation_semantics.py::test_copy_operations_preserve_literal_examples_and_rewrite_only_live_references[False-merge]",
+      "tests/test_attachment_operation_semantics.py::test_copy_operations_preserve_literal_examples_and_rewrite_only_live_references[True-merge]",
+      "tests/test_merge_admission.py::test_explicit_new_keys_represent_distinct_deliberate_jobs",
+      "tests/test_merge_admission.py::test_same_request_returns_retained_task_in_every_status[queued]",
+      "tests/test_merge_admission.py::test_same_request_returns_retained_task_in_every_status[processing]",
+      "tests/test_merge_admission.py::test_same_request_returns_retained_task_in_every_status[cancelling]",
+      "tests/test_merge_admission.py::test_same_request_returns_retained_task_in_every_status[committed]",
+      "tests/test_merge_admission.py::test_same_request_returns_retained_task_in_every_status[failed]",
+      "tests/test_merge_admission.py::test_same_request_returns_retained_task_in_every_status[cancelled]",
+      "tests/test_merge_admission.py::test_same_request_key_rejects_changed_merge_payload[order]",
+      "tests/test_merge_admission.py::test_same_request_key_rejects_changed_merge_payload[title]",
+      "tests/test_merge_admission.py::test_same_request_key_rejects_changed_merge_payload[project]",
+      "tests/test_merge_admission.py::test_replay_returns_receipt_before_source_state_validation",
+      "tests/test_merge_admission.py::test_admission_lookup_is_read_only_and_not_limited_by_task_center_window",
+      "tests/test_merge_admission.py::test_same_key_and_lookup_are_scoped_to_the_authenticated_owner",
+      "tests/test_merge_admission.py::test_deleted_sources_do_not_delete_or_hide_an_owned_admission_receipt",
+      "tests/test_merge_admission_postgres.py::test_concurrent_key_admission_is_serial_and_payload_bound[False]",
+      "tests/test_merge_admission_postgres.py::test_concurrent_key_admission_is_serial_and_payload_bound[True]",
+      "tests/test_merge_history_and_cancellation.py::test_merge_rejects_message_count_above_administrator_limit",
+      "tests/test_merge_history_and_cancellation.py::test_merge_validation_batches_large_render_block_graph",
+      "tests/test_merge_history_and_cancellation.py::test_merge_copies_all_versions_blocks_current_pointer_and_annotations",
+      "tests/test_merge_history_and_cancellation.py::test_merge_rewrites_attachment_references_and_blocks_without_mutating_source",
+      "tests/test_merge_history_and_cancellation.py::test_merge_worker_rolls_back_target_when_source_occurrence_is_missing",
+      "tests/test_merge_history_and_cancellation.py::test_cancel_endpoint_and_stale_retry_limit",
+      "tests/test_ownership_scope.py::test_project_conversation_and_task_resources_are_account_isolated",
+      "tests/test_split_merge_api.py::test_conversation_merge_and_split_create_new_conversations_without_modifying_sources",
+      "tests/test_support_requests.py::test_personal_merge_limit_is_locked_when_accepted"
+    ],
+    "exact_global_lookup_error": "NameError: effective_limits",
+    "source": "app/services/background_jobs.py:157 queue_conversation_merge",
+    "cause": "Module __getattr__ preserves external exports but does not resolve function-global name lookup."
+  },
+  "browser_gates": {
+    "settings": {
+      "schema_version": 2,
+      "gate_id": "settings-stages-1-4",
+      "status": "failed",
+      "started_at": "2026-11-15T14:43:13.658Z",
+      "test_count": 470,
+      "completed_at": "2026-11-15T15:25:39.533Z",
+      "duration_ms": 2548109,
+      "result_counts": {
+        "passed": 468,
+        "failed": 2,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      }
+    },
+    "web": {
+      "schema_version": 2,
+      "gate_id": "source-editor-mutation",
+      "status": "failed",
+      "started_at": "2026-11-15T15:06:30.428Z",
+      "test_count": 121,
+      "completed_at": "2026-11-15T15:17:24.129Z",
+      "duration_ms": 655995,
+      "result_counts": {
+        "passed": 117,
+        "failed": 4,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      }
+    }
+  },
+  "projected_same_route_exceptions_without_request_ids": [
+    {
+      "source": "settings",
+      "timestamp": "2026-11-15T15:20:11.726665+00:00",
+      "method": "POST",
+      "route_template": "/api/conversations/merge",
+      "status": 500,
+      "error_class": "NameError"
+    },
+    {
+      "source": "settings",
+      "timestamp": "2026-11-15T15:20:14.726577+00:00",
+      "method": "POST",
+      "route_template": "/api/conversations/merge",
+      "status": 500,
+      "error_class": "NameError"
+    },
+    {
+      "source": "web",
+      "timestamp": "2026-11-15T15:12:48.957206+00:00",
+      "method": "POST",
+      "route_template": "/api/conversations/merge",
+      "status": 500,
+      "error_class": "NameError"
+    }
+  ],
+  "web_secondary_failures": {
+    "observed": "Three later project creations expected 201 but received 400.",
+    "unchanged_test_source_ordering": "The failed first route assertion is followed by unrouteAll on a closed page; its exception precedes project cleanup. Later cases reuse that fixed synthetic name.",
+    "not_an_independently_proven_frontend_defect": true
+  },
+  "red_reproduction": {
+    "platform": "win32",
+    "passed": 4,
+    "failed": 4,
+    "skipped": 0,
+    "all_four_first_admissions_fail_with_the_same_NameError": true,
+    "original_result_sha256": "39c618ba1d139beba51480b46ad7b8f3ecffedad41dd2b8562282855a75d2da8",
+    "original_log_sha256": "d17e43b56207a50b73c5be2d6f9edefc551989b74254a797309ef4b089ab0977"
+  },
+  "reading_performance_and_all_release_memory_image_consumers_not_run": true,
+  "deployable_artifacts": 0,
+  "production_accessed_or_modified": false,
+  "no_old_failure_receipt_rewritten": true,
+  "no_claim_of_new_full_ci_acceptance": true
+}
