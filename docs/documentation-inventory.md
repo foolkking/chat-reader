@@ -1,6 +1,25 @@
 # Markdown 文档台账
 
-## 离线批次状态延迟与持续发布授权 — 2026-11-15
+## Reader 原生滚动物理位置栅栏与正式失败保全 — 2026-11-15
+
+仅定点同步七份已有文档，不重整全仓、改README/AGENTS/全局记忆或旧回执。
+Project State/导航保持短入口；唯一Small Host台账维护实际失败、本地修复、
+后续55分钟自行读取/失败继续修/成功部署再优化CI的当前进度。
+Frontend Architecture持有边界物理位置栅栏合同；Testing持有原25/43用例
+主体保全、最终37/45/UX2556及真实passive延迟控制的验收边界。
+证据入口区分正式API6794/Web14/Settings470+restore1通过、Reader8/1失败
+与独立诊断9通过，不把诊断或旧151ms未复现变为产品验收。
+
+新增`ci-reader-scroll-failure.json`核验四日志/三ZIP和真实120px回退；
+`ci-reader-scroll-verification.json`记录本地控制/静态及新550输入Windows构建；
+`ci-reader-scroll-inputs.json`冻结1413输入，仅4原输入变化，保护700 API/schema、
+64历史回执及13无关文件。原离线dispatch/first-read只按原字节归档；本次新
+dispatch/first-read将分别登记实际新candidate/run和真实新55分钟等待。
+仅给新`ci-reader-scroll-*`追加`-text`字节证据属性，旧属性/证据不变。
+普通完整CI不复用旧质量/资源，不改原测试、native/memory/workflow预算或
+生产/配置/来源/唯一备份，剩余产品验收仍归用户。
+
+## 前一离线批次状态延迟与持续发布授权（历史）— 2026-11-15
 
 定点更新Project State、导航、唯一台账、离线/可观测性合同和证据入口，不重整全仓。
 Testing、Deployment、部署环境和发布安全入口同步最新持续执行授权；原暂停

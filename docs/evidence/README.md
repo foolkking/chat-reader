@@ -1,6 +1,21 @@
 # 事实证据索引
 
-## 离线批次延迟与正式完整CI失败 — 2026-11-15
+## Reader 原生滚动回退与物理栅栏修复 — 2026-11-15
+
+[正式失败](reliability-2026-11-15/ci-reader-scroll-failure.json)绑定
+2e0a1fe/43681565051 attempt1：API6794、Web14、Settings470+restore1通过，
+原21份/60秒准备已通过；候选Reader8/1仅plain10000冷1真实回退120px，
+无高度/挂载变化或长任务。独立诊断9/27 profiles不替代主FAIL，两发布job跳过。
+四日志/三官方ZIP重新核验，旧派发及首次读取回执原字节保留。
+[本地验证](reliability-2026-11-15/ci-reader-scroll-verification.json) /
+[1413输入](reliability-2026-11-15/ci-reader-scroll-inputs.json)：仅4原输入变化，
+原25/43主体保留、最终37/45、UX2556、CI89/Python100和静态通过；
+同代码真实原生wheel前后控制证明旧写回/新无回退，新550输入Windows构建通过。
+不是新Linux/PWA/资源/生产验收，旧151ms根因不改标；保护64历史回执与13
+无关文件。新普通CI独立派发/新55分钟首次读取回执登记实际身份与时间，
+当前持续修复/部署授权仅见[唯一台账](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+## 前一离线批次延迟与正式完整CI失败（历史）— 2026-11-15
 
 [独立正式诊断](reliability-2026-11-15/ci-offline-latency-failure.json)绑定
 d983521/43629368808、Settings469/470、20准入/19下载和原60秒失败；

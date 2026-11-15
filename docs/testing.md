@@ -10,14 +10,17 @@ gates and native deadlines remain. Deployment requires independent proof;
 product acceptance belongs to the user. The
 [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current results.
 
-The source candidate passes related real-PG371/five original environment skips,
-offline Node214, lint/typecheck and single head0061. The original17 supervision
-cases remain;43 additive progress/exit/recovery/handoff controls are included.
-The original21-real-copy/60-second Windows browser case still fails19/18 before
-pagination.550 inputs match the earlier production Web build, not a new build.
-[Local evidence](evidence/reliability-2026-11-15/ci-offline-handoff-verification.json) /
-[1413 inputs](evidence/reliability-2026-11-15/ci-offline-handoff-inputs.json)
-do not replace fresh exact Linux full CI or image/resource/consumer acceptance.
+The latest official2e0a1fe run passes API6794, Web14 and Settings470+restore1,
+including the unchanged21-real-copy/60-second preparation. Candidate Reader8/1
+fails a real120px reverse frame; a separate passing9-case CPU diagnostic cannot
+replace it. No image/resource/consumer gates ran. The current Reader candidate
+passes local navigation37, mounted45, UX Node2556, CI Node89/Python100,
+lint/typecheck and single head0061, plus a fresh550-input Windows production
+build. [Local evidence](evidence/reliability-2026-11-15/ci-reader-scroll-verification.json) /
+[1413 inputs](evidence/reliability-2026-11-15/ci-reader-scroll-inputs.json)
+retain64 receipts/13 unrelated files and do not replace new exact Linux full CI.
+The previous Windows21-copy failures remain historical evidence, not this
+formal run's result; the older151ms product root cause is still unproven.
 
 The API and Settings quality jobs use their job-owned loopback PostgreSQL on
 port **65438**, matching the guarded synthetic scan helper. Web and image-memory
@@ -26,7 +29,39 @@ run/attempt/job; no seeder admission, native operation deadline, memory or
 test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
 
-## Native Reader failure evidence — local 2026-11-15
+## Reader native-motion fence controls — local 2026-11-15
+
+`restoreScrollAnchor` opts into an edge-only physical offset fence. The original
+25 navigation cases remain byte-identical;12 additions cover native motion
+before intent delivery, root and actual window branches, preclaim pin gaps,
+geometry-to-write races, own corrections/clamping and invalid offsets.
+Final37 pass; the complete151-file UX suite passes2556 with zero skips,
+including those37 rather than an additional37.
+
+The original43 mounted groups also remain byte-identical. Two additive probes
+use a real10000-message Reader, actual native120px wheel and a passive
+notification delay of0/180ms, without preventing default or fabricating motion.
+Both retain22 frames, a connected real article, about120px forward movement
+and zero physical reverse. The same repository control fails against the
+pre-repair bundle. They are explicitly diagnostic-only, not10k release timing
+acceptance; the ordinary comparison harness/inputs/2px/34/150/250/40/120
+bounds are unchanged. Share and other explicit restoration defaults stay intact.
+
+Set approved task TEMP/TMP/RUNNER_TEMP before these commands:
+
+```powershell
+node --test scripts/ux/reader-navigation-alignment.test.mjs
+$uxTests = @(Get-ChildItem scripts/ux -File -Filter '*.test.mjs' | Sort-Object Name | ForEach-Object FullName)
+node --test @uxTests
+node scripts/ux/reader-interaction-browser.mjs
+```
+
+[Official scroll failure](evidence/reliability-2026-11-15/ci-reader-scroll-failure.json) /
+[final local verification](evidence/reliability-2026-11-15/ci-reader-scroll-verification.json)
+preserve the actual red/control failures and distinguish the new550-input
+Windows production build from fresh Linux/PWA, full API and image-memory gates.
+
+## Earlier native Reader failure evidence — historical local 2026-11-15
 
 The official2495fb1 comparison failed math10000 cold2 at151ms against the
 unchanged150ms maximum; total231ms passed250ms. API/Web/Settings succeeded,

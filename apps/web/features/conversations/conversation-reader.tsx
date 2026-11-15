@@ -1217,6 +1217,7 @@ export function ConversationReader({
         return;
       }
       const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+      const scrollOffsetAtAnchor = root.scrollTop;
       const scrollIntentAtAnchor = scrollIntentSequenceRef.current;
       if (anchor) {
         anchorLease = await acquireScrollAnchorLease(anchor, transitionIsCurrent);
@@ -1241,7 +1242,7 @@ export function ConversationReader({
         transitionIsCurrent() &&
         scrollIntentSequenceRef.current === scrollIntentAtAnchor
       );
-      if (anchor) await restoreScrollAnchor({ root, anchor, tokenIsCurrent: restoreIsCurrent });
+      if (anchor) await restoreScrollAnchor({ root, anchor, tokenIsCurrent: restoreIsCurrent, scrollOffsetAtCapture: scrollOffsetAtAnchor });
       // The shared idle reclamation protects the entire visible/interaction
       // interval; don't separately trim an arbitrary head/tail here.
       setReaderEdgeStage(root, "previous:settled");
@@ -1281,6 +1282,7 @@ export function ConversationReader({
         return;
       }
       const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+      const scrollOffsetAtAnchor = root.scrollTop;
       const scrollIntentAtAnchor = scrollIntentSequenceRef.current;
       if (anchor) {
         anchorLease = await acquireScrollAnchorLease(anchor, transitionIsCurrent);
@@ -1305,7 +1307,7 @@ export function ConversationReader({
         transitionIsCurrent() &&
         scrollIntentSequenceRef.current === scrollIntentAtAnchor
       );
-      if (anchor) await restoreScrollAnchor({ root, anchor, tokenIsCurrent: restoreIsCurrent });
+      if (anchor) await restoreScrollAnchor({ root, anchor, tokenIsCurrent: restoreIsCurrent, scrollOffsetAtCapture: scrollOffsetAtAnchor });
       // The shared idle reclamation protects the entire visible/interaction
       // interval; don't separately trim an arbitrary head/tail here.
       setReaderEdgeStage(root, "next:settled");

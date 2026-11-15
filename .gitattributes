@@ -39,3 +39,5 @@ docs/execution/ux-audit-reading-tools-completion-2026-11-08-evidence/lint.log -t
 # Preserve the newly archived CI receipts; existing reading receipts are unchanged.
 docs/evidence/reliability-2026-11-15/ci-reading-diagnostics-dispatch.json -text whitespace=cr-at-eol,-blank-at-eof
 docs/evidence/reliability-2026-11-15/ci-offline-* -text whitespace=cr-at-eol,-blank-at-eof
+# New native-scroll receipts are likewise immutable byte evidence.
+docs/evidence/reliability-2026-11-15/ci-reader-scroll-* -text whitespace=cr-at-eol,-blank-at-eof

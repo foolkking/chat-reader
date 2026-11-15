@@ -1,6 +1,22 @@
 # 文档导航
 
-## 当前任务：离线批次等待延迟修复与持续发布闭环 — 2026-11-15
+## 当前任务：Reader 原生滚动回退修复与持续发布闭环 — 2026-11-15
+
+2e0a1fe/43681565051仅候选Reader plain10000冷1失败：真实锚点回退120px，
+高度/挂载数不变且没有长任务。API6794、Web14、Settings470+restore1通过；
+独立诊断9通过不能替代主失败，两发布job跳过。
+[正式失败](evidence/reliability-2026-11-15/ci-reader-scroll-failure.json) /
+[Reader合同](system/FRONTEND_ARCHITECTURE.md#reader-edge-physical-motion-fence--2026-11-15) /
+[唯一当前台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+边界恢复仅接受capture时物理位置及自身实际写入；外部滚动退役旧恢复，
+不伪造用户意图或动态改变真实锚点。原25/43用例主体保留，本地37/45/
+UX2556、CI89/Python100、静态及新550输入Windows构建通过，尚非新Linux验收。
+[验证](evidence/reliability-2026-11-15/ci-reader-scroll-verification.json) /
+[1413输入](evidence/reliability-2026-11-15/ci-reader-scroll-inputs.json)
+保护64旧回执/13无关文件。普通完整CI后真实新等55分钟自行查看，失败继续修，
+通过并核验新制品后部署，再优化CI耗时；剩余产品验收归用户，旧151ms根因未改标。
+
+## 前一检查点：离线批次等待延迟修复与持续发布授权（历史）— 2026-11-15
 
 d983521/43629368808仅Settings失败：真实21副本准备在原60秒内发起20份/
 下载19份，尚未进入分页断言；前19份已完成任务的状态观察累计晚11.043476秒。

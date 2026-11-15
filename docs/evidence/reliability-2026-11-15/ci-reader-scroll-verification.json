@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T07:04:32.002629+00:00",
+  "status": "local_candidate_requires_new_full_exact_linux_ci",
+  "precommit_head_sha": "2e0a1fe44629e0a2301ccab8c69dd127b420d648",
+  "repair": {
+    "actual_edge_scroll_offset_fence_checked_before_claim_and_after_geometry_reads": true,
+    "only_own_actual_clamped_write_advances_fence": true,
+    "reader_online_offline_previous_and_next_edges_opt_in": true,
+    "intent_sequence_and_real_dom_anchor_guards_retained": true,
+    "share_and_other_explicit_restore_defaults_unchanged": true,
+    "no_new_timer_dynamic_target_offset_or_native_resource_budget": true
+  },
+  "node_ux": {
+    "passed": 2556,
+    "failed": 0,
+    "skipped": 0,
+    "log_sha256": "adc14724234eafe7b946f560001e5ff31810b8ee36e16821004d8d8e9f7d78bb"
+  },
+  "navigation": {
+    "passed": 37,
+    "failed": 0,
+    "skipped": 0,
+    "log_sha256": "f2261fad707fb27343581a6679d5e12be45a41451dd66ffd31701ec5dc3c2b96"
+  },
+  "ci_node": {
+    "passed": 89,
+    "failed": 0,
+    "skipped": 0,
+    "log_sha256": "bb9f0bdadcc68727c695d27b7cf99fae3067514d1609a1d682813bcc7aadf3b7"
+  },
+  "release_python": {
+    "passed": 100,
+    "log_sha256": "cd43ec4ed05a33d4bb2a9fc904030ed496c57d428c89c7de50ef0a37f456d2be"
+  },
+  "counts_are_overlapping_not_coverage_totals": true,
+  "mounted": {
+    "passed": 45,
+    "original_case_count": 43,
+    "added_case_count": 2,
+    "explicit_routing_http_preferences_assistant_ui_adapters": true,
+    "real_reader_markdown_katex_virtualizer_and_native_wheel": true,
+    "new_controls": [
+      {
+        "passive_delay_ms": 0,
+        "frame_count": 22,
+        "largest_physical_reverse_px": 0,
+        "native_movement_px": 120.375
+      },
+      {
+        "passive_delay_ms": 180,
+        "frame_count": 22,
+        "largest_physical_reverse_px": 0,
+        "native_movement_px": 120.0
+      }
+    ],
+    "result_sha256": "186acd009f255b3de499f2a29512d6b403fa53b77dbeb3e983e62e085c2b9040"
+  },
+  "red_controls": {
+    "unit": {
+      "passed": 27,
+      "failed": 10,
+      "log_sha256": "656c7112b5ce80405d71fbb52853d5ae9138da1b2783e1c0f798f808aeef1fbb"
+    },
+    "same_repo_browser_control_before": {
+      "diagnosticOnly": true,
+      "releaseAcceptance": false,
+      "controlSha256": "6a4eefe5e566b44630fdf9cb4e985c7f0529ca876c2566f31ab0b26cb5cdb89c",
+      "bundleSha256": "e3c35090292beabf5395472bcd66decbb741bd2cf3cf981e6e54a411421cca6c",
+      "failure": "The genuine native wheel must move readable content.",
+      "errors": [],
+      "controls": [
+        {
+          "delay": 0,
+          "frames": 22,
+          "largestPhysicalReversePx": 0,
+          "nativeMovementPx": 120,
+          "eventCount": 1
+        },
+        {
+          "delay": 180,
+          "frames": 23,
+          "largestPhysicalReversePx": 0,
+          "nativeMovementPx": 0,
+          "eventCount": 2
+        }
+      ]
+    },
+    "same_repo_browser_control_after": {
+      "diagnosticOnly": true,
+      "releaseAcceptance": false,
+      "controlSha256": "6a4eefe5e566b44630fdf9cb4e985c7f0529ca876c2566f31ab0b26cb5cdb89c",
+      "bundleSha256": "c0edaf3ff403ee6aa5394241067e5cfeba651b8df347c037f0779cfff13ba058",
+      "failure": null,
+      "errors": [],
+      "controls": [
+        {
+          "delay": 0,
+          "frames": 22,
+          "largestPhysicalReversePx": 0,
+          "nativeMovementPx": 120,
+          "eventCount": 1
+        },
+        {
+          "delay": 180,
+          "frames": 22,
+          "largestPhysicalReversePx": 0,
+          "nativeMovementPx": 120,
+          "eventCount": 2
+        }
+      ]
+    },
+    "causal_native_before_actual_navigation_write_px": -120,
+    "causal_result_sha256": "40d08315a23f5028ca47b5472374e3a7d32e6275169ac4e8a978c86a87157be0",
+    "initial_browser_adapter_missing_edge_wait_failure_retained": "001baba17a6fdc141798a478b87dd58af258aa60ff10bb06ae0c35473cc9f078"
+  },
+  "static": {
+    "lint_exit_code": 0,
+    "typecheck_exit_code": 0,
+    "lint_log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+    "typecheck_log_sha256": "af0c2cef3de965837405d6ebb7304272ade06dd1c69d977b635b44cc06b8114a",
+    "typecheck_incremental_output_in_task_temp": true
+  },
+  "production_build": {
+    "started_at": "2026-11-15T06:49:23.413875+00:00",
+    "completed_at": "2026-11-15T06:51:45.739984+00:00",
+    "exit_code": 0,
+    "source_drift": [],
+    "input_manifest_sha256": "729fecca3720796ba900d93118b70be24932f6c181767428d8ac9e9b2c916c36",
+    "log_sha256": "f365664cc265d1f9effb11ffa298ac5bab53d0b93e78b81f206d9f8837684e9a",
+    "input_count": 550,
+    "same_installed_dependencies_task_local_windows_copy": true,
+    "not_linux_or_pwa_release_acceptance": true
+  },
+  "migration_head": "20261112_0061",
+  "api_schema_files_unchanged": 700,
+  "no_local_api_or_postgres_restart_this_repair": true,
+  "preservation": {
+    "inherited_inputs": 1413,
+    "changed_inputs": 4,
+    "unchanged_inputs": 1409,
+    "historical_receipts": 64,
+    "unrelated_files": 13,
+    "inputs_manifest_sha256": "dcb887ba23a3b70184979b938da8f191eb688f1cb55501b74b6b8aaf3d7c82db",
+    "official_failure_receipt_sha256": "8c321d8a10e3d50ec35e2716c2979fee297e8adf4cb87a8fc9dfbe0cc9bf3ae5"
+  },
+  "remaining": [
+    "Fresh ordinary full CI: API/Web/Settings/Reader, five real memory cases, images and independent consumer.",
+    "Old151ms product root cause remains unproven; do not relabel it as this scroll repair.",
+    "Fresh production capacity, stopped-write verified backup, old execution/lease release,0061 migration and runtime checks.",
+    "CI duration optimization follows successful deployment; product acceptance belongs to the user."
+  ],
+  "web_search_used": false,
+  "automation_created": false,
+  "production_accessed_or_modified": false,
+  "task_temporary_directory": "reliability-ci-reader-native-failure-20261115-28"
+}

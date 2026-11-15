@@ -12,7 +12,55 @@
 资料、不清理生产、不建立自动安排；未验收项不能因委托用户而改标通过。
 11月12日的一次本地检查点与随后本地工作限制保留为历史，不覆盖最新授权。
 
-### 11月15日最新：真实离线批次状态观察延迟，恢复持续修复/等待/部署
+### 11月15日最新：原生滚动先于passive通知，Reader物理位置栅栏
+
+正式2e0a1fe/43681565051 attempt1 completed/failure：API6794/3 skips/5 warnings、
+Web14门禁、Settings470矩阵及独立restore1全部通过。原21份/60秒真实副本
+准备这次已通过，不能再把该次失败归为导入吞吐。原worker监督17和真实PG
+监督13（含poll1/poll20）通过；两发布job跳过，无新镜像或资源验收。
+候选Reader8通过/1失败：plain10000冷1在原104行scrollMonotonic断言失败；
+frame35锚点真实回退120px，scrollTop1080→960，高度均2319、16消息/24 blocks，
+没有回收/高度变化、未知锚点或长任务。独立CPU诊断9通过/27 profiles仅为取证，
+不能覆盖主候选失败；旧math10000的151ms产品根因仍未证明解决。
+[独立正式失败](../evidence/reliability-2026-11-15/ci-reader-scroll-failure.json)
+核验四日志/三官方size/digest/CRC/安全路径ZIP；旧派发与55分钟首次读取回执
+原字节保留，不把06:28仍运行快照重写为06:29:06 UTC最终失败。
+
+实际mounted Reader控制复现：compositor已完成真实原生wheel滚动，但passive
+通知尚未交给Reader；旧intent token仍当前，navigation写回旧锚点，回退120px。
+只延迟通知0/180ms，不preventDefault、不伪造实际运动；同控制代码在冻结
+before失败、after通过。初始边界等待夹具失败保留，不当成产品因果证据。
+
+修复仅改Reader导航/完整轮次两边界和两个既有测试文件。capture后、await pin
+前保存root.scrollTop；restore可选物理位置栅栏在claim前、每次check及geometry
+读取后/写入前核对。只有自身实际写入（含clamp）推进栅栏，任何其他运动立即
+退役旧补偿；不把程序化滚动变成用户输入，不动态改变目标offset或增加timer。
+原intent sequence、真实DOM锚点、租约/窗口/位置语义保留；在线/离线前后边界
+共同opt in，Share及其他显式restore默认行为不变。
+[前端合同](FRONTEND_ARCHITECTURE.md#reader-edge-physical-motion-fence--2026-11-15)。
+
+原25导航用例全文保留、追加12，最终37通过且真实Reader/window分支均覆盖；
+完整UX Node2556零skip包含该37，不能相加。原43 mounted主体字节保留，追加
+两真实原生控制，最终45通过；每控制22帧、前进约120px、最大物理回退0。
+旧实现导航红测27通过/10失败保留，未删除旧用例/改2px或原阅读输入/预算。
+CI Node89、发布Python100、lint/typecheck及单head0061通过；用户tsbuildinfo
+保全，typecheck增量输出在任务TEMP。新550输入同安装依赖隔离Windows
+production构建exit0、无源码漂移；不是沿用旧构建或Linux/PWA验收。
+[最终本地回执](../evidence/reliability-2026-11-15/ci-reader-scroll-verification.json) /
+[1413输入](../evidence/reliability-2026-11-15/ci-reader-scroll-inputs.json)
+证明仅4原输入变化、其他1409不变，700 API/schema、64历史回执及13无关文件
+实际哈希不变。未启动API/PG或SSH复查/修改生产，未清理资料/备份。
+
+接续按最新授权选择性提交/正常推送，去重后派发空quality source普通完整CI；
+独立`ci-reader-scroll-dispatch.json`登记实际candidate/run，开启新真实55分钟
+同步等待再自行读取，失败继续修，不等待用户反馈或恢复历史派发后暂停。
+新六job、Web14/Settings470+restore1/Reader9、五例无swap320/640MiB、镜像
+及独立消费者均须重新证明，通过后fresh容量/停写备份/旧执行与租约释放/
+0061迁移/精确镜像部署及独立健康检查；部署成功后才优化CI耗时。
+生产3564cbf/schema0060只是此前验证指针，唯一好备份/来源/config/volume保护，
+不自动重放用户ZIP、不建automation；剩余产品与实体设备验收仍归用户。
+
+### 前一11月15日检查点（历史）：真实离线批次状态观察延迟，恢复持续发布
 
 最新用户指示覆盖下方历史“确认派发即暂停”：本任务修复、验证、选择性提交/
 正常推送，派发空quality source普通完整CI；从新等待器起真实等55分钟后自行

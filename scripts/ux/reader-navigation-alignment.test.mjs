@@ -360,3 +360,106 @@ test("retired Reader edge restoration cannot overwrite a later user scroll", asy
     "A retired anchor must not write over the later scroll.",
   );
 });
+
+for (const windowScroll of [false, true]) {
+  for (const delta of [-120, 120]) {
+    test(`edge offset fence retires before passive input delivery: ${windowScroll ? "window" : "Reader"} ${delta}px`, async () => {
+      const f = fixture({ extent: 5000, contentTop: 1100, windowScroll });
+      f.root.scrollTop = 960;
+      let nativeWriteCount = 0;
+      const task = f.restore({ scrollOffsetAtCapture: 960, ...(windowScroll ? { root: null } : {}) }, frame => {
+        if (frame === 2) {
+          // The compositor has moved, but the passive wheel notification and
+          // its intent token have not reached the Reader yet.
+          f.root.scrollTop += delta;
+          nativeWriteCount = f.writes.length;
+        }
+      });
+      assert.equal(await task, false);
+      assert.equal(f.root.scrollTop, 960 + delta);
+      assert.deepEqual(f.writes.slice(nativeWriteCount), []);
+      assert.equal(f.busy(), false);
+    });
+  }
+}
+
+test("edge offset fence rejects motion during its asynchronous pin/mount gap before claiming ownership", async () => {
+  const f = fixture({ extent: 5000 });
+  const captured = f.root.scrollTop;
+  f.root.scrollTop = 120;
+  const before = f.writes.length;
+  assert.equal(await f.restore({ scrollOffsetAtCapture: captured }), false);
+  assert.deepEqual(f.writes.slice(before), []);
+  assert.equal(f.root.scrollTop, 120);
+  assert.equal(f.busy(), false);
+});
+
+test("edge offset fence is checked again after layout reads, immediately before a write", async () => {
+  const f = fixture({ extent: 5000 });
+  let nativeWriteCount = 0;
+  const task = f.restore({ scrollOffsetAtCapture: 0 }, frame => {
+    if (frame === 1) {
+      const original = f.target.getBoundingClientRect;
+      f.target.getBoundingClientRect = () => {
+        f.target.getBoundingClientRect = original;
+        f.root.scrollTop = 120;
+        nativeWriteCount = f.writes.length;
+        return original();
+      };
+    }
+  });
+  assert.equal(await task, false);
+  assert.equal(f.root.scrollTop, 120);
+  assert.deepEqual(f.writes.slice(nativeWriteCount), []);
+});
+
+test("edge offset fence advances only by its own actual layout correction, not the requested value", async () => {
+  const f = fixture({ extent: 5000 });
+  assert.equal(await f.restore({ scrollOffsetAtCapture: 0 }, frame => {
+    if (frame === 1) f.moveContent(20);
+    if (frame === 2) f.moveContent(40);
+  }), true);
+  assert.equal(f.root.scrollTop, 60);
+  assert.deepEqual(f.writes, [20, 60]);
+  assert.equal(f.busy(), false);
+});
+
+test("edge offset fence still retires native motion after a real layout correction", async () => {
+  const f = fixture({ extent: 5000 });
+  let nativeWriteCount = 0;
+  assert.equal(await f.restore({ scrollOffsetAtCapture: 0 }, frame => {
+    if (frame === 1) f.moveContent(20);
+    if (frame === 2) {
+      f.root.scrollTop += 120;
+      nativeWriteCount = f.writes.length;
+    }
+  }), false);
+  assert.equal(f.root.scrollTop, 140);
+  assert.deepEqual(f.writes.slice(nativeWriteCount), []);
+});
+
+test("edge offset fence retains the existing bounded restoration when its own write clamps", async () => {
+  const f = fixture({ extent: 720 });
+  assert.equal(await f.restore({ scrollOffsetAtCapture: 0 }, frame => {
+    if (frame === 1) f.moveContent(400);
+  }), true);
+  assert.equal(f.root.scrollTop, 220);
+  assert.equal(f.busy(), false);
+});
+
+for (const offset of [NaN, Infinity]) {
+  test(`an invalid edge offset ${offset} cannot acquire a restoration owner`, async () => {
+    const f = fixture();
+    assert.equal(await f.restore({ scrollOffsetAtCapture: offset }), false);
+    assert.deepEqual(f.writes, []);
+    assert.equal(f.busy(), false);
+  });
+}
+
+test("both complete-turn Reader edges capture the physical offset before awaiting their pin", () => {
+  for (const name of ["loadPreviousWindow", "loadNextWindow"]) {
+    const callback = readerDeclarations.get(name).initializer.arguments[0].getText(readerAst);
+    assert.match(callback, /captureScrollAnchor\(root, ACTIVE_READING_OFFSET\)[\s\S]*const scrollOffsetAtAnchor = root\.scrollTop;[\s\S]*await acquireScrollAnchorLease/);
+    assert.match(callback, /restoreScrollAnchor\(\{ root, anchor, tokenIsCurrent: restoreIsCurrent, scrollOffsetAtCapture: scrollOffsetAtAnchor \}\)/);
+  }
+});

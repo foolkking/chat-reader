@@ -1,6 +1,39 @@
 # Project State
 
-## Latest: offline batch observation latency and continuous release loop — 2026-11-15
+## Latest: Reader native-motion fence and continuous release loop — 2026-11-15
+
+Exact2e0a1fe/43681565051 completed/failure: API6794/3 skips/5 warnings,
+Web14 gates and Settings470+independent restore1 pass. The unchanged60-second
+21-copy preparation now passes in that complete matrix. Candidate Reader8/1
+fails plain10000 cold1: one real120px backward frame, unchanged2319px extent
+and16 messages/24 blocks, no long tasks. The separate9/27-profile diagnostic
+passes but cannot replace the primary failure; both release jobs skipped.
+[Official failure](docs/evidence/reliability-2026-11-15/ci-reader-scroll-failure.json).
+
+The edge-only candidate captures the physical scroll offset before awaiting
+its real anchor pin. Restoration checks that fence before ownership and after
+geometry reads; only its own actual, possibly clamped write advances it.
+External motion retires stale compensation without inventing user intent or
+changing the fixed DOM anchor. Online/offline previous/next edges opt in;
+Share and other explicit restoration defaults remain unchanged.
+Original25 navigation and43 mounted case bodies remain; final navigation37,
+UX Node2556, mounted45, CI Node89/Python100 and lint/typecheck pass locally.
+Two genuine native-wheel controls advance120px with zero physical reversal;
+the same controlled pre-repair Reader writes back120px. A fresh same-dependency
+550-input Windows production build passes, not Linux/PWA acceptance.
+[Verification](docs/evidence/reliability-2026-11-15/ci-reader-scroll-verification.json) /
+[1413 inputs](docs/evidence/reliability-2026-11-15/ci-reader-scroll-inputs.json)
+retain1409 unchanged inputs,700 API/schema files,64 receipts and13 unrelated files.
+
+Continue selective commit/normal push, ordinary full CI with empty quality
+source, then a fresh real55-minute wait and self-check; repair failures,
+independently prove new artifacts before deployment, then optimize CI duration.
+No original test/resource/native bounds change. The older151ms product cause
+remains unproven. Production3564cbf/schema0060 is only the last verified pointer,
+not rechecked; user owns product acceptance. The
+[single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current progress.
+
+## Earlier: offline batch observation latency and release loop (history) — 2026-11-15
 
 Exact d983521/43629368808 is completed/failure: API6751, Web14 gates and
 candidate Reader9 pass; Settings469/470 pass. Its unchanged60-second real

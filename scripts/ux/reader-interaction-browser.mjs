@@ -647,6 +647,83 @@ try {
       await page.close();
     }
   }
+  // A native compositor scroll can precede its passive wheel notification.
+  // Delay only that notification in this fault control; never prevent the
+  // browser default, change release wheel inputs, or fabricate scroll motion.
+  if(!touchOnly&&!requestOnly&&!retentionOnly) for(const delay of [0,180]) {
+    const page=await browser.newPage({viewport:{width:1280,height:720}});
+    current=page;page.on("pageerror",error=>errors.push(error.stack??error.message));
+    await page.addInitScript(delay=>{
+      window.fixtureKind="retention";window.fixtureCount=10000;window.fixtureRemoteRequests=true;
+      window.edgeNativeFrames=[];window.edgeNativeEvents=[];window.delayEdgeWheel=false;
+      document.addEventListener("wheel",event=>{
+        const root=document.querySelector('[data-reader-scroll-root="true"]');
+        if(!root||!root.contains(event.target)||!window.edgeNativeStarted) return;
+        window.edgeNativeEvents.push({at:performance.now(),trusted:event.isTrusted,delta:event.deltaY,
+          top:root.scrollTop,edge:root.dataset.readerEdgeStage,delayed:window.delayEdgeWheel});
+        if(delay&&window.delayEdgeWheel&&event.isTrusted) {
+          window.delayEdgeWheel=false;event.stopImmediatePropagation();
+          const deltaY=event.deltaY;
+          setTimeout(()=>root.dispatchEvent(new WheelEvent("wheel",{deltaY,bubbles:true})),delay);
+        }
+      },{capture:true,passive:true});
+    },delay);
+    await page.route("http://reader.synthetic/**",async route=>{
+      const url=new URL(route.request().url()),p=url.pathname;
+      if(p.endsWith("/reader-turn")) {
+        const payload=await page.evaluate(anchor=>window.syntheticTurn(anchor??"m0"),url.searchParams.get("anchor_message_id"));
+        await new Promise(resolve=>setTimeout(resolve,8));
+        return route.fulfill({json:payload});
+      }
+      if(p.startsWith("/api/"))return route.fulfill({json:p.endsWith("/reading-position")?{position:null}:[]});
+      if(p.startsWith("/katex/"))return route.fulfill({body:readFileSync(join(katexRoot,p.slice(7))),contentType:p.endsWith(".css")?"text/css":"font/woff2"});
+      return route.fulfill({contentType:p==="/bundle.js"?"text/javascript":p==="/style.css"?"text/css":"text/html",
+        body:p==="/bundle.js"?bundle:p==="/style.css"?styles.css:html});
+    });
+    await page.goto("http://reader.synthetic/");
+    const scroller=page.locator('[data-reader-scroll-root="true"]');
+    await expect(scroller.locator("article").first()).toBeVisible();await scroller.hover();
+    for(let step=0;step<20;step++) {
+      await page.mouse.wheel(0,120);await page.waitForTimeout(34);
+      if(/^next:(loading|committing|mounted)$/.test(await scroller.getAttribute("data-reader-edge-stage")??"")) break;
+    }
+    await expect(scroller).toHaveAttribute("data-reader-edge-stage","next:mounted",{timeout:15000});
+    const before=await scroller.evaluate(root=>{
+      const line=root.getBoundingClientRect().top+120;
+      const article=[...root.querySelectorAll("article[data-message-id]")].find(node=>{
+        const bounds=node.getBoundingClientRect();return bounds.top<=line&&bounds.bottom>line;
+      });
+      if(!article) throw Error("The native edge control requires a real reading-line article");
+      window.edgeNativeAnchor=article;
+      window.edgeNativeStarted=performance.now();window.delayEdgeWheel=true;window.edgeNativeSampling=true;
+      const frame=()=>{
+        const anchor=window.edgeNativeAnchor;
+        window.edgeNativeFrames.push({at:performance.now(),top:root.scrollTop,height:root.scrollHeight,
+          anchorTop:anchor.isConnected&&root.contains(anchor)?anchor.getBoundingClientRect().top-root.getBoundingClientRect().top:null,
+          messages:root.querySelectorAll("article[data-message-id]").length,writer:root.dataset.readerLastScrollWriter,
+          edge:root.dataset.readerEdgeStage});
+        if(window.edgeNativeSampling) requestAnimationFrame(frame);
+      };frame();
+      return {top:root.scrollTop,anchorTop:article.getBoundingClientRect().top-root.getBoundingClientRect().top};
+    });
+    await page.mouse.wheel(0,120);await page.waitForTimeout(260);
+    const after=await page.evaluate(()=>{
+      window.edgeNativeSampling=false;
+      return {frames:window.edgeNativeFrames,events:window.edgeNativeEvents};
+    });
+    results.push({edgeNativeScrollFence:true,diagnosticOnly:true,releaseAcceptance:false,
+      fixture:{messages:10000,profile:"plain",width:1280,height:720},passiveDelayMs:delay,before,...after});
+    writeFileSync(join(out,"result.json"),JSON.stringify({results,errors},null,2));
+    assert.ok(after.frames.length>=8,"All native-motion frames, including a delayed callback, must be retained.");
+    assert.ok(after.frames.every(frame=>frame.anchorTop!==null),"The same real reading article must remain connected.");
+    assert.ok(after.events.some(event=>event.trusted&&event.delta===120&&event.delayed));
+    if(delay) assert.ok(after.events.some(event=>!event.trusted&&event.delta===120),
+      "The delayed notification must actually reach the existing Reader handlers.");
+    assert.ok(after.frames.some(frame=>frame.anchorTop<=before.anchorTop-100),"The genuine native wheel must move readable content.");
+    assert.ok(after.frames.every((frame,index)=>!index||frame.anchorTop<=after.frames[index-1].anchorTop+2),
+      "An edge restoration must not undo native motion before passive wheel intent arrives.");
+    await page.close();
+  }
   if(!touchOnly&&!requestOnly&&!retentionOnly&&!coordinateOnly) for(const [width,locale,theme] of [
     [375,"en-US","light"],[800,"zh-CN","light"],[1440,"en-US","dark"],
   ]) {

@@ -26,6 +26,8 @@ type RestoreScrollAnchorOptions = {
   root: HTMLElement | null;
   anchor: ScrollAnchorSnapshot;
   tokenIsCurrent?: () => boolean;
+  /** Edge loads must not reclaim native motion before passive intent arrives. */
+  scrollOffsetAtCapture?: number;
   minimumMs?: number;
   settleMs?: number;
   timeoutMs?: number;
@@ -253,6 +255,7 @@ export async function restoreScrollAnchor({
   root,
   anchor,
   tokenIsCurrent = () => true,
+  scrollOffsetAtCapture,
   minimumMs = 320,
   settleMs = 120,
   timeoutMs = 1500,
@@ -261,7 +264,11 @@ export async function restoreScrollAnchor({
   const target = document.getElementById(anchor.targetId)
     ?? (anchor.blockId ? document.querySelector<HTMLElement>(`[data-block-id="${anchor.blockId}"]`) : null)
     ?? (anchor.messageId ? document.querySelector<HTMLElement>(`article[data-message-id="${anchor.messageId}"]`) : null);
-  if (!target || !tokenIsCurrent()) return false;
+  const scrollOffset = () => root ? root.scrollTop : window.scrollY;
+  let ownedScrollOffset = scrollOffsetAtCapture;
+  const scrollIsCurrent = () => ownedScrollOffset === undefined
+    || (Number.isFinite(ownedScrollOffset) && scrollOffset() === ownedScrollOffset);
+  if (!target || !tokenIsCurrent() || !scrollIsCurrent()) return false;
   const owner = claimReaderPosition(root);
   const startedAt = window.performance.now();
   let lastChangeAt = startedAt;
@@ -283,15 +290,24 @@ export async function restoreScrollAnchor({
     };
     const check = () => {
       frame = 0;
-      if (!owner.current() || !tokenIsCurrent() || !target.isConnected) {
+      if (!owner.current() || !tokenIsCurrent() || !target.isConnected || !scrollIsCurrent()) {
         finish(false);
         return;
       }
       const rootTop = root?.getBoundingClientRect().top ?? 0;
       const delta = target.getBoundingClientRect().top - (rootTop + anchor.offset);
+      // Native compositor motion can precede the passive wheel/touch token.
+      // Check the physical fence again after geometry reads, before writing.
+      if (!scrollIsCurrent()) {
+        finish(false);
+        return;
+      }
       if (Math.abs(delta) > 0.5) {
         if (root) root.scrollTop += delta;
         else window.scrollBy({ top: delta, behavior: "auto" });
+        // Only our own actual (possibly clamped) correction advances this
+        // edge fence. Other motion retires it, without inventing user intent.
+        if (ownedScrollOffset !== undefined) ownedScrollOffset = scrollOffset();
         lastChangeAt = window.performance.now();
       }
       const now = window.performance.now();

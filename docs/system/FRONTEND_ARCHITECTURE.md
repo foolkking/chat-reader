@@ -1,6 +1,32 @@
 # 前端架构
 
-现役状态校准：2026-11-04。当前 `be58b12` 已包含 Reader 几何/输入恢复、
+## Reader edge physical motion fence — 2026-11-15
+
+Canonical online/offline complete-turn previous/next loads capture
+`root.scrollTop` immediately after the real anchor and before awaiting its pin.
+Their `restoreScrollAnchor` opts into `scrollOffsetAtCapture`: reject stale or
+nonfinite offsets before claiming ownership, at each check and after geometry
+reads immediately before writing. Only this restoration's actual correction,
+including browser clamping, advances the fence. Other physical motion retires
+the compensation even before a passive input notification changes its token.
+No programmatic scroll is relabeled user input; the anchor's fixed DOM offset,
+intent sequence, pin and bounded window policies remain. Share and other
+explicit restoration callers omit the option and retain their existing behavior.
+
+Official2e0a1fe/43681565051 failed plain10000 cold1 with a real120px reversal,
+unchanged extent/mount counts and no long tasks. A genuine native-wheel mounted
+control reproduces the old navigation write; delaying only passive delivery
+0/180ms yields zero reversal after this candidate. Original25 navigation and43
+mounted case bodies remain, with final37/45 local groups. These controlled
+synthetic probes and the new550-input Windows build are not fresh Linux/10k
+or production acceptance; the separate passing CPU replay never replaces
+the primary failure. The older151ms cause remains unproven.
+[Local verification](../evidence/reliability-2026-11-15/ci-reader-scroll-verification.json) /
+[current ledger](SMALL_HOST_IMPROVEMENT_STATUS.md).
+
+## Earlier deployed calibration — historical 2026-11-04
+
+现役状态校准：2026-11-04。当时 `be58b12` 已包含 Reader 几何/输入恢复、
 收藏、键盘与富内容修正；完整精确源码 CI 已通过。下方 dated candidate/local
 叙述保留失败与检查点证据，不能重新解释成当前源码未发布；真实设备和认证 UI
 仍待单独验收。参见 [Project State](../../PROJECT_STATE.md) 与
