@@ -1,6 +1,22 @@
 # 事实证据索引
 
-## Reader原生失败取证与主失败保持 — 2026-11-15
+## 离线批次延迟与正式完整CI失败 — 2026-11-15
+
+[独立正式诊断](reliability-2026-11-15/ci-offline-latency-failure.json)绑定
+d983521/43629368808、Settings469/470、20准入/19下载和原60秒失败；
+记录前19份状态观察累计延迟11.043476秒，不把未计量时间全部归为冷导入。
+其他三质量成功不代表制品验收；两发布job跳过。旧派发和实际提前结束的等待
+原字节保留；当前新授权/执行状态只见[唯一台账](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+[本地候选验证](reliability-2026-11-15/ci-offline-handoff-verification.json) /
+[1413输入](reliability-2026-11-15/ci-offline-handoff-inputs.json)：最终真实PG371/
+5原环境跳过、Node214、静态和单head0061通过；550既有构建输入不变。
+Windows原21份60秒仍失败19准入/18下载，不能称吞吐修复或Linux/PWA验收。
+初次owner夹具/交接红测/独立诊断适配错误保留，未合并不同批次通过数。
+仅5个原输入变更和3个新增测试文件，其他1405、62旧回执及13无关文件不变；
+旧派发原字节归档，新普通CI的实际身份将由独立派发回执登记。
+
+## 前一Reader原生失败取证与主失败保持（历史）— 2026-11-15
 
 [正式失败](reliability-2026-11-15/ci-reading-capacity-failure.json)：
 2495fb1/43613433508仅math10000冷2长任务151ms失败；总231ms、其他质量通过，

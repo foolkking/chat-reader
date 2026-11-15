@@ -922,6 +922,12 @@ def process_background_job(
                 include_legacy_unowned=job.owner_user_id is None,
             )
             is_sqlite = db.get_bind().dialect.name == "sqlite"
+            coalesce_offline_progress = (
+                db.get_bind().dialect.name == "postgresql"
+                and job.job_type == "offline_package"
+                and expected_execution is not None
+            )
+            offline_progress_published_at: float | None = None
             offline_phase_started_at: float | None = None
             offline_phase_name: str | None = None
             offline_phase_durations: dict[str, float] = {}
@@ -954,9 +960,23 @@ def process_background_job(
                 total: int,
                 result: dict[str, object] | None = None,
             ) -> None:
+                nonlocal offline_progress_published_at
                 track_offline_phase(phase)
                 business_progress((phase, progress, processed, total))
                 if not is_sqlite:
+                    if coalesce_offline_progress:
+                        now = time.monotonic()
+                        if (
+                            result is None
+                            and offline_progress_published_at is not None
+                            and now - offline_progress_published_at < 1.0
+                        ):
+                            return
+                        # Only the optional UI snapshot is sampled. Every
+                        # checkpoint/stop check above and the final commit fence
+                        # remain. Failed/skipped attempts also bound SQL load;
+                        # phase changes do not extend the sampling window.
+                        offline_progress_published_at = now
                     try:
                         persist_report(phase, progress, processed, total, result)
                     except SQLAlchemyError:

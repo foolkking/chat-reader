@@ -32,6 +32,43 @@ release. Empty queues, unavailable leases/reconciliation and scheduling errors
 retain the configured idle poll (default1 second). Fresh interpreters, the
 single execution slot and bounded rotating maintenance are unchanged.
 
+Local November15 follow-up: supervision uses the same250ms maximum process
+wait instead of sleeping unconditionally. OS exit can wake it early, but never
+replaces the next iteration's reconciliation and PostgreSQL lease verification.
+While alive, control cadence,300-second stall/30-second grace and2/5-second
+termination waits remain.
+
+The existing claim queries can prove an empty recovery lane: no legacy
+processing/cancelling row and no eligible queued task. Only that explicit false
+recovery-needed flag suppresses a fresh no-op recovery child. The proof resets
+on every claim; blocked/unfinished controls, active legacy rows and failed or
+unknown reads never qualify. The30-second recovery cadence, configured idle
+poll,100-row/three-attempt stale recovery, source locks and rotating maintenance
+remain; this does not perform recovery in the supervisor or mark tasks complete.
+
+The source November15 handoff candidate adds one bounded exception to ordinary
+idle backoff: after an observed execution-child exit, a fresh healthy iteration
+must pass reconciliation and both PostgreSQL leases, and claim must explicitly
+prove the empty lane. Only then wait at most250ms for up to5 monotonic seconds
+from that exit. Empty reads/progress do not renew the window; a configured
+shorter poll is not slowed. Startup/ordinary idle, unknown/legacy/control-blocked
+claims, unavailable boundaries and scheduling errors keep configured backoff.
+Already queued work still has no mandatory wait; maintenance and stop/native
+budgets are unchanged. The original17 supervision controls remain byte-identical.
+
+Only supervised PostgreSQL offline-package auxiliary UI snapshots are sampled
+at1 monotonic second. Each phase still contributes its duration and calls the
+real business/stop checkpoint. Phase changes do not renew the window; explicit
+non-None results force an attempt, including empty results. Failed/skipped
+attempts also bound optional SQL load. Existing execution/status predicates,
+transaction bounds and the final monitor/SQL commit fence remain. SQLite,
+legacy direct execution and other job types retain the original report path.
+Final related real-PG371 (five original environment skips) and loop unit47
+(one explicit PG skip in that unit-only run) pass locally. The original
+real21-copy/60-second Windows case
+still fails, including the handoff candidate. No accepted Linux throughput,
+resource or deployment result follows from the local controls.
+
 Local November14 cold-start follow-up: the shared task dispatcher imports
 models, lightweight archive type/status contracts and editing validation errors,
 not every handler. Selected task/format branches load their existing services.

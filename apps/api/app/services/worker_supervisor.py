@@ -27,6 +27,7 @@ STOP_GRACE_SECONDS = 30
 
 
 def claim(db):
+    db.info["legacy_recovery_needed"] = True
     bound_worker_transaction(db)
     current = db.get(TaskExecutionControl, SLOT)
     if current is not None and current.finished_at is None:
@@ -47,6 +48,10 @@ def claim(db):
         if row:
             candidates.append((kind, row))
     if not candidates:
+        # Both legacy-active queries succeeded and found no recovery inputs.
+        # This transaction-local proof avoids a fresh no-op recovery child;
+        # unknown/control-blocked/failed reads remain conservative.
+        db.info["legacy_recovery_needed"] = False
         return None
     kind, task = min(candidates, key=lambda value: (
         getattr(value[1], "job_type", "") == "content_noise_scan",
@@ -128,7 +133,14 @@ def supervise(child, token, reporter, shutdown, *, factory=SessionLocal,
                 child.kill()
                 child.wait(timeout=5)
             return
-        time.sleep(0.25)
+        # Keep the same control-check interval while running, but wake on OS
+        # exit instead of adding an unconditional idle delay. The scheduling
+        # loop must still verify reconciliation and the PostgreSQL lease.
+        try:
+            child.wait(timeout=0.25)
+            return
+        except subprocess.TimeoutExpired:
+            pass
 
 
 def reconcile_pending(factory=SessionLocal):
@@ -172,10 +184,12 @@ def run_task_worker_forever(*, shutdown=None):
     reporter = WorkerHeartbeatReporter(interval_seconds=settings.worker_heartbeat_interval_seconds)
     last_maintenance = time.monotonic()
     last_recovery = 0.0
+    last_execution_exit_at = None
     maintenance_pass = 0
     try:
         reporter.start()
         while not shutdown.requested and not reporter.superseded:
+            idle_poll_seconds = settings.import_worker_poll_seconds
             try:
                 with session_lease(engine, SUPERVISION_LOCK) as guard:
                     if guard is None or not reconcile_pending():
@@ -205,10 +219,12 @@ def run_task_worker_forever(*, shutdown=None):
                         with SessionLocal() as db:
                             identity = claim(db)
                             execution = db.info.get("supervised_execution")
+                            legacy_recovery_needed = db.info.get("legacy_recovery_needed", True)
                     if identity:
                         reporter.set_busy(identity[0], identity[1], execution=execution)
                         child = spawn(*identity)
                         supervise(child, identity[2], reporter, shutdown)
+                        last_execution_exit_at = time.monotonic()
                         # Canonical outcome and lock release are checked on
                         # the next iteration before any further admission.
                         # Do not add an idle poll after real execution; an
@@ -221,6 +237,9 @@ def run_task_worker_forever(*, shutdown=None):
                         # execution. A legacy live owner still blocks admission.
                         for lane, due in (("recovery", last_recovery),):
                             if shutdown.requested or time.monotonic() - due <= 30:
+                                continue
+                            if lane == "recovery" and legacy_recovery_needed is False:
+                                last_recovery = time.monotonic()
                                 continue
                             helper = spawn(lane, uuid.UUID(int=maintenance_pass if lane == "maintenance" else 0), uuid.UUID(int=0))
                             if lane == "maintenance":
@@ -237,8 +256,20 @@ def run_task_worker_forever(*, shutdown=None):
                                 last_recovery = time.monotonic()
                             else:
                                 last_maintenance = time.monotonic()
+                        if (
+                            legacy_recovery_needed is False
+                            and last_execution_exit_at is not None
+                            and 0 <= time.monotonic() - last_execution_exit_at < 5
+                        ):
+                            # A serial browser batch admits its next child only
+                            # after reading/downloading the previous result.
+                            # Bound that healthy post-exit handoff to 250ms for
+                            # five seconds, without shortening outage/lease/
+                            # unknown-state backoff or renewing it on empty reads.
+                            idle_poll_seconds = min(idle_poll_seconds, 0.25)
             except (SQLAlchemyError, OSError, subprocess.TimeoutExpired):
+                idle_poll_seconds = settings.import_worker_poll_seconds
                 logger.warning("worker_scheduling_paused")
-            shutdown.wait(settings.import_worker_poll_seconds)
+            shutdown.wait(idle_poll_seconds)
     finally:
         reporter.stop()

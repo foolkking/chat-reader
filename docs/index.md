@@ -1,6 +1,20 @@
 # 文档导航
 
-## 当前候选：Reader 失败取证，性能根因仍未确认 — 2026-11-15
+## 当前任务：离线批次等待延迟修复与持续发布闭环 — 2026-11-15
+
+d983521/43629368808仅Settings失败：真实21副本准备在原60秒内发起20份/
+下载19份，尚未进入分页断言；前19份已完成任务的状态观察累计晚11.043476秒。
+[正式诊断](evidence/reliability-2026-11-15/ci-offline-latency-failure.json) /
+[离线合同](system/PWA_OFFLINE_RESILIENCE_CONTRACT.md) /
+[唯一当前台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+最新授权覆盖历史暂停条款：修复验证后提交普通完整CI，真实新等55分钟后
+自行查看；失败继续修，通过并核验制品后部署，再优化CI耗时。用户负责产品验收。
+当前有界观察/辅助进度/健康交接候选的Windows原21份探测仍失败；
+不能标吞吐修复或用控制测试替代新的精确LinuxCI，详细边界只在同一台账。
+[本地371/214/静态与完整失败回执](evidence/reliability-2026-11-15/ci-offline-handoff-verification.json) /
+[1413输入](evidence/reliability-2026-11-15/ci-offline-handoff-inputs.json)保留13无关文件与62旧回执。
+
+## 前一检查点：Reader 失败取证，性能根因仍未确认（历史）— 2026-11-15
 
 2495fb1/43613433508仅候选math10000冷2失败：原生长任务151ms超过原150ms，
 总计231ms仍在250ms内。API6751、Web14门禁、Settings470+restore1通过；

@@ -7,7 +7,7 @@ import { importOfflinePackage, inspectOfflineCopyAssets, offlineDb, OfflinePacka
 import { planOfflineConversationDownloads } from "./offline-download-plan";
 import { canUseServer } from "./server-session";
 import { offlineAuthenticationRequired } from "./offline-access";
-import { offlineConversationResult, offlineQueueIsPaused } from "./offline-download-progress";
+import { offlineConversationResult, offlineGenerationPollDelay, offlineQueueIsPaused } from "./offline-download-progress";
 import { withRequestDeadline } from "./request-deadline";
 
 export type OfflineAssetMode = "none" | "small" | "all";
@@ -371,10 +371,14 @@ async function runDownload(db: typeof offlineDb, initial: OfflineDownload, acces
             });
           }
 
+          let processingStartedAt: number | undefined;
           while (true) {
             await check();
             const task = await getTask(record.jobId!, requestSignal(signal));
             await check();
+            if (task.status === "processing" && processingStartedAt === undefined) {
+              processingStartedAt = performance.now();
+            }
             if (task.status === "cancelled") {
               await patch(db, record.id, { state: "cancelled" });
               return;
@@ -430,8 +434,11 @@ async function runDownload(db: typeof offlineDb, initial: OfflineDownload, acces
               });
               break;
             }
-            record = await patch(db, record.id, { state: "generating", progress: overallProgress });
-            await pause(signal);
+            if (record.state !== "generating" || record.progress !== overallProgress) {
+              record = await patch(db, record.id, { state: "generating", progress: overallProgress });
+            }
+            await pause(signal, offlineGenerationPollDelay(task.status,
+              processingStartedAt === undefined ? undefined : performance.now() - processingStartedAt));
           }
         } catch (error) {
           // No incomplete package is published. Only a bounded, independently
@@ -644,10 +651,10 @@ if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_PWA_NEGATIVE_TESTS 
   }
 }
 
-function pause(signal: AbortSignal): Promise<void> {
+function pause(signal: AbortSignal, delayMs = 1_000): Promise<void> {
   return new Promise((resolve, reject) => {
     const abort = () => { clearTimeout(timer); reject(new DOMException("Paused", "AbortError")); };
-    const timer = setTimeout(() => { signal.removeEventListener("abort", abort); resolve(); }, 1000);
+    const timer = setTimeout(() => { signal.removeEventListener("abort", abort); resolve(); }, delayMs);
     signal.addEventListener("abort", abort, { once: true });
     if (signal.aborted) abort();
   });

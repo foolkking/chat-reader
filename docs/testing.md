@@ -1,5 +1,24 @@
 # Testing
 
+## Current release loop — 2026-11-15
+
+The latest authorization supersedes historical “confirm dispatch then pause”:
+repair and verify, selectively commit/push ordinary full CI with empty quality
+source, wait a new real55 minutes and self-check, then continue on failure.
+The unchanged60-second real21-copy case, all fresh quality/resource/artifact
+gates and native deadlines remain. Deployment requires independent proof;
+product acceptance belongs to the user. The
+[single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current results.
+
+The source candidate passes related real-PG371/five original environment skips,
+offline Node214, lint/typecheck and single head0061. The original17 supervision
+cases remain;43 additive progress/exit/recovery/handoff controls are included.
+The original21-real-copy/60-second Windows browser case still fails19/18 before
+pagination.550 inputs match the earlier production Web build, not a new build.
+[Local evidence](evidence/reliability-2026-11-15/ci-offline-handoff-verification.json) /
+[1413 inputs](evidence/reliability-2026-11-15/ci-offline-handoff-inputs.json)
+do not replace fresh exact Linux full CI or image/resource/consumer acceptance.
+
 The API and Settings quality jobs use their job-owned loopback PostgreSQL on
 port **65438**, matching the guarded synthetic scan helper. Web and image-memory
 fixtures retain **5432**. `postgres-service.sh` still fences ownership by

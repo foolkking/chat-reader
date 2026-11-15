@@ -1,5 +1,17 @@
 # Release Safety Baseline
 
+## Current release execution boundary — 2026-11-15
+
+The latest continuous repair/release authorization supersedes historical
+“confirm dispatch then pause”. Ordinary full CI uses an empty quality source
+and fresh exact-source quality, memory, image and independent consumer proof.
+After a new real55-minute wait, self-check and repair failures; deploy only
+after all gates and fresh operator admission pass, then optimize CI duration.
+No source reuse extension, native/resource relaxation, scheduled automation,
+production cleanup or user-source replay is authorized. Product acceptance
+belongs to the user; the [single ledger](SMALL_HOST_IMPROVEMENT_STATUS.md)
+owns current execution, separate from dated policy/evidence below.
+
 2026-10-24 release prerequisite: reviewed-optimization CI `40091984323`
 passed API/settings but failed the unchanged official-registry audit. New high
 advisory `GHSA-mrhx-c7xc-m3w5` affects the existing transitive Zod 4.4.3.

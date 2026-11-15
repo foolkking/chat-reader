@@ -1,5 +1,13 @@
 import type { OfflineDownload } from "./offline-downloads";
 
+/** Observe a newly running child promptly without polling long/queued work
+ * rapidly forever. This changes observation latency, not execution deadlines. */
+export function offlineGenerationPollDelay(status: string, processingAgeMs: number | undefined): number {
+  return status === "processing" && processingAgeMs !== undefined
+    && Number.isFinite(processingAgeMs) && processingAgeMs >= 0 && processingAgeMs < 5_000
+    ? 250 : 1_000;
+}
+
 /** A cursor counts processed children, not necessarily successful copies.
  * Older records had no failure ledger: only their committed prefix is complete. */
 export function offlineConversationResult(record: OfflineDownload, id: string, index: number) {

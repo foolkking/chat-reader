@@ -1,0 +1,1793 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T05:17:47.657556+00:00",
+  "status": "local_controls_passed_windows_batch_still_failed_linux_ci_not_accepted",
+  "precommit_head_sha": "d983521bea87c2a5725de8f24a285b505a6f8112",
+  "api_related_regression": {
+    "modules": 30,
+    "passed": 371,
+    "skipped": 5,
+    "warnings": 1,
+    "real_postgresql_selected": true,
+    "owned_port": 65438,
+    "native_poll_1_and_poll_20_supervision_controls_retained": true,
+    "new_control_cases": {
+      "progress_pg": 12,
+      "exit_loop": 5,
+      "recovery_and_handoff": 26
+    },
+    "original_supervisor_17_sha256": "4e5486acf14d06e0a9246601de26bf2ce93c2f5c0a11a7c73ec04949e8c34d55",
+    "fixture": {
+      "label": "api-offline-supervisor-final",
+      "port": 65438,
+      "started_at_unix": 1794719074.2717457,
+      "test_exit_code": 0,
+      "test_elapsed_seconds": 566.875,
+      "finished_at_unix": 1794719647.6008594,
+      "postgres_exited": true
+    },
+    "log_sha256": "0ab9559c9d824ad4f3aec503934ec253dd3b79c02696ce9b0f478cfbc5a237ec"
+  },
+  "static_and_node": {
+    "head_exit_code": 0,
+    "lint_exit_code": 0,
+    "user_tsbuildinfo_unchanged": true,
+    "typecheck_exit_code": 0,
+    "node_exit_code": 0,
+    "offline_node_files": 24,
+    "offline_node_passed": 214,
+    "offline_node_skipped": 0,
+    "single_migration_head": "20261112_0061",
+    "lint_log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+    "typecheck_log_sha256": "ea5d8efefe3d90f8c09135020da4b2f84026e58cb82d395c0d2ac7f9e2e96b1a",
+    "node_log_sha256": "f556fb7ca62f23fb378634c023757f9b8ad270383e07e1bf092856f96adb3b07"
+  },
+  "web_build": {
+    "fresh_build_this_followup": false,
+    "inherited_exact_inputs": 550,
+    "input_drift": [],
+    "original_test_bytes_unchanged": true,
+    "source_batch": "reliability-ci-offline-latency-fix-20261115-21",
+    "build_log_sha256": "7a22764c088748a8c5c8798dc131828444feb01d77610796aa3f0b6d48b3e261"
+  },
+  "windows_original_browser_case": {
+    "passed": false,
+    "native_predicate_timeout_ms": 60000,
+    "real_pg_api_single_worker_production_web": true,
+    "admitted": 19,
+    "downloaded": 18,
+    "all_21_local_copies_not_proven": true,
+    "pagination_assertions_not_reached": true,
+    "fixture": {
+      "label": "candidate-progress",
+      "started_at_unix": 1794718724.0823436,
+      "ports": [
+        65438,
+        8211,
+        8320,
+        3107
+      ],
+      "bytecode_policy": "private task-local cache; same baseline/candidate policy",
+      "browser_exit_code": 1,
+      "browser_elapsed_seconds": 75.93799999996554,
+      "finished_at_unix": 1794718834.8399062,
+      "all_direct_fixture_processes_exited": true
+    },
+    "ordinal_network_timeline": {
+      "label": "candidate-progress",
+      "admissions": 19,
+      "successful_downloads": 18,
+      "items": [
+        {
+          "ordinal": 1,
+          "admission_s": 0.0,
+          "polls": [
+            {
+              "at_s": 0.067,
+              "http_ms": 18.464,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 1.099,
+              "http_ms": 22.5,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 0.629057
+            },
+            {
+              "at_s": 1.379,
+              "http_ms": 16.89,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 0.629057
+            },
+            {
+              "at_s": 1.658,
+              "http_ms": 17.168,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 0.629057
+            },
+            {
+              "at_s": 1.93,
+              "http_ms": 15.838,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 0.629057
+            },
+            {
+              "at_s": 2.2,
+              "http_ms": 16.259,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 0.629057
+            },
+            {
+              "at_s": 2.472,
+              "http_ms": 16.861,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 0.629057
+            },
+            {
+              "at_s": 2.743,
+              "http_ms": 15.741,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 0.629057
+            },
+            {
+              "at_s": 3.015,
+              "http_ms": 15.329,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 0.629057
+            },
+            {
+              "at_s": 3.286,
+              "http_ms": 20.449,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 0.629057,
+              "completed_at_s": 3.08706,
+              "phase_durations_ms": {
+                "publishing": 0.9,
+                "validating": 226.1,
+                "packaging_assets": 0.2,
+                "packaging_search": 13.0,
+                "packaging_headings": 6.5,
+                "packaging_messages": 39.5,
+                "packaging_metadata": 0.1,
+                "validating_package": 26.6,
+                "checking_dependencies": 127.2,
+                "packaging_annotations": 4.0,
+                "packaging_attachments": 5.6,
+                "packaging_conversations": 0.3
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 3.311,
+              "http_ms": 79.782,
+              "http": 200,
+              "bytes": 1461
+            }
+          ]
+        },
+        {
+          "ordinal": 2,
+          "admission_s": 3.445,
+          "polls": [
+            {
+              "at_s": 3.55,
+              "http_ms": 16.781,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 4.606,
+              "http_ms": 16.086,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 3.766986
+            },
+            {
+              "at_s": 4.882,
+              "http_ms": 14.824,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 3.766986
+            },
+            {
+              "at_s": 5.152,
+              "http_ms": 18.508,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 3.766986
+            },
+            {
+              "at_s": 5.424,
+              "http_ms": 16.073,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 3.766986
+            },
+            {
+              "at_s": 5.696,
+              "http_ms": 14.747,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 3.766986
+            },
+            {
+              "at_s": 5.966,
+              "http_ms": 18.23,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 3.766986
+            },
+            {
+              "at_s": 6.246,
+              "http_ms": 16.305,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 3.766986,
+              "completed_at_s": 6.069482,
+              "phase_durations_ms": {
+                "publishing": 0.5,
+                "validating": 222.6,
+                "packaging_assets": 0.2,
+                "packaging_search": 14.0,
+                "packaging_headings": 5.2,
+                "packaging_messages": 40.3,
+                "packaging_metadata": 0.1,
+                "validating_package": 21.5,
+                "checking_dependencies": 123.4,
+                "packaging_annotations": 3.9,
+                "packaging_attachments": 7.0,
+                "packaging_conversations": 0.3
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 6.267,
+              "http_ms": 37.748,
+              "http": 200,
+              "bytes": 1456
+            }
+          ]
+        },
+        {
+          "ordinal": 3,
+          "admission_s": 6.363,
+          "polls": [
+            {
+              "at_s": 6.484,
+              "http_ms": 16.983,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 7.512,
+              "http_ms": 16.175,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 6.495593
+            },
+            {
+              "at_s": 7.786,
+              "http_ms": 15.712,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 6.495593
+            },
+            {
+              "at_s": 8.058,
+              "http_ms": 21.808,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 6.495593
+            },
+            {
+              "at_s": 8.339,
+              "http_ms": 16.705,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 6.495593
+            },
+            {
+              "at_s": 8.615,
+              "http_ms": 18.392,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 6.495593
+            },
+            {
+              "at_s": 8.899,
+              "http_ms": 17.472,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 6.495593,
+              "completed_at_s": 8.865109,
+              "phase_durations_ms": {
+                "publishing": 0.5,
+                "validating": 225.9,
+                "packaging_assets": 0.1,
+                "packaging_search": 17.0,
+                "packaging_headings": 4.6,
+                "packaging_messages": 40.7,
+                "packaging_metadata": 0.1,
+                "validating_package": 25.9,
+                "checking_dependencies": 119.1,
+                "packaging_annotations": 4.9,
+                "packaging_attachments": 7.2,
+                "packaging_conversations": 0.2
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 8.921,
+              "http_ms": 29.757,
+              "http": 200,
+              "bytes": 1456
+            }
+          ]
+        },
+        {
+          "ordinal": 4,
+          "admission_s": 8.999,
+          "polls": [
+            {
+              "at_s": 9.067,
+              "http_ms": 18.347,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 10.098,
+              "http_ms": 17.739,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 9.273001
+            },
+            {
+              "at_s": 10.376,
+              "http_ms": 20.862,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 9.273001
+            },
+            {
+              "at_s": 10.659,
+              "http_ms": 17.522,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 9.273001
+            },
+            {
+              "at_s": 10.932,
+              "http_ms": 14.295,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 9.273001
+            },
+            {
+              "at_s": 11.206,
+              "http_ms": 16.86,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 9.273001
+            },
+            {
+              "at_s": 11.486,
+              "http_ms": 18.762,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 9.273001
+            },
+            {
+              "at_s": 11.761,
+              "http_ms": 14.941,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 9.273001
+            },
+            {
+              "at_s": 12.032,
+              "http_ms": 18.086,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 9.273001,
+              "completed_at_s": 11.820266,
+              "phase_durations_ms": {
+                "publishing": 1.0,
+                "validating": 454.3,
+                "packaging_assets": 0.1,
+                "packaging_search": 15.7,
+                "packaging_headings": 3.7,
+                "packaging_messages": 33.3,
+                "packaging_metadata": 0.1,
+                "validating_package": 22.7,
+                "checking_dependencies": 119.8,
+                "packaging_annotations": 4.0,
+                "packaging_attachments": 6.7,
+                "packaging_conversations": 0.2
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 12.055,
+              "http_ms": 28.2,
+              "http": 200,
+              "bytes": 1451
+            }
+          ]
+        },
+        {
+          "ordinal": 5,
+          "admission_s": 12.149,
+          "polls": [
+            {
+              "at_s": 12.215,
+              "http_ms": 22.235,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 12.20245
+            },
+            {
+              "at_s": 12.499,
+              "http_ms": 18.343,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 12.20245
+            },
+            {
+              "at_s": 12.779,
+              "http_ms": 17.522,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 12.20245
+            },
+            {
+              "at_s": 13.055,
+              "http_ms": 16.743,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 12.20245
+            },
+            {
+              "at_s": 13.326,
+              "http_ms": 17.713,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 12.20245
+            },
+            {
+              "at_s": 13.597,
+              "http_ms": 14.944,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 12.20245
+            },
+            {
+              "at_s": 13.867,
+              "http_ms": 15.348,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 12.20245
+            },
+            {
+              "at_s": 14.139,
+              "http_ms": 14.643,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 12.20245
+            },
+            {
+              "at_s": 14.409,
+              "http_ms": 16.147,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 12.20245
+            },
+            {
+              "at_s": 14.679,
+              "http_ms": 17.109,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 12.20245,
+              "completed_at_s": 14.575837,
+              "phase_durations_ms": {
+                "publishing": 0.5,
+                "validating": 335.3,
+                "packaging_assets": 0.1,
+                "packaging_search": 13.5,
+                "packaging_headings": 5.4,
+                "packaging_messages": 35.0,
+                "packaging_metadata": 0.1,
+                "validating_package": 21.8,
+                "checking_dependencies": 126.6,
+                "packaging_annotations": 4.1,
+                "packaging_attachments": 6.2,
+                "packaging_conversations": 0.4
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 14.703,
+              "http_ms": 27.531,
+              "http": 200,
+              "bytes": 1455
+            }
+          ]
+        },
+        {
+          "ordinal": 6,
+          "admission_s": 14.777,
+          "polls": [
+            {
+              "at_s": 14.838,
+              "http_ms": 14.509,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 15.859,
+              "http_ms": 16.889,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 14.962861
+            },
+            {
+              "at_s": 16.139,
+              "http_ms": 16.433,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 14.962861
+            },
+            {
+              "at_s": 16.41,
+              "http_ms": 15.462,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 14.962861
+            },
+            {
+              "at_s": 16.682,
+              "http_ms": 20.351,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 14.962861
+            },
+            {
+              "at_s": 16.966,
+              "http_ms": 18.947,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 14.962861
+            },
+            {
+              "at_s": 17.247,
+              "http_ms": 20.198,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 14.962861
+            },
+            {
+              "at_s": 17.526,
+              "http_ms": 20.73,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 14.962861,
+              "completed_at_s": 17.337388,
+              "phase_durations_ms": {
+                "publishing": 0.8,
+                "validating": 258.0,
+                "packaging_assets": 0.1,
+                "packaging_search": 15.0,
+                "packaging_headings": 3.3,
+                "packaging_messages": 45.0,
+                "packaging_metadata": 0.1,
+                "validating_package": 27.1,
+                "checking_dependencies": 129.4,
+                "packaging_annotations": 6.4,
+                "packaging_attachments": 5.4,
+                "packaging_conversations": 0.3
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 17.553,
+              "http_ms": 38.199,
+              "http": 200,
+              "bytes": 1459
+            }
+          ]
+        },
+        {
+          "ordinal": 7,
+          "admission_s": 17.683,
+          "polls": [
+            {
+              "at_s": 17.776,
+              "http_ms": 19.236,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 18.805,
+              "http_ms": 17.358,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 17.892699
+            },
+            {
+              "at_s": 19.077,
+              "http_ms": 15.282,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 17.892699
+            },
+            {
+              "at_s": 19.348,
+              "http_ms": 16.182,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 17.892699
+            },
+            {
+              "at_s": 19.619,
+              "http_ms": 18.524,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 17.892699
+            },
+            {
+              "at_s": 19.89,
+              "http_ms": 14.458,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 17.892699
+            },
+            {
+              "at_s": 20.162,
+              "http_ms": 16.311,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 17.892699
+            },
+            {
+              "at_s": 20.432,
+              "http_ms": 19.819,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 17.892699,
+              "completed_at_s": 20.24585,
+              "phase_durations_ms": {
+                "publishing": 0.7,
+                "validating": 225.8,
+                "packaging_assets": 0.2,
+                "packaging_search": 14.5,
+                "packaging_headings": 5.0,
+                "packaging_messages": 36.6,
+                "packaging_metadata": 0.1,
+                "validating_package": 25.0,
+                "checking_dependencies": 117.2,
+                "packaging_annotations": 3.6,
+                "packaging_attachments": 5.9,
+                "packaging_conversations": 0.3
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 20.457,
+              "http_ms": 35.286,
+              "http": 200,
+              "bytes": 1453
+            }
+          ]
+        },
+        {
+          "ordinal": 8,
+          "admission_s": 20.557,
+          "polls": [
+            {
+              "at_s": 20.618,
+              "http_ms": 19.615,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 21.645,
+              "http_ms": 16.604,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 22.673,
+              "http_ms": 16.685,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 23.698,
+              "http_ms": 18.403,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 23.051369
+            },
+            {
+              "at_s": 23.973,
+              "http_ms": 15.093,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 23.051369
+            },
+            {
+              "at_s": 24.245,
+              "http_ms": 16.056,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 23.051369
+            },
+            {
+              "at_s": 24.514,
+              "http_ms": 16.606,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 23.051369
+            },
+            {
+              "at_s": 24.784,
+              "http_ms": 15.713,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 23.051369
+            },
+            {
+              "at_s": 25.056,
+              "http_ms": 14.029,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 23.051369
+            },
+            {
+              "at_s": 25.34,
+              "http_ms": 184.695,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 23.051369
+            },
+            {
+              "at_s": 25.812,
+              "http_ms": 146.825,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 23.051369
+            },
+            {
+              "at_s": 26.249,
+              "http_ms": 156.089,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 23.051369
+            },
+            {
+              "at_s": 26.659,
+              "http_ms": 18.868,
+              "status": "processing",
+              "progress": 0,
+              "started_at_s": 23.051369
+            },
+            {
+              "at_s": 26.938,
+              "http_ms": 16.507,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 23.051369,
+              "completed_at_s": 26.709807,
+              "phase_durations_ms": {
+                "publishing": 0.7,
+                "validating": 225.6,
+                "packaging_assets": 0.2,
+                "packaging_search": 17.5,
+                "packaging_headings": 2.9,
+                "packaging_messages": 548.3,
+                "packaging_metadata": 0.1,
+                "validating_package": 24.4,
+                "checking_dependencies": 917.8,
+                "packaging_annotations": 6.1,
+                "packaging_attachments": 5.8,
+                "packaging_conversations": 0.3
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 26.959,
+              "http_ms": 30.733,
+              "http": 200,
+              "bytes": 1458
+            }
+          ]
+        },
+        {
+          "ordinal": 9,
+          "admission_s": 27.055,
+          "polls": [
+            {
+              "at_s": 27.115,
+              "http_ms": 16.111,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 28.138,
+              "http_ms": 16.934,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 27.358266
+            },
+            {
+              "at_s": 28.418,
+              "http_ms": 16.066,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 27.358266
+            },
+            {
+              "at_s": 28.69,
+              "http_ms": 15.185,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 27.358266
+            },
+            {
+              "at_s": 28.962,
+              "http_ms": 18.154,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 27.358266
+            },
+            {
+              "at_s": 29.244,
+              "http_ms": 16.128,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 27.358266
+            },
+            {
+              "at_s": 29.52,
+              "http_ms": 15.416,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 27.358266
+            },
+            {
+              "at_s": 29.789,
+              "http_ms": 13.288,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 27.358266,
+              "completed_at_s": 29.705926,
+              "phase_durations_ms": {
+                "publishing": 0.4,
+                "validating": 215.1,
+                "packaging_assets": 0.1,
+                "packaging_search": 14.1,
+                "packaging_headings": 4.1,
+                "packaging_messages": 33.5,
+                "packaging_metadata": 0.1,
+                "validating_package": 23.6,
+                "checking_dependencies": 125.1,
+                "packaging_annotations": 4.7,
+                "packaging_attachments": 4.9,
+                "packaging_conversations": 0.2
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 29.809,
+              "http_ms": 28.175,
+              "http": 200,
+              "bytes": 1457
+            }
+          ]
+        },
+        {
+          "ordinal": 10,
+          "admission_s": 29.895,
+          "polls": [
+            {
+              "at_s": 30.107,
+              "http_ms": 19.055,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 31.138,
+              "http_ms": 17.451,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 30.128828
+            },
+            {
+              "at_s": 31.413,
+              "http_ms": 15.269,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 30.128828
+            },
+            {
+              "at_s": 31.685,
+              "http_ms": 20.507,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 30.128828
+            },
+            {
+              "at_s": 31.965,
+              "http_ms": 16.472,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 30.128828
+            },
+            {
+              "at_s": 32.241,
+              "http_ms": 17.158,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 30.128828
+            },
+            {
+              "at_s": 32.525,
+              "http_ms": 16.475,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 30.128828,
+              "completed_at_s": 32.460912,
+              "phase_durations_ms": {
+                "publishing": 0.5,
+                "validating": 235.9,
+                "packaging_assets": 0.1,
+                "packaging_search": 13.5,
+                "packaging_headings": 3.8,
+                "packaging_messages": 36.6,
+                "packaging_metadata": 0.1,
+                "validating_package": 21.8,
+                "checking_dependencies": 132.7,
+                "packaging_annotations": 5.1,
+                "packaging_attachments": 5.5,
+                "packaging_conversations": 0.3
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 32.546,
+              "http_ms": 27.28,
+              "http": 200,
+              "bytes": 1455
+            }
+          ]
+        },
+        {
+          "ordinal": 11,
+          "admission_s": 32.626,
+          "polls": [
+            {
+              "at_s": 32.683,
+              "http_ms": 19.222,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 33.711,
+              "http_ms": 16.379,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 32.842297
+            },
+            {
+              "at_s": 33.991,
+              "http_ms": 16.597,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 32.842297
+            },
+            {
+              "at_s": 34.262,
+              "http_ms": 18.459,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 32.842297
+            },
+            {
+              "at_s": 34.534,
+              "http_ms": 14.776,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 32.842297
+            },
+            {
+              "at_s": 34.804,
+              "http_ms": 17.289,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 32.842297
+            },
+            {
+              "at_s": 35.078,
+              "http_ms": 16.356,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 32.842297
+            },
+            {
+              "at_s": 35.347,
+              "http_ms": 15.287,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 32.842297,
+              "completed_at_s": 35.092081,
+              "phase_durations_ms": {
+                "publishing": 0.5,
+                "validating": 232.1,
+                "packaging_assets": 0.1,
+                "packaging_search": 12.3,
+                "packaging_headings": 2.8,
+                "packaging_messages": 38.0,
+                "packaging_metadata": 0.1,
+                "validating_package": 25.6,
+                "checking_dependencies": 121.3,
+                "packaging_annotations": 5.2,
+                "packaging_attachments": 5.2,
+                "packaging_conversations": 0.2
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 35.369,
+              "http_ms": 32.863,
+              "http": 200,
+              "bytes": 1457
+            }
+          ]
+        },
+        {
+          "ordinal": 12,
+          "admission_s": 35.483,
+          "polls": [
+            {
+              "at_s": 35.545,
+              "http_ms": 16.192,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 36.565,
+              "http_ms": 17.141,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 35.771542
+            },
+            {
+              "at_s": 36.836,
+              "http_ms": 14.607,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 35.771542
+            },
+            {
+              "at_s": 37.106,
+              "http_ms": 24.428,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 35.771542
+            },
+            {
+              "at_s": 37.391,
+              "http_ms": 16.681,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 35.771542
+            },
+            {
+              "at_s": 37.664,
+              "http_ms": 13.902,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 35.771542
+            },
+            {
+              "at_s": 37.935,
+              "http_ms": 16.241,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 35.771542
+            },
+            {
+              "at_s": 38.205,
+              "http_ms": 18.26,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 35.771542
+            },
+            {
+              "at_s": 38.478,
+              "http_ms": 14.775,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 35.771542,
+              "completed_at_s": 38.327033,
+              "phase_durations_ms": {
+                "publishing": 0.6,
+                "validating": 442.7,
+                "packaging_assets": 0.1,
+                "packaging_search": 14.9,
+                "packaging_headings": 3.9,
+                "packaging_messages": 38.6,
+                "packaging_metadata": 0.1,
+                "validating_package": 21.7,
+                "checking_dependencies": 139.0,
+                "packaging_annotations": 4.2,
+                "packaging_attachments": 7.6,
+                "packaging_conversations": 0.2
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 38.496,
+              "http_ms": 35.061,
+              "http": 200,
+              "bytes": 1460
+            }
+          ]
+        },
+        {
+          "ordinal": 13,
+          "admission_s": 38.6,
+          "polls": [
+            {
+              "at_s": 38.666,
+              "http_ms": 19.359,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 39.697,
+              "http_ms": 17.058,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 38.740103
+            },
+            {
+              "at_s": 39.968,
+              "http_ms": 15.402,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 38.740103
+            },
+            {
+              "at_s": 40.24,
+              "http_ms": 15.904,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 38.740103
+            },
+            {
+              "at_s": 40.51,
+              "http_ms": 16.995,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 38.740103
+            },
+            {
+              "at_s": 40.782,
+              "http_ms": 15.779,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 38.740103
+            },
+            {
+              "at_s": 41.055,
+              "http_ms": 14.504,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 38.740103
+            },
+            {
+              "at_s": 41.325,
+              "http_ms": 19.877,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 38.740103,
+              "completed_at_s": 41.095554,
+              "phase_durations_ms": {
+                "publishing": 0.4,
+                "validating": 230.2,
+                "packaging_assets": 0.2,
+                "packaging_search": 14.8,
+                "packaging_headings": 3.4,
+                "packaging_messages": 38.9,
+                "packaging_metadata": 0.0,
+                "validating_package": 21.3,
+                "checking_dependencies": 124.6,
+                "packaging_annotations": 3.5,
+                "packaging_attachments": 6.7,
+                "packaging_conversations": 0.4
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 41.35,
+              "http_ms": 41.881,
+              "http": 200,
+              "bytes": 1455
+            }
+          ]
+        },
+        {
+          "ordinal": 14,
+          "admission_s": 41.471,
+          "polls": [
+            {
+              "at_s": 41.551,
+              "http_ms": 19.951,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 42.578,
+              "http_ms": 17.127,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 41.599534
+            },
+            {
+              "at_s": 42.858,
+              "http_ms": 15.815,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 41.599534
+            },
+            {
+              "at_s": 43.134,
+              "http_ms": 15.595,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 41.599534
+            },
+            {
+              "at_s": 43.404,
+              "http_ms": 18.864,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 41.599534
+            },
+            {
+              "at_s": 43.684,
+              "http_ms": 17.291,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 41.599534
+            },
+            {
+              "at_s": 43.962,
+              "http_ms": 15.764,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 41.599534
+            },
+            {
+              "at_s": 44.232,
+              "http_ms": 15.933,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 41.599534,
+              "completed_at_s": 44.023362,
+              "phase_durations_ms": {
+                "publishing": 1.1,
+                "validating": 362.6,
+                "packaging_assets": 0.1,
+                "packaging_search": 16.6,
+                "packaging_headings": 4.0,
+                "packaging_messages": 37.3,
+                "packaging_metadata": 0.1,
+                "validating_package": 31.4,
+                "checking_dependencies": 120.9,
+                "packaging_annotations": 5.0,
+                "packaging_attachments": 5.3,
+                "packaging_conversations": 0.3
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 44.252,
+              "http_ms": 29.174,
+              "http": 200,
+              "bytes": 1458
+            }
+          ]
+        },
+        {
+          "ordinal": 15,
+          "admission_s": 44.349,
+          "polls": [
+            {
+              "at_s": 44.424,
+              "http_ms": 22.069,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 44.406601
+            },
+            {
+              "at_s": 44.711,
+              "http_ms": 18.147,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 44.406601
+            },
+            {
+              "at_s": 44.987,
+              "http_ms": 17.387,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 44.406601
+            },
+            {
+              "at_s": 45.258,
+              "http_ms": 16.836,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 44.406601
+            },
+            {
+              "at_s": 45.528,
+              "http_ms": 16.003,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 44.406601
+            },
+            {
+              "at_s": 45.8,
+              "http_ms": 16.409,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 44.406601
+            },
+            {
+              "at_s": 46.071,
+              "http_ms": 17.242,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 44.406601
+            },
+            {
+              "at_s": 46.342,
+              "http_ms": 14.823,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 44.406601
+            },
+            {
+              "at_s": 46.612,
+              "http_ms": 17.089,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 44.406601
+            },
+            {
+              "at_s": 46.884,
+              "http_ms": 16.642,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 44.406601,
+              "completed_at_s": 46.67383,
+              "phase_durations_ms": {
+                "publishing": 1.0,
+                "validating": 226.4,
+                "packaging_assets": 0.1,
+                "packaging_search": 14.3,
+                "packaging_headings": 4.4,
+                "packaging_messages": 37.1,
+                "packaging_metadata": 0.1,
+                "validating_package": 25.7,
+                "checking_dependencies": 124.8,
+                "packaging_annotations": 4.2,
+                "packaging_attachments": 6.9,
+                "packaging_conversations": 0.3
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 46.905,
+              "http_ms": 34.417,
+              "http": 200,
+              "bytes": 1457
+            }
+          ]
+        },
+        {
+          "ordinal": 16,
+          "admission_s": 46.997,
+          "polls": [
+            {
+              "at_s": 47.051,
+              "http_ms": 16.257,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 48.074,
+              "http_ms": 15.76,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 47.082105
+            },
+            {
+              "at_s": 48.344,
+              "http_ms": 14.99,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 47.082105
+            },
+            {
+              "at_s": 48.614,
+              "http_ms": 16.777,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 47.082105
+            },
+            {
+              "at_s": 48.884,
+              "http_ms": 17.95,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 47.082105
+            },
+            {
+              "at_s": 49.164,
+              "http_ms": 18.12,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 47.082105
+            },
+            {
+              "at_s": 49.441,
+              "http_ms": 17.121,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 47.082105
+            },
+            {
+              "at_s": 49.711,
+              "http_ms": 15.495,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 47.082105,
+              "completed_at_s": 49.447397,
+              "phase_durations_ms": {
+                "publishing": 0.7,
+                "validating": 245.7,
+                "packaging_assets": 0.1,
+                "packaging_search": 15.8,
+                "packaging_headings": 2.9,
+                "packaging_messages": 38.3,
+                "packaging_metadata": 0.1,
+                "validating_package": 30.9,
+                "checking_dependencies": 128.3,
+                "packaging_annotations": 5.5,
+                "packaging_attachments": 4.6,
+                "packaging_conversations": 0.2
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 49.732,
+              "http_ms": 33.713,
+              "http": 200,
+              "bytes": 1457
+            }
+          ]
+        },
+        {
+          "ordinal": 17,
+          "admission_s": 49.83,
+          "polls": [
+            {
+              "at_s": 49.902,
+              "http_ms": 16.099,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 50.924,
+              "http_ms": 17.047,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 50.121158
+            },
+            {
+              "at_s": 51.204,
+              "http_ms": 16.917,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 50.121158
+            },
+            {
+              "at_s": 51.475,
+              "http_ms": 15.299,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 50.121158
+            },
+            {
+              "at_s": 51.745,
+              "http_ms": 17.41,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 50.121158
+            },
+            {
+              "at_s": 52.018,
+              "http_ms": 16.709,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 50.121158
+            },
+            {
+              "at_s": 52.297,
+              "http_ms": 15.322,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 50.121158
+            },
+            {
+              "at_s": 52.574,
+              "http_ms": 16.536,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 50.121158,
+              "completed_at_s": 52.556968,
+              "phase_durations_ms": {
+                "publishing": 0.7,
+                "validating": 354.3,
+                "packaging_assets": 0.1,
+                "packaging_search": 9.4,
+                "packaging_headings": 4.6,
+                "packaging_messages": 34.6,
+                "packaging_metadata": 0.0,
+                "validating_package": 23.5,
+                "checking_dependencies": 119.1,
+                "packaging_annotations": 5.9,
+                "packaging_attachments": 5.5,
+                "packaging_conversations": 0.2
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 52.596,
+              "http_ms": 38.45,
+              "http": 200,
+              "bytes": 1456
+            }
+          ]
+        },
+        {
+          "ordinal": 18,
+          "admission_s": 52.705,
+          "polls": [
+            {
+              "at_s": 52.769,
+              "http_ms": 20.359,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 53.804,
+              "http_ms": 17.204,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 52.99397
+            },
+            {
+              "at_s": 54.082,
+              "http_ms": 17.032,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 52.99397
+            },
+            {
+              "at_s": 54.354,
+              "http_ms": 14.72,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 52.99397
+            },
+            {
+              "at_s": 54.625,
+              "http_ms": 15.09,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 52.99397
+            },
+            {
+              "at_s": 54.897,
+              "http_ms": 15.931,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 52.99397
+            },
+            {
+              "at_s": 55.168,
+              "http_ms": 14.95,
+              "status": "processing",
+              "progress": 5,
+              "started_at_s": 52.99397
+            },
+            {
+              "at_s": 55.444,
+              "http_ms": 14.374,
+              "status": "committed",
+              "progress": 100,
+              "started_at_s": 52.99397,
+              "completed_at_s": 55.432331,
+              "phase_durations_ms": {
+                "publishing": 1.0,
+                "validating": 351.8,
+                "packaging_assets": 0.2,
+                "packaging_search": 17.6,
+                "packaging_headings": 2.8,
+                "packaging_messages": 37.2,
+                "packaging_metadata": 0.1,
+                "validating_package": 28.3,
+                "checking_dependencies": 119.5,
+                "packaging_annotations": 4.1,
+                "packaging_attachments": 5.4,
+                "packaging_conversations": 0.4
+              }
+            }
+          ],
+          "downloads": [
+            {
+              "at_s": 55.462,
+              "http_ms": 28.28,
+              "http": 200,
+              "bytes": 1451
+            }
+          ]
+        },
+        {
+          "ordinal": 19,
+          "admission_s": 55.554,
+          "polls": [
+            {
+              "at_s": 55.639,
+              "http_ms": 15.689,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 56.671,
+              "http_ms": 14.903,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 57.697,
+              "http_ms": 13.782,
+              "status": "queued",
+              "progress": 0
+            },
+            {
+              "at_s": 58.717,
+              "http_ms": 14.975,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 58.151993
+            },
+            {
+              "at_s": 58.989,
+              "http_ms": 17.243,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 58.151993
+            },
+            {
+              "at_s": 59.26,
+              "http_ms": 20.493,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 58.151993
+            },
+            {
+              "at_s": 59.537,
+              "http_ms": 15.632,
+              "status": "processing",
+              "progress": 1,
+              "started_at_s": 58.151993
+            }
+          ],
+          "downloads": []
+        }
+      ]
+    },
+    "trace_sha256": "602d7eb080cb428e343eed18a23f026daf013b042eadb537fc632474b46611b5"
+  },
+  "first_publication_diagnostic": {
+    "platform": "Windows; not Linux throughput or browser acceptance",
+    "unprofiled_order": [
+      "baseline",
+      "candidate",
+      "candidate",
+      "baseline",
+      "baseline",
+      "candidate",
+      "candidate",
+      "baseline"
+    ],
+    "every_child_new_conversation_and_first_package": true,
+    "independent_profile_count": 2,
+    "median_spawn_to_exit_s": {
+      "baseline": 2.3280000000377186,
+      "candidate": 2.210499999986496
+    },
+    "summary_sha256": "3ad0aefe0162f9bc8847f1e4a886ed0bc088c3a28c06d57ba077632659addcc8"
+  },
+  "retained_failures": [
+    {
+      "scope": "new PG fixture without required owner",
+      "failed": 1,
+      "passed": 357,
+      "log_sha256": "c2512edb13e25a0429ebbaf612d823cf7d677d5012f552776092792818016ce0"
+    },
+    {
+      "scope": "recent-exit controls before handoff fix",
+      "failed": 4,
+      "passed": 21,
+      "skipped": 1,
+      "log_sha256": "f6783d65e08e602137343c8609a76053b605576cbc522b43ebc2626736a54aa0"
+    },
+    {
+      "scope": "first-publication diagnostic adapter collection/schema errors",
+      "product_failures": false,
+      "earlier_runs_retained": 2
+    }
+  ],
+  "preservation": {
+    "inherited_inputs_unchanged": 1405,
+    "protected_files": 13,
+    "historical_receipts": 62,
+    "old_dispatch_bytes_unchanged": true
+  },
+  "acceptance_boundary": {
+    "linux_batch_throughput": false,
+    "full_470_plus_restore": false,
+    "new_exact_ci_all_six_jobs": false,
+    "images_and_memory": false,
+    "independent_artifact_consumer": false,
+    "deployment": false,
+    "reader_151ms_product_root_cause_proven_fixed": false,
+    "product_acceptance_owned_by_user": true
+  },
+  "next_action": "ordinary full CI with empty quality source; fresh real55-minute waiter and self-check, continue on failure",
+  "production_rechecked_or_modified": false,
+  "task_temporary_directory": "reliability-ci-offline-handoff-fix-20261115-27"
+}

@@ -1,5 +1,28 @@
 # PWA and Offline Resilience Contract
 
+## Bounded generation observation — source candidate, 2026-11-15
+
+A child first observed processing is polled every250ms for at most5 monotonic
+seconds. Later processing and queued/cancelling/unknown states keep the
+existing1-second cadence; progress changes do not renew the fast window.
+Unchanged generating state/progress does not rewrite its Dexie record or emit
+another UI-change event. This removes serial completion-observation gaps,
+not a worker execution limit. One HTTP read at a time, request/body deadlines,
+one browser writer/worker, child receipts and v1/v2/v3 atomic publication remain.
+The original21-real-copy/60-second case and470+restore1 CI gates remain.
+See the [current ledger](SMALL_HOST_IMPROVEMENT_STATUS.md).
+
+The source worker candidate samples only supervised PostgreSQL offline UI
+snapshots at1 second, with explicit results forcing a publication attempt.
+Phase accounting and every business/stop checkpoint remain; canonical status,
+execution generation and the monitor's commit fence still govern publication.
+SQLite, legacy direct calls and other task types keep their reporting behavior.
+Process-exit observation and no-op recovery admission are documented in the
+[observability contract](OBSERVABILITY_CONTRACT.md), including the bounded
+healthy post-exit handoff window. All Windows original21-copy probes still
+fail60 seconds; unit/PG controls do not establish batch throughput. Fresh
+exact Linux CI and release gates remain required, not deployment acceptance.
+
 ## Per-conversation recovery — released 2026-11-11
 
 Exact `3564cbf` / CI `42828329240` is deployed. The full CI PWA gates and the

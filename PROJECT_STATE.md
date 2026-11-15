@@ -1,6 +1,40 @@
 # Project State
 
-## Latest: Reader failure diagnostics, not a proven performance fix — 2026-11-15
+## Latest: offline batch observation latency and continuous release loop — 2026-11-15
+
+Exact d983521/43629368808 is completed/failure: API6751, Web14 gates and
+candidate Reader9 pass; Settings469/470 pass. Its unchanged60-second real
+21-copy preparation admitted20/downloaded19 before pagination assertions.
+The first19 completed jobs accumulated11.043476 seconds of completion-to-read
+lag. [Official diagnosis](docs/evidence/reliability-2026-11-15/ci-offline-latency-failure.json).
+Both release jobs skipped; there are no new deployable images.
+
+The source candidate bounds browser observation and avoids unchanged Dexie
+writes. Supervised PostgreSQL offline progress snapshots are sampled at1 second,
+without suppressing phase accounting, business checkpoints or commit fencing.
+Supervision wakes on process exit within the existing250ms wait; only a fresh
+claim proving no legacy recovery inputs avoids a no-op recovery child.
+A healthy, explicitly empty lane gets a250ms handoff wait for at most5 seconds
+after a real child exit; empty reads do not renew it. Unknown/blocked claims,
+outages and ordinary idle retain configured backoff. Maintenance, single-child
+admission, real publication, native deadlines and resource limits remain.
+All Windows21-copy probes, including this handoff candidate, still fail60 seconds;
+the candidate is not an accepted throughput fix. Final related real-PG371
+(five original environment skips), offline Node214, lint/typecheck and single
+head0061 pass;550 prior production-build inputs are unchanged, not a new build.
+[Verification](docs/evidence/reliability-2026-11-15/ci-offline-handoff-verification.json) /
+[1413 inputs](docs/evidence/reliability-2026-11-15/ci-offline-handoff-inputs.json)
+preserve1405 inherited inputs,62 receipts and13 unrelated files.
+Fresh exact Linux CI remains required, not replaced by local controls.
+
+Latest authorization supersedes the historical “dispatch then pause”: repair,
+verify, selectively commit/push ordinary full CI with empty quality source,
+wait a new real55 minutes and self-check; continue on failure, prove artifacts
+before deployment, then optimize CI duration. User owns product acceptance.
+Production3564cbf/schema0060 is only the last verified pointer, not rechecked.
+Current progress lives in the [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md).
+
+## Earlier: Reader failure diagnostics, not a proven performance fix — 2026-11-15
 
 Exact2495fb1/43613433508 completed/failure solely in candidate math10000,
 cold2: native tasks80/151ms, exceeding the unchanged150ms maximum; total231ms

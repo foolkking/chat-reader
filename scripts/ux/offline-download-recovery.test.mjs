@@ -23,8 +23,8 @@ class OfflinePackageImportError extends Error { constructor(code) { super("Synth
 // Executes the complete production coordinator. Storage, network, access and
 // package publication are deterministic adapters, not claims about real Dexie,
 // ZIP validation, Web Locks or authentication; the browser gate covers those.
-function fixture(count = 4) {
-  const settings = new Map(), copies = new Map(), jobs = new Map(), failures = new Map(), admissions = [], imports = [];
+function fixture(count = 4, clock) {
+  const settings = new Map(), copies = new Map(), jobs = new Map(), failures = new Map(), admissions = [], imports = [], writes = [];
   const catalog = { projects: [], conversations: Array.from({ length: count }, (_, i) =>
     ({ id: `synthetic-${i + 1}`, display_title: `Synthetic conversation ${i + 1}`, revision: 2 })) };
   let epoch = 1, usable = true, catalogError, duringCatalog;
@@ -38,7 +38,7 @@ function fixture(count = 4) {
   const db = { name: "synthetic-account",
     settings: {
       get: async key => settings.has(key) ? { key, value: read(settings.get(key)) } : undefined,
-      put: async row => { settings.set(row.key, read(row.value)); },
+      put: async row => { settings.set(row.key, read(row.value)); writes.push(row.key); },
       bulkPut: async rows => rows.forEach(row => settings.set(row.key, read(row.value))),
       delete: async key => { settings.delete(key); },
       where: () => ({ startsWith: prefix => query(prefix) }),
@@ -85,15 +85,29 @@ function fixture(count = 4) {
       } },
   };
   const exports = {};
-  new Function("exports", "require", "window", "navigator", "crypto", "fetch", moduleSource)(
+  const timers = new Map();
+  new Function("exports", "require", "window", "navigator", "crypto", "fetch", "performance", "setTimeout", "clearTimeout", moduleSource)(
     exports, name => { assert.ok(deps[name], name); return deps[name]; },
     { dispatchEvent() {} }, { onLine: true }, { randomUUID }, async url => {
       const key = url.split("/").at(-2), failure = failures.get(jobs.get(key)?.id);
       if (failure?.fetch) return new Response(null, { status: failure.fetch });
       return new Response("synthetic");
     },
+    clock ? { now: () => clock.now } : performance,
+    clock ? (callback, delay) => {
+      const timer = Symbol();
+      timers.set(timer, true);
+      queueMicrotask(() => {
+        if (!timers.delete(timer)) return;
+        clock.now += delay;
+        clock.waits.push(delay);
+        callback();
+      });
+      return timer;
+    } : setTimeout,
+    clock ? timer => { timers.delete(timer); } : clearTimeout,
   );
-  return { api: exports, copies, jobs, failures, admissions, imports, catalog, settings,
+  return { api: exports, copies, jobs, failures, admissions, imports, catalog, settings, writes,
     row: id => read(settings.get("offline-download:" + id)),
     set: row => settings.set("offline-download:" + row.id, read(row)),
     enqueue: async (scopeId, assetMode = "all") => exports.enqueueOfflineDownload({ scope: scopeId ? "conversation" : "all", scopeId, assetMode }),
@@ -102,8 +116,83 @@ function fixture(count = 4) {
     catalogFailure: status => { catalogError = status; },
     changeDuringCatalog: callback => { duringCatalog = callback; },
     authorize: () => { usable = true; },
+    readTasksWith: reader => { api.getTask = reader; },
   };
 }
+
+test("short processing polls remove serial completion-observation gaps; each child still commits before the next admission", async () => {
+  const clock = { now: 0, waits: [] };
+  const f = fixture(2, clock);
+  const record = await f.enqueue();
+  const starts = new Map(), reads = [];
+  f.readTasksWith(async key => {
+    if (!starts.has(key)) starts.set(key, { time: clock.now, writes: f.writes.length });
+    const age = clock.now - starts.get(key).time;
+    reads.push({ child: f.jobs.get(key).id, age });
+    // The API is queued initially, then runs and genuinely commits at 1750ms.
+    const status = age < 1_000 ? "queued" : age < 1_750 ? "processing" : "committed";
+    if (status !== "committed") {
+      assert.equal(f.imports.length, f.admissions.length - 1);
+      assert.equal(f.row(record.id).conversationCursor, f.imports.length);
+      assert.equal(f.writes.length, starts.get(key).writes, "Unchanged polling must not rewrite Dexie or trigger UI work");
+    }
+    return { status, progress: status === "committed" ? 100 : 1, result: { package_id: key } };
+  });
+  await f.run();
+  assert.equal(f.row(record.id).state, "completed");
+  assert.deepEqual(f.imports, ["synthetic-1", "synthetic-2"]);
+  assert.deepEqual(clock.waits, [1_000, 250, 250, 250, 1_000, 250, 250, 250]);
+  assert.equal(clock.now, 3_500);
+  assert.deepEqual(reads.filter(read => read.age === 0).map(read => read.child), f.imports);
+});
+
+test("processing observation backs off after five seconds even with changing progress; queued work never fast-polls", async () => {
+  const clock = { now: 0, waits: [] };
+  const f = fixture(1, clock);
+  const record = await f.enqueue();
+  let reads = 0;
+  f.readTasksWith(async key => {
+    reads++;
+    const status = clock.now < 2_000 ? "queued" : clock.now < 9_000 ? "processing" : "committed";
+    if (status !== "committed") {
+      assert.equal(f.imports.length, 0);
+      assert.equal(f.row(record.id).conversationCursor, 0);
+    }
+    return { status, progress: reads, result: { package_id: key } };
+  });
+  await f.run();
+  assert.deepEqual(clock.waits, [1_000, 1_000, ...Array(20).fill(250), 1_000, 1_000]);
+  assert.equal(clock.now, 9_000);
+  assert.equal(f.row(record.id).state, "completed");
+  assert.equal(f.admissions.length, 1);
+});
+
+test("aborting processing observation preserves the unfinished receipt and admits no sibling", async () => {
+  const clock = { now: 0, waits: [] };
+  const f = fixture(2, clock);
+  const record = await f.enqueue(), controller = new AbortController();
+  f.readTasksWith(async key => {
+    if (clock.now >= 500) controller.abort();
+    return { status: "processing", progress: 1, result: { package_id: key } };
+  });
+  await f.run(controller.signal);
+  assert.deepEqual(clock.waits, [250, 250]);
+  assert.equal(f.admissions.length, 1);
+  assert.equal(f.imports.length, 0);
+  assert.equal(f.row(record.id).state, "generating");
+  assert.equal(f.row(record.id).conversationCursor, 0);
+  assert.equal(f.row(record.id).jobId, f.admissions[0].key);
+});
+
+for (const [status, age, delay] of [
+  ["processing", 0, 250], ["processing", 4_999, 250], ["processing", 5_000, 1_000],
+  ["processing", 9_000, 1_000], ["processing", undefined, 1_000],
+  ["processing", NaN, 1_000], ["processing", Infinity, 1_000], ["processing", -1, 1_000],
+  ["queued", 0, 1_000], ["queued", 4_999, 1_000],
+  ["cancelling", 0, 1_000], ["unknown", 0, 1_000],
+]) test(`generation polling is bounded for ${status}/${String(age)}`, () => {
+  assert.equal(progress.offlineGenerationPollDelay(status, age), delay);
+});
 
 for (const code of ["GENERATION", "OFFLINE_ASSET_INTEGRITY", "OFFLINE_CONTEXT_INTEGRITY", "OFFLINE_CONTEXT_UNAVAILABLE"]) {
   test(`independent ${code} leaves a truthful ledger and continues siblings; retry repeats only failures`, async () => {

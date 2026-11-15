@@ -36,3 +36,6 @@ docs/execution/ux-audit-noise-matching-2026-10-25-evidence/** -text whitespace=c
 # Captured lint stdout retains its original final blank line and newline bytes.
 docs/evidence/reading-tools-audit-fixes-2026-11-08/lint-final.log -text whitespace=cr-at-eol,-blank-at-eof
 docs/execution/ux-audit-reading-tools-completion-2026-11-08-evidence/lint.log -text whitespace=cr-at-eol,-blank-at-eof
+# Preserve the newly archived CI receipts; existing reading receipts are unchanged.
+docs/evidence/reliability-2026-11-15/ci-reading-diagnostics-dispatch.json -text whitespace=cr-at-eol,-blank-at-eof
+docs/evidence/reliability-2026-11-15/ci-offline-* -text whitespace=cr-at-eol,-blank-at-eof

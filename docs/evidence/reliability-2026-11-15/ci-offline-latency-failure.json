@@ -1,0 +1,614 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T03:26:26.077766+00:00",
+  "purpose": "Official failed full CI and ordinal offline observation-latency diagnosis; not release acceptance",
+  "run": {
+    "id": 43629368808,
+    "head_sha": "d983521bea87c2a5725de8f24a285b505a6f8112",
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-14T18:56:37Z",
+    "updated_at": "2026-11-14T20:00:56Z",
+    "html_url": "https://github.com/foolkking/chat-reader/actions/runs/43629368808"
+  },
+  "jobs": [
+    {
+      "id": 132552338004,
+      "name": "web-quality",
+      "conclusion": "success",
+      "duration_seconds": 3466.0
+    },
+    {
+      "id": 132552338264,
+      "name": "settings-quality",
+      "conclusion": "failure",
+      "duration_seconds": 3854.0
+    },
+    {
+      "id": 132552338356,
+      "name": "api-quality",
+      "conclusion": "success",
+      "duration_seconds": 1815.0
+    },
+    {
+      "id": 132560889051,
+      "name": "reading-performance-comparison / compare",
+      "conclusion": "success",
+      "duration_seconds": 614.0
+    },
+    {
+      "id": 132570304168,
+      "name": "inspect-release-artifact",
+      "conclusion": "skipped",
+      "duration_seconds": 0.0
+    },
+    {
+      "id": 132570304257,
+      "name": "build-images",
+      "conclusion": "skipped",
+      "duration_seconds": 0.0
+    }
+  ],
+  "api": {
+    "passed": 6751,
+    "skipped": 3,
+    "warnings": 5,
+    "pytest_seconds": 1624.28
+  },
+  "web": {
+    "overall_status": "PASS",
+    "counts": {
+      "PASS": 14,
+      "FAIL": 0,
+      "NOT_VERIFIED": 0,
+      "SKIPPED": 0
+    },
+    "gates": [
+      {
+        "gate_id": "adaptive-import-recovery",
+        "status": "PASS",
+        "test_count": 15,
+        "result_counts": {
+          "passed": 14,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 1,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "csp-enforcement",
+        "status": "PASS",
+        "test_count": 4,
+        "result_counts": {
+          "passed": 4,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "context-files",
+        "status": "PASS",
+        "test_count": 38,
+        "result_counts": {
+          "passed": 38,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "focused-online-security",
+        "status": "PASS",
+        "test_count": 78,
+        "result_counts": {
+          "passed": 78,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "share-focus",
+        "status": "PASS",
+        "test_count": 2,
+        "result_counts": {
+          "passed": 2,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "source-editor-mutation",
+        "status": "PASS",
+        "test_count": 121,
+        "result_counts": {
+          "passed": 121,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "source-editor-cleanup",
+        "status": "PASS",
+        "test_count": 6,
+        "result_counts": {
+          "passed": 6,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "upload-token-atomicity",
+        "status": "PASS",
+        "test_count": 18,
+        "result_counts": {
+          "passed": 18,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "markdown-image-viewer",
+        "status": "PASS",
+        "test_count": 31,
+        "result_counts": {
+          "passed": 31,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "reading-stability",
+        "status": "PASS",
+        "test_count": 35,
+        "result_counts": {
+          "passed": 35,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "pdfjs-maintained-line",
+        "status": "PASS",
+        "test_count": 13,
+        "result_counts": {
+          "passed": 13,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "default-pwa",
+        "status": "PASS",
+        "test_count": 1049,
+        "result_counts": {
+          "passed": 223,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 826,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "single-owner-auth",
+        "status": "PASS",
+        "test_count": 24,
+        "result_counts": {
+          "passed": 24,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "pwa-negative",
+        "status": "PASS",
+        "test_count": 28,
+        "result_counts": {
+          "passed": 28,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      }
+    ]
+  },
+  "reader": {
+    "candidate_passed": 9,
+    "previous_151ms_product_root_cause_still_unproven": true
+  },
+  "settings": {
+    "gate": {
+      "schema_version": 2,
+      "gate_id": "settings-stages-1-4",
+      "status": "failed",
+      "started_at": "2026-11-14T18:59:35.732Z",
+      "test_count": 470,
+      "completed_at": "2026-11-14T20:00:47.375Z",
+      "duration_ms": 3675118,
+      "result_counts": {
+        "passed": 469,
+        "failed": 1,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      }
+    },
+    "independent_restore_ran": false,
+    "failed_test": "apps/web/e2e/settings-offline-recovery.spec.ts:532",
+    "failed_assertion_line": 543,
+    "unchanged_predicate_timeout_ms": 60000,
+    "failure": "expected completed; observed generating; preparing actual copies before pagination assertions",
+    "not_job_or_test_total_timeout": true
+  },
+  "ordinal_trace": {
+    "origin": "first package admission request; same-host UTC correlation",
+    "admissions": 20,
+    "successful_downloads": 19,
+    "worker_commits": 20,
+    "requested_target_count": 21,
+    "item_bytes_range": [
+      1446,
+      1456
+    ],
+    "items": [
+      {
+        "ordinal": 1,
+        "admitted_s": 0.0,
+        "started_s": 0.916457,
+        "completed_s": 2.377245,
+        "observed_s": 3.133428,
+        "recorded_phase_total_ms": 482.2,
+        "worker_commit_event_s": 2.395,
+        "task_reads": 4,
+        "last_observed_status": "committed",
+        "download_started_s": 3.138,
+        "download_http": 200
+      },
+      {
+        "ordinal": 2,
+        "admitted_s": 3.21,
+        "started_s": 3.739189,
+        "completed_s": 5.194854,
+        "observed_s": 5.407938,
+        "recorded_phase_total_ms": 488.9,
+        "worker_commit_event_s": 5.206,
+        "task_reads": 3,
+        "last_observed_status": "committed",
+        "download_started_s": 5.413,
+        "download_http": 200
+      },
+      {
+        "ordinal": 3,
+        "admitted_s": 5.513,
+        "started_s": 5.570937,
+        "completed_s": 7.063561,
+        "observed_s": 7.65265,
+        "recorded_phase_total_ms": 446.0,
+        "worker_commit_event_s": 7.076,
+        "task_reads": 3,
+        "last_observed_status": "committed",
+        "download_started_s": 7.657,
+        "download_http": 200
+      },
+      {
+        "ordinal": 4,
+        "admitted_s": 7.734,
+        "started_s": 8.401096,
+        "completed_s": 9.974366,
+        "observed_s": 10.894207,
+        "recorded_phase_total_ms": 509.6,
+        "worker_commit_event_s": 9.987,
+        "task_reads": 4,
+        "last_observed_status": "committed",
+        "download_started_s": 10.906,
+        "download_http": 200
+      },
+      {
+        "ordinal": 5,
+        "admitted_s": 11.034,
+        "started_s": 14.825842,
+        "completed_s": 16.26685,
+        "observed_s": 17.291988,
+        "recorded_phase_total_ms": 439.3,
+        "worker_commit_event_s": 16.282,
+        "task_reads": 7,
+        "last_observed_status": "committed",
+        "download_started_s": 17.296,
+        "download_http": 200
+      },
+      {
+        "ordinal": 6,
+        "admitted_s": 17.363,
+        "started_s": 17.645517,
+        "completed_s": 19.10434,
+        "observed_s": 19.480818,
+        "recorded_phase_total_ms": 443.4,
+        "worker_commit_event_s": 19.116,
+        "task_reads": 3,
+        "last_observed_status": "committed",
+        "download_started_s": 19.485,
+        "download_http": 200
+      },
+      {
+        "ordinal": 7,
+        "admitted_s": 19.566,
+        "started_s": 20.466512,
+        "completed_s": 21.910207,
+        "observed_s": 22.710178,
+        "recorded_phase_total_ms": 450.2,
+        "worker_commit_event_s": 21.922,
+        "task_reads": 4,
+        "last_observed_status": "committed",
+        "download_started_s": 22.714,
+        "download_http": 200
+      },
+      {
+        "ordinal": 8,
+        "admitted_s": 22.797,
+        "started_s": 23.296247,
+        "completed_s": 24.746874,
+        "observed_s": 24.949367,
+        "recorded_phase_total_ms": 482.1,
+        "worker_commit_event_s": 24.759,
+        "task_reads": 3,
+        "last_observed_status": "committed",
+        "download_started_s": 24.955,
+        "download_http": 200
+      },
+      {
+        "ordinal": 9,
+        "admitted_s": 25.064,
+        "started_s": 25.142308,
+        "completed_s": 26.579285,
+        "observed_s": 27.244401,
+        "recorded_phase_total_ms": 441.1,
+        "worker_commit_event_s": 26.591,
+        "task_reads": 3,
+        "last_observed_status": "committed",
+        "download_started_s": 27.249,
+        "download_http": 200
+      },
+      {
+        "ordinal": 10,
+        "admitted_s": 27.319,
+        "started_s": 27.975499,
+        "completed_s": 29.411368,
+        "observed_s": 29.430647,
+        "recorded_phase_total_ms": 431.2,
+        "worker_commit_event_s": 29.427,
+        "task_reads": 3,
+        "last_observed_status": "committed",
+        "download_started_s": 29.438,
+        "download_http": 200
+      },
+      {
+        "ordinal": 11,
+        "admitted_s": 29.551,
+        "started_s": 29.790851,
+        "completed_s": 31.167565,
+        "observed_s": 31.715999,
+        "recorded_phase_total_ms": 418.8,
+        "worker_commit_event_s": 31.18,
+        "task_reads": 3,
+        "last_observed_status": "committed",
+        "download_started_s": 31.72,
+        "download_http": 200
+      },
+      {
+        "ordinal": 12,
+        "admitted_s": 31.8,
+        "started_s": 32.613758,
+        "completed_s": 34.033237,
+        "observed_s": 34.952111,
+        "recorded_phase_total_ms": 459.4,
+        "worker_commit_event_s": 34.054,
+        "task_reads": 4,
+        "last_observed_status": "committed",
+        "download_started_s": 34.957,
+        "download_http": 200
+      },
+      {
+        "ordinal": 13,
+        "admitted_s": 35.034,
+        "started_s": 35.438925,
+        "completed_s": 36.825474,
+        "observed_s": 37.169257,
+        "recorded_phase_total_ms": 417.4,
+        "worker_commit_event_s": 36.838,
+        "task_reads": 3,
+        "last_observed_status": "committed",
+        "download_started_s": 37.173,
+        "download_http": 200
+      },
+      {
+        "ordinal": 14,
+        "admitted_s": 37.265,
+        "started_s": 38.26212,
+        "completed_s": 39.742154,
+        "observed_s": 40.408095,
+        "recorded_phase_total_ms": 443.5,
+        "worker_commit_event_s": 39.754,
+        "task_reads": 4,
+        "last_observed_status": "committed",
+        "download_started_s": 40.413,
+        "download_http": 200
+      },
+      {
+        "ordinal": 15,
+        "admitted_s": 40.497,
+        "started_s": 41.33562,
+        "completed_s": 42.761315,
+        "observed_s": 43.64712,
+        "recorded_phase_total_ms": 442.7,
+        "worker_commit_event_s": 42.775,
+        "task_reads": 4,
+        "last_observed_status": "committed",
+        "download_started_s": 43.654,
+        "download_http": 200
+      },
+      {
+        "ordinal": 16,
+        "admitted_s": 43.778,
+        "started_s": 47.252149,
+        "completed_s": 48.617566,
+        "observed_s": 49.024916,
+        "recorded_phase_total_ms": 416.1,
+        "worker_commit_event_s": 48.63,
+        "task_reads": 6,
+        "last_observed_status": "committed",
+        "download_started_s": 49.029,
+        "download_http": 200
+      },
+      {
+        "ordinal": 17,
+        "admitted_s": 49.144,
+        "started_s": 50.091303,
+        "completed_s": 51.509188,
+        "observed_s": 52.337005,
+        "recorded_phase_total_ms": 435.7,
+        "worker_commit_event_s": 51.521,
+        "task_reads": 4,
+        "last_observed_status": "committed",
+        "download_started_s": 52.341,
+        "download_http": 200
+      },
+      {
+        "ordinal": 18,
+        "admitted_s": 52.439,
+        "started_s": 52.918743,
+        "completed_s": 54.356103,
+        "observed_s": 54.560569,
+        "recorded_phase_total_ms": 481.1,
+        "worker_commit_event_s": 54.368,
+        "task_reads": 3,
+        "last_observed_status": "committed",
+        "download_started_s": 54.566,
+        "download_http": 200
+      },
+      {
+        "ordinal": 19,
+        "admitted_s": 54.683,
+        "started_s": 54.742562,
+        "completed_s": 56.149079,
+        "observed_s": 56.823413,
+        "recorded_phase_total_ms": 429.5,
+        "worker_commit_event_s": 56.16,
+        "task_reads": 3,
+        "last_observed_status": "committed",
+        "download_started_s": 56.828,
+        "download_http": 200
+      },
+      {
+        "ordinal": 20,
+        "admitted_s": 56.918,
+        "started_s": 57.580784,
+        "worker_commit_event_s": 59.155,
+        "task_reads": 3,
+        "last_observed_status": "processing",
+        "download_started_s": null,
+        "download_http": null
+      }
+    ],
+    "first_19_completion_to_observation_sum_seconds": 11.043476,
+    "first_19_execution_minus_metered_phase_sum_seconds": 18.806796,
+    "unmetered_time_is_not_attributed_solely_to_imports": true,
+    "last_download_started_s": 56.828
+  },
+  "official_logs": [
+    {
+      "job_id": 132552338004,
+      "name": "web-quality",
+      "filename": "official-job-132552338004.log",
+      "bytes": 1397103,
+      "sha256": "fe8f63aef3f23a43efcca7b392caba8d3d51e8f1d4674b4f449324cc26fa97c4"
+    },
+    {
+      "job_id": 132552338264,
+      "name": "settings-quality",
+      "filename": "official-job-132552338264.log",
+      "bytes": 199825,
+      "sha256": "7fa321f25f653f0870381f794728d9f5010d7143c0b1c1d2efb03ef2dfa01196"
+    },
+    {
+      "job_id": 132552338356,
+      "name": "api-quality",
+      "filename": "official-job-132552338356.log",
+      "bytes": 1420474,
+      "sha256": "b14ba5e40fc55a04a998ae14d27ad405f5c045a8541d057cdb27d21897325e3d"
+    },
+    {
+      "job_id": 132560889051,
+      "name": "reading-performance-comparison / compare",
+      "filename": "official-job-132560889051.log",
+      "bytes": 21651589,
+      "sha256": "6f232c4b9edf9a12061584c3802a2e767107e961339677b1e71bd2646142ccbb"
+    }
+  ],
+  "official_artifacts": [
+    {
+      "id": 14130265280,
+      "name": "settings-quality-evidence-d983521bea87c2a5725de8f24a285b505a6f8112-1",
+      "bytes": 80877728,
+      "digest": "sha256:8a2dfa790e214a8b609c65f02ecf2cc3a02261498818c2c88cf82ba2e1d56a0c",
+      "official_digest_size_crc_and_safe_paths_verified": true
+    },
+    {
+      "id": 14129153859,
+      "name": "release-a-quality-evidence-d983521bea87c2a5725de8f24a285b505a6f8112-1",
+      "bytes": 40497793,
+      "digest": "sha256:8238927f2bafa9ffb8101b0948194c587a647760c80bc2676a23c84ea6aedde9",
+      "official_digest_size_crc_and_safe_paths_verified": true
+    },
+    {
+      "id": 14128029609,
+      "name": "reading-performance-comparison",
+      "bytes": 4162039,
+      "digest": "sha256:131616cecedd05fc1dae482f336d667814fb7a5cac7915ea6abeb57fb29979f6",
+      "official_digest_size_crc_and_safe_paths_verified": true
+    }
+  ],
+  "evidence_receipt_sha256": {
+    "official-user-reported-ci-snapshot.json": "028b6831f6b1eef3a8978ed1640e4c280855274f42002cb6a30364ddcd4d5280",
+    "official-user-reported-ci-log-receipts.json": "25348de90d7f8d6a169fde6a8f1e76485c41c80d0a3b118e41a70eef285d54b4",
+    "official-artifact-download-receipts.json": "f03c7b3ba6150fd2316f448b32d89df32ab2751b0bdbe45d844eda27d4ae0dc3",
+    "settings-selected-evidence-receipt.json": "ae8389d93cfead58f79f628aeabb857d31fa791fda46bbdaa2a58e5d25487113",
+    "user-failure-notice-wait-reconciliation.json": "770fdc436d941b8f2765c94deac046f45a717e5284025a87541f89ce7d8623b5"
+  },
+  "prior_wait": {
+    "full_55_minutes_completed": false,
+    "actual_seconds_before_user_failure_notice_stop": 1577.565,
+    "old_waiter_not_reused": true
+  },
+  "current_authorization": {
+    "fix_verify_selectively_commit_normal_push_ordinary_full_ci": true,
+    "quality_source_run_id": "",
+    "real_new_55_minute_wait_then_self_check": true,
+    "success_requires_fresh_release_proof_before_deployment": true,
+    "ci_duration_optimization_after_deployment": true
+  },
+  "no_deployable_images_or_fresh_resource_acceptance": true,
+  "no_ci_cancel_or_production_operation_this_repair": true
+}
