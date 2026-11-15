@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import uuid
 import zipfile
@@ -5,7 +7,7 @@ from contextlib import closing
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from sqlalchemy import insert, text
 from sqlalchemy.orm import Session
@@ -43,20 +45,40 @@ from app.services.import_pipeline.canonical_draft import (
     content_hash,
     normalize_text,
 )
-from app.services.import_pipeline.exporter_aligner import align_exporter_sources
-from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
-from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
 from app.services.import_pipeline.draft_store import ImportDraftError, iter_import_draft
 from app.services.uploads import UploadLimitError
-from app.services.import_pipeline.official_json_parser import OfficialConversationResult, parse_official_json
-from app.services.import_pipeline.official_normalizer import _extract_content, _metadata_preview
-from app.services.import_pipeline.official_primary_path import resolve_primary_path
 from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
 from app.services.search.search_indexer import rebuild_search_documents_for_conversation
 from app.services.toc.toc_builder import rebuild_headings_for_conversation
-from app.services.exporting.cr_archive import CrArchiveError, import_cr_archive
 from app.services.exporting.archive_transaction import track_archive_object
 from app.services.ownership import OwnershipScope
+
+if TYPE_CHECKING:
+    from app.services.import_pipeline.official_json_parser import OfficialConversationResult
+
+_FORMAT_EXPORTS = {
+    "align_exporter_sources": "app.services.import_pipeline.exporter_aligner",
+    "parse_exporter_json": "app.services.import_pipeline.exporter_json_parser",
+    "parse_exporter_markdown": "app.services.import_pipeline.exporter_markdown_parser",
+    "OfficialConversationResult": "app.services.import_pipeline.official_json_parser",
+    "parse_official_json": "app.services.import_pipeline.official_json_parser",
+    "_extract_content": "app.services.import_pipeline.official_normalizer",
+    "_metadata_preview": "app.services.import_pipeline.official_normalizer",
+    "resolve_primary_path": "app.services.import_pipeline.official_primary_path",
+    "CrArchiveError": "app.services.exporting.cr_archive",
+    "import_cr_archive": "app.services.exporting.cr_archive",
+}
+
+
+def __getattr__(name: str):
+    # Queue/lease reads and canonical drafts do not parse legacy source formats.
+    if name in _FORMAT_EXPORTS:
+        from importlib import import_module
+
+        value = getattr(import_module(_FORMAT_EXPORTS[name]), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class CommitImportError(ValueError):
@@ -183,6 +205,8 @@ def commit_import_preview(
         None,
     )
     if archive_artifact is not None:
+        from app.services.exporting.cr_archive import CrArchiveError, import_cr_archive
+
         try:
             conversation, message_count = import_cr_archive(
                 db,
@@ -358,6 +382,10 @@ def _build_persistable_conversations(import_id: uuid.UUID, artifacts: list[Sourc
 
 
 def _build_exporter_conversations(import_id: uuid.UUID, artifacts: list[SourceArtifact]) -> list[PersistableConversation]:
+    from app.services.import_pipeline.exporter_aligner import align_exporter_sources
+    from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
+    from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
+
     json_artifact = next((artifact for artifact in artifacts if artifact.source_profile == "chatgpt_exporter_json"), None)
     markdown_artifact = next((artifact for artifact in artifacts if artifact.source_profile == "chatgpt_exporter_markdown"), None)
     json_result = parse_exporter_json(_read_artifact(import_id, json_artifact)) if json_artifact else None
@@ -456,6 +484,8 @@ def _build_official_conversations(import_id: uuid.UUID, artifacts: list[SourceAr
     )
     if official_artifact is None:
         return []
+    from app.services.import_pipeline.official_json_parser import parse_official_json
+
     parse_result = parse_official_json(_read_artifact(import_id, official_artifact))
     return [_from_official_conversation(conversation, parse_result.source_profile) for conversation in parse_result.conversations]
 
@@ -464,6 +494,9 @@ def _from_official_conversation(
     conversation: OfficialConversationResult,
     source_profile: str,
 ) -> PersistableConversation:
+    from app.services.import_pipeline.official_normalizer import _extract_content, _metadata_preview
+    from app.services.import_pipeline.official_primary_path import resolve_primary_path
+
     primary = resolve_primary_path(conversation.mapping, conversation.current_node)
     messages: list[PersistableMessage] = []
     turn_index = 0

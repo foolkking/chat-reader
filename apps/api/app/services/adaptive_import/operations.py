@@ -4,14 +4,26 @@ from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
-from fastapi import HTTPException
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
-
 from app.services.adaptive_import.contracts import AdaptiveImportError
 
 
+def __getattr__(name: str):
+    # These compatibility exports belong to API queuing, not worker admission.
+    if name in {"HTTPException", "jsonable_encoder", "JSONResponse"}:
+        from fastapi import HTTPException
+        from fastapi.encoders import jsonable_encoder
+        from fastapi.responses import JSONResponse
+
+        globals().update(HTTPException=HTTPException, jsonable_encoder=jsonable_encoder,
+                         JSONResponse=JSONResponse)
+        return globals()[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 def queue_operation(db, record, operation, arguments=None):
+    from fastapi import HTTPException
+    from fastapi.encoders import jsonable_encoder
+    from fastapi.responses import JSONResponse
     from app.services.adaptive_import.service import (
         RECOVERABLE_SESSION_STATES, SOURCE_REPAIR_STATES, _require_session_state, queue_session_analysis, session_payload,
     )

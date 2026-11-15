@@ -1,6 +1,27 @@
 # 文档导航
 
-## 当前任务：Reader 原生滚动回退修复与持续发布闭环 — 2026-11-15
+## 当前任务：小预算 worker 冷启动与持续发布闭环 — 2026-11-15
+
+4ca1ed5/43688838312四项质量全部通过，builder在原320MiB/no-swap、
+180秒v1 ZIP分析门禁失败；末态/OOM未保留，无可部署制品。
+[正式失败](evidence/reliability-2026-11-15/ci-worker-budget-failure.json) /
+[worker合同](system/BACKEND_AND_API.md#worker-registration-and-single-use-preparation--source-2026-11-15) /
+[ZIP资源边界](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#single-use-worker-preparation--source-2026-11-15) /
+[只读失败取证](system/OBSERVABILITY_CONTRACT.md#synthetic-resource-failure-projection--source-2026-11-15) /
+[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+当前单次待机解释器不持DB连接/执行lease，不与维护、恢复或另一执行重叠；
+原注册/格式兼容和全部门槛保留。五项本机资源实测、Linux生命周期142、
+ORM10/失败投影5及静态通过；更高的约116MiB真实idle代价必须一起说明。
+最新完整Windows相关矩阵仍1失败/1079通过/14跳过；Linux收集失败和中断矩阵
+不改标通过。仅新增测试的严格libmagic只读发现边界修复后，真实Linux75、
+原Nginx1和Windows隔离18通过；6904项/新增107只是实际收集，不是全量执行。
+[定点验证](evidence/reliability-2026-11-15/ci-worker-budget-verification.json) /
+[1422输入](evidence/reliability-2026-11-15/ci-worker-budget-inputs.json)
+保留原失败/69旧回执，不用局部通过覆盖广泛失败；尚非新精确CI验收。
+接续普通完整CI后新真实等55分钟自行查看，失败继续修，通过并核验新制品后
+部署，再优化CI耗时；用户负责产品验收，旧151ms根因不改标。
+
+## 前一检查点：Reader 原生滚动回退修复与持续发布闭环（历史）— 2026-11-15
 
 2e0a1fe/43681565051仅候选Reader plain10000冷1失败：真实锚点回退120px，
 高度/挂载数不变且没有长任务。API6794、Web14、Settings470+restore1通过；

@@ -1,11 +1,21 @@
 """Lightweight archive task projection; safe in the supervisor interpreter."""
 from datetime import datetime, timezone
-from app.models.administration import SystemBackupRecord
 
 SYSTEM_JOB_TYPES = ("system_archive_export", "system_archive_preflight", "system_archive_restore")
 PERSONAL_JOB_TYPES = ("personal_archive_export", "personal_archive_preflight", "personal_archive_restore")
 
+
+def __getattr__(name: str):
+    if name == "SystemBackupRecord":
+        from app.models.administration import SystemBackupRecord
+        globals()[name] = SystemBackupRecord
+        return SystemBackupRecord
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 def sync_system_archive_record(db, job, *, result=None, status=None):
+    from app.models.administration import SystemBackupRecord
+
     record = db.query(SystemBackupRecord).filter_by(background_job_id=job.id).one_or_none()
     if record is None:
         return

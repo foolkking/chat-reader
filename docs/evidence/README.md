@@ -1,6 +1,25 @@
 # 事实证据索引
 
-## Reader 原生滚动回退与物理栅栏修复 — 2026-11-15
+## 小预算 worker 冷启动与原资源失败 — 2026-11-15
+
+[正式失败](reliability-2026-11-15/ci-worker-budget-failure.json)绑定
+4ca1ed5/43688838312：API6794、Web14、Settings470+restore1及候选Reader9通过；
+builder原320MiB/no-extra-swap v1分析180秒等待失败，末态/OOM未知，无可部署制品。
+五日志/四官方ZIP指纹与完整性核验保留，不把旧等待快照或历史失败改成通过。
+
+当前五项本机memory及Linux142/ORM10/投影5/静态通过；真实combined idle约
+116MiB高于旧单parent，增量更小不等于idle节省。最新完整Windows相关矩阵
+保留1失败/1079通过/14跳过；Linux收集失败、中断矩阵和真实ZIP54的29通过/
+2失败不改标通过。严格新增测试guard修复后的Linux75、原Nginx1和Windows
+guard18是独立定点通过，6904/新增107只是实际收集。
+[定点验证](reliability-2026-11-15/ci-worker-budget-verification.json) /
+[1422输入](reliability-2026-11-15/ci-worker-budget-inputs.json)
+记录全部失败/平台/存储边界和69原物理回执保全；
+新dispatch/first-read独立记录实际candidate/run/
+新55分钟等待，不复用旧质量或镜像资源结果。进度只在
+[唯一台账](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+## 前一Reader原生滚动回退与物理栅栏修复（历史）— 2026-11-15
 
 [正式失败](reliability-2026-11-15/ci-reader-scroll-failure.json)绑定
 2e0a1fe/43681565051 attempt1：API6794、Web14、Settings470+restore1通过，

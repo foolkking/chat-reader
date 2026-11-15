@@ -1,0 +1,461 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T14:35:32.205950+00:00",
+  "status": "scoped_local_controls_passed_with_retained_matrix_failures_not_exact_ci_acceptance",
+  "precommit_head_sha": "4ca1ed59464da0ebc7cf5473b728931b55c25a09",
+  "input_manifest": "ci-worker-budget-inputs.json",
+  "input_manifest_sha256": "db10adbf038eaf373bc80cc346c9dc0eac14e19054a0920d8587b9c167ac86ab",
+  "formal_failure": {
+    "file": "ci-worker-budget-failure.json",
+    "sha256": "637f1fcf7f2e5251ebed3c898c81a2b22bab8373682f46ed2cc26f6f6aa9395f",
+    "run_id": 43688838312,
+    "status": "failed_full_ci_not_deployable",
+    "original_wait_seconds": 180,
+    "memory_mib": 320,
+    "no_extra_swap": true,
+    "final_task_state_and_oom_counters_unavailable": true,
+    "formal_oom_not_proven": true
+  },
+  "retained_complete_windows_api_matrix": {
+    "required_command": "corepack pnpm run test:api",
+    "test_files": 93,
+    "collected": 1094,
+    "failed": 1,
+    "passed": 1079,
+    "skipped": 14,
+    "warnings": 1,
+    "seconds": 1757.96,
+    "full_6904_item_suite_executed": false,
+    "test_process_observer": null,
+    "unchanged_original_memory_admission": true,
+    "status": "failed_not_erased_by_scoped_linux_controls",
+    "original_v2_576MiB_required_actual_failed_child_read_unavailable": true,
+    "parent_sampler442_to563MB_not_exact_failed_child_read_or_proof_of_leak_or_OOM": true,
+    "all_1422_candidate_inputs_unchanged_after_execution": true,
+    "tests_log_sha256": "1c372bafa61a96c26aa03877f883958c1ca2095cddfd9a7b059c7cac08a9a656",
+    "temporary_result_file": "broad-api-controls-43/result.json",
+    "result_sha256": "618a965ac4e4e2afa57905dfad4c6a29bdf6821f2cb034a233113af76f0182f2",
+    "host_memory_observer": "independent parent driver only; no test-memory substitution",
+    "host_headroom_log_sha256": "a63b5090382ff7884fa8a91ef40a09f590b2ceb677c24a4a86f852cb226f8f9f"
+  },
+  "retained_failed_local_checkpoints": [
+    {
+      "temporary_result_file": "broad-api-controls-24/result.json",
+      "failed": 3,
+      "passed": 1077,
+      "skipped": 14,
+      "warnings": 1,
+      "seconds": 2466.81,
+      "tests_log_sha256": "19ef4f2d975c302a980cac4738b3ff6de7e3bbfc73c5d06ccd07f05925e09f5e",
+      "observed_boundary": "health tasks remained queued/waiting_resources/UPLOAD_MEMORY_PRESSURE, attempt_count=0",
+      "old_actual_host_headroom_unavailable": true,
+      "old_ram_shortage_leak_or_oom_not_proven": true
+    },
+    {
+      "temporary_result_file": "health-full-prefix-34/result.json",
+      "failed": 1,
+      "passed": 332,
+      "skipped": 3,
+      "seconds": 615.03,
+      "tests_log_sha256": "9ca3055b537a54284cfa8416c94cfa3da0bb340d6e351aa8b7c99e6c7e8423da"
+    },
+    {
+      "temporary_result_file": "broad-api-controls-37/result.json",
+      "failed": 1,
+      "passed": 1079,
+      "skipped": 14,
+      "warnings": 1,
+      "seconds": 1844.13,
+      "tests_log_sha256": "8b4bfd1ba52495cdd889dbb250c48b7a2280c0feee79cb0fb5871e64580e297f",
+      "failed_case": "test_real_dedicated_zip_analysis_and_commit_keep_selected_formats_and_source[True]",
+      "observed_error_class": "UploadLimitError",
+      "parent1second_sampling_not_the_exact_failed_child_admission_read": true,
+      "old_actual_admission_value_or_root_cause_not_proven": true,
+      "parent_driver_gbk_reporting_error_after_failed_test_receipt_preserved": true
+    },
+    {
+      "temporary_result_file": "zip-health-controls-42/result.json",
+      "failed": 1,
+      "passed": 30,
+      "seconds": 26.34,
+      "tests_log_sha256": "88f9ab33d4d36b1403a2d1d679aa26902d8311b40cffbba997dde4d162716ed7",
+      "same_v2_case_failed_without_observer_or_changed_gate": true
+    }
+  ],
+  "read_only_health_diagnosis": {
+    "temporary_result_file": "health-observation-35-full/result.json",
+    "passed": 335,
+    "skipped": 3,
+    "seconds": 375.69,
+    "tests_log_sha256": "58d00064a739634b5ba087053a776b46f40c852f22c7a2811a0fffa8595a1f2b",
+    "numeric_observation_sha256": "700b823c7ba8870e3408119475280187e00ee9445b7d8f4b3dbbecd8e3267e18",
+    "original_admission_calls_and_returns_forwarded_not_replaced": true,
+    "passed_replay_does_not_erase_old_failures_or_establish_their_root_cause": true
+  },
+  "read_only_v2_admission_diagnosis": {
+    "temporary_result_file": "v2-admission-observation-44/result.json",
+    "numeric_log_sha256": "fa4b23a12613002fd854e468e8b0932cc1ab804aa51c1b720a6123c973dfbdc4",
+    "original_control_passed": true,
+    "original_calls_returns_and_errors_forwarded": true,
+    "actual_required_bytes": 603979776,
+    "instrumented_diagnostic_not_uninstrumented_acceptance": true,
+    "prior_driver41_signature_error_preserved_actual_control_not_reached": true,
+    "old_failure_cause_not_retroactively_proven": true
+  },
+  "local_real_memory_controls": [
+    {
+      "case": "v1-small",
+      "temporary_result_file": "local-after-07/result.json",
+      "sha256": "d4fb4d149997076230362bdc73bf68c761d7a7d29088d73b930e19443340806d",
+      "native_wait_seconds": 180,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "baseline_bytes_including_idle_interpreter": 121417728,
+      "absolute_peak_bytes": 140677120,
+      "workspace_peak_delta_bytes": 19259392,
+      "verified_counts": {
+        "attachment_count": 14,
+        "conversation_count": 1,
+        "message_count": 4,
+        "passed": true,
+        "reference_count": 13,
+        "verified_asset_hashes": 14
+      },
+      "actual_limits": {
+        "memory": 335544320,
+        "memory_swap": 335544320,
+        "oom_killed": false,
+        "running": true,
+        "restarts": 0
+      },
+      "real_combined_cgroup_sensor": true,
+      "retained_original_assertions": true
+    },
+    {
+      "case": "v2-small",
+      "temporary_result_file": "local-after-07-v2-small/result.json",
+      "sha256": "58595ccb376aef164047b9f37ed357d6f25406dd593e2f347750292859fae386",
+      "native_wait_seconds": 600,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "baseline_bytes_including_idle_interpreter": 121974784,
+      "absolute_peak_bytes": 140591104,
+      "workspace_peak_delta_bytes": 18616320,
+      "verified_counts": {
+        "attachment_count": 14,
+        "block_count": 177,
+        "conversation_count": 1,
+        "draft_format": 2,
+        "message_count": 4,
+        "passed": true,
+        "reference_count": 13,
+        "verified_asset_hashes": 14
+      },
+      "actual_limits": {
+        "memory": 335544320,
+        "memory_swap": 335544320,
+        "oom_killed": false,
+        "running": true,
+        "restarts": 0
+      },
+      "real_combined_cgroup_sensor": true,
+      "retained_original_assertions": true
+    },
+    {
+      "case": "v2-long",
+      "temporary_result_file": "local-after-07-v2-long/result.json",
+      "sha256": "bc31b84398cc31ea5b2c74dc3ba1063b599a6c3db9d2a00d51b93805bb790145",
+      "native_wait_seconds": 600,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "baseline_bytes_including_idle_interpreter": 121278464,
+      "absolute_peak_bytes": 138985472,
+      "workspace_peak_delta_bytes": 17707008,
+      "verified_counts": {
+        "attachment_count": 0,
+        "block_count": 21600,
+        "conversation_count": 1,
+        "draft_format": 2,
+        "message_count": 36,
+        "passed": true,
+        "reference_count": 0,
+        "verified_asset_hashes": 0
+      },
+      "actual_limits": {
+        "memory": 335544320,
+        "memory_swap": 335544320,
+        "oom_killed": false,
+        "running": true,
+        "restarts": 0
+      },
+      "real_combined_cgroup_sensor": true,
+      "retained_original_assertions": true
+    },
+    {
+      "case": "v2-assets100",
+      "temporary_result_file": "local-after-07-v2-assets100/result.json",
+      "sha256": "f4996782ab4d283e0fc8e152b981e8ca1f26fccd4dc6fd4a312456bbfa12a2d5",
+      "native_wait_seconds": 600,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "baseline_bytes_including_idle_interpreter": 121167872,
+      "absolute_peak_bytes": 137482240,
+      "workspace_peak_delta_bytes": 16314368,
+      "verified_counts": {
+        "attachment_count": 4,
+        "block_count": 6484,
+        "conversation_count": 1,
+        "draft_format": 2,
+        "message_count": 36,
+        "passed": true,
+        "reference_count": 4,
+        "verified_asset_hashes": 4
+      },
+      "actual_limits": {
+        "memory": 335544320,
+        "memory_swap": 335544320,
+        "oom_killed": false,
+        "running": true,
+        "restarts": 0
+      },
+      "real_combined_cgroup_sensor": true,
+      "retained_original_assertions": true
+    },
+    {
+      "case": "v2-assets500",
+      "temporary_result_file": "local-after-07-v2-assets500/result.json",
+      "sha256": "97f6100d02401cda4d2f9fba3f9309d268649593688b3fefc729650a2e9ca483",
+      "native_wait_seconds": 600,
+      "memory_limit_bytes": 671088640,
+      "memory_swap_limit_bytes": 671088640,
+      "baseline_bytes_including_idle_interpreter": 121487360,
+      "absolute_peak_bytes": 137678848,
+      "workspace_peak_delta_bytes": 16191488,
+      "verified_counts": {
+        "attachment_count": 4,
+        "block_count": 6484,
+        "conversation_count": 1,
+        "draft_format": 2,
+        "message_count": 36,
+        "passed": true,
+        "reference_count": 4,
+        "verified_asset_hashes": 4
+      },
+      "actual_limits": {
+        "memory": 671088640,
+        "memory_swap": 671088640,
+        "oom_killed": false,
+        "running": true,
+        "restarts": 0
+      },
+      "real_combined_cgroup_sensor": true,
+      "retained_original_assertions": true
+    }
+  ],
+  "diagnostic_image": {
+    "image_id": "sha256:11d138a3a6e643d387b9c53f135795b2b9f2f19dc0fca73a53f9503d420a04ca",
+    "tag": "chat-reader-debug-small-budget:worktree-after-07",
+    "git_lf_source_count": 394,
+    "current_source_drift": [],
+    "build_revision_empty_and_oci_uncommitted": true,
+    "synthetic_host_backed_storage_not_exact_ci_linux_volume": true,
+    "not_deployable_release_artifact": true,
+    "tradeoff": "The real standby interpreter raises combined idle to about116 MiB; report absolute peak and delta together."
+  },
+  "linux_lifecycle": {
+    "passed": 142,
+    "warnings": 1,
+    "seconds": 273.26,
+    "postgres_version": 16,
+    "tests_log_sha256": "0c37d30e353f3257fd42c3906cf5e9b5fad203dff93b1df85659e7465af6b5c4",
+    "parent_death_natural30second_maintenance_single_child_and_posix_shutdown_executed": true,
+    "idle_no_connection_or_execution_lease": true,
+    "original_test_bodies_and_wait_budgets_retained": true,
+    "test_framework_only_hash_locked_offline_venv": true,
+    "capture": "local tee-sys for Windows Docker bind; product runtime unchanged",
+    "two_earlier_preparation_driver_failures_preserved_tests_not_reached": true
+  },
+  "orm_helper": {
+    "original_cases": 7,
+    "new_diagnostic_cases": 3,
+    "passed": 10,
+    "log_sha256": "2ed194df5ebe30f41baa85bd9407061aa1989f77b3968ac72fe67aaaa13beb2e"
+  },
+  "failure_projection": {
+    "passed": 5,
+    "log_sha256": "19674ff83803a0bd69d958fe07313c913592cf5ce6ae9ac79bf174509ea4a91e"
+  },
+  "static_and_ci_controls": {
+    "lint": {
+      "exit_code": 0,
+      "log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+    },
+    "typecheck": {
+      "exit_code": 0,
+      "log_sha256": "8aec2c918628ff35721d196050e435c41e7764ad8e7208b60a1b633d3510ba19",
+      "user_tsbuildinfo_bytes_preserved": true
+    },
+    "migration": {
+      "single_head": "20261112_0061",
+      "log_sha256": "73423f8cc296997f4c5fa5d11c6fbcf544629c61e9b90c2257f86f00f0243af5"
+    },
+    "ci_node": {
+      "passed": 89,
+      "skips": 0,
+      "log_sha256": "75dd49597995533549c552b7f58ce683c8468ebabe705eab93a4f8fb42bb6643"
+    },
+    "ci_python": {
+      "passed": 100,
+      "log_sha256": "5c22cde5bf402ccfef48089892b779c1f6b6bf9496747284f7e5a563d5e19ff9"
+    },
+    "new_local_consumer_api_parser": {
+      "controls": 11,
+      "receipt_sha256": "833932bdd70a8012e0d6ffdfa6cefef6f518632a5be576a262854e131ad8f583"
+    }
+  },
+  "api_collection_not_execution": {
+    "collected": 6904,
+    "new_portable_cases": 107,
+    "new_helper_cases_separate": 3,
+    "expected_linux_passed_if_original3_skips_retained": 6901,
+    "collection_log_sha256": "5f6ba8a5bcf4b5132dd9e457603f06784efcfd6c64c5609235c9134a18d4f2e3"
+  },
+  "preservation": {
+    "original_input_count": 1413,
+    "intentionally_changed_original_inputs": 14,
+    "unchanged_original_input_count": 1399,
+    "expanded_existing_git_baseline_scripts": 2,
+    "new_source_test_inputs": 7,
+    "final_input_count": 1422,
+    "original_api_schema_snapshot_count": 700,
+    "intentionally_changed_api_snapshot_inputs": 15,
+    "model_definitions_migrations_schemas_unchanged": 109,
+    "web_build_inputs_unchanged": 550,
+    "historical_receipts_raw_and_distinct_physical_files": 69,
+    "unrelated_files_preserved": 13,
+    "unowned_local_docker_resources_verified": 10,
+    "owned_loopback_postgres_stopped_zero_other_clients_data_retained": true,
+    "user_imports_production_configuration_volumes_and_unique_good_backup_not_modified": true
+  },
+  "remaining": [
+    "Selective commit and normal push, ordinary full CI with empty quality source.",
+    "Start a new actual55-minute monotonic/UTC wait, self-check and repair failures without waiting for user.",
+    "Independently prove all fresh quality, five memory cases and exact image contents before deployment.",
+    "Fresh production capacity, stopped-write backup, old execution/lease release,0061 migration and runtime checks.",
+    "Optimize CI duration only after accepted deployment; product/device/real-user-import acceptance belongs to user."
+  ],
+  "production_rechecked_or_modified": false,
+  "web_search_used": false,
+  "automation_created": false,
+  "scoped_real_linux_api": {
+    "passed": 75,
+    "seconds": 78.61,
+    "postgres_version": 16,
+    "temporary_result_file": "linux-critical-zip-controls-60/result.json",
+    "result_sha256": "54318675842eed7604e032ba077798cb68646a2f13b027370c8fa8f9456db1e5",
+    "tests_log_sha256": "a6ae2dbc5f2f8d5cee0be7a3c88392af4734e64c99727c4ba6bf9e0a8e4c1e04",
+    "includes_original_health3_real_zip_v1_v2_and_original_optional_dependency29": true,
+    "includes_15_new_guard_controls_without_added_skips": true,
+    "test_process_observer": null,
+    "original_required_memory_and_success_assertions_retained": true,
+    "not_full_api_matrix_or_ci_acceptance": true
+  },
+  "scoped_native_windows_guard_controls": {
+    "passed": 18,
+    "deselected": 25,
+    "seconds": 10.11,
+    "tests_log_sha256": "2c732408f074cbf3bbb32ab4ebf06321ba721073d8b4cf93575e733a308aa05a",
+    "temporary_result_file": "windows-zip-guard-controls-57/result.json",
+    "not_full_api_health_or_memory_acceptance": true
+  },
+  "scoped_original_linux_nginx_contract": {
+    "passed": 1,
+    "seconds": 10.04,
+    "tests_log_sha256": "5c81601fe9a422fa2360c405f927b691edfe5209766e03cc0d1fc09b17c63dae",
+    "temporary_result_file": "linux-nginx-contract-58/result.json",
+    "original_test_and_five520m_exact_route_assertions_retained": true,
+    "unchanged_git_fixture_now_present_in_disposable_snapshot": true,
+    "not_broad_matrix_or_ci_acceptance": true
+  },
+  "retained_failed_or_interrupted_linux_checkpoints": [
+    {
+      "temporary_result_file": "linux-broad-api-controls-45/result.json",
+      "errors": 2,
+      "seconds": 97.06,
+      "tests_executed": 0,
+      "tests_log_sha256": "62cb2aef6f1b27329651874e46437e4ec9d0908dfb86347e6d7e4c702fa8ef89",
+      "scope": "collection failure; disposable snapshot omitted unchanged scripts.verify_attachment_storage",
+      "not_a_pass_or_full_matrix_execution": true
+    },
+    {
+      "temporary_result_file": "linux-broad-api-controls-47/result.json",
+      "failed": 1,
+      "passed": 524,
+      "skipped": 3,
+      "seconds": 2106.95,
+      "exit_code": 2,
+      "tests_log_sha256": "af3e9db90f6516a13a1a0e8b6143514371352eb78b9a9c7444097ada158af078",
+      "scope": "failed Nginx case lacked unchanged deploy fixture; uniquely owned pytest interrupted",
+      "interruption_receipt_sha256": "6c3034fc2b9560b5f37427240e0b57bdd455a7c736c4373c2c705b1c84caefd1",
+      "not_a_complete_matrix_pass": true
+    },
+    {
+      "temporary_result_file": "linux-critical-zip-controls-54/result.json",
+      "failed": 2,
+      "passed": 29,
+      "seconds": 35.72,
+      "tests_executed": 31,
+      "tests_log_sha256": "44decaab9e4931e689f16e21202945f78e3da9c6f6ce06f515c7cf567c3b7942",
+      "cause": "new real-ZIP helper rejected ctypes libmagic loader subprocess /sbin/ldconfig -p",
+      "actual_analysis_committed_and_READY_before_canonical_MIME_failure": true,
+      "not_relabelled_as_a_driver_failure_or_pass": true
+    },
+    {
+      "temporary_result_file": "linux-critical-zip-controls-56/result.json",
+      "tests_executed": 0,
+      "review_receipt_sha256": "6dc02c353505b273b449e5fe575efc68142b8d014166f7bda3c36b973cdefac4",
+      "scope": "overbroad disposable-driver suffix rename changed port65438 into invalid65638",
+      "not_a_product_or_test_failure_or_pass": true
+    }
+  ],
+  "real_zip_test_portability": {
+    "path": "apps/api/tests/test_zip_worker_selected_parser_imports.py",
+    "prior_raw_sha256": "15b5a788075c92b7530e07e48439ba3cf2cfc8018422c9009d81f3fac2008f7f",
+    "current_raw_sha256": "8b2cacf909653bb82bf8805e8913c2d3bfaee49fd8adb2393bb504c2bfbc4c11",
+    "linux54_two_failures_retained": true,
+    "original_real_zip_assertions_ast_preserved": true,
+    "other_original_test_function_ast_preserved": true,
+    "passive_guard_module_unchanged": true,
+    "product_runtime_and_memory_inputs_unchanged": true,
+    "allowed_operation": "owned canonical stage only; exact /sbin/ldconfig -p, no shell, exact C locale env",
+    "new_negative_controls": 14,
+    "new_platform_specific_positive_or_rejection_control": 1,
+    "audit_sha256": "23e9757e8e3dc0624714489f59a9553f917b5a8ae7da82e9316713454bc80b49",
+    "original_passive_guard_and_scanner_code_unchanged": true,
+    "no_preheated_magic_fake_find_library_or_disabled_MIME_detection": true,
+    "other_programs_relative_paths_shell_cache_writes_cwd_env_network_and_passive_phase_rejected": true
+  },
+  "additional_read_only_v2_admission_diagnosis": {
+    "temporary_result_file": "v2-admission-observation-46/result.json",
+    "numeric_log_sha256": "7339391f20bacdf056d3664197251becf0a4e3bff5c4305f6fad101e1b5793ac",
+    "actual_required_bytes": 603979776,
+    "available_observation_range_bytes": [
+      2488786944,
+      2520547328
+    ],
+    "original_probe_returns_decisions_errors_and_success_assertions_forwarded": true,
+    "instrumented_pass_not_unobserved_acceptance_or_proof_of_old_failure_cause": true
+  },
+  "actual_api_collection_contract": {
+    "receipt_sha256": "06b9c2481ca16ec102fe0d858cfd67ecf53505e783d9138c15b4e50845acece6",
+    "collected_not_executed": 6904,
+    "new_cases_requiring_actual_CI_pass": 107,
+    "expected_original_linux_skips": 3,
+    "expected_CI_passed": 6901,
+    "original6888_stable_ids_and92_new_ids_byte_equal": true,
+    "one_unchanged_legacy_gzip_id_varies_only_by_real_collection_mtime": true,
+    "fixture_not_changed_or_its_time_faked": true
+  },
+  "full_api_linux_windows_or_new_ci_pass_claimed": false,
+  "prior_matrix_failures_not_erased_by_scoped_controls": true
+}

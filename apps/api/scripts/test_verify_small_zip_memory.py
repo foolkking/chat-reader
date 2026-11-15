@@ -186,6 +186,98 @@ class MemoryGateStatusTests(unittest.TestCase):
                 ):
                     verify_small_zip_memory.main()
 
+    def run_diagnostics(self, *, bounded=False):
+        helper = verify_bounded_zip_memory if bounded else verify_small_zip_memory
+        settings = self.settings.model_copy(update={
+            "database_url": self.settings.database_url + ("_bounded_small" if bounded else ""),
+        })
+        output = io.StringIO()
+        with (
+            patch.dict(os.environ, {
+                "APP_ENV": "test", "SMALL_IMPORT_MEMORY_GATE": "1",
+                "BOUNDED_IMPORT_CASE": "small",
+            }),
+            patch("app.core.config.get_settings", return_value=settings),
+            patch("app.core.database.SessionLocal", self.factory),
+            patch.object(helper, "STATE", self.state),
+            patch("sys.argv", ["memory-diagnostics-control", "diagnostics"]),
+            redirect_stdout(output),
+        ):
+            helper.main()
+        return json.loads(output.getvalue())
+
+    def test_diagnostics_keeps_real_wait_without_source_text_or_task_identity(self):
+        wait = {
+            "reason": "UPLOAD_MEMORY_PRESSURE", "remaining_seconds": 1720,
+            "next_retry_at": "2026-11-15T08:15:00+00:00", "checks": 3,
+            "private": "must-not-persist",
+        }
+        with self.factory() as db:
+            record = db.get(ImportRecord, self.record_id)
+            record.status, record.phase = "analyzing", "waiting_resources"
+            record.error_message = "must-not-persist"
+            record.analysis_summary = {"failure": None, "source": "must-not-persist"}
+            job = db.get(BackgroundJob, self.job_id)
+            job.phase = "waiting_resources"
+            job.result = {"resource_wait": wait, "body": "must-not-persist"}
+            db.commit()
+        result = self.run_diagnostics()
+        self.assertEqual(result["resource_wait"], {
+            "reason": "UPLOAD_MEMORY_PRESSURE", "remaining_seconds": 1720,
+            "next_retry_at": "2026-11-15T08:15:00+00:00",
+        })
+        self.assertEqual(result["job_phase"], "waiting_resources")
+        self.assertEqual(result["record_phase"], "waiting_resources")
+        self.assertIsNone(result["worker_state"])
+        self.assertIsNone(result["execution"])
+        self.assertEqual(result, self.run_diagnostics(bounded=True))
+        serialized = json.dumps(result)
+        for private in ("must-not-persist", str(self.record_id), str(self.job_id)):
+            self.assertNotIn(private, serialized)
+        with self.factory() as db:
+            self.assertEqual(db.get(BackgroundJob, self.job_id).result, {
+                "resource_wait": wait, "body": "must-not-persist",
+            })
+            self.assertEqual(db.get(ImportRecord, self.record_id).error_message, "must-not-persist")
+
+    def test_diagnostics_never_projects_unknown_phase_text(self):
+        with self.factory() as db:
+            db.get(ImportRecord, self.record_id).phase = "private source content"
+            db.get(BackgroundJob, self.job_id).phase = "private source content"
+            db.commit()
+        result = self.run_diagnostics()
+        self.assertIsNone(result["record_phase"])
+        self.assertIsNone(result["job_phase"])
+        self.assertNotIn("private source content", json.dumps(result))
+
+    def test_diagnostics_only_reports_the_matching_execution_and_does_not_finish_it(self):
+        from datetime import datetime, timezone
+        from app.models.task_execution_control import TaskExecutionControl
+        from app.models.worker_runtime_state import WorkerRuntimeState
+        from app.services.execution_control import SLOT
+
+        now = datetime.now(timezone.utc)
+        with self.factory() as db:
+            db.add(WorkerRuntimeState(
+                worker_key="primary", instance_id=uuid.uuid4(), state="busy", task_kind="job",
+                started_at=now, heartbeat_at=now,
+            ))
+            db.add(TaskExecutionControl(
+                slot=SLOT, token=uuid.uuid4(), task_kind="job", task_id=self.job_id, attempt=1,
+                started_at=now, progress_at=now, stop_requested_at=now,
+            ))
+            db.commit()
+        result = self.run_diagnostics()
+        self.assertEqual(result["worker_state"], "busy")
+        self.assertEqual(result["execution"], {"finished": False, "stop_requested": True})
+        with self.factory() as db:
+            control = db.get(TaskExecutionControl, SLOT)
+            self.assertIsNone(control.finished_at)
+            self.assertIsNotNone(control.stop_requested_at)
+            control.task_id = uuid.uuid4()
+            db.commit()
+        self.assertIsNone(self.run_diagnostics()["execution"])
+
 
 if __name__ == "__main__":
     unittest.main()

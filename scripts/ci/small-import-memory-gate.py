@@ -16,6 +16,17 @@ from pathlib import Path
 MIB = 1024**2
 
 
+def capture_failure_evidence(report: dict, stage: str, error: Exception, probes=()) -> None:
+    """Keep real failed observations; unavailable counters remain unavailable."""
+    report["failure"] = {"stage": stage, "error_class": type(error).__name__}
+    for name, probe in probes:
+        try:
+            report[name] = probe()
+        except Exception as exc:
+            # No exception strings, Docker environments, source text or tokens.
+            report.setdefault("diagnostic_errors", {})[name] = type(exc).__name__
+
+
 def docker(*args: str, timeout: int = 120) -> str:
     try:
         return subprocess.run(["docker", *args], check=True, capture_output=True, text=True, timeout=timeout).stdout.strip()
@@ -58,16 +69,19 @@ def main(*, bounded_case: str | None = None, memory_mib: int = 320) -> None:
         common.extend(["--env", "BOUNDED_IMPORT_CASE=" + bounded_case])
         report["case"] = bounded_case
     created_volume = created_worker = False
+    stage = "resource_creation"
 
     def helper(action: str) -> dict:
         module = "scripts.verify_small_zip_memory" if bounded_case is None else "scripts.verify_bounded_zip_memory"
-        output = docker("run", "--rm", *common, image, "python", "-m", module, action, timeout=600)
+        output = docker("run", "--rm", *common, image, "python", "-m", module, action,
+                        timeout=15 if action == "diagnostics" else 600)
         return json.loads(output.splitlines()[-1])
 
     def wait_for(predicate, *, timeout: int = 180) -> dict:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             status = helper("status")
+            report["last_status"] = status
             if status["analysis"] in {"failed", "cancelled"} or status["import"] == "failed":
                 raise RuntimeError("The real constrained worker failed: " + str(status.get("failure_code") or "TASK_FAILED"))
             if predicate(status):
@@ -103,33 +117,44 @@ fi
                 raise RuntimeError("The disposable resource identity is already in use.")
         docker("volume", "create", "--label", f"{label}={owner}", volume)
         created_volume = True
+        stage = "migration"
         if bounded_case is not None:
             helper("create-database")
         docker("run", "--rm", *common, image, "python", "-m", "alembic", "upgrade", "head")
         limits = ["--memory=320m", "--memory-swap=320m"] if memory_mib == 320 else ["--memory=640m", "--memory-swap=640m"]
+        stage = "worker_start"
         docker("run", "--detach", "--name", name, "--label", f"{label}={owner}",
                *limits, *common,
                image, "python", "-m", "app.workers.import_worker")
         created_worker = True
+        stage = "worker_idle"
         deadline = time.monotonic() + 60
         while not helper("idle")["idle"]:
             if time.monotonic() >= deadline:
                 raise RuntimeError("The real worker never reached idle.")
             time.sleep(1)
         baseline = memory_stats()
+        report["baseline_measurement"] = baseline
         if baseline["oom"] or baseline["oom_kill"] or baseline["failcnt"]:
             raise RuntimeError("The worker experienced startup memory pressure.")
+        stage = "fixture"
         fixture = helper("prepare")
+        report["fixture_observation"] = fixture
         if bounded_case is None and (not 1_400_000 <= fixture["archive_bytes"] <= 1_600_000 or fixture["entries"] != 18):
             raise RuntimeError("The fixture no longer represents the reported archive shape.")
         if bounded_case in {"assets100", "assets500"}:
             target = 100 if bounded_case == "assets100" else 500
             if not (target - 2) * MIB <= fixture["archive_bytes"] <= target * MIB:
                 raise RuntimeError("The large fixture no longer covers its declared ZIP size.")
+        stage = "analysis_wait"
         wait_for(lambda result: result["state"] == "READY" and result["analysis"] == "committed", timeout=600 if bounded_case else 180)
+        stage = "commit_queue"
         helper("queue-commit")
+        stage = "commit_wait"
         wait_for(lambda result: result["import"] == "committed", timeout=600 if bounded_case else 180)
+        stage = "verification"
         verified = helper("verify")
+        stage = "memory_contract"
         final = memory_stats()
         inspection = json.loads(docker("container", "inspect", name))[0]
         delta = max(0, final["peak"] - baseline["current"])
@@ -150,6 +175,23 @@ fi
         if bounded_case is None:
             report["entries"] = 18
         print(json.dumps(report, sort_keys=True))
+    except Exception as exc:
+        def worker_state():
+            observed = json.loads(docker("container", "inspect", name))[0]
+            return {
+                "running": observed["State"]["Running"],
+                "oom_killed": observed["State"]["OOMKilled"],
+                "restarts": observed["RestartCount"],
+                "memory_limit_bytes": observed["HostConfig"]["Memory"],
+                "memory_swap_limit_bytes": observed["HostConfig"]["MemorySwap"],
+            }
+        probes = (
+            ("task_diagnostics", lambda: helper("diagnostics")),
+            ("failure_memory_measurement", memory_stats),
+            ("failure_worker_state", worker_state),
+        ) if created_worker else ()
+        capture_failure_evidence(report, stage, exc, probes)
+        raise
     finally:
         try:
             output = "small-zip-memory.json" if bounded_case is None else f"bounded-zip-{bounded_case}.json"

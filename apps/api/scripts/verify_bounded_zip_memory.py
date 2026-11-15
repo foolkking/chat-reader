@@ -62,7 +62,7 @@ def synthetic_zip(path, case):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=["create-database", "idle", "prepare", "status", "queue-commit", "verify"])
+    parser.add_argument("action", choices=["create-database", "idle", "prepare", "status", "diagnostics", "queue-commit", "verify"])
     args = parser.parse_args()
     case = os.environ.get("BOUNDED_IMPORT_CASE", "")
     if (os.environ.get("SMALL_IMPORT_MEMORY_GATE") != "1" or os.environ.get("APP_ENV") != "test"
@@ -120,12 +120,22 @@ def main():
             result = {"queued": True, "archive_bytes": size}
         else:
             state = json.loads(STATE.read_text())
+            if args.action == "diagnostics" and db.get_bind().dialect.name == "postgresql":
+                from sqlalchemy import text
+                db.execute(text("SET TRANSACTION READ ONLY"))
+                db.execute(text("SET LOCAL statement_timeout = '1500ms'"))
+                db.execute(text("SET LOCAL lock_timeout = '250ms'"))
             record = db.get(ImportRecord, uuid.UUID(state["import_id"]))
             job = db.get(BackgroundJob, uuid.UUID(state["job_id"]))
+            if record is None or job is None:
+                raise SystemExit("Synthetic task disappeared.")
             expected = state["expected"]
             if args.action == "status":
                 result = {"analysis": job.status, "import": record.status, "state": record.session_state,
                           "failure_code": ((record.analysis_summary or {}).get("failure") or {}).get("code")}
+            elif args.action == "diagnostics":
+                from scripts.verify_small_zip_memory import diagnostic_state
+                result = diagnostic_state(db, record, job)
             elif args.action == "queue-commit":
                 if (record.session_state != "READY" or record.draft_summary.get("format_version") != 2
                         or record.draft_summary.get("message_count") != expected["messages"]):

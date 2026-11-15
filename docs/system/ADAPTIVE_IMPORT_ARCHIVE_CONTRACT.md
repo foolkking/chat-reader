@@ -157,6 +157,31 @@ recovery flow.
 This section describes the retained v1/production fallback. The disk-backed path's
 new v2 lane is specified separately below; neither relaxes JSON admission.
 
+### Single-use worker preparation — source 2026-11-15
+
+The standard supervisor keeps one real, independent execution interpreter
+ready while idle. Only a claimed kind/UUID/token is delivered; no parser data,
+source File, DB connection or execution lease is retained by the unassigned
+child. Selected model/parser imports reduce cold task work without changing
+ZIP qualification, hashes/counts, canonical atomicity or the live sensors.
+Dedicated ZIP recognition skips only a normal match that its validated profile
+would replace; repair and real document/admission paths remain.
+
+The retained v1 gate still requires320 MiB memory/memory+swap,180-second
+analysis/commit waits and ≤64 MiB cgroup peak growth. The four v2 cases retain
+their600-second waits and original320/640-MiB/no-extra-swap bounds.
+No CI-only warmup, fake idle, file-cache subtraction or resource override is
+introduced. Every child is single-use and is retired before another lane starts.
+
+Five final local Linux-image diagnostic cases pass these original assertions.
+Their real combined idle usage is121,167,872–121,974,784 bytes (about116 MiB),
+including the standby interpreter; it is higher than the previous single-parent
+idle. Absolute observed peaks are137,482,240–140,677,120 bytes, with measured
+increments16,191,488–19,259,392 bytes. Do not present a smaller increment alone
+as idle-RAM savings. Host-backed synthetic storage and an uncommitted diagnostic
+image do not replace the new exact-source CI, its Linux volume or release proof.
+The [single ledger](SMALL_HOST_IMPROVEMENT_STATUS.md) owns verification status.
+
 `IMPORT_SMALL_ZIP_ENABLED=true` (default) grants a lower reserve only after
 owned source bytes pass a bounded EOCD/central-directory preflight and the
 existing ZIP safety validation. ZIP64 and multi-volume sources do not qualify.

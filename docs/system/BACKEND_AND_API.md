@@ -4,6 +4,57 @@
 和[当前发布回执](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)为准。
 下方带日期的 local/源码检查点保留其原验证含义，不是当前未发布清单。
 
+## Worker registration and single-use preparation — source 2026-11-15
+
+The ordinary `python -m app.workers.import_worker` launcher prepares one
+independent execution interpreter before publishing its initial idle state.
+While unassigned, that child has no database connection or execution lease
+and receives no user source, parser contents or File object. It accepts one
+bounded kind/UUID/token byte message after genuine readiness; the original
+claim, execution lease, monitor, business handler and reconciliation remain.
+Every task still gets a fresh process, not a pool or reused parser.
+
+Preparation belongs to the healthy supervision/idle-execution lease boundary.
+Maintenance, recovery and pending reconciliation retire it before spawning
+another child; lease loss, database errors, supersession and shutdown also
+retire it. Failed readiness keeps the configured backoff without claiming,
+publishing a false initial idle or falling back to a second cold executor.
+Uncertain pipe delivery reconciles the claimed token and never launches a
+substitute executor. The5-second ready protocol and existing stop/helper waits
+remain; Windows writes readiness as bytes rather than translating LF to CRLF.
+Legacy programmatic callers without the standard launcher retain their old path.
+
+`app.models._loading` declares complete FK/relationship registration closures:
+
+| Entry/operation | Eager modules | Mapped classes |
+| --- | ---: | ---: |
+| Default/API/Alembic or unrecognized main module | 40 | 92 |
+| Standard supervisor | 19 | 36 |
+| Execution common path | 25 | 45 |
+| Selected maintenance | 29 | 55 |
+
+Only the actual `__main__.__spec__.name` selects a worker closure; no CI/env
+switch changes registration. Non-adaptive jobs, non-pure-ZIP canonical imports,
+recovery and reconciliation upgrade to complete registration before business
+work. Accessing a previously exported unloaded package class also upgrades;
+the original90 genuine exports/75-item `__all__`, model definitions and
+migrations remain. Changes to relationships require updating and testing these
+closures, not deleting metadata or changing mapper events.
+
+Upload annotations/API response classes, unselected legacy parsers, archive
+record projection, noise-scan policies and Share password helpers load at their
+selected operation. Compatibility exports retain the real objects. Dedicated
+validated ZIP analysis avoids only the ordinary match result it would overwrite;
+it retains actual document reads, admission and repair-profile matching.
+Idle preparation has a real memory cost; see the
+[ZIP resource boundary](ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#single-use-worker-preparation--source-2026-11-15)
+and [single status ledger](SMALL_HOST_IMPROVEMENT_STATUS.md). This source candidate
+is not a production deployment or accepted exact-CI resource result.
+The real-ZIP test's narrowly scoped Linux library-cache query is only a test IO
+boundary; the production scanner, cold MIME detection and passive-import guards
+are unchanged. See [test controls](../testing.md#worker-preparation-and-resource-failure-controls--local-2026-11-15)
+for the preserved failures and separate scoped passes.
+
 ## 两轮 Web 功能合同 — 2026-10-30（已发布）
 
 新增接口与限制见 [API 参考](../api-reference.md#累计功能补齐--2026-10-30已发布生产-head-0058)：

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import threading
 import time
 import uuid
 
@@ -87,9 +88,99 @@ def spawn(kind, task_id, token, *, reconcile=False):
     command = [sys.executable, "-m", "app.workers.execution_child", kind, str(task_id), str(token)]
     if reconcile:
         command.append("--reconcile")
+    pipes = {"stdin": subprocess.PIPE, "stdout": subprocess.PIPE} if kind == "standby" else {}
     return subprocess.Popen(command, cwd=Path(__file__).resolve().parents[2],
         env={**os.environ, "CHAT_READER_EXECUTION_PARENT": str(os.getpid())},
-        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0, **pipes)
+
+
+class PreparedExecution:
+    """One independent, single-use child. No task or execution lease while idle."""
+    def __init__(self, process):
+        self.process = process
+        self.ready = threading.Event()
+        self.valid = False
+        self._delivery_lock = threading.Lock()
+        self._consumed = False
+        self._reader = threading.Thread(target=self._read, daemon=True)
+        self._reader.start()
+
+    def _read(self):
+        try:
+            self.valid = self.process.stdout.readline(128) == b"chat-reader-executor-ready-v1\n"
+            self.ready.set()
+            if self.valid:
+                while data := self.process.stdout.read1(65536):
+                    # Preserve ordinary child stdout without a blocked pipe;
+                    # stderr keeps its original inherited logging destination.
+                    try:
+                        remaining = memoryview(data)
+                        while remaining:
+                            written = os.write(sys.stdout.fileno(), remaining)
+                            if written <= 0:
+                                raise OSError("Child output forwarding stopped")
+                            remaining = remaining[written:]
+                    except (AttributeError, OSError, ValueError):
+                        sys.stdout.write(data.decode("utf-8", errors="replace"))
+                        sys.stdout.flush()
+        except (OSError, ValueError):
+            self.valid = False
+        finally:
+            self.ready.set()
+            self.process.stdout.close()
+
+    def activate(self, kind, task_id, token):
+        if kind not in {"import", "job"}:
+            raise ValueError("Unsupported prepared execution kind")
+        task_id, token = uuid.UUID(str(task_id)), uuid.UUID(str(token))
+        with self._delivery_lock:
+            if self._consumed:
+                raise RuntimeError("Prepared execution has already been consumed")
+            self._consumed = True
+            try:
+                self.process.stdin.write(f"{kind}\t{task_id}\t{token}\n".encode("ascii"))
+                self.process.stdin.flush()
+            except (BrokenPipeError, OSError):
+                # Delivery may have succeeded before the pipe failed. Never
+                # start a second executor: reconcile this exact claimed token.
+                pass
+            finally:
+                try:
+                    self.process.stdin.close()
+                except (BrokenPipeError, OSError):
+                    pass
+        return self.process
+
+    def close(self):
+        with self._delivery_lock:
+            self._consumed = True
+            try:
+                self.process.stdin.close()
+            except (BrokenPipeError, OSError):
+                pass
+        try:
+            self.process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=5)
+        self._reader.join(timeout=2)
+
+
+def prepare_execution_child(shutdown):
+    child = PreparedExecution(spawn("standby", uuid.UUID(int=0), uuid.UUID(int=0)))
+    deadline = time.monotonic() + 5
+    while not child.ready.wait(timeout=0.05):
+        if shutdown.requested or time.monotonic() >= deadline:
+            child.close()
+            return None
+    if shutdown.requested or not child.valid or child.process.poll() is not None:
+        child.close()
+        return None
+    return child
 
 
 def _seconds(value):
@@ -143,13 +234,15 @@ def supervise(child, token, reporter, shutdown, *, factory=SessionLocal,
             pass
 
 
-def reconcile_pending(factory=SessionLocal):
+def reconcile_pending(factory=SessionLocal, *, retire_idle=None):
     with factory() as db:
         bound_worker_transaction(db)
         control = db.get(TaskExecutionControl, SLOT)
         if control is None or control.finished_at:
             return True
         identity = control.task_kind, control.task_id, control.token
+    if retire_idle is not None:
+        retire_idle()
     # A dead parent / replacement worker must verify the old database lease,
     # not just a PID or a stale heartbeat. No user job can start in this gap.
     with session_lease(engine, EXECUTION_LOCK) as lease:
@@ -176,29 +269,53 @@ def reconcile_pending(factory=SessionLocal):
         return bool(control and control.token == identity[2] and control.finished_at)
 
 
-def run_task_worker_forever(*, shutdown=None):
+def run_task_worker_forever(*, shutdown=None, prepare_child=None):
     shutdown = shutdown or WorkerShutdown()
     if shutdown.requested:
         return
+    # The documented -m launcher uses standby preparation in every environment,
+    # not a CI-only warmup. Legacy programmatic callers retain their old path.
+    spec = getattr(sys.modules.get("__main__"), "__spec__", None)
+    if prepare_child is None and getattr(spec, "name", None) == "app.workers.import_worker":
+        prepare_child = prepare_execution_child
     settings = get_settings()
     reporter = WorkerHeartbeatReporter(interval_seconds=settings.worker_heartbeat_interval_seconds)
     last_maintenance = time.monotonic()
     last_recovery = 0.0
     last_execution_exit_at = None
     maintenance_pass = 0
+    prepared = None
+    reporter_started = False
+
+    def retire_idle():
+        nonlocal prepared
+        if prepared is not None:
+            prepared.close()
+            prepared = None
+
     try:
-        reporter.start()
+        if prepare_child is None:
+            reporter.start()
+            reporter_started = True
         while not shutdown.requested and not reporter.superseded:
             idle_poll_seconds = settings.import_worker_poll_seconds
             try:
                 with session_lease(engine, SUPERVISION_LOCK) as guard:
-                    if guard is None or not reconcile_pending():
+                    if guard is None:
+                        retire_idle()
+                        shutdown.wait(settings.import_worker_poll_seconds)
+                        continue
+                    reconciled = (
+                        reconcile_pending(retire_idle=retire_idle) if prepared is not None else reconcile_pending()
+                    )
+                    if not reconciled:
                         shutdown.wait(settings.import_worker_poll_seconds)
                         continue
                     # A continuous user queue must not starve already-authorized
                     # staging cleanup. One bounded helper between executions,
                     # never alongside one, keeps the same resource/slot budget.
                     if time.monotonic() - last_maintenance >= 30:
+                        retire_idle()
                         helper = spawn("maintenance", uuid.UUID(int=maintenance_pass), uuid.UUID(int=0))
                         maintenance_pass = (maintenance_pass + 1) % 4
                         try:
@@ -214,15 +331,37 @@ def run_task_worker_forever(*, shutdown=None):
                     # backend lease. This also fences a just-terminated helper.
                     with session_lease(engine, EXECUTION_LOCK) as idle_lease:
                         if idle_lease is None:
+                            retire_idle()
                             shutdown.wait(settings.import_worker_poll_seconds)
                             continue
+                        if prepare_child is not None:
+                            if prepared is not None and prepared.process.poll() is not None:
+                                retire_idle()
+                            if prepared is None:
+                                prepared = prepare_child(shutdown)
+                        if shutdown.requested or reporter.superseded:
+                            break
+                        if prepare_child is not None and prepared is None:
+                            # Standard-launcher readiness failed. Do not
+                            # publish a partially cold runtime as idle or
+                            # silently replace it with another cold executor.
+                            raise OSError("Worker interpreter readiness is unavailable")
+                        if not reporter_started:
+                            # Idle means the real runtime is ready, including
+                            # its idle interpreter, not a partially cold start.
+                            reporter.start()
+                            reporter_started = True
                         with SessionLocal() as db:
                             identity = claim(db)
                             execution = db.info.get("supervised_execution")
                             legacy_recovery_needed = db.info.get("legacy_recovery_needed", True)
                     if identity:
                         reporter.set_busy(identity[0], identity[1], execution=execution)
-                        child = spawn(*identity)
+                        if prepared is not None:
+                            child = prepared.activate(*identity)
+                            prepared = None
+                        else:
+                            child = spawn(*identity)
                         supervise(child, identity[2], reporter, shutdown)
                         last_execution_exit_at = time.monotonic()
                         # Canonical outcome and lock release are checked on
@@ -241,6 +380,7 @@ def run_task_worker_forever(*, shutdown=None):
                             if lane == "recovery" and legacy_recovery_needed is False:
                                 last_recovery = time.monotonic()
                                 continue
+                            retire_idle()
                             helper = spawn(lane, uuid.UUID(int=maintenance_pass if lane == "maintenance" else 0), uuid.UUID(int=0))
                             if lane == "maintenance":
                                 maintenance_pass = (maintenance_pass + 1) % 4
@@ -268,8 +408,12 @@ def run_task_worker_forever(*, shutdown=None):
                             # unknown-state backoff or renewing it on empty reads.
                             idle_poll_seconds = min(idle_poll_seconds, 0.25)
             except (SQLAlchemyError, OSError, subprocess.TimeoutExpired):
+                # An unknown database/lease boundary must not retain an idle
+                # interpreter prepared under the previous healthy guard.
+                retire_idle()
                 idle_poll_seconds = settings.import_worker_poll_seconds
                 logger.warning("worker_scheduling_paused")
             shutdown.wait(idle_poll_seconds)
     finally:
+        retire_idle()
         reporter.stop()

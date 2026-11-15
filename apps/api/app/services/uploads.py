@@ -5,13 +5,27 @@ import hashlib
 import threading
 import time
 from contextlib import asynccontextmanager, contextmanager
-from typing import AsyncIterator, Iterable, Iterator
+from typing import TYPE_CHECKING, AsyncIterator, Iterable, Iterator
 
-from fastapi import UploadFile
 from sqlalchemy import text
 
 from app.core.config import Settings, get_settings
 from app.core.memory import available_memory_bytes
+
+if TYPE_CHECKING:
+    from fastapi import UploadFile
+
+
+def __getattr__(name: str):
+    # Worker admission uses no UploadFile objects. Keep its annotation-only
+    # dependency out of fresh children, while explicit API type access retains
+    # FastAPI's exact subclass and the original evaluated type annotations.
+    if name == "UploadFile":
+        from fastapi import UploadFile
+
+        globals()["UploadFile"] = UploadFile
+        return UploadFile
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class UploadLimitError(ValueError):

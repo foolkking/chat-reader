@@ -10,7 +10,28 @@ gates and native deadlines remain. Deployment requires independent proof;
 product acceptance belongs to the user. The
 [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current results.
 
-The latest official2e0a1fe run passes API6794, Web14 and Settings470+restore1,
+The latest official4ca1ed5/43688838312 passes API6794, Web14,
+Settings470+restore1 and candidate Reader9. Only the original320-MiB/no-extra-swap
+v1 analysis wait failed at180 seconds; absent final status/OOM counters do not
+prove OOM. No deployable artifact/consumer acceptance exists.
+[Official failure](evidence/reliability-2026-11-15/ci-worker-budget-failure.json).
+
+Final local single-use-worker image passes all five original memory assertions;
+Linux/PG lifecycle142 has zero skips/1 original warning. ORM10 (original7+3),
+failure projection5, CI Node89/Python100, lint/typecheck and head0061 pass.
+The latest complete related Windows API93-file/1094-item matrix retains
+1 failed/1079 passed/14 skipped/1 original warning. The failed child's exact
+admission is unavailable; read-only passing observations do not prove its cause.
+Linux broad collection/interrupt failures and real-ZIP54's29 passes/2 failures
+remain failures, not a full pass. The new-test-only strict loader guard repair
+passes Linux75, original Nginx1 and native Windows guard18 as separate scopes.
+API collection is6904/new107, not execution of the full suite.
+[Scoped evidence](evidence/reliability-2026-11-15/ci-worker-budget-verification.json)
+retains those boundaries and all prior failures.
+The extra real idle interpreter costs about116-MiB combined RAM; local
+uncommitted/host-backed image controls do not replace new exact-source CI.
+
+The earlier official2e0a1fe run passes API6794, Web14 and Settings470+restore1,
 including the unchanged21-real-copy/60-second preparation. Candidate Reader8/1
 fails a real120px reverse frame; a separate passing9-case CPU diagnostic cannot
 replace it. No image/resource/consumer gates ran. The current Reader candidate
@@ -28,6 +49,49 @@ fixtures retain **5432**. `postgres-service.sh` still fences ownership by
 run/attempt/job; no seeder admission, native operation deadline, memory or
 test-skip relaxation.
 The [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns execution status.
+
+## Worker preparation and resource-failure controls — local 2026-11-15
+
+- `test_worker_model_registration.py` checks actual declared FK/relationship
+  closures, complete default/API/Alembic registration, maintenance/full upgrades,
+  real class identity and all original package/service exports.
+- `test_prepared_worker_execution.py` covers one delivery, uncertain pipe writes,
+  consumption/retirement rejection, original5-second readiness and2/2/5 close,
+  healthy claim ordering and retirement on maintenance/unknown/lost boundaries.
+  Failed readiness cannot publish initial idle, claim or cold-fallback.
+- `test_prepared_worker_processes.py` uses genuine interpreters and PostgreSQL:
+  idle connection/lease absence, rejected protocol/EOF, fenced task/stop results,
+  pending reconciliation before a new physical child, parent-death SIGKILL,
+  natural30-second maintenance, child count≤1 and real POSIX shutdown.
+  Process exit and PostgreSQL backend teardown are independently observed.
+- `test_worker_zip_optional_upload_type.py` retains exact UploadFile/type hints
+  and API response/error/persistence ordering without passive worker API imports.
+- `test_zip_worker_selected_parser_imports.py` exercises real v1/v2 ZIP analysis/
+  canonical counts, hashes/source retention and explicit original parser exports.
+  Its scratch exception accepts only the owned heading-counter SQLite shape.
+  During the actual commit only, Linux's cold libmagic discovery may execute
+  exactly `/sbin/ldconfig -p`, with no shell/cwd and the exact C locale environment,
+  under an existing task-owned scratch directory; the scope retires in finally.
+  Original passive guards and the product scanner remain unchanged. Fifteen
+  additional controls exercise passive/retired/nonowned scopes, other programs,
+  relative paths, cache writes, shell, executable/cwd/environment changes and
+  network rejection, plus the real read-only library cache. Sibling/outside/
+  ordinary SQLite remains rejected. No MIME bypass, fake discovery or preheat.
+- The original seven real-ORM helper cases remain unchanged; three new diagnostic
+  cases and five pure failure-projection cases retain read-only/privacy/fail-closed
+  behavior. Original ZIP fixture builders and all memory comparisons/assertions
+  remain, without changed native waits, sensors, skips or success budgets.
+
+Linux framework wheels are separately hash-locked/offline in a test-only venv,
+not installed into the measured product runtime. Two retained local-driver
+preparation failures did not reach tests. Final local tee-sys capture avoids
+unsupported fd temporary-file truncation on the Windows Docker bind; it does
+not alter product code, process observations or the original POSIX test bodies.
+Fresh exact-CI volumes and the release artifact consumer remain mandatory.
+The six new test files now collect107 cases, all requiring an actual Linux CI
+PASS with their exact stable IDs. The original gzip fixture is unchanged: only
+its collection-time header timestamp changes one legacy parameter ID; the real
+builder's full forward encoding, compressed body/CRC and content are verified.
 
 ## Reader native-motion fence controls — local 2026-11-15
 

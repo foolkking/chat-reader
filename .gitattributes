@@ -41,3 +41,5 @@ docs/evidence/reliability-2026-11-15/ci-reading-diagnostics-dispatch.json -text 
 docs/evidence/reliability-2026-11-15/ci-offline-* -text whitespace=cr-at-eol,-blank-at-eof
 # New native-scroll receipts are likewise immutable byte evidence.
 docs/evidence/reliability-2026-11-15/ci-reader-scroll-* -text whitespace=cr-at-eol,-blank-at-eof
+# New worker-budget receipts preserve actual evidence bytes and failed observations.
+docs/evidence/reliability-2026-11-15/ci-worker-budget-* -text whitespace=cr-at-eol,-blank-at-eof

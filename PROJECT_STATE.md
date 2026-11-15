@@ -1,6 +1,47 @@
 # Project State
 
-## Latest: Reader native-motion fence and continuous release loop — 2026-11-15
+## Latest: bounded worker startup and retained resource failure — 2026-11-15
+
+Exact4ca1ed5/43688838312 completed/failure: API6794/3 skips/5 warnings,
+Web14, Settings470+independent restore1 and candidate Reader9 pass. The builder
+failed the unchanged180-second v1 ZIP analysis wait at320 MiB/no-extra-swap;
+final task/OOM observations were absent, so formal OOM is not proven.
+There are no deployable artifacts.
+[Official failure](docs/evidence/reliability-2026-11-15/ci-worker-budget-failure.json).
+
+The standard worker source candidate prepares one independent, single-use
+interpreter under the healthy lease boundary before genuine initial idle.
+It holds no idle DB connection/execution lease or user source. Selected complete
+model closures and lazy format/operation imports retain every existing class,
+schema and compatibility export. Retirement precedes another physical child;
+uncertain delivery never starts a substitute. Failure evidence is read-only
+and privacy-projected; original native/resource/success assertions remain.
+[Runtime contract](docs/system/BACKEND_AND_API.md#worker-registration-and-single-use-preparation--source-2026-11-15).
+
+Final local diagnostic image passes all five original real-memory cases.
+Idle includes the standby interpreter: about116 MiB, higher than the old single
+parent; absolute peaks about131–134 MiB and increments about15–18 MiB are both
+reported. Real Linux/PG lifecycle controls142 pass without skips; original ORM
+helper7 plus3 diagnostic controls, failure projection5, CI Node89/Python100,
+lint/typecheck and single head0061 pass. The latest complete related Windows
+matrix remains1 failed/1079 passed/14 skipped; the failed child's exact memory
+admission is unavailable. Retained Linux collection/interrupted-matrix failures
+are not full passes. A new-test-only, strictly scoped libmagic discovery guard
+repair passes real Linux75 and the original Nginx1; Windows guard18 passes.
+Actual API collection is6904/new107, not full-suite execution.
+[Scoped verification](docs/evidence/reliability-2026-11-15/ci-worker-budget-verification.json) /
+[1422 inputs](docs/evidence/reliability-2026-11-15/ci-worker-budget-inputs.json)
+preserve every prior failure and69 historical receipts. No new exact CI/deployment
+acceptance follows from these local results. The
+[single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns remaining work.
+
+Continue verification/selective commit/normal push and ordinary full CI with
+empty quality source, then a new real55-minute wait and self-check; repair
+failures, independently prove artifacts before deployment, then optimize CI.
+User owns product acceptance. Production3564cbf/schema0060 is only the last
+verified pointer, not rechecked; the older151ms product cause remains unproven.
+
+## Earlier: Reader native-motion fence and continuous release loop — 2026-11-15
 
 Exact2e0a1fe/43681565051 completed/failure: API6794/3 skips/5 warnings,
 Web14 gates and Settings470+independent restore1 pass. The unchanged60-second

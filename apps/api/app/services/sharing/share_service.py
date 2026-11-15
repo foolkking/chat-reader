@@ -34,7 +34,6 @@ from app.schemas.share import (
     ShareUpdate,
     SharedConversationBootstrap,
 )
-from app.services.auth import hash_password, verify_password
 from app.services.preferences import get_or_create_preferences
 from app.schemas.toc import TocItem, TocResponse
 from app.services.reader_preview import dialogue_preview
@@ -55,6 +54,14 @@ SHARE_UNLOCK_BACKOFF_AFTER = 3
 SHARE_UNLOCK_BACKOFF_MAX_SECONDS = 60
 
 
+def __getattr__(name: str):
+    if name in {"hash_password", "verify_password"}:
+        from app.services.auth import hash_password, verify_password
+        globals().update(hash_password=hash_password, verify_password=verify_password)
+        return globals()[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 @dataclass(frozen=True)
 class ShareCreateResult:
     share: Share
@@ -70,6 +77,8 @@ def create_share(
     *,
     idempotency_key: str | None = None,
 ) -> ShareCreateResult:
+    from app.services.auth import hash_password
+
     policy = get_feature_policy(db)
     if not policy.allow_share_links:
         raise ShareError("Share links are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
@@ -679,6 +688,8 @@ def update_share(
     payload: ShareUpdate,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> Share:
+    from app.services.auth import hash_password
+
     policy = get_feature_policy(db)
     if not policy.allow_share_links:
         raise ShareError("Share links are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
@@ -847,6 +858,8 @@ def resolve_accessible_share(db: Session, token: str, unlock_token: str | None =
 
 
 def unlock_share(db: Session, token: str, password: str) -> tuple[Share, str]:
+    from app.services.auth import verify_password
+
     share = db.query(Share).filter(Share.token_hash == hash_token(token)).one_or_none()
     if share is None:
         raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)

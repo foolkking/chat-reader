@@ -1,6 +1,27 @@
 # Markdown 文档台账
 
-## Reader 原生滚动物理位置栅栏与正式失败保全 — 2026-11-15
+## 小预算 worker 注册/单次待机与失败取证 — 2026-11-15
+
+仅定点同步现有知识入口，不重整README/AGENTS、旧历史或其他任务资料。
+`PROJECT_STATE.md`/`docs/index.md`给当前失败和待验证边界；唯一进度仍在
+`SMALL_HOST_IMPROVEMENT_STATUS.md`。`BACKEND_AND_API.md`负责真实入口/模型闭包/
+单次待机生命周期；ZIP合同负责不变的资源边界和更高combined idle代价；
+`OBSERVABILITY_CONTRACT.md`负责只读脱敏失败取证；testing明确Linux142、
+ORM10/投影5与新Linux75/原Nginx1/Windows guard18的独立范围，不覆盖Windows
+整批失败、Linux收集/中断失败或真实ZIP54两项失败。新增helper严格只读
+libmagic发现边界只属于测试，不能写成产品MIME禁用/预热或资源门槛放宽。
+
+`ci-worker-budget-failure.json`保留4ca1ed5正式原180秒资源失败、五日志/四ZIP
+及OOM未知。已生成`ci-worker-budget-verification.json`/`ci-worker-budget-inputs.json`，
+分别负责诚实的定点验证/全部失败保留与1422输入/69原物理回执/13无关文件
+保全；实际收集6904/新增107不是全量执行。唯一旧gzip参数ID的mtime变化经
+未改动builder正向编码证明，不改fixture或让不同平台全部legacy ID伪一致。
+随后dispatch/first-read记录新candidate/run及新真实55分钟等待，不重写旧Reader回执。
+当前1422输入明确区分1413旧清单中14变化、两项旧清单外的既有Git基线脚本、
+七新代码/测试文件；15项API实际改动不冒称原700全不变。
+新worker-budget证据属性保留字节，旧freeze按raw SHA核对。
+
+## 前一Reader原生滚动物理位置栅栏与正式失败保全（历史）— 2026-11-15
 
 仅定点同步七份已有文档，不重整全仓、改README/AGENTS/全局记忆或旧回执。
 Project State/导航保持短入口；唯一Small Host台账维护实际失败、本地修复、

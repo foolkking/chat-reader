@@ -3,6 +3,33 @@ import os
 import sys
 import uuid
 
+READY = "chat-reader-executor-ready-v1\n"
+
+
+def _select_model_registration(kind, task_id):
+    """Read-only selection before any business work or heartbeat thread."""
+    from app import models
+    from app.core.database import SessionLocal
+
+    if kind == "maintenance":
+        models._register_maintenance_models()
+    elif kind == "recovery" or "--reconcile" in sys.argv:
+        models._register_all_models()
+    elif kind == "job":
+        from app.models.background_job import BackgroundJob
+        with SessionLocal() as db:
+            job = db.get(BackgroundJob, task_id)
+            if job is None or job.job_type != "adaptive_import_analysis":
+                models._register_all_models()
+    else:
+        from app.models.import_record import ImportRecord
+        with SessionLocal() as db:
+            record = db.get(ImportRecord, task_id)
+            originals = [item.source_type for item in record.artifacts
+                         if item.source_type != "adaptive_archive_document"] if record else []
+            if not originals or any(source != "adaptive_archive" for source in originals):
+                models._register_all_models()
+
 
 def main():
     # Docker/Linux: losing the supervisor must not orphan a second executor.
@@ -19,9 +46,33 @@ def main():
     from app.core.database import SessionLocal, engine
     from app.services.execution_control import EXECUTION_LOCK, ExecutionStopped, monitor_execution, session_lease
     from app.services.execution_reconciliation import reconcile
+    if kind == "standby":
+        # This independent interpreter holds no database connection or lease,
+        # parser contents or user File object while idle. It accepts one fenced
+        # identity only, then exits exactly like the original execution child.
+        from sqlalchemy.orm import configure_mappers
+        configure_mappers()
+        # This is a byte protocol, including on Windows text streams which
+        # otherwise translate LF to CRLF and invalidate genuine readiness.
+        sys.stdout.buffer.write(READY.encode("ascii"))
+        sys.stdout.buffer.flush()
+        identity = sys.stdin.readline(256)
+        if not identity:
+            return 0
+        fields = identity.rstrip("\n").split("\t")
+        if not identity.endswith("\n") or len(fields) != 3 or fields[0] not in {"import", "job"}:
+            return 3
+        kind = fields[0]
+        try:
+            task_id, token = uuid.UUID(fields[1]), uuid.UUID(fields[2])
+        except ValueError:
+            return 3
+    if kind not in {"import", "job", "maintenance", "recovery"}:
+        return 3
     with session_lease(engine, EXECUTION_LOCK) as lease:
         if lease is None:
             return 3
+        _select_model_registration(kind, task_id)
         if kind == "maintenance":
             from pathlib import Path
             from app.core.config import get_settings

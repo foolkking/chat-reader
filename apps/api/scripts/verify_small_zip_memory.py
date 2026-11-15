@@ -18,6 +18,39 @@ from pathlib import Path
 STATE = Path("/data/small-zip-gate.json")
 
 
+def diagnostic_state(db, record, job) -> dict:
+    """Project only synthetic gate state, never source text or task identity."""
+    from app.models.task_execution_control import TaskExecutionControl
+    from app.models.worker_runtime_state import WorkerRuntimeState
+    from app.services.adaptive_import.resource_wait import public_wait
+    from app.services.execution_control import SLOT
+
+    phases = {
+        "queued", "validating", "analyzing", "parsing", "persisting",
+        "waiting_resources", "resource_paused", "analysis_failed",
+        "failed", "cancelled", "committed", "completed", "finalizing",
+    }
+    worker = db.get(WorkerRuntimeState, "primary")
+    control = db.get(TaskExecutionControl, SLOT)
+    same_task = control is not None and (
+        (control.task_kind == "job" and control.task_id == job.id)
+        or (control.task_kind == "import" and control.task_id == record.id)
+    )
+    return {
+        "analysis": job.status, "state": record.session_state,
+        "import": record.status,
+        "job_phase": job.phase if job.phase in phases else None,
+        "record_phase": record.phase if record.phase in phases else None,
+        "job_progress": job.progress, "record_progress": record.progress,
+        "resource_wait": public_wait(job.result) or public_wait(record.analysis_summary),
+        "worker_state": worker.state if worker is not None and worker.state in {"idle", "busy"} else None,
+        "execution": {
+            "finished": control.finished_at is not None,
+            "stop_requested": control.stop_requested_at is not None,
+        } if same_task else None,
+    }
+
+
 def synthetic_zip() -> bytes:
     """Match the reported archive shape, without copying user data."""
     assets = [f"assets/picture-{index}.png" for index in range(13)] + ["assets/supplement.md"]
@@ -49,7 +82,7 @@ def synthetic_zip() -> bytes:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=["idle", "prepare", "status", "queue-commit", "verify"])
+    parser.add_argument("action", choices=["idle", "prepare", "status", "diagnostics", "queue-commit", "verify"])
     args = parser.parse_args()
     if os.environ.get("SMALL_IMPORT_MEMORY_GATE") != "1" or os.environ.get("APP_ENV") != "test":
         raise SystemExit("This helper is restricted to the disposable synthetic CI gate.")
@@ -88,6 +121,11 @@ def main() -> None:
             result = {"queued": True, "archive_bytes": len(data), "entries": 18}
         else:
             state = json.loads(STATE.read_text())
+            if args.action == "diagnostics" and db.get_bind().dialect.name == "postgresql":
+                from sqlalchemy import text
+                db.execute(text("SET TRANSACTION READ ONLY"))
+                db.execute(text("SET LOCAL statement_timeout = '1500ms'"))
+                db.execute(text("SET LOCAL lock_timeout = '250ms'"))
             record = db.get(ImportRecord, uuid.UUID(state["import_id"]))
             job = db.get(BackgroundJob, uuid.UUID(state["job_id"]))
             if record is None or job is None:
@@ -98,6 +136,8 @@ def main() -> None:
                     "import": record.status,
                     "failure_code": ((record.analysis_summary or {}).get("failure") or {}).get("code"),
                 }
+            elif args.action == "diagnostics":
+                result = diagnostic_state(db, record, job)
             elif args.action == "queue-commit":
                 receipt = (record.analysis_summary or {}).get("small_zip_profile") or {}
                 expected = {"conversation_count": 1, "message_count": 4, "block_count": 177,

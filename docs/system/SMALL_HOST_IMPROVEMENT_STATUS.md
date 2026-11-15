@@ -12,7 +12,103 @@
 资料、不清理生产、不建立自动安排；未验收项不能因委托用户而改标通过。
 11月12日的一次本地检查点与随后本地工作限制保留为历史，不覆盖最新授权。
 
-### 11月15日最新：原生滚动先于passive通知，Reader物理位置栅栏
+### 11月15日最新：小预算执行冷启动、真实单次待机及失败取证
+
+正式4ca1ed5/43688838312 attempt1 completed/failure：API6794/3 skips/5 warnings、
+Web14、Settings470+独立restore1、候选Reader9均通过。builder失败于原
+320MiB/no-extra-swap v1 ZIP分析180秒等待，不是编译失败；v2/后续制品及独立
+消费者未运行，无可部署镜像。末态和OOM计数未保留，不能声称正式CI证明OOM。
+[独立失败回执](../evidence/reliability-2026-11-15/ci-worker-budget-failure.json)
+核验五日志/四官方ZIP的size/digest/CRC/安全路径，原派发/55分钟读取不改写。
+
+当前源码沿用单supervisor/单execution slot，不引入pool、复用解析器或继承连接。
+实际标准`-m`入口选择完整FK/relationship模型闭包：supervisor19模块/36类，
+execution25/45、maintenance29/55；默认/API/Alembic仍40/92。原90真实导出、
+75项`__all__`和所有model定义/migration保留；未加载旧package类显式访问升级
+完整注册，非adaptive任务、非纯ZIP canonical导入、recovery/reconcile业务前
+完整注册。维护闭包时必须补关系/测试，不能删metadata或依赖Mapper事件。
+[后端合同](BACKEND_AND_API.md#worker-registration-and-single-use-preparation--source-2026-11-15)。
+
+健康guard和idle execution lease下准备一个独立解释器；未分配时无DB连接、
+execution lease、用户File或正文，真实ready后才发布initial idle。单次只交付
+kind/task UUID/token UUID，仍用原claim/lease/monitor/业务/reconcile。维护、
+恢复、pending reconcile、失guard、execution lease阻塞、DB异常、停止前先退役；
+write/flush不确定不能fallback第二executor，消费/退役后拒绝再次交付。
+Windows ready使用真实字节LF，保留5秒ready和2/2/5关闭；ready失败按原退避、
+不claim/假idle/冷fallback。原stall300/grace30和所有维护/PG/资源边界不改。
+无CI/env特殊模式；程序化非标准调用保留legacy路径。
+
+按选中操作加载UploadFile/API响应、旧解析器、SystemBackupRecord、cleanup
+模型/策略与Share原密码函数，真实对象导出保留，auth参数不改。只有已验证
+dedicated ZIP且非repair才跳过随后必被覆盖的普通match；真实document读、
+analysis_unit、repair/JSON/CanJSON/.cr合同保留。新memory失败报告留last status、
+实际baseline/fixture并独立尝试只读任务/cgroup/container投影；缺计数保持未知，
+不伪造零、不改passed:false或原成功断言，不持久化来源、身份、env或异常正文。
+[可观测性合同](OBSERVABILITY_CONTRACT.md#synthetic-resource-failure-projection--source-2026-11-15)。
+
+最终after07本机诊断镜像五项均PASS；394项Git-LF构建输入与当前源码一致，
+Build revision为空/OCI为uncommitted诊断标识，不是Git-exact CI/release制品。
+v1保留180秒，四v2保留600秒及原320/640MiB/no-extra-swap，真实counts/hash、
+≤64MiB增量、OOM/restart断言均通过。合成来源保留，精确owned容器已移除。
+必须报告权衡：真实combined idle121,167,872–121,974,784 bytes（约116MiB）
+包含待机解释器，高于旧单parent；absolute peak137,482,240–140,677,120、
+增量16,191,488–19,259,392 bytes。不能只宣传更低workspace、冒称idle省RAM，
+也不能用host-backed本机存储替代新精确CI Linux volume。
+
+真实Linux/PG16生命周期/原POSIX组142通过、零skip/1原Alembic warning：
+idle无连接/lease、EOF/坏协议拒绝、原token/停止/单次执行、pending reconciliation
+先退役、Linux父死、真实30秒维护/物理child≤1和graceful shutdown均实际执行。
+框架五纯Pythonwheel按原锁hash离线安装在独立test venv，产品runtime不改。
+前两Linux driver分别失败于无网络安装及宿主bind上pytest fd截断，pytest均未
+真正执行；失败保留，最终仅本机driver改tee-sys捕获，不改测试主体/原等待预算。
+ORM10＝原7＋新3、失败投影5、CI Node89/Python100、lint/typecheck及单head0061
+通过。最新完整Windows相关API93文件/1094项最终1失败/1079通过/14跳过/
+1原warning（1757.96秒），真实v2在分析时UploadLimitError，原成功断言未改。
+独立父驱动的约442–563MB可用内存不是该失败子进程的精确准入读值，不能
+据此证明旧失败、泄漏或OOM。只读转发诊断仍要求576MiB，观察到约2.52→
+2.49GB可用并通过；它不是未观测验收，不覆盖此前health3/同v2失败。
+
+Linux广泛45因临时快照漏原Git helper而2项收集错误、0执行；47补helper后
+原Nginx用例因漏未改动deploy配置失败，定点中断唯一owned pytest，保留
+1失败/524通过/3原跳过、exit2，不是完整矩阵通过。真实ZIP专项54实际执行
+31项，29通过/2失败：analysis已committed/READY，新增guard在canonical MIME
+阶段拦截Linux ctypes调用`/sbin/ldconfig -p`；不能改称driver或内存失败。
+
+仅修改新增real-ZIP helper：实际canonical调用期间、已存在的owned scratch
+目录下，只放行Linux精确绝对命令、精确C locale环境和无cwd/shell的只读
+库缓存查询，finally退役。原passive guard/扫描器源码、MIME冷路径、内存/
+等待/计数/来源哈希断言保留；其他程序、相对路径、写cache、shell、cwd/env、
+网络及非commit阶段由15项新控制拒绝/核验。Windows隔离18通过；新Linux75
+零skip/零warning包含原health3、真实v1/v2、原optional29和新增控制，原
+Nginx独立1通过。56的无效端口重命名错误在pytest前发生，0执行并保留；
+修正的临时driver保留原65438端口/60秒启动边界，不改产品或测试。
+
+实际API重新收集6904项、六份新增测试107项；旧6888个稳定ID和原新增92个
+ID保留，唯一旧gzip参数ID只是原builder的真实mtime变化，压缩正文/CRC/
+解压内容相同，没有改fixture或冻结时间。新普通CI仍须实际执行并证明
+原3项Linux skip之外6901通过；不能把收集或不同批次通过数相加当全量验收。
+[定点最终验证](../evidence/reliability-2026-11-15/ci-worker-budget-verification.json)
+保留上述全部失败、观察/平台边界和局部通过。
+
+原1413输入中14项有意变化/1399 raw SHA不变；另两此前未入该清单的既有
+memory脚本明确以原Git blob为基线补入，追加七新代码/测试输入，当前共1422。
+同一700 API/schema快照中15项实际改动（不是“700不变”）；109模型定义/
+migration/schema、550 Web构建输入、13无关文件和旧回执实际字节保全。
+用户tsbuildinfo保留，所有临时输出在本任务TEMP；未动用户imports或其他任务。
+[1422输入保全](../evidence/reliability-2026-11-15/ci-worker-budget-inputs.json)
+已生成；本轮owned PG17零其他client后停止、data保留，10个非本任务Docker
+资源的状态/config/mount/重启计数重新只读核验不变。广泛矩阵不宣称通过，
+接续选择性提交与新完整CI，不能用临时本机镜像部署。
+
+后续按新授权普通完整CI空quality source，新独立`ci-worker-budget-dispatch.json`
+记录实际candidate/run，开启新真实55分钟等待并自行查看；失败继续修，不等用户
+代查，不恢复历史派发后暂停或旧等待器。全六job/原质量/五例资源和独立制品均
+重新证明后，fresh容量/停写备份/旧执行与lease释放/0061迁移/精确镜像部署及
+独立健康检查；部署成功后才优化CI耗时。生产3564cbf/schema0060仅为此前
+验证指针，本轮未访问；唯一好备份、来源、config/volume保护，不清生产/
+自动重放用户ZIP/创建automation；剩余产品和实体设备验收仍归用户。
+
+### 前一11月15日检查点（历史）：原生滚动先于passive通知，Reader物理位置栅栏
 
 正式2e0a1fe/43681565051 attempt1 completed/failure：API6794/3 skips/5 warnings、
 Web14门禁、Settings470矩阵及独立restore1全部通过。原21份/60秒真实副本

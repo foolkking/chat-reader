@@ -1,69 +1,41 @@
-from app.models.context_continuation import (ContextMemberObject, ContextBinding, ContinuationRevision, ContinuationState, ContinuationCandidate, ContinuationValidation, ContextExportReceipt)
-from app.models.background_job import BackgroundJob
-from app.models.attachment_public_link import AttachmentPublicLink
-from app.models.support_request import SupportRequest, SupportMessage, UserLimitOverride
-from app.models.archive_restore import ArchiveRestoreAccount, ArchiveRestoreReceipt
-from app.models.auth import AuthLoginThrottle, AuthPrincipal, AuthRateLimit, AuthSession
-from app.models.annotation import AnnotationSyncReceipt, ConversationAnnotation, ConversationNotebook
-from app.models.task_execution_control import TaskExecutionControl
-from app.models.attachment import (
-    AssetDerivative,
-    AssetObject,
-    AssetObjectLease,
-    Attachment,
-    AttachmentUploadItem,
-    AttachmentUploadSession,
-    MessageVersionAttachment,
+import sys
+from threading import RLock
+
+from app.models._loading import (
+    EXECUTION_MODULES, MAINTENANCE_MODULES, MODULE_EXPORTS, PUBLIC_NAMES,
+    SUPERVISOR_MODULES, load_modules,
 )
-from app.models.conversation import Conversation
-from app.models.conversation_event import ConversationEvent
-from app.models.conversation_split import ConversationSplitReceipt
-from app.models.content_cleanup import (
-    ContentCleanupException,
-    ContentCleanupOccurrence,
-    ContentCleanupRule,
-    ContentCleanupRuleAlias,
-    ContentCleanupRuleGrant,
-    ContentCleanupRulePublication,
-    ContentCleanupRulePreference,
-    ContentCleanupRuleRevision,
-    ContentCleanupScan,
-    ContentCleanupScanRule,
-    ContentCleanupScanTarget,
-)
-from app.models.export_artifact import ExportArtifact, ExportArtifactLease
-from app.models.heading import Heading
-from app.models.import_record import ImportRecord
-from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfileAlias, ImportProfileGrant, ImportProfilePreference, ImportProfilePublication, ImportProfileRevision, ImportStructureFamily
-from app.models.message import Message
-from app.models.message_version import MessageVersion
-from app.models.offline_package_artifact import OfflinePackageArtifact
-from app.models.offline_package_lease import OfflinePackageLease
-from app.models.project import Project
-from app.models.project_conversation import ProjectConversation
-from app.models.reading_position import ReadingPosition
-from app.models.reading_content_baseline import ReadingContentBaseline, ReadingContentBaselineMessage
-from app.models.recent_item import RecentItem
-from app.models.render_block import RenderBlock
-from app.models.search_document import SearchDocument
-from app.models.share import Share, ShareUnlockSession
-from app.models.share_snapshot import ShareSnapshot
-from app.models.source_artifact import SourceArtifact
-from app.models.source_message_ref import SourceMessageRef
-from app.models.user_preference import UserPreference
-from app.models.user_feature_entry import UserFeatureEntry
-from app.models.worker_runtime_state import WorkerRuntimeState
-from app.models.user_skill import UserSkill, UserSkillSelection
-from app.models.skill_bundle import SkillFileObject, SkillBundleRevision, SkillBundleMember
-from app.models.user import User
-from app.models.access import AccountInvitation, EmailVerificationGrant, InstanceAccessSetting, PasswordResetGrant
-from app.models.administration import (
-    AdminAuditLog,
-    InstanceFeaturePolicy,
-    SystemBackupRecord,
-    SystemSkill,
-    UserDeletionRequest,
-)
+
+_registration_lock = RLock()
+_spec = getattr(sys.modules.get("__main__"), "__spec__", None)
+_role = getattr(_spec, "name", None)
+_complete = _role not in {"app.workers.import_worker", "app.workers.execution_child"}
+globals().update(load_modules(
+    MODULE_EXPORTS if _complete else
+    SUPERVISOR_MODULES if _role == "app.workers.import_worker" else EXECUTION_MODULES
+))
+
+
+def _register_all_models():
+    """Default/API/Alembic registration, also used before non-ZIP execution."""
+    global _complete
+    with _registration_lock:
+        if not _complete:
+            globals().update(load_modules(MODULE_EXPORTS))
+            _complete = True
+
+
+def _register_maintenance_models():
+    with _registration_lock:
+        globals().update(load_modules(MAINTENANCE_MODULES))
+
+
+def __getattr__(name):
+    # Explicit legacy package exports always retain their genuine mapped class.
+    if name in PUBLIC_NAMES:
+        _register_all_models()
+        return globals()[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     "ContextMemberObject", "ContextBinding", "ContinuationRevision", "ContinuationState",

@@ -1,5 +1,24 @@
 # Observability Contract
 
+## Synthetic resource-failure projection — source 2026-11-15
+
+The disposable CI memory gate now retains its last real task status, observed
+idle baseline and fixture before an unchanged assertion fails. Failure records
+name the stage/error class and attempt independent read-only synthetic-task,
+cgroup and container-state probes. A missing probe remains unavailable with its
+error class; it is not invented as zero and does not suppress other probes.
+Failed evidence never changes `passed:false` or supplies a fabricated workspace
+delta. Container projection excludes environment, payload, source text and IDs.
+
+Both synthetic helper `diagnostics` actions keep their original test-only
+admission. PostgreSQL reads use a read-only transaction with1500ms statement/
+250ms lock limits; the Docker diagnostic call has a15-second bound. Only known
+phases, the existing public resource-wait shape and the matching execution's
+finished/stop booleans are projected. No task is finished, retried or otherwise
+mutated. Original v1/v2 waits, sensors, limits and success assertions remain.
+The older formal4ca1ed5 timeout did not retain final task/OOM observations;
+this new facility does not retroactively prove that failure was OOM.
+
 ## Supervised single execution — worktree 2026-11-12
 
 One worker service now runs a lightweight supervisor and at most one fresh
@@ -9,6 +28,17 @@ execution advisory leases prevent overlap; a slot record in0061 stores the
 attempt, business checkpoint and independent stop request. Canonical task rows
 may stay locked without blocking stop. Every auxiliary write uses250ms lock /
 1500ms statement bounds and execution fencing. A commit verifies its fence.
+
+Source November15 single-use preparation additionally requires the real idle
+interpreter's readiness before initial heartbeat/idle publication. It remains
+unassigned and connection/lease-free; physical execution children never overlap.
+Pending reconciliation, maintenance/recovery, unknown/lost lease boundaries,
+database errors and shutdown retire it first. Readiness failure leaves scheduling
+paused with original backoff, not a synthetic idle or cold-executor fallback.
+Uncertain identity delivery never starts a substitute child. The actual launcher,
+registration closure and compatibility boundary are specified in
+[Backend/API](BACKEND_AND_API.md#worker-registration-and-single-use-preparation--source-2026-11-15).
+The extra idle RAM is real and included in combined-process resource baselines.
 
 Heartbeat proves liveness only. Positive byte reads, changed unit/cursor/phase
 checkpoints advance business progress; identical percentages and heartbeat do

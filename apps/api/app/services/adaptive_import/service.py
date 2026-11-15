@@ -345,13 +345,18 @@ def analyze_session(
         with analysis_unit(record, _group_artifacts(record, family_groups[0])):
             documents = _group_documents(record, family_groups[0])
             try:
-                match = match_profile(
-                    db, representative, documents, owner_user_id=record.owner_user_id,
-                    admitted_revision_ids=tuple(uuid.UUID(value) for value in admitted),
-                )
+                dedicated_archive = repair_profile is None and _family_is_dedicated_archive(record, family_groups)
+                # This owned, validated ZIP profile already overrides ordinary
+                # matching below. Do not load unrelated parsers for a discarded
+                # result; retain the real document read and admission checkpoint.
+                if not dedicated_archive:
+                    match = match_profile(
+                        db, representative, documents, owner_user_id=record.owner_user_id,
+                        admitted_revision_ids=tuple(uuid.UUID(value) for value in admitted),
+                    )
             finally:
                 del documents
-        if repair_profile is None and _family_is_dedicated_archive(record, family_groups):
+        if dedicated_archive:
             from app.services.adaptive_import.contracts import MatchResult
             match = MatchResult(
                 status="COMPATIBLE",

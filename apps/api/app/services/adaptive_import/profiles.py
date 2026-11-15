@@ -14,14 +14,32 @@ from app.services.adaptive_import.profile_identity import configuration_digest_v
 from app.services.adaptive_import.analysis import default_mapping
 from app.services.adaptive_import.normalization import _draft_conversation, _draft_message
 from app.services.adaptive_import.contracts import AnalysisResult, MatchResult, SourceDocument
-from app.services.import_pipeline.canjson_parser import CanJsonParseError, parse_canjson_v1, parse_canjson_v2
-from app.services.import_pipeline.exporter_aligner import align_exporter_sources
-from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseError, parse_exporter_json
-from app.services.import_pipeline.exporter_markdown_parser import ExporterMarkdownPairingError, parse_exporter_markdown
-from app.services.import_pipeline.source_detector import detect_source_profile
 from app.schemas.import_schema import SourceProfile
 
 MATCHER_VERSION = "adaptive-matcher-v1"
+
+_FORMAT_EXPORTS = {
+    "CanJsonParseError": "app.services.import_pipeline.canjson_parser",
+    "parse_canjson_v1": "app.services.import_pipeline.canjson_parser",
+    "parse_canjson_v2": "app.services.import_pipeline.canjson_parser",
+    "align_exporter_sources": "app.services.import_pipeline.exporter_aligner",
+    "ExporterJsonParseError": "app.services.import_pipeline.exporter_json_parser",
+    "parse_exporter_json": "app.services.import_pipeline.exporter_json_parser",
+    "ExporterMarkdownPairingError": "app.services.import_pipeline.exporter_markdown_parser",
+    "parse_exporter_markdown": "app.services.import_pipeline.exporter_markdown_parser",
+    "detect_source_profile": "app.services.import_pipeline.source_detector",
+}
+
+
+def __getattr__(name: str):
+    # ZIP profile selection needs no unselected legacy parser implementation.
+    if name in _FORMAT_EXPORTS:
+        from importlib import import_module
+
+        value = getattr(import_module(_FORMAT_EXPORTS[name]), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 @dataclass(frozen=True)
@@ -103,6 +121,8 @@ def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> 
     json_doc = next((item for item in documents if item.extension in {".json", ".jsonl", ".gz"}), None)
     markdown_doc = next((item for item in documents if item.extension in {".md", ".markdown"}), None)
     if json_doc:
+        from app.services.import_pipeline.source_detector import detect_source_profile
+
         detection = detect_source_profile(json_doc.filename, json_doc.content)
         if detection.source_profile == SourceProfile.chat_reader_canjson_v1:
             return _builtin("builtin:canjson-v1")
@@ -110,6 +130,9 @@ def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> 
             return _builtin("builtin:canjson-v2")
         if detection.source_profile == SourceProfile.chatgpt_exporter_json:
             if markdown_doc:
+                from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseError, parse_exporter_json
+                from app.services.import_pipeline.exporter_markdown_parser import ExporterMarkdownPairingError, parse_exporter_markdown
+
                 try:
                     parsed = parse_exporter_json(json_doc.content)
                     parse_exporter_markdown(markdown_doc.content, parsed.messages)
@@ -121,6 +144,8 @@ def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> 
             boundary = analysis.signature.get("boundary") or {}
             roles = {str(value).casefold() for value in analysis.signature.get("role_labels", [])}
             return _builtin("builtin:chat-reader-markdown") if boundary == {"kind": "HEADING", "level": 2} and roles <= {"prompt", "response"} else None
+        from app.services.import_pipeline.exporter_markdown_parser import ExporterMarkdownPairingError, parse_exporter_markdown
+
         try:
             parsed = parse_exporter_markdown(markdown_doc.content)
         except ExporterMarkdownPairingError:
@@ -172,12 +197,18 @@ def normalize_builtin(key: str, documents: list[SourceDocument]):
         return [replace(draft, created_at=parsed.metadata.get("created"), updated_at=parsed.metadata.get("updated"),
                         external_source_id=extract_conversation_id(parsed.metadata.get("link")), source_refs=refs)]
     if key == "builtin:canjson-v1" and json_doc:
+        from app.services.import_pipeline.canjson_parser import CanJsonParseError, parse_canjson_v1
+
         try: return [parse_canjson_v1(json_doc.content).conversation]
         except CanJsonParseError as exc: raise ValueError(str(exc)) from exc
     if key == "builtin:canjson-v2" and json_doc:
+        from app.services.import_pipeline.canjson_parser import CanJsonParseError, parse_canjson_v2
+
         try: return [parse_canjson_v2(json_doc.content, compressed=json_doc.filename.casefold().endswith(".gz")).conversation]
         except CanJsonParseError as exc: raise ValueError(str(exc)) from exc
     if key == "builtin:chat-reader-markdown-v2" and markdown_doc:
+        from app.services.import_pipeline.exporter_markdown_parser import ExporterMarkdownPairingError, parse_exporter_markdown
+
         try:
             parsed = parse_exporter_markdown(markdown_doc.content)
         except ExporterMarkdownPairingError as exc:
@@ -199,6 +230,10 @@ def normalize_builtin(key: str, documents: list[SourceDocument]):
         title = parsed.title or markdown_doc.filename.rsplit(".", 1)[0]
         return [_draft_conversation(title, messages, "Chat Reader Native Markdown Export v2", source_type="adaptive_markdown")]
     if key == "builtin:chat-reader-exporter" and json_doc:
+        from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
+        from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
+        from app.services.import_pipeline.exporter_aligner import align_exporter_sources
+
         parsed_json = parse_exporter_json(json_doc.content)
         parsed_markdown = parse_exporter_markdown(markdown_doc.content, parsed_json.messages) if markdown_doc else None
         aligned = align_exporter_sources(parsed_json, parsed_markdown)

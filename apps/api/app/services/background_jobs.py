@@ -16,7 +16,6 @@ from app.core.database import SessionLocal
 from app.core.config import get_settings
 from app.models.background_job import BackgroundJob
 from app.models.attachment import Attachment
-from app.models.content_cleanup import ContentCleanupScan
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.project import Project
@@ -25,7 +24,6 @@ from app.services.exporting.archive_task_status import PERSONAL_JOB_TYPES, SYSTE
 from app.schemas.export import ExportOptions
 from app.services.artifact_lifecycle import cleanup_committed_artifacts
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
-from app.services.feature_policies import effective_limits
 from app.core.observability import structured_event
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
@@ -34,6 +32,18 @@ logger = logging.getLogger(__name__)
 ACTIVE_JOB_STATUSES = ("queued", "processing", "cancelling")
 CANCELLABLE_JOB_TYPES = {"adaptive_import_analysis", "content_noise_scan", "context_return", "context_validation", "conversation_merge", "conversation_batch_delete", "conversation_batch_export", *PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}
 ProgressCallback = Callable[[str, int, int, int], None]
+
+
+def __getattr__(name: str):
+    if name == "ContentCleanupScan":
+        from app.models.content_cleanup import ContentCleanupScan
+        globals()[name] = ContentCleanupScan
+        return ContentCleanupScan
+    if name == "effective_limits":
+        from app.services.feature_policies import effective_limits
+        globals()[name] = effective_limits
+        return effective_limits
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class BackgroundJobCancelled(RuntimeError):
@@ -645,6 +655,8 @@ def queue_offline_package(
     subject_key: str = "local:default",
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
+    from app.services.feature_policies import effective_limits
+
     from app.services.offline_packages import OfflinePackageError, changed_conversations, select_conversations
     conversations = select_conversations(
         db,
@@ -1243,6 +1255,8 @@ def process_background_job(
                     job_result = result
                     processed_items = total
             elif job.job_type == "content_noise_scan":
+                from app.models.content_cleanup import ContentCleanupScan
+
                 scan_id = uuid.UUID(str(payload["scan_id"]))
                 result = process_scan_chunk(db, scan_id)
                 if not bool(result.get("done")):

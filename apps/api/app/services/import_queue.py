@@ -18,7 +18,6 @@ from app.services.canonical.persistence import (
 )
 from app.services.import_pipeline.draft_store import ImportDraftError
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
-from app.services.content_cleanup import queue_import_scan
 from app.services.ownership import OwnershipScope
 from app.core.observability import structured_event
 from app.services.task_errors import import_failure_from_exception
@@ -26,6 +25,13 @@ from app.services.task_errors import import_failure_from_exception
 logger = logging.getLogger(__name__)
 
 ACTIVE_IMPORT_STATUSES = ("queued", "processing")
+
+
+def queue_import_scan(*args, **kwargs):
+    # Keep the existing post-commit instrumentation seam; its rules/models
+    # belong to that selected operation, not cold parser admission.
+    from app.services.content_cleanup import queue_import_scan as queue
+    return queue(*args, **kwargs)
 
 
 def queue_import(record: ImportRecord, db: Session) -> ImportRecord:
