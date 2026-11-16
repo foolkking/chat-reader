@@ -1,0 +1,1077 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T17:42:35.935674+00:00",
+  "head_sha": "2463f2985c367e681c3443b1b485e57f2925b313",
+  "workflow_run_id": 43737444629,
+  "fresh_wait_seconds": 3300,
+  "started_at": "2026-11-15T16:47:32.562646+00:00",
+  "first_result_read_not_before": "2026-11-15T17:42:32.562646+00:00",
+  "prior_wait_time_not_inherited": true,
+  "first_result_read_requested_at": "2026-11-15T17:42:32.563818+00:00",
+  "fresh_monotonic_wait_elapsed_seconds": 3300.0,
+  "fresh_utc_wait_elapsed_seconds": 3300.001172,
+  "dispatch_wall_elapsed_seconds": 3307.594433,
+  "both_monotonic_and_utc_boundary_passed": true,
+  "run": {
+    "conclusion": null,
+    "created_at": "2026-11-15T16:47:28Z",
+    "event": "workflow_dispatch",
+    "head_branch": "master",
+    "head_sha": "2463f2985c367e681c3443b1b485e57f2925b313",
+    "html_url": "https://github.com/foolkking/chat-reader/actions/runs/43737444629",
+    "id": 43737444629,
+    "path": ".github/workflows/build-release-images.yml",
+    "run_attempt": 1,
+    "status": "in_progress",
+    "updated_at": "2026-11-15T17:40:06Z",
+    "workflow_id": 328268956
+  },
+  "jobs": {
+    "jobs": [
+      {
+        "completed_at": "2026-11-15T17:35:27Z",
+        "conclusion": "success",
+        "id": 132883064167,
+        "name": "web-quality",
+        "started_at": "2026-11-15T16:47:32Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completed_at": "2026-11-15T16:47:34Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "started_at": "2026-11-15T16:47:33Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:38Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 2,
+            "started_at": "2026-11-15T16:47:34Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:51Z",
+            "conclusion": "success",
+            "name": "Start pinned disposable PostgreSQL with official-source fallback",
+            "number": 3,
+            "started_at": "2026-11-15T16:47:38Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:52Z",
+            "conclusion": "success",
+            "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+            "number": 4,
+            "started_at": "2026-11-15T16:47:51Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:56Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 5,
+            "started_at": "2026-11-15T16:47:52Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:56Z",
+            "conclusion": "success",
+            "name": "Resolve pnpm store",
+            "number": 6,
+            "started_at": "2026-11-15T16:47:56Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:04Z",
+            "conclusion": "success",
+            "name": "Restore pnpm store",
+            "number": 7,
+            "started_at": "2026-11-15T16:47:56Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:04Z",
+            "conclusion": "success",
+            "name": "Record pnpm cache evidence",
+            "number": 8,
+            "started_at": "2026-11-15T16:48:04Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:06Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            "number": 9,
+            "started_at": "2026-11-15T16:48:04Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:17Z",
+            "conclusion": "success",
+            "name": "Install locked dependencies without lifecycle scripts",
+            "number": 10,
+            "started_at": "2026-11-15T16:48:06Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:20Z",
+            "conclusion": "success",
+            "name": "Prepare test services",
+            "number": 11,
+            "started_at": "2026-11-15T16:48:17Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:30Z",
+            "conclusion": "success",
+            "name": "Web lint",
+            "number": 12,
+            "started_at": "2026-11-15T16:48:20Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:50Z",
+            "conclusion": "success",
+            "name": "Web typecheck",
+            "number": 13,
+            "started_at": "2026-11-15T16:48:30Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:50:07Z",
+            "conclusion": "success",
+            "name": "Web production build (timed)",
+            "number": 14,
+            "started_at": "2026-11-15T16:48:50Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:50:07Z",
+            "conclusion": "success",
+            "name": "Build dependency regressions",
+            "number": 15,
+            "started_at": "2026-11-15T16:50:07Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:50:07Z",
+            "conclusion": "success",
+            "name": "Official release image source contract",
+            "number": 16,
+            "started_at": "2026-11-15T16:50:07Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:50:07Z",
+            "conclusion": "success",
+            "name": "Settings completion timing source controls",
+            "number": 17,
+            "started_at": "2026-11-15T16:50:07Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:50:08Z",
+            "conclusion": "success",
+            "name": "Offline shell reconciliation regressions",
+            "number": 18,
+            "started_at": "2026-11-15T16:50:07Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:50:58Z",
+            "conclusion": "success",
+            "name": "Ordinary-user recovery and bounded attachment regressions",
+            "number": 19,
+            "started_at": "2026-11-15T16:50:08Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:50:59Z",
+            "conclusion": "success",
+            "name": "Dependency audit from official npm registry",
+            "number": 20,
+            "started_at": "2026-11-15T16:50:58Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:51:01Z",
+            "conclusion": "success",
+            "name": "Start API and worker for browser integration",
+            "number": 21,
+            "started_at": "2026-11-15T16:50:59Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:51:19Z",
+            "conclusion": "success",
+            "name": "Install Playwright Chromium",
+            "number": 22,
+            "started_at": "2026-11-15T16:51:01Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:51:31Z",
+            "conclusion": "success",
+            "name": "Mounted Viewer and retained mobile sheet regression",
+            "number": 23,
+            "started_at": "2026-11-15T16:51:19Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:51:51Z",
+            "conclusion": "success",
+            "name": "Image size commit, recovery and responsive controls",
+            "number": 24,
+            "started_at": "2026-11-15T16:51:31Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:56:18Z",
+            "conclusion": "success",
+            "name": "Formula reading, focus tools and timed return regression",
+            "number": 25,
+            "started_at": "2026-11-15T16:51:51Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:56:33Z",
+            "conclusion": "success",
+            "name": "Cross-device reading handoff and conflict recovery",
+            "number": 26,
+            "started_at": "2026-11-15T16:56:18Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:57:43Z",
+            "conclusion": "success",
+            "name": "Retained import stop and per-task recovery controls",
+            "number": 27,
+            "started_at": "2026-11-15T16:56:33Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:58:11Z",
+            "conclusion": "success",
+            "name": "Minimal administrator runtime and bounded read recovery",
+            "number": 28,
+            "started_at": "2026-11-15T16:57:43Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:59:03Z",
+            "conclusion": "success",
+            "name": "Failed and paused import source repair",
+            "number": 29,
+            "started_at": "2026-11-15T16:58:11Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:59:29Z",
+            "conclusion": "success",
+            "name": "Reader table export and recovery controls",
+            "number": 30,
+            "started_at": "2026-11-15T16:59:03Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:59:50Z",
+            "conclusion": "success",
+            "name": "Offline per-conversation recovery and capacity choices",
+            "number": 31,
+            "started_at": "2026-11-15T16:59:29Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:00:15Z",
+            "conclusion": "success",
+            "name": "Export option continuity and unknown-result recovery",
+            "number": 32,
+            "started_at": "2026-11-15T16:59:50Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:00:29Z",
+            "conclusion": "success",
+            "name": "Attachment ordered uploads and original-request recovery",
+            "number": 33,
+            "started_at": "2026-11-15T17:00:15Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:01:29Z",
+            "conclusion": "success",
+            "name": "Source save snapshots, receipts and real editor transactions",
+            "number": 34,
+            "started_at": "2026-11-15T17:00:29Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:01:50Z",
+            "conclusion": "success",
+            "name": "Reading success feedback and explicit copy recovery",
+            "number": 35,
+            "started_at": "2026-11-15T17:01:29Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:01:54Z",
+            "conclusion": "success",
+            "name": "Context and Skill upload proxy transport",
+            "number": 36,
+            "started_at": "2026-11-15T17:01:50Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:02:55Z",
+            "conclusion": "success",
+            "name": "Adaptive Import recovery browser flow",
+            "number": 37,
+            "started_at": "2026-11-15T17:01:54Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:03:01Z",
+            "conclusion": "success",
+            "name": "Release H enforced CSP browser matrix",
+            "number": 38,
+            "started_at": "2026-11-15T17:02:55Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:07:21Z",
+            "conclusion": "success",
+            "name": "Context files, export and reader recovery",
+            "number": 39,
+            "started_at": "2026-11-15T17:03:01Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:09:08Z",
+            "conclusion": "success",
+            "name": "Focused online browser and security checks",
+            "number": 40,
+            "started_at": "2026-11-15T17:07:21Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:09:17Z",
+            "conclusion": "success",
+            "name": "Release H Share focus checks",
+            "number": 41,
+            "started_at": "2026-11-15T17:09:08Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:19:21Z",
+            "conclusion": "success",
+            "name": "Release H Source Editor and mutation cache checks",
+            "number": 42,
+            "started_at": "2026-11-15T17:09:17Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:20:05Z",
+            "conclusion": "success",
+            "name": "Source Editor content cleanup browser gate",
+            "number": 43,
+            "started_at": "2026-11-15T17:19:21Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:20:56Z",
+            "conclusion": "success",
+            "name": "Release I upload-token atomicity matrix",
+            "number": 44,
+            "started_at": "2026-11-15T17:20:05Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:22:40Z",
+            "conclusion": "success",
+            "name": "Release H Markdown and image Viewer checks",
+            "number": 45,
+            "started_at": "2026-11-15T17:20:56Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:25:08Z",
+            "conclusion": "success",
+            "name": "Reading geometry, image snapshots and cross-module recovery",
+            "number": 46,
+            "started_at": "2026-11-15T17:22:40Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:26:11Z",
+            "conclusion": "success",
+            "name": "PDF.js maintained-line browser checks",
+            "number": 47,
+            "started_at": "2026-11-15T17:25:08Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:30:48Z",
+            "conclusion": "success",
+            "name": "Default PWA baseline",
+            "number": 48,
+            "started_at": "2026-11-15T17:26:11Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:32:39Z",
+            "conclusion": "success",
+            "name": "Single-owner authentication browser gate",
+            "number": 49,
+            "started_at": "2026-11-15T17:30:48Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:35:19Z",
+            "conclusion": "success",
+            "name": "Release E production-build PWA negative matrix",
+            "number": 50,
+            "started_at": "2026-11-15T17:32:39Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:35:19Z",
+            "conclusion": "success",
+            "name": "Build machine-readable browser gate summary",
+            "number": 51,
+            "started_at": "2026-11-15T17:35:19Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:35:22Z",
+            "conclusion": "success",
+            "name": "Upload non-deployable quality evidence",
+            "number": 52,
+            "started_at": "2026-11-15T17:35:19Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:35:22Z",
+            "conclusion": "success",
+            "name": "Stop owned disposable PostgreSQL",
+            "number": 53,
+            "started_at": "2026-11-15T17:35:22Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:35:22Z",
+            "conclusion": "success",
+            "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            "number": 102,
+            "started_at": "2026-11-15T17:35:22Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:35:23Z",
+            "conclusion": "success",
+            "name": "Post Restore pnpm store",
+            "number": 103,
+            "started_at": "2026-11-15T17:35:22Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:35:23Z",
+            "conclusion": "success",
+            "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 104,
+            "started_at": "2026-11-15T17:35:23Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:35:23Z",
+            "conclusion": "success",
+            "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+            "number": 105,
+            "started_at": "2026-11-15T17:35:23Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:35:23Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 106,
+            "started_at": "2026-11-15T17:35:23Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:35:23Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 107,
+            "started_at": "2026-11-15T17:35:23Z",
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "completed_at": "2026-11-15T17:28:12Z",
+        "conclusion": "success",
+        "id": 132883064357,
+        "name": "api-quality",
+        "started_at": "2026-11-15T16:47:32Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completed_at": "2026-11-15T16:47:34Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "started_at": "2026-11-15T16:47:33Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:38Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 2,
+            "started_at": "2026-11-15T16:47:34Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:47Z",
+            "conclusion": "success",
+            "name": "Start pinned disposable PostgreSQL with official-source fallback",
+            "number": 3,
+            "started_at": "2026-11-15T16:47:38Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:50Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            "number": 4,
+            "started_at": "2026-11-15T16:47:47Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:00Z",
+            "conclusion": "success",
+            "name": "Install API dependencies",
+            "number": 5,
+            "started_at": "2026-11-15T16:47:50Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:02Z",
+            "conclusion": "success",
+            "name": "Prepare API test services",
+            "number": 6,
+            "started_at": "2026-11-15T16:48:00Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:05Z",
+            "conclusion": "success",
+            "name": "Context runtime and distributed Bundle consistency",
+            "number": 7,
+            "started_at": "2026-11-15T16:48:02Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:28:07Z",
+            "conclusion": "success",
+            "name": "API full suite",
+            "number": 8,
+            "started_at": "2026-11-15T16:48:05Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:28:07Z",
+            "conclusion": "success",
+            "name": "Alembic single-head and current validation",
+            "number": 9,
+            "started_at": "2026-11-15T17:28:07Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:28:08Z",
+            "conclusion": "success",
+            "name": "Stop owned disposable PostgreSQL",
+            "number": 10,
+            "started_at": "2026-11-15T17:28:07Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:28:08Z",
+            "conclusion": "success",
+            "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            "number": 19,
+            "started_at": "2026-11-15T17:28:08Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:28:08Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 20,
+            "started_at": "2026-11-15T17:28:08Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:28:08Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 21,
+            "started_at": "2026-11-15T17:28:08Z",
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "completed_at": "2026-11-15T17:40:04Z",
+        "conclusion": "success",
+        "id": 132883064523,
+        "name": "settings-quality",
+        "started_at": "2026-11-15T16:47:32Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completed_at": "2026-11-15T16:47:35Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "started_at": "2026-11-15T16:47:33Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:39Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 2,
+            "started_at": "2026-11-15T16:47:35Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:39Z",
+            "conclusion": "success",
+            "name": "Record Settings completion timing mode",
+            "number": 3,
+            "started_at": "2026-11-15T16:47:39Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:53Z",
+            "conclusion": "success",
+            "name": "Start pinned disposable PostgreSQL with official-source fallback",
+            "number": 4,
+            "started_at": "2026-11-15T16:47:39Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:47:54Z",
+            "conclusion": "success",
+            "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+            "number": 5,
+            "started_at": "2026-11-15T16:47:53Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:03Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 6,
+            "started_at": "2026-11-15T16:47:54Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:08Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            "number": 7,
+            "started_at": "2026-11-15T16:48:03Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:48:28Z",
+            "conclusion": "success",
+            "name": "Install and migrate disposable fixture",
+            "number": 8,
+            "started_at": "2026-11-15T16:48:08Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T16:50:16Z",
+            "conclusion": "success",
+            "name": "Build authenticated Web and install Chromium",
+            "number": 9,
+            "started_at": "2026-11-15T16:48:28Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:39:08Z",
+            "conclusion": "success",
+            "name": "Real settings, SMTP, offline and sync browser matrix",
+            "number": 10,
+            "started_at": "2026-11-15T16:50:16Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:39:54Z",
+            "conclusion": "success",
+            "name": "System archive restore into a fresh PostgreSQL instance",
+            "number": 11,
+            "started_at": "2026-11-15T17:39:08Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:39:58Z",
+            "conclusion": "success",
+            "name": "Upload settings quality evidence",
+            "number": 12,
+            "started_at": "2026-11-15T17:39:54Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:39:59Z",
+            "conclusion": "success",
+            "name": "Stop owned disposable PostgreSQL",
+            "number": 13,
+            "started_at": "2026-11-15T17:39:58Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:39:59Z",
+            "conclusion": "success",
+            "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            "number": 23,
+            "started_at": "2026-11-15T17:39:59Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:00Z",
+            "conclusion": "success",
+            "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 24,
+            "started_at": "2026-11-15T17:39:59Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:00Z",
+            "conclusion": "success",
+            "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+            "number": 25,
+            "started_at": "2026-11-15T17:40:00Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:00Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 26,
+            "started_at": "2026-11-15T17:40:00Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:00Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 27,
+            "started_at": "2026-11-15T17:40:00Z",
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "completed_at": "2026-11-15T17:37:43Z",
+        "conclusion": "success",
+        "id": 132894751383,
+        "name": "reading-performance-comparison / compare",
+        "started_at": "2026-11-15T17:28:15Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completed_at": "2026-11-15T17:28:16Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "started_at": "2026-11-15T17:28:15Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:28:20Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 2,
+            "started_at": "2026-11-15T17:28:16Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:28:21Z",
+            "conclusion": "success",
+            "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+            "number": 3,
+            "started_at": "2026-11-15T17:28:20Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:28:25Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 4,
+            "started_at": "2026-11-15T17:28:21Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:28:25Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            "number": 5,
+            "started_at": "2026-11-15T17:28:25Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:29:07Z",
+            "conclusion": "success",
+            "name": "Install identical locked harness dependencies",
+            "number": 6,
+            "started_at": "2026-11-15T17:28:25Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:37:39Z",
+            "conclusion": "success",
+            "name": "Baseline then candidate on the same isolated runner",
+            "number": 7,
+            "started_at": "2026-11-15T17:29:07Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:37:40Z",
+            "conclusion": "success",
+            "name": "Preserve comparison measurements",
+            "number": 8,
+            "started_at": "2026-11-15T17:37:39Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:37:40Z",
+            "conclusion": "success",
+            "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+            "number": 13,
+            "started_at": "2026-11-15T17:37:40Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:37:40Z",
+            "conclusion": "success",
+            "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 14,
+            "started_at": "2026-11-15T17:37:40Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:37:41Z",
+            "conclusion": "success",
+            "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+            "number": 15,
+            "started_at": "2026-11-15T17:37:40Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:37:41Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 16,
+            "started_at": "2026-11-15T17:37:41Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:37:41Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "started_at": "2026-11-15T17:37:41Z",
+            "status": "completed"
+          }
+        ]
+      },
+      {
+        "completed_at": null,
+        "conclusion": null,
+        "id": 132898175410,
+        "name": "build-images",
+        "started_at": "2026-11-15T17:40:06Z",
+        "status": "in_progress",
+        "steps": [
+          {
+            "completed_at": "2026-11-15T17:40:08Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "started_at": "2026-11-15T17:40:07Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:11Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 2,
+            "started_at": "2026-11-15T17:40:08Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:11Z",
+            "conclusion": "skipped",
+            "name": "Image-only release policy negative controls",
+            "number": 3,
+            "started_at": "2026-11-15T17:40:11Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:13Z",
+            "conclusion": "success",
+            "name": "Record verified release quality provenance",
+            "number": 4,
+            "started_at": "2026-11-15T17:40:11Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:14Z",
+            "conclusion": "success",
+            "name": "Run docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+            "number": 5,
+            "started_at": "2026-11-15T17:40:13Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:19Z",
+            "conclusion": "success",
+            "name": "Prepare pinned image bases with official-source fallback",
+            "number": 6,
+            "started_at": "2026-11-15T17:40:14Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:19Z",
+            "conclusion": "success",
+            "name": "Record image build metadata",
+            "number": 7,
+            "started_at": "2026-11-15T17:40:19Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:19Z",
+            "conclusion": "success",
+            "name": "Record artifact producer attempt",
+            "number": 8,
+            "started_at": "2026-11-15T17:40:19Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:43Z",
+            "conclusion": "success",
+            "name": "Build API and worker image",
+            "number": 9,
+            "started_at": "2026-11-15T17:40:19Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:40:54Z",
+            "conclusion": "success",
+            "name": "Start disposable PostgreSQL for the real memory gate",
+            "number": 10,
+            "started_at": "2026-11-15T17:40:43Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": "2026-11-15T17:41:06Z",
+            "conclusion": "success",
+            "name": "Verify real 320 MiB worker ZIP analysis and commit without swap",
+            "number": 11,
+            "started_at": "2026-11-15T17:40:54Z",
+            "status": "completed"
+          },
+          {
+            "completed_at": null,
+            "conclusion": null,
+            "name": "Verify bounded ZIP 100 and 500 MiB sources and long Markdown",
+            "number": 12,
+            "started_at": "2026-11-15T17:41:06Z",
+            "status": "in_progress"
+          },
+          {
+            "completed_at": null,
+            "conclusion": null,
+            "name": "Stop memory-gate PostgreSQL",
+            "number": 13,
+            "started_at": null,
+            "status": "pending"
+          },
+          {
+            "completed_at": null,
+            "conclusion": null,
+            "name": "Preserve real memory-gate evidence",
+            "number": 14,
+            "started_at": null,
+            "status": "pending"
+          },
+          {
+            "completed_at": null,
+            "conclusion": null,
+            "name": "Verify real ORM memory-control-plane status and source guards",
+            "number": 15,
+            "started_at": null,
+            "status": "pending"
+          },
+          {
+            "completed_at": null,
+            "conclusion": null,
+            "name": "Build Web image",
+            "number": 16,
+            "started_at": null,
+            "status": "pending"
+          },
+          {
+            "completed_at": null,
+            "conclusion": null,
+            "name": "Inspect release images",
+            "number": 17,
+            "started_at": null,
+            "status": "pending"
+          },
+          {
+            "completed_at": null,
+            "conclusion": null,
+            "name": "Package images and provenance",
+            "number": 18,
+            "started_at": null,
+            "status": "pending"
+          },
+          {
+            "completed_at": null,
+            "conclusion": null,
+            "name": "Upload deployable release artifact",
+            "number": 19,
+            "started_at": null,
+            "status": "pending"
+          },
+          {
+            "completed_at": null,
+            "conclusion": null,
+            "name": "Post Run docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+            "number": 37,
+            "started_at": null,
+            "status": "pending"
+          },
+          {
+            "completed_at": null,
+            "conclusion": null,
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 38,
+            "started_at": null,
+            "status": "pending"
+          }
+        ]
+      }
+    ],
+    "total_count": 5
+  },
+  "artifacts_or_deployment_not_accepted_by_status_read": true
+}

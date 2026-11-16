@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-16T06:49:48.806754+00:00",
+  "status": "final_scoped_source_verified_ordinary_full_ci_and_fresh_deployment_still_required",
+  "source_head": "2463f2985c367e681c3443b1b485e57f2925b313",
+  "candidate_migration_head": "20261112_0061",
+  "zip_markdown_tests_executed_and_passed": 98,
+  "counts_are_overlapping_checkpoints_not_additive_coverage": true,
+  "final_api": {
+    "log": "api-related-2.log",
+    "log_sha256": "3f0a1b196f59ba717afec7219520fa3d638867cbea1096bbd01fd55c0c2d825e",
+    "junit": "api-related-2.xml",
+    "junit_sha256": "e1f534eb04b5a042a2aa54bb402fcca2bdc085523d09e1924314de23943d544a",
+    "executed": 621,
+    "passed": 615,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 6,
+    "seconds": 1219.662
+  },
+  "initial_api": {
+    "log": "api-related-1.log",
+    "log_sha256": "bcb6811bbf5837c7f1c49b88f84c17327d458b07f8723b83f99175722d082012",
+    "junit": "api-related-1.xml",
+    "junit_sha256": "8d83c7af0c7f4180de0b22f52525c7e11103cca01ee528949f1dd257ad741807",
+    "executed": 614,
+    "passed": 608,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 6,
+    "seconds": 1167.806
+  },
+  "final_postgres": {
+    "log": "pg-related-2.log",
+    "log_sha256": "dab1a27f37040c0be8a71acfeaabf01a138ac2668673cc49fa18a75f1b8c9e86",
+    "junit": "pg-related-2.xml",
+    "junit_sha256": "7c827642c224e187d9f634492ad59709779251a0444b947b24f2cb79c3a83856",
+    "executed": 36,
+    "passed": 36,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 156.175
+  },
+  "initial_postgres": {
+    "log": "pg-related-1.log",
+    "log_sha256": "a2f7c3431af2d29d194227f92dcf6047a527fce2a02e02d1f74686f393a585d9",
+    "junit": "pg-related-1.xml",
+    "junit_sha256": "924c77ead5e8eb565daa1ab883434d988d649bd2d0643c20e4662db740dad14f",
+    "executed": 36,
+    "passed": 36,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 150.123
+  },
+  "initial_api_is_checkpoint_before_final_seven_controls_and_three_small_corrections": true,
+  "final_matrix_uses_current_exact_seven_runtime_test_inputs": true,
+  "original_environment_skips": {
+    "windows_symlink_privilege": 4,
+    "unconfigured_exporter_pair": 2,
+    "user_sources_not_configured_or_replayed_to_remove_skips": true
+  },
+  "earlier_static_checks": [
+    {
+      "log": "ci-node-1.log",
+      "sha256": "2dd26a733b7d2a9cbdb368a98ca50ae6a03f74247ae6156e71fb0a68e831753f",
+      "verified_marker": "# pass 89",
+      "earlier_scoped_checks_not_a_new_full_ci": true
+    },
+    {
+      "log": "ci-python-1.log",
+      "sha256": "3fabf1fcd23e8726f37859e08b8657da0754a6b82fe3b26c298ebfac188eec3c",
+      "verified_marker": "Ran 100 tests",
+      "earlier_scoped_checks_not_a_new_full_ci": true
+    },
+    {
+      "log": "lint-1.log",
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "verified_marker": "eslint . --max-warnings=0",
+      "earlier_scoped_checks_not_a_new_full_ci": true
+    },
+    {
+      "log": "typecheck-1.log",
+      "sha256": "231f3ed2a8636999437e24fd3abfb381918c1c7547d66db9b40fc5e154ab9209",
+      "verified_marker": "tsc --noEmit",
+      "earlier_scoped_checks_not_a_new_full_ci": true
+    },
+    {
+      "log": "alembic-heads.log",
+      "sha256": "73423f8cc296997f4c5fa5d11c6fbcf544629c61e9b90c2257f86f00f0243af5",
+      "verified_marker": "20261112_0061",
+      "earlier_scoped_checks_not_a_new_full_ci": true
+    }
+  ],
+  "failure_checkpoints_retained": [
+    {
+      "log": "green-1.log",
+      "log_sha256": "7031ba71e5940520496f66e3dfe25dd54e425885eece87b428a238f4726dd92c",
+      "junit": "green-1.xml",
+      "junit_sha256": "39fc3330c3caa64350e11d98f8c59b10e7cf61bc931e2c9dad710fb85ba565b0",
+      "executed": 52,
+      "passed": 38,
+      "failed": 14,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 106.915
+    },
+    {
+      "log": "green-2.log",
+      "log_sha256": "07ee7079397a5f5a0af0b6bb338614a2995337e0812ae5703a3231bf85402b45",
+      "junit": "green-2.xml",
+      "junit_sha256": "cc8951bf06292c11bd8c15d2c23cabdb8b838f5f19eee629e1c08671836b257a",
+      "executed": 65,
+      "passed": 63,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 162.247
+    },
+    {
+      "log": "green-4.log",
+      "log_sha256": "f60e7a99e053b4ad7ba71cbc0a8da9f8b9db6dc4ce7436bf24118284109ee9d3",
+      "junit": "green-4.xml",
+      "junit_sha256": "e795426721380e4d9bce3c04eaf29eb93bd24255e85a4f5220ca5d4b053a1816",
+      "executed": 113,
+      "passed": 110,
+      "failed": 3,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 305.363
+    },
+    {
+      "log": "green-6-legacy-binding.log",
+      "log_sha256": "b3624b73d84d4a27b8df4c3b6ae33d2b54e973ea8e7e7a508a713d300bebffe2",
+      "junit": "green-6-legacy-binding.xml",
+      "junit_sha256": "87189d7d21b72dd363ba89465b9fa47b8b5156035468a666eead7113c7145d9a",
+      "executed": 7,
+      "passed": 5,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 17.598
+    },
+    {
+      "log": "red-1.log",
+      "log_sha256": "8dd235d967e286cb8b8a8ab48aa428f08042882b2aa44acaef4ae327e82813a1",
+      "junit": "red-1.xml",
+      "junit_sha256": "9a8de456c3cbb8020003f449a87cbb694b30ebad140362d08a9862464403f9ac",
+      "executed": 15,
+      "passed": 2,
+      "failed": 13,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 23.799
+    },
+    {
+      "log": "red-2.log",
+      "log_sha256": "fcdb912b787e227ca12feb85c6cd47cb8142ce0ea38c1fc033f44e2b3765d174",
+      "junit": "red-2.xml",
+      "junit_sha256": "0081d599817e872fed4068c254ba37f89ea1119b3340da6bb4f51e30ead889e1",
+      "executed": 6,
+      "passed": 0,
+      "failed": 6,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 14.265
+    },
+    {
+      "log": "red-3-source-atomicity.log",
+      "log_sha256": "8d8eabc295deedcdc42d42f491607112f4d572c5f19e68ad7050c3e00bef7fc1",
+      "junit": "red-3-source-atomicity.xml",
+      "junit_sha256": "3e8d85146dc21f503ec25a2e83b755d63c9af8d2d4c007acea17fb5225475ee4",
+      "executed": 8,
+      "passed": 4,
+      "failed": 4,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 19.336
+    },
+    {
+      "log": "red-4-catalog.log",
+      "log_sha256": "0fe08a34e1d928160fb6f7e5b1f9963ca5e1d3a2fc8c7328f3756146b24a8459",
+      "junit": "red-4-catalog.xml",
+      "junit_sha256": "efa9c2435d7f7cafdebd9aa175acfd7a641a3728595030a3724037e2c8deabf6",
+      "executed": 4,
+      "passed": 0,
+      "failed": 4,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 11.696
+    },
+    {
+      "log": "red-5-fences.log",
+      "log_sha256": "a1268fa82cebc91a96a09da84bbbc0f0ad8f2e1d1688be845775bdc6f1230e85",
+      "junit": "red-5-fences.xml",
+      "junit_sha256": "e6f9b54b85041bdd711202b54e3a644085ce9bc2596a790f559468bf866e0410",
+      "executed": 5,
+      "passed": 2,
+      "failed": 3,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 12.838
+    },
+    {
+      "log": "red-6-legacy-binding.log",
+      "log_sha256": "9cb0d58cf4e0954f9a07d03c75466fe3b4ba1a2624772df483f30dcf621fca42",
+      "junit": "red-6-legacy-binding.xml",
+      "junit_sha256": "817496bb7399ca601e7224a34a8aba44779a00334c83ad36d5c4e33097b631f4",
+      "executed": 7,
+      "passed": 5,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 17.034
+    }
+  ],
+  "failure_boundaries": [
+    "Real v1 source/partial-commit gaps, Markdown selection, catalog counters/ordinals, stale-memory response and old dedicated-source binding failures remain failures.",
+    "New fixture block-type, ordinal/error-shape and Attachment.status mistakes were corrected against actual contracts, without changing product assertions."
+  ],
+  "retained_test_wrapper_failure": {
+    "log": "green-5-fences.log",
+    "sha256": "2cb823719cdccbdc9d4961f434e5aa4167176845622713eb0bb688421e62ab83",
+    "cause": "pnpm forwarded an extra separator to pytest; zero tests collected",
+    "not_a_product_failure_or_a_passing_run": true
+  },
+  "api_collection": {
+    "recorded_at": "2026-11-16T06:32:52.329415+00:00",
+    "collection_only_not_execution": true,
+    "actual_collected": 7010,
+    "portable_case_count": 213,
+    "zip_case_count": 98,
+    "all_6911_existing_stable_ids_preserved": true,
+    "old_115_portable_ids_preserved": true,
+    "source_detector_sha256": "4feac73d110ecad83f7445ff55127154ebd4fa5cb41f0624132f3ecf1f581208",
+    "gzip_mtime_only_id_change_verified": true,
+    "collection_result_sha256": "aa92542b59f2287221cde8f55cde43b1304d38c4dc60c902690777b11f00c40f",
+    "collection_log_sha256": "4e5dad7a09337c59bf015ca845322397ebf6d5a6972b15fbc2e618196b4abdae",
+    "expectations_sha256": "c5684483ac9661b42c82feb2a0ba57639664f7684ae16219696180ee3fc95c2a",
+    "expected_full_ci_passes": 7007,
+    "expected_original_linux_skips": 3,
+    "no_prior_execution_counts_inherited": true
+  },
+  "inputs": {
+    "path": "ci-zip-markdown-inputs.json",
+    "files": 1424,
+    "sha256": "765348d79d6301b02309ac2cd02561df1f29bdcf1bebedd4fea0df1dfdcbad1d"
+  },
+  "temporary_postgresql": {
+    "owned_loopback_cluster_stopped": true,
+    "stop_log_sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb",
+    "data_and_evidence_retained": true
+  },
+  "boundaries": {
+    "web_search_used": false,
+    "commit": false,
+    "push": false,
+    "ci_dispatched": false,
+    "production_accessed": false,
+    "deployed": false,
+    "automation_created": false,
+    "unrelated_files_and_user_build_cache_preserved": true,
+    "user_import_sources_touched": false,
+    "paused_ci_optimization_not_mixed_into_product_fix": true
+  },
+  "remaining": [
+    "Selectively commit/normal push ordinary full CI, empty quality source; perform a new real55-minute UTC/monotonic wait.",
+    "All original API/Web14/Settings470+restore1/Reader and five exact-image resource/native gates; independently verify official artifacts/OCI graph/embedded source.",
+    "Fresh capacity, naturally completed active tasks and released leases, new independent five-component backup, unchanged0061 and exact service/pointer/health checks.",
+    "Restore/reconcile CI optimization only after this product fix is successfully deployed.",
+    "Product acceptance remains user-owned; no real-user ZIP replay or production-backup restore drill is claimed."
+  ]
+}

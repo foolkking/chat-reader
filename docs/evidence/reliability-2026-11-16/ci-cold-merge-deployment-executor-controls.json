@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T20:03:22.125704+00:00",
+  "status": "post_migration_execution_prepared_offline_only_not_authorized_or_dispatched",
+  "source_sha": "2463f2985c367e681c3443b1b485e57f2925b313",
+  "existing_passing_ci_run": 43737444629,
+  "existing_ci_proof_sha256": "194256946fb0a26243d681e79c84d62551767dc2bae7b23365854b2ae26164d1",
+  "prepared_task_local_sources": {
+    "release_post_migration_65_66.py": {
+      "bytes": 45585,
+      "sha256": "4256de0286a39a3de080edb9d3106936f5d93f337446235aab0f15f76b0db967"
+    },
+    "rollout_production_release_65.py": {
+      "bytes": 595,
+      "sha256": "52fac7f68ce902949e2e2cb5dff2d59b67143cd81b9f58773df456420437f8d0"
+    },
+    "finalize_production_release_66.py": {
+      "bytes": 584,
+      "sha256": "4333dcb535372c139514a9355ba09df0321cf40e081bdbc5667c9f123a02f381"
+    },
+    "test_release_post_migration_65_66.py": {
+      "bytes": 32329,
+      "sha256": "323ea3006635a9ea0e8e5e1bf28df2ac55b0b0e7a24bb3944594eff9a63ba91d"
+    },
+    "verify_post_migration_controls_linux_63.py": {
+      "bytes": 8508,
+      "sha256": "ae7c0f4ad0a01dcd911516d463309212ef6ce8c92ddbef8ae2082d15e4cc8545"
+    },
+    "verify_post_migration_controls_linux_64.py": {
+      "bytes": 8591,
+      "sha256": "dcf2819599567ec8d99460452ed9bcbf23b248d15ed4310886e2b2dd0712b011"
+    },
+    "prepare_post_migration_controls_linux_64.py": {
+      "bytes": 2563,
+      "sha256": "3b9ad14f9f04107890fc9ca96b2628619d888a7b7dfb544f9820062ee4c6f9d5"
+    }
+  },
+  "final_offline_linux": {
+    "tests_executed": 113,
+    "passed": 113,
+    "skipped": 0,
+    "ordered_test_ids_sha256": "1e8b402e8c81e7c1f48e869f174bf6f6d1fe0a7b6887d595ad036b27bfc62aca",
+    "retained_log": {
+      "bytes": 17817,
+      "sha256": "37091015a33f643d508cbb996487917f2e01a4e1f74702bb71f1a5333c9a0a3d"
+    },
+    "source_dispatch_bindings_verified": true,
+    "image_id": "sha256:9c900dea9e8fb7e16277c179b555cc72d29a352dbc33cff48ad5a0412fd5bfc7",
+    "driver_sha256": "dcf2819599567ec8d99460452ed9bcbf23b248d15ed4310886e2b2dd0712b011",
+    "memory_limit_bytes": 67108864,
+    "swap_limit_bytes": 67108864,
+    "native_task_tmpfs_bytes": 8388608,
+    "network": "none",
+    "readonly_root_and_source_mount": true,
+    "container_outcome": {
+      "exit_code": 0,
+      "oom_killed": false,
+      "restart_count": 0,
+      "docker_start_cli_exit_code": 0
+    },
+    "actual_directory_descriptor_symlink_atomic_rename_metadata_and_fsync_controls": true,
+    "filesystem_is_task_owned_tmpfs_not_production_disk": true
+  },
+  "final_windows": {
+    "tests_executed": 113,
+    "passed": 101,
+    "skipped": 12,
+    "ordered_test_ids_sha256": "1e8b402e8c81e7c1f48e869f174bf6f6d1fe0a7b6887d595ad036b27bfc62aca",
+    "retained_log": {
+      "bytes": 18920,
+      "sha256": "4eaf245532597df65cebb76683ad64414fef62e10cb6f5d823b35ae033f94897"
+    },
+    "same_ordered_test_ids_as_final_linux": true,
+    "twelve_symbolic_link_controls_skipped_due_to_windows_privilege": true,
+    "all_twelve_actually_executed_and_passed_in_linux": true,
+    "no_independent_windows_dispatch_input_manifest_claimed": true
+  },
+  "first_scope_preserved": {
+    "linux_passed": 97,
+    "new_methods_added": 16,
+    "old_log_receipt_and_source_copies_byte_preserved": true,
+    "later_success_not_written_into_first_scope": true
+  },
+  "technical_controls": [
+    "explicit exact-eight-file approval required before production adapter construction",
+    "fresh loaded-image combined capacity63 and new independent five-component backup required",
+    "new matching preparation63/migration64/cycle/receipt bindings; old46/47 rejected",
+    "actual available-local SHA coverage bound to independent counts, not clean alone",
+    "only serial API -> standard worker -> Web; no build, pull, migrate or dependency startup",
+    "new heartbeat cannot be substituted by old idle; running supervisor may briefly hold its real guard",
+    "Docker config image identity, exact environment/command/full host config and complete mount set",
+    "original production zero/640-MiB and 1280-MiB swap preserved, not replaced by CI attributes",
+    "no pointer advance before independent matching-runtime, health, data and anonymous/TLS checks",
+    "three original state keys; uid/gid/mode and authoritative root symlink preserved",
+    "exclusive pending/retained files; atomic rename/fsync; content/link/rollback races rejected",
+    "failure or delivery uncertainty retained; no blind retry, downgrade, old worker or automatic rollback",
+    "both stdout and stderr log streams inspected in memory; private subprocess errors suppressed"
+  ],
+  "production": {
+    "rechecked_this_continuation": false,
+    "last_verified_at": "2026-11-15T19:27:00.864037+00:00",
+    "last_verified_revision": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+    "last_verified_schema": [
+      "20261108_0060"
+    ],
+    "last_verified_old_services_healthy_idle": true,
+    "exact_eight_file_isolation_user_approval_present": false,
+    "isolation_move_or_delete_performed_this_continuation": false,
+    "new_backup_migration_or_rollout_performed_this_continuation": false,
+    "new_preparation63_or_migration64_receipts_created_by_this_task": false,
+    "rollout65_and_finalization66_dispatched": false,
+    "legacy46_or47_replayed": false,
+    "no_deployment_operation_this_continuation": true
+  },
+  "preservation": {
+    "existing_reliability_receipts_byte_identical": 109,
+    "unrelated_files_byte_identical": 12,
+    "user_tsbuildinfo_byte_identical": true,
+    "all_ten_original_local_containers_unchanged": true,
+    "only_verified_stopped_synthetic_test_containers_removed": true,
+    "original_ci_dispatch_first_read_failure_and_release_proof_bytes_preserved": true,
+    "no_repository_product_dependency_test_workflow_or_migration_change": true,
+    "no_new_commit_push_ci_dispatch_waiter_or_automation": true
+  },
+  "remaining": [
+    "User must explicitly approve only the eight-file reversible non-cleaned isolation.",
+    "Prepare/review a new63/64 operator; no such operation/receipt has been fabricated.",
+    "Fresh capacity, stopped writers/leases, actual isolation preservation and complete zero-issue SHA audit.",
+    "New independent five-component backup, bounded exact0061 migration, matching rollout and independent health.",
+    "Only after successful deployment investigate unnecessary CI duration without removing original gates.",
+    "Product acceptance remains user-owned and is not claimed by these controls."
+  ]
+}

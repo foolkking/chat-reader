@@ -149,7 +149,7 @@ def bounded_zip_session(record) -> bool:
 
 
 @contextmanager
-def sequential_analysis_admission(db, record):
+def sequential_analysis_admission(db, record, *, archive_changes=None):
     """Hold one parser lane; admit only bytes of the unit actually being read.
 
     Bounded ZIPs retain their session-wide live workspace budget. Materializing
@@ -160,7 +160,9 @@ def sequential_analysis_admission(db, record):
     if bounded_zip_session(record) or (
         len(originals) == 1 and originals[0].source_type == "adaptive_archive"
     ):
-        with import_analysis_admission(db, record, stage="analysis", force_memory_check=True):
+        with import_analysis_admission(
+            db, record, stage="analysis", force_memory_check=True, archive_changes=archive_changes,
+        ):
             yield
         return
     with uploads.bounded_analysis_admission_sync([0], force_memory_check=True, wait_for_slot=False, db=db):
@@ -287,7 +289,7 @@ def _bounded_directory(source: BinaryIO) -> bool:
 
 def _qualifies(source: BinaryIO) -> bool:
     from app.services.adaptive_import.archive_sources import (
-        _effective_path, _is_exporter_manifest, _read_member_bytes, _validated_members,
+        _conversation_document_paths, _effective_path, _is_exporter_manifest, _read_member_bytes, _validated_members,
     )
 
     position = source.tell()
@@ -310,8 +312,7 @@ def _qualifies(source: BinaryIO) -> bool:
                 manifest = json.loads(_read_member_bytes(archive, info, MAX_TEXT_BYTES))
             dedicated = bool(main and _is_exporter_manifest(manifest))
             documents = [paths[main]] if dedicated else [
-                info for path, info in paths.items()
-                if Path(path).suffix.casefold() in {".md", ".markdown"}
+                paths[path] for path in _conversation_document_paths(paths)
             ]
             if len(documents) != 1 or documents[0].file_size > MAX_TEXT_BYTES:
                 return False
@@ -341,10 +342,61 @@ def _owned_archive(record, *, replacement=None) -> tuple[Path | None, BinaryIO |
     return _artifact_path(record, originals[0]), None
 
 
+def _catalog_selection_qualifies(record, archive_changes=None) -> bool:
+    """Do not apply an initial one-document proof to a broader explicit review."""
+    from app.services.adaptive_import.archive_sources import CATALOG_VERSION, archive_catalog
+    from app.services.adaptive_import.contracts import AdaptiveImportError
+
+    originals = [item for item in record.artifacts if item.source_type != "adaptive_archive_document"]
+    if len(originals) != 1 or originals[0].source_type != "adaptive_archive":
+        return False
+    artifact = originals[0]
+    summary = getattr(artifact, "parsed_summary", None) or {}
+    if not summary.get("archive_catalog_version"):
+        return archive_changes is None
+    if summary["archive_catalog_version"] != CATALOG_VERSION:
+        return False
+    try:
+        catalog = archive_catalog(record, artifact.id)
+        selection = {
+            member["member_id"]: {"use": member["use"], "byte_size": member.get("byte_size")}
+            for member in catalog["members"]
+        }
+        if archive_changes is not None:
+            if (str(artifact.id) != archive_changes.get("artifact_id")
+                    or catalog["classification_version"] != archive_changes.get("expected_version")):
+                return False
+            for change in archive_changes.get("changes") or []:
+                member = selection.get(str(change.get("member_id")))
+                if member is None or change.get("use") not in {"conversation", "attachment", "excluded"}:
+                    return False
+                # A newly enabled body and its references have not been
+                # bounded yet. Admit that first inspection with normal RAM.
+                if change["use"] == "conversation" and member["use"] != "conversation":
+                    return False
+                member["use"] = change["use"]
+            for change in archive_changes.get("reference_changes") or []:
+                target_id = change.get("target_member_id")
+                if target_id is not None:
+                    target = selection.get(str(target_id))
+                    if target is None or target["use"] == "conversation":
+                        return False
+                    target["use"] = "attachment"
+        documents = [member for member in selection.values() if member["use"] == "conversation"]
+        attachments = [member for member in selection.values() if member["use"] == "attachment"]
+        return (
+            len(documents) == 1 and int(documents[0]["byte_size"] or 0) <= MAX_TEXT_BYTES
+            and len(attachments) <= MAX_ATTACHMENTS
+            and all(int(member["byte_size"] or 0) <= MAX_ATTACHMENT_BYTES for member in attachments)
+        )
+    except (AdaptiveImportError, OSError, ValueError, TypeError, KeyError):
+        return False
+
+
 @contextmanager
 def import_analysis_admission(
     db, record, *, stage="analysis", force_memory_check=False,
-    sizes=None, replacement=None,
+    sizes=None, replacement=None, archive_changes=None,
 ):
     """Share the normal semaphore and a DB-wide lightweight lane.
 
@@ -411,7 +463,7 @@ def import_analysis_admission(
             qualifies = _qualifies(stream)
         else:
             qualifies = False
-        if qualifies:
+        if qualifies and (replacement is not None or _catalog_selection_qualifies(record, archive_changes)):
             if stage != "commit":
                 profile = {"kind": "bounded_analysis"}
             else:

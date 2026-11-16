@@ -1,6 +1,73 @@
 # Testing
 
-## Cold merge admission and scoped repair verification — 2026-11-16
+## ZIP Markdown-resource candidate verification — 2026-11-16
+
+Current source prioritizes the ZIP attachment fix, including arbitrary deeper
+directories, wrapper-relative paths, manual body/owner choices and old catalog
+compatibility. V1 and v2 must retain exact attachment bytes/occurrences,
+source validation, CRC/scanner rejection and whole-ZIP rollback. The actual
+pre-repair v1 partial/source failures and catalog counter/ordinal failures are
+retained, not relabelled as passes.
+
+Final31-file related API execution passes615/6 original environment skips in
+20m19s, including all98 new ZIP cases. The earlier608/6 matrix has its own
+seven-input checkpoint, before the final seven controls and three small fixes;
+the scopes overlap and must not be added. Fresh owned PostgreSQL17 reruns36
+original analysis/owner/upload/bundle cases with zero skips, then stops only
+that verified loopback cluster and retains its data/evidence.
+Web lint/typecheck, single head0061 and unchanged CI Node89/Python100 controls
+pass;1424 inputs,19 protected files and the user's tsbuildinfo are unchanged.
+[Scoped verification](evidence/reliability-2026-11-16/ci-zip-markdown-verification.json) /
+[exact inputs](evidence/reliability-2026-11-16/ci-zip-markdown-inputs.json) preserve
+all actual failures, including the later legacy binding and fixture/wrapper
+failures. Actual full collection7010 is not execution acceptance;213 portable
+IDs (old115 plus ZIP98) require individual PASSED outcomes in the fresh CI.
+The six local skips are four Windows symlink privileges and two unconfigured
+Exporter sources; real user ZIPs are not replayed to remove them.
+This is not full Linux/PWA,
+exact-image memory, CI or deployment acceptance. All six original jobs and five
+resource/native gates require fresh ordinary full CI with empty quality source,
+then a new real55-minute UTC/monotonic wait. See the
+[single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md); CI optimization remains
+preserved and paused until this product fix is deployed.
+
+## Exact full CI and independent production verification pass — 2026-11-16
+
+Exact2463f298/43737444629 attempt1 runs ordinary full mode with empty quality
+source. All six jobs pass in3483 seconds after the real fresh3300-second
+UTC/monotonic wait; API6909/3 original skips/5 warnings executes all6912 cases,
+including every115 new portable ID as PASSED. Web14, mounted45, Settings470+
+independent restore1, primary Reader9/all27 cold physical-frame checks, original
+64+12+4/cold Viewer and all five unchanged memory cases independently pass.
+The [byte-preserved release proof](evidence/reliability-2026-11-16/ci-cold-merge-independent-release.json)
+also verifies official provenance,35 OCI blobs,23 application-layer diff IDs,
+393 embedded API files and Web revision. Earlier failures remain failures.
+
+The earlier production192-MiB/no-extra-swap read-only audit exits1 without OOM:
+2839 referenced files pass SHA, but8 complete/classifiable orphan issues remain.
+Independent reference/hash checks prove those8 are canonical-byte duplicates,
+not omitted derivatives; successful diagnostic execution does not mean clean
+release acceptance. [Historical held preparation](evidence/reliability-2026-11-16/ci-cold-merge-production-held.json).
+The subsequent separately authorized reversible eight-file move, zero-issue
+SHA audit, independent five-component backup, exact0061 migration and rollout/
+atomic pointer completed. Independent live84 verifies exact images/RootFS,
+health/TLS/access, configuration/other containers, both backups and all eight
+protected originals. [Release evidence](evidence/reliability-2026-11-16/ci-cold-merge-production-release.json).
+Final native operator controls224 Linux passes/0skip overlap earlier scopes;
+Windows212/12 privilege skips are covered by Linux. This is not user product
+acceptance, a production-backup restore drill or proof of the older151ms cause.
+
+Production keeps640MiB memory/1280MiB swap, distinct from CI's five no-extra-swap
+cases. After user writes resume, full-volume equality to the stopped snapshot
+is not a health invariant. Independent83 rechecks every original871 import file/
+1,141,001,405 bytes in the retained backup, without restoring files or stopping
+new work; the specific cause of15 live files without inspected references is
+not proven. Original65/70 and read-only79/80 failures remain preserved.
+Remaining CI scheduling optimization requires a fresh full exact-source run;
+do not remove tests, lower native bounds, share a mutable browser DB, or replace
+the actual55-minute UTC/monotonic wait with inherited clocks.
+
+## Earlier cold merge admission and scoped repair verification — 2026-11-16
 
 Exact cd392195/43725701515 fails API27, Web merge4 and Settings2 after the
 actual55-minute wait. The API and browser logs agree on unprimed merge policy

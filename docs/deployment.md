@@ -1,6 +1,21 @@
 # 生产部署
 
-## 当前持续发布授权 — 2026-11-15
+## 当前优先级：ZIP附件识别修复的fresh发布 — 2026-11-16
+
+用户暂缓CI优化，先修任意辅助子目录Markdown附件默认误作对话的问题。
+[源码合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16) /
+[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)记录本候选及回归边界。
+原六job和全部门禁恢复；本次需选择性提交/推送、空quality source的普通完整CI、
+新真实55分钟双时钟等待、独立制品核验，再做新部署。schema仍0061，无新迁移。
+2463的63/64/74/75已完成且绑定旧前态，不能重放给本候选；必须新容量、
+自然完成活动任务/旧租约释放、新独立五组件备份、精确镜像及独立运行健康。
+不终止用户新导入、不清队列/volume、不覆盖env或dirty checkout；原两备份与
+八文件可逆保护保留。部署成功后才恢复CI优化；用户负责产品验收。
+[最终专项615/6、ZIP98及PG36/0skip](evidence/reliability-2026-11-16/ci-zip-markdown-verification.json)
+已通过，独立测试库停止且资料保留；这是新普通完整CI前的本地证据，不继承
+2463的CI/镜像、停写快照或发布阶段，也不替代新的制品和运行准入。
+
+## 上一发布已完成（接续CI优化随后暂停）— 2026-11-16
 
 最新指示覆盖下方历史“确认派发后暂停”：修复、验证、选择性提交/正常推送，
 以空quality source派发普通完整CI，从新等待器起真实等55分钟后自行查看；
@@ -8,8 +23,27 @@
 用户负责产品验收；全部自动质量、320/640MiB无swap、制品及原生门禁保留。
 部署前重新检查容量、停写备份、旧执行/租约释放、0061迁移与精确镜像，
 部署后独立核对运行健康。不清理生产、不重放来源、不建自动安排。
-生产3564cbf/schema0060只是上次验证指针，未作本轮fresh准入；
-当前进度与证据只见[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+2463f298/43737444629完整CI和独立制品通过，58分03秒；随后获单独批准的
+63停写/可逆隔离/零issue SHA审计/新五组件备份、64精确0061迁移、74续跑及
+75原子发布指针均已完成。84独立复查在11:50 +08:00通过，现役
+**2463f298/20261112_0061**。65的Compose null继承误判和70的完整HostConfig
+Mounts数组顺序误判已定点修正；真实配置/挂载选项不放宽，原失败回执保留。
+74只启动剩余Web，没有重建已健康API/worker；不重放发布或重启旧worker。
+
+保留原`chat-reader-20261110T155821Z`（source865b0a6）及独立
+`chat-reader-20261116T024231Z`（停写source3564cbf/schema0060，关闭去重）；
+后者五SHA、四gzip/tar及PG TOC已验证，没有与旧备份共享hardlink。
+原8文件共3,359,426 bytes可逆保全，inode/元数据不变，保护目录不受自动清理。
+生产worker仍640MiB memory/1280MiB swap，不能冒称生产无额外swap。
+指针保留原三keys、uid/gid/mode、根软链接及旧字节，没有旧worker直接回退。
+
+用户写入已恢复；79/80的停写全卷恒等假设失败不是当前发布失败。83完整验证
+原871 imports/1,141,001,405 bytes仍在新备份；不恢复随后缺失文件或干预新任务。
+[独立发布证据](evidence/reliability-2026-11-16/ci-cold-merge-production-release.json) /
+[历史阻塞](evidence/reliability-2026-11-16/ci-cold-merge-production-held.json) /
+[唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+下一步是CI调度优化及新完整CI实测，不是再次部署本候选。用户产品验收不改标；
+未来发布仍需新容量、停写备份、schema/job兼容与精确镜像/独立健康准入。
 
 ## 前一普通完整CI授权 — 2026-11-14（历史：确认派发后暂停）
 

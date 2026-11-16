@@ -731,18 +731,23 @@ def update_adaptive_import_archive(
     if not get_feature_policy(db).allow_user_import:
         raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled by the system administrator."})
     removed_paths: list[Path] = []
-    if bounded_zip_session(record):
-        if int((artifact.parsed_summary or {}).get("classification_version") or 0) != payload.expected_version:
-            raise HTTPException(status_code=409, detail={
-                "code": "ARCHIVE_CLASSIFICATION_STALE", "message": "The ZIP preview changed. Refresh before saving.",
-            })
+    bounded_archive = bounded_zip_session(record)
+    if (bounded_archive or artifact.source_type == "adaptive_archive") and (
+        int((artifact.parsed_summary or {}).get("classification_version") or 0) != payload.expected_version
+    ):
+        raise HTTPException(status_code=409, detail={
+            "code": "ARCHIVE_CLASSIFICATION_STALE", "message": "The ZIP preview changed. Refresh before saving.",
+        })
+    if bounded_archive:
         return queue_operation(db, record, "classification", {
             "artifact_id": str(artifact.id), **payload.model_dump(mode="json"),
         })
     mutation_committed = False
     try:
         with archive_file_recovery(record):
-            with sequential_analysis_admission(db, record):
+            with sequential_analysis_admission(db, record, archive_changes={
+                "artifact_id": str(artifact.id), **payload.model_dump(mode="json"),
+            }):
                 removed_paths = reclassify_archive(
                     db,
                     record,

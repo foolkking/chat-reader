@@ -66,7 +66,10 @@ def prospective_record(record, payload):
 def operation_admission(db, record, payload):
     from app.services.adaptive_import.memory_budget import sequential_analysis_admission
     candidate = prospective_record(record, payload)
-    with sequential_analysis_admission(db, candidate):
+    with sequential_analysis_admission(
+        db, candidate,
+        archive_changes=payload.get("arguments") if payload.get("operation") == "classification" else None,
+    ):
         yield
 
 

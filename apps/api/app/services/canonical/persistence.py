@@ -25,7 +25,7 @@ from app.models.render_block import RenderBlock
 from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
 from app.services.canonical.block_builder import build_basic_render_blocks
-from app.services.adaptive_import.archive_sources import archive_member_stream, archive_missing_member
+from app.services.adaptive_import.archive_sources import archive_member_stream, archive_missing_member, verify_archive_sources
 from app.services.adaptive_import.contracts import AdaptiveImportError
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import (
@@ -276,6 +276,8 @@ def commit_import_preview(
     conversation_ids: list[uuid.UUID] = []
     total_messages = 0
     all_warnings: list[str] = []
+    verified_archive_sources: set[str] = set()
+    atomic_zip_import = any(artifact.source_type == "adaptive_archive" for artifact in artifacts)
     from app.services.ownership import OwnershipScope, get_owned
     import_scope = OwnershipScope(import_record.owner_user_id, include_legacy_unowned=import_record.owner_user_id is None)
     # PostgreSQL starts a real transaction on the reads above. Python's legacy
@@ -309,6 +311,7 @@ def commit_import_preview(
                         progress_callback=progress_callback,
                         processed_before=total_messages,
                         total_messages=total_expected_messages,
+                        verified_archive_sources=verified_archive_sources,
                     )
                     add_conversation_to_project(db, target_project.id, conversation.id, added_by="system", ownership_scope=import_scope)
                     _report(progress_callback, "headings", 78, total_messages, total_expected_messages)
@@ -323,7 +326,7 @@ def commit_import_preview(
             except Exception as exc:
                 from app.services.task_errors import import_failure_from_exception
                 failure_code = import_failure_from_exception(exc, stage="commit")["code"]
-                if conversation_draft.stream_records is not None or failure_code in {"UPLOAD_MEMORY_PRESSURE", "IMPORT_WORKSPACE_EXCEEDED",
+                if atomic_zip_import or conversation_draft.stream_records is not None or failure_code in {"UPLOAD_MEMORY_PRESSURE", "IMPORT_WORKSPACE_EXCEEDED",
                                     "UPLOAD_QUEUE_FULL", "UPLOAD_QUEUE_TIMEOUT", "IMPORT_STORAGE_FULL"} or isinstance(exc, ImportDraftError):
                     db.rollback()
                     raise CommitImportError("The bounded import could not be committed; no conversation was published.") from exc
@@ -568,7 +571,17 @@ def _persist_conversation(
     progress_callback: ProgressCallback | None = None,
     processed_before: int = 0,
     total_messages: int = 0,
+    verified_archive_sources: set[str] | None = None,
 ) -> Conversation:
+    if verified_archive_sources is None:
+        verified_archive_sources = set()
+    if not verified_archive_sources and any(
+        artifact.source_type == "adaptive_archive" for artifact in artifacts
+    ):
+        # Draft iteration has already entered the real admission lane. Verify
+        # all original ZIPs before the first canonical write, and share this
+        # proof across their conversations and attachment streaming checks.
+        verify_archive_sources(import_record, verified_archive_sources)
     conversation = Conversation(
         id=uuid.uuid4(),
         owner_user_id=import_record.owner_user_id,
@@ -592,7 +605,9 @@ def _persist_conversation(
     db.add(conversation)
     db.flush()
 
-    attachment_map = _persist_canjson_attachments(db, import_record, conversation, draft)
+    attachment_map = _persist_canjson_attachments(
+        db, import_record, conversation, draft, verified_archives=verified_archive_sources,
+    )
     if draft.stream_records is not None:
         from app.services.canonical.stream_persistence import persist_stream_messages
         persist_stream_messages(db, conversation, draft, attachment_map,
@@ -856,11 +871,14 @@ def _persist_canjson_attachments(
     import_record: ImportRecord,
     conversation: Conversation,
     draft: PersistableConversation,
+    *,
+    verified_archives: set[str] | None = None,
 ) -> dict[str, uuid.UUID]:
     from app.services.adaptive_import.memory_budget import checkpoint
 
     mapping: dict[str, uuid.UUID] = {}
-    verified_missing_archives: set[str] = set()
+    if verified_archives is None:
+        verified_archives = set()
     for raw in draft.attachments:
         checkpoint()
         if not isinstance(raw, dict) or raw.get("record_type") != "attachment":
@@ -881,7 +899,7 @@ def _persist_canjson_attachments(
         asset: AssetObject | None = None
         detected_mime = _optional_text(raw.get("detected_mime_type"))
         scan_status = "not_available"
-        missing_archive_attachment = archive_attachment and archive_missing_member(import_record, raw, verified_missing_archives)
+        missing_archive_attachment = archive_attachment and archive_missing_member(import_record, raw, verified_archives)
         if archive_attachment and not missing_archive_attachment:
             store = get_asset_store()
             archive = source = None

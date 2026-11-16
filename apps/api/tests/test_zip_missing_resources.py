@@ -94,8 +94,29 @@ def test_missing_relative_resource_owned_by_each_actual_document(zip_client):
         "one.md": b"# One\n\n## User\nOne\n\n## Assistant\n![a](assets/missing.png)\n",
         "nested/two.md": b"# Two\n\n## User\nTwo\n\n## Assistant\n![b](../assets/missing.png)\n",
     }), "application/zip")])
-    # Generic Markdown ZIPs use the existing mapping workflow.
+    # Deeper Markdown starts excluded; select this actual second transcript
+    # explicitly, retaining its parent-relative resource and ownership checks.
     from test_adaptive_import_api import _complete_analysis
+    endpoint = (
+        f"/api/adaptive-import/sessions/{session['import_id']}/archives/"
+        f"{session['archives'][0]['artifact_id']}"
+    )
+    catalog = zip_client.get(endpoint).json()
+    nested = next(item for item in catalog["members"] if item["path"] == "nested/two.md")
+    assert nested["use"] == "excluded"
+    response = zip_client.put(endpoint, json={
+        "expected_version": catalog["classification_version"],
+        "changes": [{"member_id": nested["member_id"], "use": "conversation"}],
+    })
+    assert response.status_code in (200, 202), response.text
+    session = response.json()
+    if response.status_code == 202:
+        session = _complete_analysis(zip_client, session)
+    catalog = zip_client.get(endpoint).json()
+    documents = {item["member_id"] for item in catalog["members"] if item["use"] == "conversation"}
+    missing = next(item for item in catalog["members"] if item["path"] == "assets/missing.png")
+    assert set(missing["owner_document_ids"]) == set(missing["referenced_by"]) == documents
+    # Generic Markdown ZIPs retain the existing mapping workflow.
     for family in session["families"]:
         if family["handling_class"] == "MAPPABLE":
             response = zip_client.post(

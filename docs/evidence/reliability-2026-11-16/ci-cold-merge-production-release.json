@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-16T04:28:58.105824+00:00",
+  "status": "independently_verified_production_release",
+  "source_sha": "2463f2985c367e681c3443b1b485e57f2925b313",
+  "schema_head": "20261112_0061",
+  "accepted_full_ci": {
+    "run_id": 43737444629,
+    "attempt": 1,
+    "quality_source_run_id": "",
+    "elapsed_seconds": 3483,
+    "independent_proof_sha256": "194256946fb0a26243d681e79c84d62551767dc2bae7b23365854b2ae26164d1"
+  },
+  "release_finalized_at": "2026-11-16T03:33:16.963873+00:00",
+  "independently_verified_at": "2026-11-16T03:50:04.919414+00:00",
+  "runtime": {
+    "matching_exact_images_and_rootfs_verified": true,
+    "api_web_postgresql_healthy": true,
+    "worker_alive_with_fresh_heartbeat": true,
+    "worker_memory_limit_bytes": 671088640,
+    "worker_memory_swap_limit_bytes": 1342177280,
+    "complete_host_configuration_preserved": true,
+    "only_worker_mount_declaration_order_normalized": true,
+    "anonymous_statuses": {
+      "/api/app-info": 401,
+      "/api/capabilities": 401,
+      "/api/conversations": 401,
+      "/api/health": 200,
+      "/api/internal/diagnostics": 404,
+      "/api/projects": 401
+    },
+    "production_configuration_dirty_checkout_and_other_containers_preserved": true
+  },
+  "release_pointer": {
+    "original_three_keys_only": true,
+    "owner_mode_and_root_symlink_preserved": true,
+    "old_pointer_bytes_preserved_without_direct_old_worker_rollback": true,
+    "directory_fsync_executed": true
+  },
+  "backups": {
+    "original": {
+      "name": "chat-reader-20261110T155821Z",
+      "source_sha": "865b0a6e381bb3d5c2afba06b5c3aa4c59a61092",
+      "retained_and_reverified": true
+    },
+    "new": {
+      "name": "chat-reader-20261116T024231Z",
+      "source_sha": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+      "schema": "20261108_0060",
+      "component_checksums": {
+        "assets.tar.gz": "db79eb4d604eb5a96685bca2780583a17b5c62be02435a83b772ae568d18833e",
+        "exports.tar.gz": "d1e96d743f9334d7c30266c42625a3639b7d8cd618cc1a3ab25d1d43aa0bf7d4",
+        "imports.tar.gz": "145046e164032c10ab32ddcdc2911654abc73dc0806fdbe4474baa1954bbaaca",
+        "offline.tar.gz": "4e2394188335bdf9185e8990a8f6bd163dce9e7f5a37a4de609b6d45dc82c5d6",
+        "postgres.dump": "9bb27e7d00037e32602ed6dcb1e00eb94b7361d8ce7a1ad0a0c3cb04859b5230"
+      },
+      "gzip_crc_count": 4,
+      "tar_stream_count": 4,
+      "postgres_toc_verified": true,
+      "independent_components_no_old_backup_hardlinks": true
+    },
+    "independent_live_check_rechecks_metadata_not_new_full_crc_or_restore": true,
+    "production_backup_restore_or_offsite_recovery_not_accepted": true
+  },
+  "eight_file_protection": {
+    "scope_count": 8,
+    "bytes": 3359426,
+    "aggregate_set_sha256": "b217f35bf0889730a0d383e179e85b0f1cb3ad894f469b074b147976451e63f8",
+    "separately_authorized_reversible_move_completed": true,
+    "all_bytes_inodes_and_metadata_preserved": true,
+    "independently_reverified": true,
+    "no_file_deletion_or_expanded_cleanup": true
+  },
+  "post_release_user_activity": {
+    "writes_resumed_and_canonical_counts_advanced": true,
+    "frozen_full_volume_equality_not_a_runtime_invariant": true,
+    "original_import_backup": {
+      "aggregate_content_sha256": "c238177d353110426271cb5ea4ecb2f3de2a446ef070294a6418370580bd9e05",
+      "bytes": 1141001405,
+      "files": 871
+    },
+    "all_original_import_backup_bytes_verified": true,
+    "missing_original_files_in_later_snapshot": 19,
+    "missing_original_bytes_in_later_snapshot": 5311810,
+    "missing_canceled_source_references": 4,
+    "missing_noncanceled_source_references": 0,
+    "missing_draft_references": 0,
+    "files_without_inspected_references": 15,
+    "reference_scope": "SourceArtifact canonical/raw URI and ImportRecord draft URI; not an exhaustive legacy filename or BackgroundJob payload audit.",
+    "specific_deletion_cause_for_unreferenced_files_not_proven": true,
+    "no_file_restore_job_interruption_or_user_source_replay": true
+  },
+  "native_operator_controls": {
+    "linux_passed": 224,
+    "linux_skipped": 0,
+    "windows_passed": 212,
+    "windows_symlink_privilege_skips": 12,
+    "overlapping_previous_controls_not_added": true
+  },
+  "preserved_failures": [
+    "original preparation46 and unexecuted47",
+    "original rollout65 and70",
+    "read-only frozen-volume equality79 and80",
+    "original release first-read in_progress snapshot"
+  ],
+  "source_receipts": [
+    {
+      "name": "release-preparation-63.json",
+      "sha256": "c336c52a2ac08c74d61386e2699dd599384982c5ebf19581ad6c37485efe47ab",
+      "recorded_at": "2026-11-16T02:50:24.132143+00:00",
+      "exit_code": 0
+    },
+    {
+      "name": "release-migration-64.json",
+      "sha256": "1455c44e142f16051b98ac085c3ef72171449ac1681500fb9bc77b9b28bef391",
+      "recorded_at": "2026-11-16T02:52:11.193759+00:00",
+      "exit_code": 0
+    },
+    {
+      "name": "release-rollout-74.json",
+      "sha256": "d4cba50c478b6356a623aea0c2d7a871aa1970917ff885a973457c424beba83c",
+      "recorded_at": "2026-11-16T03:32:24.207672+00:00",
+      "exit_code": 0
+    },
+    {
+      "name": "release-finalization-75.json",
+      "sha256": "3f3b40b86d7f71d5b9784abd5fa1f958ff9cc48a6c9945188d178ecabb910d75",
+      "recorded_at": "2026-11-16T03:33:14.566624+00:00",
+      "exit_code": 0
+    },
+    {
+      "name": "resume-native-controls-78.json",
+      "sha256": "991c9fcf4d9e33b08ff1cb734f99cd62c44f9ced4c2e93be6308afdfcc862276",
+      "recorded_at": "2026-11-16T03:29:52.418504+00:00",
+      "exit_code": 0
+    },
+    {
+      "name": "release-import-delta-verification-83.json",
+      "sha256": "4580b6844fb5b3d1c8b69ae60fd0717e289df0137830504d7e0834512a0a5c3e",
+      "recorded_at": "2026-11-16T03:47:52.649586+00:00",
+      "exit_code": 0
+    },
+    {
+      "name": "release-independent-live-verification-84.json",
+      "sha256": "7eebdd8ca4411478a1631a373cb3c1d61981fbea97274f35dd4ae566a7f70378",
+      "recorded_at": "2026-11-16T03:50:02.526700+00:00",
+      "exit_code": 0
+    }
+  ],
+  "remaining": [
+    "CI scheduling optimization must be validated by a fresh complete exact-source CI after a real55-minute wait.",
+    "Product acceptance remains user-owned; no authenticated production UI, real-device or production-backup restore PASS is claimed."
+  ],
+  "privacy": {
+    "no_conversation_ids_body_user_paths_share_tokens_cookies_credentials_or_environment_values": true
+  }
+}

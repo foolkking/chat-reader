@@ -1,21 +1,35 @@
 # 文档导航
 
-## 当前任务：冷合并准入修复与完整CI发布闭环 — 2026-11-16
+## 当前优先级：ZIP Markdown附件误识别 — 2026-11-16
 
-cd392195/43725701515正式失败：API6874通过/27失败/3跳过，Web编辑117/4、
-Settings468/2；未预热的合并入口全局策略查找抛NameError，API/浏览器日志一致。
-Reader及两发布job跳过，没有可部署制品。
-[正式失败](evidence/reliability-2026-11-16/ci-cold-merge-failure.json) /
-[后端合同](system/BACKEND_AND_API.md#cold-merge-policy-resolution--source-2026-11-16) /
+CI调度优化已保全暂停；先修任意辅助子目录Markdown默认误作对话的问题。
+见[源码合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16) /
+[唯一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+最终相关API615/6原环境skip（含新增ZIP98全部通过）、真实PG36/0skip及
+[1424输入/失败保全证据](evidence/reliability-2026-11-16/ci-zip-markdown-verification.json)
+通过，不是完整CI。最后已验生产为2463f298/0061；还需普通完整CI、新真实55分钟
+等待、独立制品和fresh部署，成功后才接回CI优化。用户负责产品验收。
+
+## 上一发布：2463f298/0061已部署（随后CI优化已暂停）— 2026-11-16
+
+已提交/推送2463f298，普通完整CI43737444629六job全绿，58分03秒；
+真实新55分钟双时钟等待完成，API6909/原3跳过、115新增逐项通过，
+Web14、mounted45、Settings470+restore1、Reader9/27 cold及五项memory通过。
+[独立精确制品证明](evidence/reliability-2026-11-16/ci-cold-merge-independent-release.json) /
 [唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
-产品仅补业务调用前的真实策略导入，保留receipt先行、所有权、延迟导出和原门槛；
-新增8个独立解释器控制。Linux/PG244、冷导入54（重叠范围）、原浏览器4+2、
-新550输入Windows构建和原五项memory均通过，不等于完整CI/产品验收。
-真实idle约115–116MiB，峰值131–159MiB，不能只宣传增量降低；旧广泛失败保留。
-[验证](evidence/reliability-2026-11-16/ci-cold-merge-verification.json) /
-[1423输入](evidence/reliability-2026-11-16/ci-cold-merge-inputs.json)。
-6912/新增115只是实际收集；接续普通完整CI、全新真实等55分钟后自行查看，
-失败继续修，全绿并独立核验制品后部署，再优化CI耗时。剩余产品验收由用户做。
+生产63/64/74/75已完成，独立84在11:50 +08:00核验精确镜像/RootFS、健康、
+匿名/TLS、配置及其他容器、两备份和8个保护文件通过，现役2463f298/schema0061。
+8文件已按单独批准可逆移动并保留全部字节/inode/元数据；原865b0a6备份与
+新停写3564cbf/0060独立备份均保留，无旧worker直接回退，不重放本次发布。
+[发布及独立复查](evidence/reliability-2026-11-16/ci-cold-merge-production-release.json) /
+[历史阻塞及保全](evidence/reliability-2026-11-16/ci-cold-merge-production-held.json) /
+[后端修复合同](system/BACKEND_AND_API.md#cold-merge-policy-resolution--source-2026-11-16) /
+[原失败与本地限制](evidence/reliability-2026-11-16/ci-cold-merge-verification.json)。
+用户已恢复真实使用，不干预新导入或要求全卷恒等于停写快照；原871个导入文件
+全部字节仍由新备份保护，后续19个live文件缺失的具体删除原因未全部证明。
+接续优化不必要的串行调度，保留全部门禁与独立DB/单worker，必须用新完整CI
+实测；新派发后真实等55分钟自行查看，不建安排。产品验收归用户，旧151ms
+原因不改标，未来发布仍需fresh容量/备份/兼容性/精确镜像与独立健康准入。
 
 ## 前一检查点：小预算 worker 冷启动与持续发布闭环 — 2026-11-15
 

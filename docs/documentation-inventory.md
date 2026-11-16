@@ -1,6 +1,52 @@
 # Markdown 文档台账
 
-## 冷合并准入修复及完整CI接续 — 2026-11-16
+## ZIP Markdown附件优先修复与CI工作隔离 — 2026-11-16
+
+更新Archive合同的默认正文层级、任意辅助目录Markdown资源、显式分类/归属、
+catalog v1可选标记兼容、原小预算准入和提交级SHA/整ZIP回滚边界。
+Project State、导航、部署/环境、测试和唯一Small Host台账同步当前优先级：
+先回归/普通完整CI/独立制品/fresh部署，之后才恢复已在任务临时区保全的12份
+CI改动。原六job与source-proof一并恢复，不独带新的八job证明。
+不重整README/AGENTS，不重写原失败或2463生产发布JSON，不修改其他任务资料、
+用户来源或构建缓存；产品验收仍归用户。
+新增`ci-zip-markdown-verification.json`与`ci-zip-markdown-inputs.json`只记录最终
+专项API615/6、ZIP98、PG36/0skip、重叠初次checkpoint及全部实际失败/原字节SHA。
+完整collection7010与213 portable控制保留原稳定ID，但不是CI运行通过；
+1424输入、19 protected及12暂停CI文件已核验，原生产状态/备份不改写。
+
+## 2463f298/0061发布事实同步与CI优化接续 — 2026-11-16
+
+仅定点更新原八份入口/运行文档及本台账，不重整README/AGENTS或改历史JSON。
+新增`ci-cold-merge-production-release.json`从63/64/74/75/78/83/84成功回执投影
+聚合事实及原始SHA：已部署/独立健康、两备份、原8文件可逆保全、正确生产swap、
+原子指针和最终224重叠控制。79/80冻结全卷假设失败保留；用户写入已恢复，原
+871 imports全部字节仍在备份，15个live文件的具体删除原因未证明，不改称已知。
+Small Host继续是唯一剩余工作台账；CI调度优化须新完整CI实测，产品验收归用户。
+本次状态同步不重放部署/来源，不修改其他任务资料、旧备份或用户构建缓存。
+
+## 前一完整CI通过及部署前重复无主文件保全（历史）— 2026-11-16
+
+仅定点同步原八入口，不重整README/AGENTS、专题架构、旧历史或其他任务资料。
+Project State/导航保持短入口；Small Host仍是唯一进度和剩余授权台账，
+Testing区分真实全量CI、独立制品成功与生产clean=false，Deployment/环境
+同步fresh旧版恢复、未备份/迁移及隔离未授权的边界。CI耗时调查仍在部署之后。
+
+新增`ci-cold-merge-independent-release.json`原字节保存34508-byte独立精确证明，
+六job/6909/115实际执行、原14/470+1/9/27冷帧及五memory通过，35 blobs/23
+应用层diff IDs/393 API文件和Web revision核验；不改旧first-read的in_progress。
+`ci-cold-merge-production-held.json`持有失败46与后续同192MiBexit1/OOM=false
+及独立8重复对象参考检查，只保存聚合/哈希，不持久化真实文件身份/路径/内容。
+这些8文件没有移动/删除，不能把诊断exit0或byte重复当成release clean PASS。
+12无关文件+用户cache及109既有reliability JSON按raw冻结；旧失败/属性不改，
+新证据沿用已有ci-cold-merge-*的-text规则。本批没有新产品、依赖、测试、
+workflow或migration改动，没有新CI派发或部署，待归档不是新发布验收。
+
+续跑追加`ci-cold-merge-deployment-executor-controls.json`，只记录任务临时目录
+65/66准备：Linux113/0skip、Windows101/12权限skip由Linux补测，首97证据保留。
+原入口定点链接同一台账；不把离线控制写成隔离授权、新63/64回执或部署成功，
+不新增长期总览/产品命令或重整历史。原109回执、12无关文件及cache仍按raw保全。
+
+## 前一冷合并准入修复及完整CI接续（历史）— 2026-11-16
 
 仅定点同步原七知识入口，不重整README/AGENTS、旧历史或其他任务资料。
 Project State/导航给短失败与待验证入口；Small Host是唯一进度台账；

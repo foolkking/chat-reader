@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-15T19:15:52.416436+00:00",
+  "status": "full_ci_verified_production_preparation_held_for_protected_duplicate_orphans",
+  "candidate_sha": "2463f2985c367e681c3443b1b485e57f2925b313",
+  "ci": {
+    "workflow_run_id": 43737444629,
+    "attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "quality_source_run_id": "",
+    "url": "https://github.com/foolkking/chat-reader/actions/runs/43737444629",
+    "elapsed_seconds": 3483.0,
+    "elapsed_clock": "official created_at to completed updated_at",
+    "real_fresh_wait_seconds": 3300,
+    "real_both_clock_wait_passed": true,
+    "original_first_read_status_remains_in_progress": true,
+    "official_terminal_receipt": {
+      "bytes": 40843,
+      "sha256": "e4c7020e2baa2cbf0e4d361ac333de05a64e83144a8091a80f9289095e7056c0"
+    },
+    "independent_proof": {
+      "path": "docs/evidence/reliability-2026-11-16/ci-cold-merge-independent-release.json",
+      "bytes": 34508,
+      "sha256": "194256946fb0a26243d681e79c84d62551767dc2bae7b23365854b2ae26164d1"
+    },
+    "jobs": {
+      "web-quality": "success",
+      "api-quality": "success",
+      "settings-quality": "success",
+      "reading-performance-comparison / compare": "success",
+      "build-images": "success",
+      "inspect-release-artifact": "success"
+    },
+    "api": {
+      "passed": 6909,
+      "skipped": 3,
+      "warnings": 5,
+      "seconds": 2270.05,
+      "collected_count_verified": 6912,
+      "new_cases_all_executed_and_passed": 115,
+      "original_supervisor_cases": 17,
+      "real_postgres_supervision_cases": 13,
+      "poll_cases": [
+        1,
+        20
+      ]
+    },
+    "web_gates": 14,
+    "mounted_reader_groups": 45,
+    "settings_primary": 470,
+    "settings_independent_restore": 1,
+    "reader_primary": 9,
+    "cold_runs_all_physical_frames_verified": 27,
+    "original_64_plus12_plus4_and_cold_viewer_frames_verified": true,
+    "memory_cases": 5,
+    "oci_blobs_verified": 35,
+    "application_layer_diff_ids_verified": 23,
+    "embedded_api_files_verified": 393,
+    "embedded_web_revision_verified": true
+  },
+  "production": {
+    "revision": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+    "schema": "20261108_0060",
+    "preparation_status": "failed_before_backup_or_migration_old_services_recovered",
+    "original_failure": {
+      "error_class": "RuntimeError",
+      "no_migration_attempted": true,
+      "old_applications_resumed": true,
+      "phase": "read_only_attachment_hash_audit",
+      "source_lines": [
+        318,
+        55
+      ],
+      "status": "release_preparation_failed_closed"
+    },
+    "original_failed_child_stdout_stderr_exit_and_oom_state_not_retained": true,
+    "new_retained_same_192_mib_audit": {
+      "container_exit_code": 1,
+      "oom_killed": false,
+      "restart_count": 0,
+      "audit": {
+        "applicable": true,
+        "clean": false,
+        "complete": true,
+        "issue_count": 8,
+        "issue_counts": {
+          "ORPHAN_ASSET_FILE": 8
+        },
+        "orphan_classification_safe": true,
+        "read_only": true,
+        "scanned_active_attachment_count": 2916,
+        "scanned_asset_object_count": 2825,
+        "scanned_context_object_count": 14,
+        "scanned_file_count": 2847,
+        "scanned_skill_object_count": 0,
+        "sha256_verified_count": 2839,
+        "storage_backend": "local"
+      },
+      "orphan_summary": {
+        "age_bin_counts": {
+          "1_to_7_days": 8
+        },
+        "aggregate_relative_key_size_and_content_sha256": "b217f35bf0889730a0d383e179e85b0f1cb3ad894f469b074b147976451e63f8",
+        "all_canonical_derivatives_point_to_existing_asset_objects_already_audited": true,
+        "all_storage_path_reference_counts": {
+          "asset_objects.storage_key": 0,
+          "attachment_upload_items.temporary_storage_key": 0,
+          "context_member_objects.storage_key": 0,
+          "skill_file_objects.storage_key": 0
+        },
+        "bytes": 3359426,
+        "canonical_derivative_rows": 36,
+        "file_count": 8,
+        "matches_any_asset_metadata_count": 8,
+        "matches_available_hash_verified_canonical_object_count": 8,
+        "namespace_counts": {
+          "objects": 8
+        },
+        "newest_age_seconds": 101903,
+        "oldest_age_seconds": 101998,
+        "storage_path_columns_checked": 4
+      }
+    },
+    "source58_reference_driver_exit_code": 0,
+    "root_read_permissions_verified": true,
+    "old_candidate_native_identity_equal": true,
+    "all_eleven_containers_preserved_during_independent_reference_diagnostic": true,
+    "canonical_counts": {
+      "asset_objects": 2825,
+      "attachments": 2952,
+      "conversations": 98,
+      "message_versions": 7886,
+      "messages": 7511
+    },
+    "active_imports": 0,
+    "active_jobs": 0,
+    "lock_waits": 0,
+    "worker": [
+      {
+        "age_seconds": 23.50964,
+        "state": "idle"
+      }
+    ],
+    "candidate_images_loaded_but_not_serving": true,
+    "migration_attempted": false,
+    "new_backup_created": false,
+    "original_backup": {
+      "name": "chat-reader-20261110T155821Z",
+      "full_original_checksums": {
+        "assets.tar.gz": "8f1e680cbe03a29bfc7fe099568a4d5f1c826e0f84e37592751df4593b199ac6",
+        "exports.tar.gz": "9e63d6e38687ff6bed80e1e9627438900a35f9228eb7e3888273820e7ae04fde",
+        "imports.tar.gz": "a56fd6917f2df13f5c64e4ce8fc1242bb5a73826127e62a65a7ab84841c5cd80",
+        "offline.tar.gz": "ceb800a7bfef3608d19f6661f194c3fe28b48781f10c7cddc0b1afc14c19d953",
+        "postgres.dump": "d16b9feb8d72d36ed258338e227ea32a81d0a5604a1a6e9ccb016d543843fa01"
+      },
+      "gzip_crc_count": 4,
+      "tar_stream_count": 4,
+      "independent_pg_toc_reverified": true,
+      "not_an_offsite_copy_or_restore_drill": true
+    },
+    "artifact_source_and_runtime_identity_graph_verified": true,
+    "no_data_source_permission_config_volume_or_backup_cleanup_or_mutation": true,
+    "no_ci_resubmission_or_deployment_from_these_diagnostics": true
+  },
+  "retained_diagnostic_receipts": {
+    "capacity-runtime-plan-45.json": {
+      "bytes": 1972,
+      "sha256": "959be02adb5fedfabbf83402b70ea168095dc1deeedf76e0130a52f68c105702"
+    },
+    "release-preparation-46.json": {
+      "bytes": 616,
+      "sha256": "a893792c69bd1fe8b99d06b998fec3489e1e77c720403417d89016dd022e8653"
+    },
+    "native-image-controls-52.json": {
+      "bytes": 2160,
+      "sha256": "3a9be6f5ca69f8f710cbb54ba4ec73e91483a8252597e0e83baa8df9f8f49ae7"
+    },
+    "retained-audit-outcomes-53.json": {
+      "bytes": 498,
+      "sha256": "178767e280c3656d846c6f56c1b230a38fb25ab80afcc92edd3117799ee5d76f"
+    },
+    "retained-audit-outcomes-54.json": {
+      "bytes": 498,
+      "sha256": "4c7a02b4b07f8d5a40039a620f0d06710dd5911a03de764aa639315bc84b48aa"
+    },
+    "retained-journal-and-mount-proofs-55.json": {
+      "bytes": 5594,
+      "sha256": "e8fb1be53c89c6c12ae026a6bf7ec75bdbf74f229de010201b0529f0adc3aaa8"
+    },
+    "source-literal-transport-controls-56.json": {
+      "bytes": 497,
+      "sha256": "2a9d609a94c906b68f39b17079ef43d46e482574cb956ddb243badb2402847c0"
+    },
+    "orphan-scope-read-only-57.json": {
+      "bytes": 485,
+      "sha256": "71e055204718898965b20c371dfb0481dc3df6976de610fe197b8978bfa18885"
+    },
+    "orphan-scope-syntax-correction-58.json": {
+      "bytes": 428,
+      "sha256": "fcb2ef251cd8dddcd5995e3ba4bbde465d57f9cfb80be3599f511ae3db0a8215"
+    },
+    "orphan-scope-read-only-58.json": {
+      "bytes": 4614,
+      "sha256": "14f4452e1a211a4a313ed021ba5f64a699d9cbf2dc32608f0a15f79b256d5052"
+    }
+  },
+  "remaining": [
+    "Explicit authorization before any bounded reversible movement of the eight duplicate orphan files.",
+    "Fresh capacity and stopped-writer/lease/complete zero-issue SHA audit fences.",
+    "New independently verified five-component consistent backup while preserving the original.",
+    "Exact bounded0060->0061 migration; matching API/worker/Web rollout and independent health.",
+    "Only after successful deployment, investigate CI duration without relaxing original gates.",
+    "Product and physical-device acceptance remains user-owned and unverified."
+  ],
+  "no_real_product_ids_paths_filenames_credentials_environment_values_or_raw_errors_persisted": true
+}

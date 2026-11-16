@@ -1,37 +1,73 @@
 # Project State
 
-## Latest: cold merge admission repair and full-CI release loop — 2026-11-16
+## Latest: ZIP Markdown-resource fix before resuming CI optimization — 2026-11-16
 
-Exact cd392195/43725701515 completed/failure after the real55-minute wait:
-API6874 passed/27 failed/3 skipped, Web Source Editor117/4 and Settings468/2.
-Module `__getattr__` does not resolve a function's global lookup; the unprimed
-merge admission raised `NameError: effective_limits`. Official API and browser
-logs agree. Reader and both release jobs skipped; no deployable artifacts.
-[Official failure](docs/evidence/reliability-2026-11-16/ci-cold-merge-failure.json).
+The user paused CI optimization to prioritize Markdown attachments in ZIPs,
+including arbitrarily named auxiliary directories. New generic inspection
+selects only the outermost Markdown layer after safe wrapper normalization;
+deeper Markdown is excluded unless referenced as a file or explicitly enabled
+as a body. Existing review, dedicated exports and older catalog choices remain.
+[Current source contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16).
 
-The only product change imports the real policy at merge admission, after
-receipt replay/conflict and canonical source validation. Lazy compatibility
-exports, passive worker imports, ownership and existing tests/budgets remain.
-Eight new independent-interpreter cases protect cold limits, owned overrides,
-replay/conflict ordering and passive standard-worker loading.
-[Contract](docs/system/BACKEND_AND_API.md#cold-merge-policy-resolution--source-2026-11-16).
+Five API runtime files and scoped tests also close actual v1 source/partial
+commit gaps; original resource, CRC/scanner, ownership and rollback gates stay.
+CI scheduling changes are byte-preserved outside the worktree, with the original
+six-job workflow and its source proof restored together. Final 31-file API
+verification passes615/6 original environment skips, including all98 new ZIP
+cases; fresh PostgreSQL17 passes36/0skip. All1424 inputs,19 protected files and
+the user build cache are verified. [Scoped evidence](docs/evidence/reliability-2026-11-16/ci-zip-markdown-verification.json).
+No new commit, CI, image or deployment is accepted yet. Production's last
+verified identity is **2463f298 / 20261112_0061**.
 
-Local Linux/PG244, overlapping cold-import54, the original four Web/two Settings
-merge browser cases, a fresh550-input Windows production build and all five
-original memory cases pass. Combined idle about115–116MiB includes the standby
-child; absolute peaks131–159MiB and increments16–44MiB are reported together.
-Host-backed diagnostic images, installed Chrome and scoped checks are not
-Linux/full-PWA/release acceptance; prior broad failures remain retained.
-Actual API collection is6912/new115, not execution; new full CI must prove6909
-passes and the original3 Linux skips.
-[Verification](docs/evidence/reliability-2026-11-16/ci-cold-merge-verification.json) /
-[1423 inputs](docs/evidence/reliability-2026-11-16/ci-cold-merge-inputs.json).
+Finish this fix, selectively commit/push ordinary full CI with empty quality
+source, perform a new real55-minute UTC/monotonic wait and independent artifact
+checks, then a fresh deployment. Only afterward restore/reconcile the paused CI
+optimization. Do not replay the completed2463 release or interrupt new imports;
+product acceptance remains user-owned. The
+[single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns remaining work.
 
-Continue selective commit/normal push, ordinary full CI with empty quality
-source, a new real55-minute wait and self-check; repair failures, prove artifacts
-before deployment, then optimize CI duration. User owns product acceptance.
-Production3564cbf/schema0060 is only the earlier verified pointer, not rechecked;
-the old151ms product cause remains unproven. Current progress belongs to the
+## Earlier: 2463f298 / schema0061 deployed; CI scheduling optimization — 2026-11-16
+
+Committed/pushed **2463f298 / CI43737444629 attempt1** passes all six jobs in
+**58m03s**, with empty quality source and a completed real55-minute dual-clock
+wait. API6909 passes/3 original skips, all115 new cases actually PASSED; Web14,
+mounted45, Settings470+independent restore1, Reader9/27 cold physical-frame
+checks and all five original memory gates pass. OCI provenance,35 blobs,
+23 application-layer diff IDs,393 exact API files and embedded Web revision
+are independently verified. [Exact release proof](docs/evidence/reliability-2026-11-16/ci-cold-merge-independent-release.json).
+The cold merge policy repair and its earlier failures remain documented in the
+[contract](docs/system/BACKEND_AND_API.md#cold-merge-policy-resolution--source-2026-11-16) /
+[scoped verification](docs/evidence/reliability-2026-11-16/ci-cold-merge-verification.json).
+
+Production is now **2463f298 / 20261112_0061**. Authorized preparation63,
+migration64, forward rollout74 and atomic pointer75 completed; independent
+live verification84 passed at **2026-11-16 11:50 +08:00**. Exact images/RootFS,
+API/Web/PG health, worker heartbeat, anonymous/TLS boundaries, configuration,
+other containers, both backups and the eight protected files were verified.
+Production retains **640 MiB memory /1280 MiB swap** for the worker; this is
+not CI's no-extra-swap setting. [Scoped release evidence](docs/evidence/reliability-2026-11-16/ci-cold-merge-production-release.json).
+
+The separately approved eight-file reversible move preserves all3,359,426 bytes,
+inodes and metadata outside automatic cleanup. Original backup
+`chat-reader-20261110T155821Z` (source865b0a6) and new independent five-component
+`chat-reader-20261116T024231Z` (stopped source3564cbf/schema0060) remain.
+No direct old-worker rollback or automatic downgrade. Original46/65/70 failures
+and the [held preparation](docs/evidence/reliability-2026-11-16/ci-cold-merge-production-held.json)
+remain historical, not the current release status.
+
+User writes have resumed and canonical counts advanced. A later frozen-volume
+equality diagnostic failed; independent83 verified all original871 import files/
+1,141,001,405 bytes in the retained backup. The19 subsequently missing live files
+have no inspected noncancelled SourceArtifact or draft references; the cause for
+15 without inspected references is not proven. Do not restore files, interrupt
+new imports or require post-release data to equal the stopped snapshot.
+
+Remaining work is CI scheduling optimization and a fresh complete exact-source
+CI with a real55-minute UTC/monotonic wait, not another deployment of2463f298.
+Keep every quality/resource/native gate and isolation boundary; product
+acceptance remains user-owned, and the older151ms cause is not proven.
+Final native operator controls224 Linux passes/0skip overlap earlier113/175/218,
+not additive coverage. Current progress belongs to the
 [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md).
 
 ## Earlier: bounded worker startup and retained resource failure — 2026-11-15

@@ -1,5 +1,50 @@
 # Adaptive Import ZIP Contract
 
+## Markdown resource selection — source candidate 2026-11-16
+
+Generic ZIP inspection selects only the outermost Markdown layer after safe
+member validation and the existing single-wrapper normalization. Directory
+names are not a whitelist: deeper Markdown in any auxiliary directory starts
+excluded, even when its filename or contents resemble a transcript. Real body
+references can propose it as an attachment; otherwise it is not decoded,
+parsed, recursively inspected or silently attached. Equal-depth independent
+documents still enter the existing mapping/review flow.
+
+Explicit member choices remain authoritative. Enabling a previously unselected
+Markdown body verifies its retained source and scans its actual references with
+the existing bounded scanner, including missing/blocked targets. This does not
+overwrite explicit exclusions or attachment-owner choices. Catalog v1 gains
+optional server-owned `classification_explicit` and `references_inspected`
+flags; old catalogs remain readable and their prior selections are retained.
+Already imported conversations and older reviewed sessions are not rewritten
+or automatically replayed. Unreferenced never-selected Markdown resources
+join the existing excluded-resource count; warning ordinals track the current
+selected document order.
+
+The retained v1 small-ZIP lane uses the same default document selection and the
+current/prospective catalog. Enabling another body, multiple selected bodies or
+exceeding the original member caps requires standard admission. Original
+reserve, workspace, source/count/hash and v2 limits remain unchanged.
+Canonical ZIP commit verifies original source bytes before its first
+conversation/attachment write, sharing the verification cache across
+conversations and attachment checks.
+Late ZIP failures roll back the entire batch on v1 as well as v2. Old
+available-only catalogs can use their owned SourceArtifact SHA; missing
+identities still require a source-bound catalog even after a cache hit.
+An explicit new-body scan upgrades an older catalog's optional source digest
+only after verifying the actual retained bytes and their member binding.
+Stale ZIP classification requests return the refresh conflict before memory
+admission on both lanes; non-ZIP commits do not enter ZIP source verification.
+No migration, `.cr`, Share, Dexie or portable-package change is involved.
+
+This source is not yet a new CI or deployment acceptance. The last independently
+verified production identity is2463f298/schema0061. See the
+[single ledger](SMALL_HOST_IMPROVEMENT_STATUS.md) for current progress and the
+[final scoped verification](../evidence/reliability-2026-11-16/ci-zip-markdown-verification.json)
+for98 actually passed ZIP controls,615 related API passes/6 original local
+skips and36 real PostgreSQL passes. These scopes and older checkpoints overlap;
+they do not replace the fresh full CI or exact-image resource gates.
+
 ## Recovery extension — released 2026-11-11
 
 Exact `3564cbf` / CI `42828329240` is deployed with unchanged schema0060.
@@ -72,12 +117,15 @@ Markdown:
   boundaries and text. Manifest message-count differences are warnings, not
   permission to fabricate messages. Only the selected transcript is imported;
   manifest-declared files become candidate attachments.
-- **Generic Markdown ZIP:** one or more `.md`/`.markdown` members. Each is a
-  conversation candidate and remains in the existing profile/mapping review
-  flow. Other members begin excluded; resolvable local resources referenced by
-  Markdown are proposed as attachments and associated with the referring
-  document. The user may include/exclude members and correct ownership before
-  commit.
+- **Generic Markdown ZIP:** one or more `.md`/`.markdown` members. Only members
+  in the shallowest Markdown layer, after the single common wrapper is removed,
+  are default conversation candidates in the existing profile/mapping review
+  flow. Deeper Markdown and other members begin excluded. Resolvable resources
+  referenced by selected bodies, including Markdown files, are proposed as
+  attachments associated with the actual referring document. The user may
+  explicitly enable another Markdown body, include/exclude files and correct
+  ownership before commit. This rule does not guess from directory names,
+  role-like text or a link between same-layer transcript candidates.
 
 Other ZIP types do not become conversation import paths merely because they
 contain role-like text. An archive with no Markdown document is rejected.
@@ -189,7 +237,10 @@ Limits are: archive/expanded bytes each 32 MiB; 256 entries; 256 KiB central
 directory, manifest and single selected Markdown document; 128 attachments
 of at most 16 MiB each; one conversation, 256 messages, 2,048 render blocks,
 1,024 actual references and a 1-MiB canonical draft. Manifest-declared Markdown
-attachments in dedicated exports are not additional selected documents.
+attachments in dedicated exports and deeper resource Markdown in generic ZIPs
+are not additional default documents. Current and proposed classifications
+must still satisfy these caps; a new body cannot borrow the initial proof
+before its references have been inspected with standard admission.
 
 Admission requires 128 MiB reserve plus 64 MiB workspace (192 MiB effective
 headroom); the existing host/cgroup minimum probe remains authoritative.
@@ -207,7 +258,8 @@ worker processes; contention is retryable. Commit binds the proof to actual
 archive, selected-document and draft hashes, source fingerprint, classification
 revision and bounded counts. Replacement cannot inherit old eligibility.
 Streaming/CRC/MIME/scanning, source preservation and canonical rollback remain
-mandatory; no schema or portable-file format changes.
+mandatory; no schema or portable-file format changes. Source verification is
+commit-scoped, not repeated for every attachment or conversation.
 
 Session/task reads may add `failure: {code, stage, retryable}` from existing
 JSON fields. Only known codes/stages are projected; wrapped exceptions and

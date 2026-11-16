@@ -1,6 +1,54 @@
 # 事实证据索引
 
-## 冷合并准入正式失败与定点修复 — 2026-11-16
+## ZIP Markdown附件修复：当前取证边界 — 2026-11-16
+
+本轮保留原目录白名单不足、v1源变更/部分提交、旧资源计数/告警序号的实际
+失败日志；[最终专项证据](reliability-2026-11-16/ci-zip-markdown-verification.json)
+保存31-file API615/6原环境skip、ZIP98逐项PASSED及最终PG36/0skip。前一608/6
+矩阵和后续旧catalog绑定、夹具字段名/包装失败单列，不相加或改写。
+[1424输入](reliability-2026-11-16/ci-zip-markdown-inputs.json)核验七文件checkpoint、
+19个protected及用户cache，PG仅停止本轮独立库并保留资料。lint/typecheck、
+head0061及原CI Node89/Python100通过，不代替完整CI、五资源门禁或新部署；
+collection7010/portable213不是执行PASS。
+CI优化12文件完整字节保全，原六job/source-proof一并恢复；当前优先级见
+[唯一台账](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+2463的发布证据及所有原始失败回执不改写；不落盘真实正文、身份、凭据或env值。
+
+## 2463f298/0061已发布，独立运行复查成功 — 2026-11-16
+
+[发布聚合证据](reliability-2026-11-16/ci-cold-merge-production-release.json)
+引用63/64/74/75/78/83/84原回执SHA，不持久化用户路径、正文、对话身份或凭据。
+11:50 +08:00独立84通过精确镜像/RootFS、健康/匿名/TLS、配置/其他容器、两备份
+及获准可逆保全的8文件；原指针三keys/元数据/根软链接/旧字节保留，无旧worker
+直接回退。生产640MiB memory/1280MiB swap不改称CI无额外swap。
+最终Linux224/0skip与旧控制重叠，不相加；原65/70失败与79/80全卷冻结假设失败
+原样保留。用户活动已恢复，83验证原871 imports全部1,141,001,405 bytes仍在
+新备份，随后15个无所检引用live文件的删除原因未证明，未恢复或干预新任务。
+下一步是隔离CI调度优化及新完整CI实测，用户产品/实体设备/生产备份恢复未代验。
+
+## 前一精确完整CI成功，部署前8个重复无主文件仍受保护（历史）— 2026-11-16
+
+[独立制品证明](reliability-2026-11-16/ci-cold-merge-independent-release.json)
+绑定2463f298/43737444629 attempt1，六job全部成功、58分03秒；
+实际新55分钟双时钟等待已完成。原first-read仍是当时in_progress快照。
+API6909/原3跳过/115新增逐项PASSED、Web14/mounted45、Settings470+restore1、
+Reader9/27 cold物理帧及原五memory通过；官方来源、OCI图/层和内嵌源码独立通过。
+
+[生产准备阻塞](reliability-2026-11-16/ci-cold-merge-production-held.json)保留46失败
+及旧3564cbf/schema0060恢复，未新建备份或迁移。后续保留192MiB只读审计明确
+exit1/OOM=false：2839引用文件SHA通过，8 orphan为3,359,426 bytes的canonical
+字节重复，全部路径引用为0且36条derivative均已包含。文件仍原样保留，隔离
+未获单独授权；不得把独立参考诊断exit0改成release clean PASS或删除文件。
+文档不含原文件身份/路径/内容/环境值，旧失败、派发及读数均按原字节保全；
+当前剩余只见[唯一台账](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+[部署执行器离线准备](reliability-2026-11-16/ci-cold-merge-deployment-executor-controls.json)
+记录未派发65/66的最终Linux113/0skip和Windows101/12权限skip（Linux实际补测），
+保留首97的原日志、回执与源码副本。原10本机容器、109旧回执、12无关文件及
+用户cache未改；任务tmpfs的POSIX验证不是生产磁盘或新CI验收。隔离未获批准，
+没有新63/64、备份/迁移/部署；本次不冒称新的生产复查，也不提前优化CI耗时。
+
+## 前一冷合并准入正式失败与定点修复（历史）— 2026-11-16
 
 [正式失败](reliability-2026-11-16/ci-cold-merge-failure.json)绑定
 cd392195/43725701515：API6874/27/3、Web编辑117/4、Settings468/2，
