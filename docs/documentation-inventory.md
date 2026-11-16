@@ -1,5 +1,12 @@
 # Markdown 文档台账
 
+## 第二轮CI实施：指定失败修复的独立检查点 — 2026-11-17
+
+定点同步当前状态、导航、唯一台账、测试和Release Safety边界；新增
+`ci-scheduling-mounted-contract-repair.json`，保留全部旧JSON。
+旧43907985394运行仍为failure，五项父workflow查找错误已修，完整UX2556及CI控制通过；
+第二轮19-job拓扑和两次新全绿计时尚未完成，生产不变，不宣称提速。
+
 ## 最新：首轮优化CI失败与最小修复已同步，精确全量复跑待派发 — 2026-11-17
 
 定点更新Project State、文档导航、唯一Small Host状态台账、测试入口、Release Safety合同及证据索引。

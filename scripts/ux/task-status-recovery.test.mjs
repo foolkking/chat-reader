@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { test } from "node:test";
 import { setImmediate } from "node:timers/promises";
 import contextRecovery from "./fixtures/context-return-recovery.mjs";
+import { requiredWebStep } from "../ci/required-web-step.mjs";
 
 const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const React = require("react"), ts = require("typescript");
@@ -25,8 +26,7 @@ const compiled = ts.transpileModule(source + "\nexport { taskFailureMessage };",
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX,
 } }).outputText;
 test("the mounted recovery matrix is a required CI step with retained evidence", () => {
-  const workflow = readFileSync(new URL("../../.github/workflows/build-release-images.yml", import.meta.url), "utf8");
-  const step = workflow.split("- name: Retained import stop and per-task recovery controls")[1]?.split("- name:")[0];
+  const { workflow, step } = requiredWebStep("Retained import stop and per-task recovery controls");
   assert.ok(step);
   assert.match(step, /run: node scripts\/ux\/import-recovery-browser\.mjs/);
   assert.match(step, /PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"/);

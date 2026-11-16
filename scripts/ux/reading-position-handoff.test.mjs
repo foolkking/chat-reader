@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import test from "node:test";
+import { requiredWebStep } from "../ci/required-web-step.mjs";
 const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const ts = require("typescript");
 const compiled = ts.transpileModule(readFileSync(new URL("../../apps/web/lib/reading-position-sync.ts", import.meta.url), "utf8"), {
@@ -9,8 +10,7 @@ const compiled = ts.transpileModule(readFileSync(new URL("../../apps/web/lib/rea
 }).outputText;
 const copy = value => value === undefined ? value : structuredClone(value);
 test("mounted handoff evidence is required by release CI",()=>{
-  const workflow=readFileSync(new URL("../../.github/workflows/build-release-images.yml",import.meta.url),"utf8");
-  const step=workflow.split("- name: Cross-device reading handoff and conflict recovery")[1]?.split("- name:")[0];
+  const { workflow, step } = requiredWebStep("Cross-device reading handoff and conflict recovery");
   assert.match(step??"",/run: node scripts\/ux\/reading-position-browser\.mjs/);
   assert.doesNotMatch(step,/continue-on-error|if:/);
   assert.match(workflow,/reading-position-browser\/result\.json/);

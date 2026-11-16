@@ -1,6 +1,14 @@
 # 文档导航
 
-## 当前：71342129 已部署并独立核验；修复首轮 CI 后等待完整复跑 — 2026-11-17
+## 当前：第二轮 CI 提速实施中 — 2026-11-17
+
+43907985394/2e5d51d已失败，仅Web shard1的五项旧工作流断言失败。现已定点修复，
+完整UX2556、CI Node152/Python124及静态检查通过；尚非新完整CI验收。
+[修复证据](evidence/reliability-2026-11-16/ci-scheduling-mounted-contract-repair.json) /
+[唯一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)记录已批准的API4/Settings4/Web3、
+独立restore及提前候选镜像方案。20–25分钟是待实测目标，不是已取得收益；生产不变。
+
+## 前一检查点：71342129 已部署并独立核验 — 2026-11-17
 
 ZIP 辅助子目录中的 Markdown 默认不再作为对话导入；只选择安全归一后的最外层正文，
 更深文件需正文引用或显式启用。详见[源码合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16)。

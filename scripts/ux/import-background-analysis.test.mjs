@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import test from "node:test";
 import { setImmediate } from "node:timers/promises";
+import { requiredWebStep } from "../ci/required-web-step.mjs";
 
 const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const React = require("react"), ts = require("typescript"), noop = () => {};
@@ -23,8 +24,7 @@ const completion = { import_id: "synthetic-import", status: "committed", convers
   conversation_count: 1, message_count: 2, warnings: [] };
 
 test("source repair has a required mounted CI gate and retained screenshots", () => {
-  const workflow = readFileSync(new URL("../../.github/workflows/build-release-images.yml", import.meta.url), "utf8");
-  const step = workflow.split("- name: Failed and paused import source repair")[1]?.split("- name:")[0];
+  const { workflow, step } = requiredWebStep("Failed and paused import source repair");
   assert.match(step ?? "", /run: node scripts\/ux\/import-source-repair-browser\.mjs/);
   assert.doesNotMatch(step, /continue-on-error|if:/);
   assert.match(workflow, /import-source-repair-browser\/result\.json/);

@@ -1,6 +1,23 @@
 # Project State
 
-## Latest: ZIP Markdown attachment fix deployed; CI scheduling repair awaits fresh full run — 2026-11-17
+## Latest: mounted CI contract repair verified locally; second scheduling round in progress — 2026-11-17
+
+Run43907985394/attempt1 at2e5d51d is completed/failure. Its only failed job is
+Web shard1: five retained UX tests still searched the parent workflow for steps
+now owned by the reusable Web workflow. The repaired tests require the exact
+shard condition and original commands/evidence; semantic negative controls
+verify the caller/aggregator/publisher chain. Full UX2556, CI Node152/Python124,
+lint/typecheck and Actionlint pass locally. This is not a new full CI pass.
+[Scoped proof](docs/evidence/reliability-2026-11-16/ci-scheduling-mounted-contract-repair.json).
+
+The approved next step is API4/Settings4/Web3 isolated, weighted scheduling,
+an independent restore gate and early non-deployable image preparation.
+Implementation and two new complete successful timing runs remain pending.
+No test/resource budget is relaxed; production71342129/schema0061 is unchanged
+and does not need redeployment for CI-only work. The
+[single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current status.
+
+## Previous checkpoint: ZIP fix deployed; first scheduling repair — 2026-11-17
 
 The ZIP importer now defaults to the outermost Markdown layer after safe wrapper
 normalization; deeper Markdown files are resources unless referenced or explicitly

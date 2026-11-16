@@ -1,6 +1,18 @@
 # Testing
 
-## Latest: ZIP Markdown-resource production verified; first optimized CI failed and was repaired — 2026-11-17
+## Latest: required mounted-gate contract repaired — 2026-11-17
+
+The five retained mounted-gate assertions now inspect the reusable Web workflow,
+accept only the exact required shard assignment, and retain their original
+command/evidence checks. Semantic YAML controls reject a missing caller,
+wrong shard, missing aggregation/publication dependency, skipped/swallowed gate,
+duplicate step or missing evidence. Full UX2556, CI Node152/Python124,
+lint/typecheck and Actionlint pass locally; user tsbuildinfo bytes are untouched.
+[Proof](evidence/reliability-2026-11-16/ci-scheduling-mounted-contract-repair.json).
+The old43907985394 run remains failed; API4/Settings4/Web3 scheduling and fresh
+full Linux/native/resource execution are the next work, not completed acceptance.
+
+## Earlier checkpoint: ZIP production verified; first scheduling repair — 2026-11-17
 
 Exact71342129 / CI43820675687 attempt1 ordinary full CI passes all six jobs in3467 seconds;
 a fresh3300-second UTC/monotonic wait and independent OCI/application-artifact proof completed.

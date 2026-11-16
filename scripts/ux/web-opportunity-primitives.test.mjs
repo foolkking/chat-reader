@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { loadTableFixtureModule } from "./markdown-table-source-fixture.mjs";
+import { requiredWebStep } from "../ci/required-web-step.mjs";
 
 const tableExport = (await loadTableFixtureModule("../../apps/web/features/conversations/markdown-table-export.ts")).module;
 const pastedTranscript = (await loadTableFixtureModule("../../apps/web/features/import/pasted-transcript.ts")).module;
@@ -9,8 +10,7 @@ const citation = (await loadTableFixtureModule("../../apps/web/features/conversa
 const versionDiff = (await loadTableFixtureModule("../../apps/web/features/editing/version-diff.ts")).module;
 
 test("Reader table interaction matrix is a required CI gate with retained evidence", () => {
-  const workflow = readFileSync(new URL("../../.github/workflows/build-release-images.yml", import.meta.url), "utf8");
-  const step = workflow.split("- name: Reader table export and recovery controls")[1]?.split("- name:")[0];
+  const { workflow, step } = requiredWebStep("Reader table export and recovery controls");
   assert.match(step ?? "", /run: node scripts\/ux\/reader-table-actions-browser\.mjs/);
   assert.match(step ?? "", /PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"/);
   assert.doesNotMatch(step ?? "", /continue-on-error|if:/);

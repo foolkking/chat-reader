@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { test } from "node:test";
+import { requiredWebStep } from "../ci/required-web-step.mjs";
 const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const ts = require("typescript");
 function compile(file) {
@@ -13,8 +14,7 @@ const policy = {};
 new Function("exports", compile("features/conversations/reader-render-policy.ts"))(policy);
 const block = (text, block_type = "paragraph") => ({ block_type, data: {}, plain_text: text });
 test("release CI requires the mounted Reader regression and preserves its evidence", () => {
-  const workflow = readFileSync(new URL("../../.github/workflows/build-release-images.yml", import.meta.url), "utf8");
-  const step = workflow.split("- name: Formula reading, focus tools and timed return regression")[1]?.split("- name:")[0];
+  const { workflow, step } = requiredWebStep("Formula reading, focus tools and timed return regression");
   assert.ok(step, "The mounted regression must be a required release step.");
   assert.match(step, /run: node scripts\/ux\/reader-interaction-browser\.mjs/);
   assert.match(step, /PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"/);

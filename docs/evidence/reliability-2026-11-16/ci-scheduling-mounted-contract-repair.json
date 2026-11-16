@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-16T17:26:38.049502+00:00",
+  "base_head": "2e5d51d43a895d75e4f4d9ebdf90d0df3211e1e0",
+  "failed_run": 43907985394,
+  "attempt": 1,
+  "failed_job": 133441924065,
+  "only_failed_job": "web-quality-shard-1 / gates",
+  "official_log_sha256": "f8aba1ef5aa2fd1c24a4e6c3ca780540152978d17c574f390c6d0e6b4473017c",
+  "official_ux_passed": 2551,
+  "official_ux_failed": 5,
+  "reason": "Five mounted-gate source tests searched the parent rather than the required reusable workflow.",
+  "repair": "Retain every original command/evidence assertion; permit only the exact shard condition and verify the required semantic caller/aggregate/publisher chain.",
+  "source_sha256": {
+    ".github/workflows/web-quality.yml": "9a92fbae95f00e83e4e09a37d02bbea1738f345eb70a09095397629e52eac7a0",
+    "scripts/ci/required-web-step.mjs": "dc6884f0a89d2b164ed85ffda33119a2ecbdc6665e973bf5e7c824ee7fade340",
+    "scripts/ci/required_web_gates.py": "cc6779c26b18a003332d4a4f09cf44b4148f85aa2de1dde11e945bf998f2a38d",
+    "scripts/ci/test_required_web_gates.py": "8af23c1314299358fc0bc6ee2a124f17300450f6320e24d29c918e328f33b018",
+    "scripts/ux/import-background-analysis.test.mjs": "ea3e990983790d029c86df17c1ba87bf7ddc89b06bde671154d4f2a88452a3c8",
+    "scripts/ux/reader-interaction-policy.test.mjs": "649dd5026af8e0dd49ee567cb6b31efbbcf76f488b60054710ec23b2de769866",
+    "scripts/ux/reading-position-handoff.test.mjs": "83b6d58eb4f624c919f617b463e1a131c3715474f2219cbcd89f926baef005de",
+    "scripts/ux/task-status-recovery.test.mjs": "b59d00b9f6a2a0cf4ccd2e815ec8ee132ebf5d4796e24199050967ab3a16dc31",
+    "scripts/ux/web-opportunity-primitives.test.mjs": "2ba7651e6b99667c789026059b3992077d563a0eec89994d76b9b466061e8a1a"
+  },
+  "validation": [
+    {
+      "name": "ux-full",
+      "exit_code": 0,
+      "seconds": 29.59,
+      "log_sha256": "1aaf9edfe484da89c86b2e090f0cd10e9d4cc0cc5aa10568188fc3d32c614976"
+    },
+    {
+      "name": "ci-node",
+      "exit_code": 0,
+      "seconds": 6.55,
+      "log_sha256": "ed3bc5f77b35ee3ebebcca2a40f16b60ba4132da7796a6967bf6480c718d80cb"
+    },
+    {
+      "name": "ci-python",
+      "exit_code": 0,
+      "seconds": 3.74,
+      "log_sha256": "87bfb28bb2fc6a6d74ca43a349e472031d2b08a97af38be7df04e177015e4b8f"
+    },
+    {
+      "name": "lint",
+      "exit_code": 0,
+      "seconds": 15.19,
+      "log_sha256": "12318e1458c77defc58b71801a46646387fd5cfc66f98359491f30888decd8f2"
+    },
+    {
+      "name": "typecheck",
+      "exit_code": 0,
+      "seconds": 26.66,
+      "log_sha256": "c3f29cffa105a6978b9330dc33cae9e1e9a0700e7791eca5b9fb3736c6af892a"
+    },
+    {
+      "name": "actionlint",
+      "exit_code": 0,
+      "seconds": 0.36,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "local_counts": {
+    "ux_passed": 2556,
+    "ux_failed": 0,
+    "ci_node_passed": 152,
+    "ci_python_passed": 124
+  },
+  "native_browser_ci_rerun_not_claimed": true,
+  "second_round_scheduling_not_yet_implemented": true,
+  "production_unchanged": true,
+  "user_tsbuildinfo_sha256": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135"
+}

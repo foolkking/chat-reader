@@ -1,5 +1,16 @@
 # Release Safety Baseline
 
+## Mounted workflow contract correction — 2026-11-17
+
+The five mounted UX assertions follow the required reusable Web shard instead
+of searching for an inline parent step. Only its exact assignment condition is
+permitted; semantic caller/aggregate/publisher checks and negative mutations
+retain the release requirement. These controls and complete UX2556 pass locally.
+[Evidence](../evidence/reliability-2026-11-16/ci-scheduling-mounted-contract-repair.json).
+The approved next topology (API4/Settings4/Web3, independent restore, early
+non-deployable candidate images) is not yet implemented/accepted at this checkpoint.
+Historical image-only source/lineage is not broadened. Current production is unchanged.
+
 ## Current full-CI scheduling contract — repair pending exact re-run, 2026-11-17
 
 Ordinary empty-quality-source mode now requires eight quality jobs: the complete API suite,

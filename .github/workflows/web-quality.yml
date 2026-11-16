@@ -100,14 +100,6 @@ jobs:
         if: ${{ inputs.shard == 1 }}
         run: pnpm --filter web typecheck
 
-      - name: Web production build (timed)
-        run: >-
-          /usr/bin/time -f 'build=standard
-          elapsed_seconds=%e
-          max_rss_kb=%M'
-          -o "$RUNNER_TEMP/web-build-standard.txt"
-          pnpm --filter web build
-
       - name: Build dependency regressions
         if: ${{ inputs.shard == 1 }}
         run: node --test scripts/security/braces-depth.test.mjs scripts/security/source-map-offsets.test.mjs
@@ -124,6 +116,7 @@ jobs:
         if: ${{ inputs.shard == 1 }}
         run: |
           python -m unittest discover -s scripts/ci -p 'test_quality_scheduling.py' -v
+          python -m unittest discover -s scripts/ci -p 'test_required_web_gates.py' -v
           node --test scripts/ci/quality-shard-evidence.test.mjs
 
       - name: Offline shell reconciliation regressions
@@ -151,6 +144,14 @@ jobs:
             "$RUNNER_TEMP/dependency-audit-report.json"
           printf 'audit_source=https://registry.npmjs.org\naudit_timestamp=%s\n' \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$RUNNER_TEMP/dependency-audit-source.txt"
+
+      - name: Web production build (timed)
+        run: >-
+          /usr/bin/time -f 'build=standard
+          elapsed_seconds=%e
+          max_rss_kb=%M'
+          -o "$RUNNER_TEMP/web-build-standard.txt"
+          pnpm --filter web build
 
       - name: Start API and worker for browser integration
         run: |
