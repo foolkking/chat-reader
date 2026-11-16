@@ -25,7 +25,11 @@ function jobFrom(source, name) {
 const job = (name) => jobFrom(workflow, name);
 const webFixture = jobFrom(read(".github/workflows/web-quality.yml"), "gates");
 const settingsShardFixture = jobFrom(read(".github/workflows/settings-browser-shard.yml"), "matrix");
-const fixture = (name) => name === "web-quality" ? webFixture : job(name);
+const apiFixture = jobFrom(read(".github/workflows/api-quality-shard.yml"), "suite");
+const fixture = (name) => ({
+  "web-quality": webFixture, "api-quality": apiFixture, "settings-quality": settingsShardFixture,
+}[name] ?? job(name));
+const imagePreparation = job("image-preparation");
 
 function pinnedAction(body, action) {
   const escaped = action.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -34,7 +38,7 @@ function pinnedAction(body, action) {
   return { index: match.index, sha: match[1] };
 }
 
-for (const name of ["api-quality", "web-quality", "settings-quality"]) {
+for (const name of ["api-quality", "web-quality", "settings-quality", "settings-restore"]) {
   test(`${name} starts the pinned PostgreSQL fixture with bounded official-source fallback`, () => {
     const body = fixture(name);
     assert.doesNotMatch(body, /^    services:/m);
@@ -58,7 +62,7 @@ test("PostgreSQL fallback keeps the previously verified digest, health probe and
   assert.match(postgresService, /docker pull --platform linux\/amd64 "\$source"/);
   assert.match(postgresService, /--publish "127\.0\.0\.1:\$\{port\}:5432"/);
   for (const name of ["api-quality", "settings-quality"]) {
-    const body = job(name);
+    const body = fixture(name);
     assert.match(body, /CI_POSTGRES_PORT: "65438"/, `${name} must use the guarded fixture port`);
     assert.match(body, /DATABASE_URL: postgresql\+psycopg:\/\/chat_reader:chat_reader_ci@127\.0\.0\.1:65438\/chat_reader(?:\n|$)/,
       `${name} must connect to the same owned fixture port`);
@@ -79,20 +83,23 @@ test("both Web base stages share the argument and preserve the existing Node def
 
 for (const [argument, source] of [["PYTHON_BASE_IMAGE", sources.python], ["NODE_BASE_IMAGE", sources.node]]) {
   test(`CI passes the verified ${argument} pin to docker build`, () => {
-    const build = job("build-images");
-    assert.ok(build.includes(`      ${argument}: ${source}\n`));
-    assert.ok(build.includes(`--build-arg ${argument}="\$\{${argument}\}"`));
+    for (const build of [imagePreparation, job("build-images")]) {
+      assert.ok(build.includes(`      ${argument}: ${source}\n`));
+      assert.ok(build.includes(`--build-arg ${argument}="\$\{${argument}\}"`));
+    }
   });
 }
 
 test("builder setup uses Docker's built-in driver without a BuildKit container pull", () => {
-  const build = job("build-images");
+  const build = imagePreparation;
   pinnedAction(build, "docker/setup-buildx-action");
   assert.match(build, /- uses: docker\/setup-buildx-action@[0-9a-f]{40}(?:\s+# [^\n]+)?\n        with:\n          driver: docker(?:\n|$)/);
 });
 
 test("both image builds explicitly select the accepted Linux amd64 platform", () => {
-  assert.equal([...job("build-images").matchAll(/--platform linux\/amd64/g)].length, 2);
+  for (const body of [imagePreparation, job("build-images")]) {
+    assert.equal([...body.matchAll(/--platform linux\/amd64/g)].length, 2);
+  }
 });
 
 test("the registry source contract runs as an additive CI check", () => {
@@ -100,7 +107,7 @@ test("the registry source contract runs as an additive CI check", () => {
 });
 
 test("both pinned bases are prepared before building without retrying application builds", () => {
-  const build = job("build-images");
+  const build = imagePreparation;
   const preparation = build.indexOf("run: bash scripts/ci/image-base-sources.sh");
   assert.match(build, /- name: Prepare pinned image bases with official-source fallback\n        run: bash scripts\/ci\/image-base-sources\.sh/);
   assert.ok(preparation < build.indexOf("- name: Build API and worker image"));
@@ -109,14 +116,16 @@ test("both pinned bases are prepared before building without retrying applicatio
 });
 
 test("the complete API suite stays PostgreSQL-enabled and diagnosable with platform-default CI timing", () => {
-  assert.match(job("api-quality"), /- name: API full suite\n        env:\n/);
-  assert.doesNotMatch(job("api-quality"), /^\s*timeout-minutes:/m);
-  assert.match(job("api-quality"), /SETTINGS_POSTGRES_INTEGRATION: "1"/);
-  assert.match(job("api-quality"), /run: cd apps\/api && pytest -vv --capture=tee-sys -o faulthandler_timeout=120(?:\n|$)/);
+  assert.match(apiFixture, /- name: API full suite\n        env:\n/);
+  assert.doesNotMatch(apiFixture, /^\s*timeout-minutes:/m);
+  assert.match(apiFixture, /SETTINGS_POSTGRES_INTEGRATION: "1"/);
+  assert.match(apiFixture, /cd apps\/api\n.*\n            pytest -vv --capture=tee-sys -o faulthandler_timeout=120 -p api_shard_plugin/);
+  assert.match(apiFixture, /--ci-shard="\$CI_QUALITY_SHARD"/);
+  assert.match(apiFixture, /--junitxml="\$RUNNER_TEMP\/api-junit\.xml"/);
 });
 
 test("restore checks reuse matching clients from the owned pinned database, not runner apt packages", () => {
-  assert.doesNotMatch(job("api-quality"), /apt-get install[^\n]*postgresql-client/);
+  assert.doesNotMatch(apiFixture, /apt-get install[^\n]*postgresql-client/);
   const clients = read("apps/api/tests/postgres_backup_tools.py");
   assert.match(clients, /chat-reader-ci-postgres-\{run\}-\{attempt\}-\{job\}/);
   assert.match(clients, /"docker", "exec", "-i"/);
@@ -126,10 +135,10 @@ test("restore checks reuse matching clients from the owned pinned database, not 
 });
 
 test("release requires a real constrained worker, no swap and independently checked evidence", () => {
-  const build = job("build-images"), inspector = job("inspect-release-artifact");
+  const build = imagePreparation, inspector = job("inspect-release-artifact");
   assert.match(build, /run: python3 scripts\/ci\/small-import-memory-gate\.py/);
   assert.ok(build.indexOf("Build API and worker image") < build.indexOf("small-import-memory-gate.py"));
-  assert.ok(build.indexOf("small-import-memory-gate.py") < build.indexOf("Package images and provenance"));
+  assert.ok(build.indexOf("small-import-memory-gate.py") < build.indexOf("Package non-deployable exact tested candidate"));
   const gate = read("scripts/ci/small-import-memory-gate.py");
   assert.match(gate, /"--memory=320m", "--memory-swap=320m"/);
   assert.match(gate, /"app\.workers\.import_worker"/);
@@ -141,10 +150,10 @@ test("release requires a real constrained worker, no swap and independently chec
 });
 
 test("bounded large ZIP memory evidence is additive and pinned to the exact release image", () => {
-  const build = job("build-images"), inspector = job("inspect-release-artifact");
+  const build = imagePreparation, inspector = job("inspect-release-artifact");
   assert.match(build, /run: python3 scripts\/ci\/bounded-import-memory-gate\.py/);
   assert.ok(build.indexOf("small-import-memory-gate.py") < build.indexOf("bounded-import-memory-gate.py"));
-  assert.ok(build.indexOf("bounded-import-memory-gate.py") < build.indexOf("Package images and provenance"));
+  assert.ok(build.indexOf("bounded-import-memory-gate.py") < build.indexOf("Package non-deployable exact tested candidate"));
   assert.match(inspector, /bounded-zip-memory\.json/);
   assert.match(inspector, /\.draft_format == 2/);
   assert.match(inspector, /all\(\.cases\[\];/);
@@ -157,7 +166,7 @@ test("bounded large ZIP memory evidence is additive and pinned to the exact rele
 
 test("reading capacity comparison is additive and required before release images", () => {
   assert.match(job("reading-performance-comparison"), /uses: \.\/\.github\/workflows\/reading-performance\.yml/);
-  assert.match(job("build-images"), /needs: \[api-quality, web-quality, settings-quality, reading-performance-comparison\]/);
+  assert.match(job("build-images"), /needs: \[api-quality, web-quality, settings-quality, reading-performance-comparison, image-preparation\]/);
   assert.match(job("build-images"), /needs\.reading-performance-comparison\.result == 'success'/);
   const comparison = read(".github/workflows/reading-performance.yml");
   assert.match(comparison, /for phase in baseline candidate; do/);
@@ -177,9 +186,9 @@ for (const [name, prefix] of [["web-quality", "release-a-quality-evidence"], ["s
   });
 }
 
-for (const [family, file] of [["web", "web-quality.yml"], ["settings", "settings-browser-shard.yml"]]) {
-  test(`${family} runs both fixed shards on separate reusable runners without cross-quality dependencies`, () => {
-    for (const index of [1, 2]) {
+for (const [family, file, count] of [["api", "api-quality-shard.yml", 4], ["web", "web-quality.yml", 3], ["settings", "settings-browser-shard.yml", 4]]) {
+  test(`${family} runs all fixed shards on separate reusable runners without cross-quality dependencies`, () => {
+    for (let index = 1; index <= count; index++) {
       const body = job(`${family}-quality-shard-${index}`);
       assert.match(body, /^    if: \$\{\{ inputs\.quality_source_run_id == '' \}\}\n/);
       assert.ok(body.includes(`    uses: ./.github/workflows/${file}\n    with:\n      shard: ${index}\n`));

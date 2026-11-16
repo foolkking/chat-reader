@@ -43,10 +43,14 @@ QUALITY_NAMES = (
 # Full mode must never accept the historical six-job topology after sharding.
 # The approved image-only source retains its original exact six-job contract.
 FULL_QUALITY_NAMES = (
+    "api-quality-shard-1 / suite", "api-quality-shard-2 / suite",
+    "api-quality-shard-3 / suite", "api-quality-shard-4 / suite",
     "api-quality",
-    "web-quality-shard-1 / gates", "web-quality-shard-2 / gates", "web-quality",
-    "settings-quality-shard-1 / matrix", "settings-quality-shard-2 / matrix", "settings-quality",
-    "reading-performance-comparison / compare",
+    "web-quality-shard-1 / gates", "web-quality-shard-2 / gates", "web-quality-shard-3 / gates", "web-quality",
+    "settings-quality-shard-1 / matrix", "settings-quality-shard-2 / matrix",
+    "settings-quality-shard-3 / matrix", "settings-quality-shard-4 / matrix",
+    "settings-restore", "settings-quality",
+    "reading-performance-comparison / compare", "image-preparation",
 )
 NEEDS_NAMES = ("api-quality", "web-quality", "settings-quality", "reading-performance-comparison")
 EVIDENCE_GET_TIMEOUT_SECONDS = 180
@@ -532,9 +536,10 @@ def source_proof(source_run, source_sha, attempt, *, reuse, cache):
 
 
 def validate_needs(needs, *, reuse):
-    require(set(needs) == set(NEEDS_NAMES), "All four original quality dependencies are required.")
+    names = NEEDS_NAMES if reuse else (*NEEDS_NAMES, "image-preparation")
+    require(set(needs) == set(names), "All original quality dependencies and the full-mode candidate are required.")
     expected = "skipped" if reuse else "success"
-    require(all(needs[name].get("result") == expected for name in NEEDS_NAMES),
+    require(all(needs[name].get("result") == expected for name in names),
             "The normal/reuse quality-job branch does not match its declared provenance.")
 
 
@@ -616,7 +621,13 @@ def main():
                 and (args.verify_report is not None or attempt == int(current_attempt)),
                 "Invalid artifact producer attempt.")
         if not args.verify_report:
-            validate_needs(json.loads(os.environ.get("QUALITY_JOB_RESULTS", "{}")), reuse=reuse)
+            needs = json.loads(os.environ.get("QUALITY_JOB_RESULTS", "{}"))
+            if reuse:
+                require(set(needs) == {*NEEDS_NAMES, "image-preparation"}
+                        and needs["image-preparation"].get("result") == "skipped",
+                        "Historical reuse must not consume an early candidate.")
+                needs.pop("image-preparation")
+            validate_needs(needs, reuse=reuse)
         verification = {
             "mode": "authorized-image-only" if reuse else "full-exact",
             "candidate": {"sha": args.head, "workflow_run_id": run_id, "workflow_run_attempt": attempt},

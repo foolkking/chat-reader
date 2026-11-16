@@ -1,5 +1,16 @@
 # 事实证据索引
 
+## 第二轮CI调度实现与本地控制 — 2026-11-17
+
+[本地验证](reliability-2026-11-16/ci-scheduling-v2-local-verification.json)绑定19-job候选源码、
+确定性完整分片清单和测试日志SHA。原UX2556、Node156/Python138、格式识别13及静态检查通过；
+两次API7010 collection一致，仅gzip参数增加稳定ID；Settings470原源码/超时绑定及真实四片
+blob小型控制通过。提前镜像为非发布候选，完整质量通过后才能按同一精确制品发布。
+这些记录不是本轮全量API、浏览器或五项内存执行，也不是20–25分钟收益验收；至少两次
+新完整成功与真实计时/缓存观察仍待完成。旧失败、旧回执、用户修改与生产状态均保留。
+[提交前最终源绑定](reliability-2026-11-16/ci-scheduling-v2-precommit-final.json)保留首次暂存检查
+发现的API子工作流末尾空行问题，仅去除多余空行并重验YAML/Actionlint；原本地JSON不覆盖。
+
 ## 指定Web shard失败与完整UX修复验证 — 2026-11-17
 
 [mounted合同修复](reliability-2026-11-16/ci-scheduling-mounted-contract-repair.json)

@@ -37,7 +37,7 @@ jobs:
       - name: Validate fixed independent shard
         shell: bash
         run: |
-          case "$CI_QUALITY_SHARD" in 1|2) ;; *) exit 1 ;; esac
+          case "$CI_QUALITY_SHARD" in 1|2|3) ;; *) exit 1 ;; esac
 
       - name: Start pinned disposable PostgreSQL with official-source fallback
         id: postgres
@@ -117,6 +117,8 @@ jobs:
         run: |
           python -m unittest discover -s scripts/ci -p 'test_quality_scheduling.py' -v
           python -m unittest discover -s scripts/ci -p 'test_required_web_gates.py' -v
+          python -m unittest discover -s scripts/ci -p 'test_api_shard_evidence.py' -v
+          python -m unittest discover -s scripts/ci -p 'test_image_candidate.py' -v
           node --test scripts/ci/quality-shard-evidence.test.mjs
 
       - name: Offline shell reconciliation regressions
@@ -171,25 +173,25 @@ jobs:
         run: pnpm --filter web exec playwright install --with-deps chromium
 
       - name: Mounted Viewer and retained mobile sheet regression
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 3 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/attachment-modal-browser.mjs
 
       - name: Image size commit, recovery and responsive controls
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 2 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/image-scale-slider-browser.mjs
 
       - name: Formula reading, focus tools and timed return regression
-        if: ${{ inputs.shard == 2 }}
+        if: ${{ inputs.shard == 1 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reader-interaction-browser.mjs
 
       - name: Cross-device reading handoff and conflict recovery
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 2 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reading-position-browser.mjs
@@ -213,7 +215,7 @@ jobs:
         run: node scripts/ux/import-source-repair-browser.mjs
 
       - name: Reader table export and recovery controls
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 3 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reader-table-actions-browser.mjs
@@ -225,7 +227,7 @@ jobs:
         run: node scripts/ux/offline-recovery-browser.mjs
 
       - name: Export option continuity and unknown-result recovery
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 2 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/export-recovery-browser.mjs
@@ -237,13 +239,13 @@ jobs:
         run: node scripts/ux/attachment-recovery-browser.mjs
 
       - name: Source save snapshots, receipts and real editor transactions
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 2 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/source-editor-table-browser.mjs
 
       - name: Reading success feedback and explicit copy recovery
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 3 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reading-feedback-browser.mjs
@@ -275,7 +277,7 @@ jobs:
           e2e/csp-enforcement.spec.ts
 
       - name: Context files, export and reader recovery
-        if: ${{ inputs.shard == 2 }}
+        if: ${{ inputs.shard == 3 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: context-files
@@ -293,7 +295,7 @@ jobs:
           e2e/context-skill-bundles.spec.ts
 
       - name: Focused online browser and security checks
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 3 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: focused-online-security
@@ -310,7 +312,7 @@ jobs:
           e2e/release-stabilization-contract.spec.ts
 
       - name: Release H Share focus checks
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 2 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: share-focus
@@ -320,7 +322,7 @@ jobs:
           e2e/share-drawer-focus.spec.ts
 
       - name: Release H Source Editor and mutation cache checks
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 2 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: source-editor-mutation
@@ -334,7 +336,7 @@ jobs:
           e2e/manual-markdown-fidelity.spec.ts
 
       - name: Source Editor content cleanup browser gate
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 3 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: source-editor-cleanup
@@ -346,7 +348,7 @@ jobs:
           e2e/thinking-summary.spec.ts
 
       - name: Release I upload-token atomicity matrix
-        if: ${{ inputs.shard == 1 }}
+        if: ${{ inputs.shard == 2 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: upload-token-atomicity
@@ -370,7 +372,7 @@ jobs:
           e2e/message-markdown-copy.spec.ts
 
       - name: Reading geometry, image snapshots and cross-module recovery
-        if: ${{ inputs.shard == 2 }}
+        if: ${{ inputs.shard == 1 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: reading-stability
@@ -380,7 +382,7 @@ jobs:
           node scripts/ci/verify-reading-stability.mjs
 
       - name: PDF.js maintained-line browser checks
-        if: ${{ inputs.shard == 2 }}
+        if: ${{ inputs.shard == 3 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: pdfjs-maintained-line
@@ -392,7 +394,7 @@ jobs:
           e2e/pdfjs-share.spec.ts
 
       - name: Default PWA baseline
-        if: ${{ inputs.shard == 2 }}
+        if: ${{ inputs.shard == 3 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: default-pwa
@@ -400,7 +402,7 @@ jobs:
         run: pnpm --filter web exec playwright test --config=playwright.config.ts
 
       - name: Single-owner authentication browser gate
-        if: ${{ inputs.shard == 2 }}
+        if: ${{ inputs.shard == 3 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: single-owner-auth
@@ -443,7 +445,7 @@ jobs:
           done
 
       - name: Release E production-build PWA negative matrix
-        if: ${{ inputs.shard == 2 }}
+        if: ${{ inputs.shard == 1 }}
         env:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: pwa-negative
@@ -462,7 +464,7 @@ jobs:
       - name: Build machine-readable browser gate summary
         if: always()
         env:
-          PLAYWRIGHT_EXPECTED_GATES: ${{ inputs.shard == 1 && 'adaptive-import-recovery,csp-enforcement,focused-online-security,share-focus,source-editor-mutation,source-editor-cleanup,upload-token-atomicity' || 'context-files,markdown-image-viewer,reading-stability,pdfjs-maintained-line,default-pwa,single-owner-auth,pwa-negative' }}
+          PLAYWRIGHT_EXPECTED_GATES: ${{ inputs.shard == 1 && 'adaptive-import-recovery,csp-enforcement,reading-stability,pwa-negative' || inputs.shard == 2 && 'share-focus,source-editor-mutation,upload-token-atomicity,markdown-image-viewer' || 'context-files,focused-online-security,source-editor-cleanup,pdfjs-maintained-line,default-pwa,single-owner-auth' }}
         run: >-
           node apps/web/e2e/gate-summary.mjs
           apps/web/test-results

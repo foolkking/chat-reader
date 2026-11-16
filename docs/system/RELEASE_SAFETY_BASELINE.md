@@ -1,6 +1,39 @@
 # Release Safety Baseline
 
-## Mounted workflow contract correction — 2026-11-17
+## Current: full19-job release scheduling and early candidate boundary — 2026-11-17
+
+Empty-quality-source mode requires API4+aggregate, Web3+aggregate,
+Settings4+independent restore+aggregate, Reader comparison, early image preparation,
+publisher and independent inspector. Peak initial scheduling is14 independent
+standard runners. The publisher verifies17 exact-source successful prerequisite
+job identities, including preparation; historical six-job image-only reuse keeps
+its original fixed run, lineage and narrow file whitelist.
+
+The frozen v1 execution contract is not rewritten. A separate SHA-bound v2
+schedule assigns complete files/gates by deterministic LPT from recorded timings.
+API retains7010 collected/7007pass/3 exact skips with full collection equality and
+actual per-case native JUnit/lifecycle proof. Settings retains470+restore1 and
+source-bound native timeouts; four original blobs must independently merge to
+the same attempts without missing, duplicated, skipped, failed or retried cases.
+Reader baseline→candidate ordering and all five real memory gates are unchanged.
+
+`image-preparation` has no quality dependency but can upload only
+`non-deployable-image-candidate-<sha>-<attempt>`; it cannot emit a release manifest.
+Candidate proof binds source/run/attempt, archive/report hashes, actual config
+IDs/RootFS, and separately verified Docker engine/OCI identities. The measured
+worker must belong to that same image graph. Only after all quality dependencies
+pass may `build-images` download the exact artifact ID and official ZIP digest,
+load and verify those images and create the normal release manifest. Full mode
+does not rebuild another image. The final inspector retains original checks and
+redownloads the original candidate for byte equality with the published archive.
+Missing/mismatched reports, attempts, configs or quality success reject publication.
+
+Local controls are verified, not complete CI acceptance:
+[proof](../evidence/reliability-2026-11-16/ci-scheduling-v2-local-verification.json).
+Two new successful full runs and measured timing/cache behavior are still needed.
+No product/API/schema/offline-format or production deployment change.
+
+## Earlier mounted workflow contract correction — 2026-11-17
 
 The five mounted UX assertions follow the required reusable Web shard instead
 of searching for an inline parent step. Only its exact assignment condition is
@@ -11,7 +44,7 @@ The approved next topology (API4/Settings4/Web3, independent restore, early
 non-deployable candidate images) is not yet implemented/accepted at this checkpoint.
 Historical image-only source/lineage is not broadened. Current production is unchanged.
 
-## Current full-CI scheduling contract — repair pending exact re-run, 2026-11-17
+## Historical first-round scheduling contract — repair pending at that checkpoint, 2026-11-17
 
 Ordinary empty-quality-source mode now requires eight quality jobs: the complete API suite,
 two isolated Web shards plus strict fourteen-gate aggregation, two isolated Settings shards plus

@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-16T18:20:49.456557+00:00",
+  "status": "second_round_source_and_local_controls_verified_not_full_ci_acceptance",
+  "base_head": "8adaf9f36aec78258d9ddf9ed7a43ac1e53d1e61",
+  "separate_specified_failure_repair": "8adaf9f36aec78258d9ddf9ed7a43ac1e53d1e61",
+  "jobs": 19,
+  "initial_parallel_runners": 14,
+  "api_shards": 4,
+  "settings_shards": 4,
+  "web_shards": 3,
+  "restore_independent_and_aggregate_has_no_application_services": true,
+  "original_contract_lf_sha256": "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c",
+  "schedule_lf_sha256": "b8bc9632a94b12f2fae7a5f051c0135e91f46c6ed118989410121cc6953db1ca",
+  "source_lf_sha256": {
+    ".github/workflows/build-release-images.yml": "873875bbf96caa81c8921b619954de2af7be2126bf31e962b3a0e20d6ef1ef68",
+    ".github/workflows/api-quality-shard.yml": "f469c1e5d0b8114d3bb4cc248f060997d20ec7f49620a168b064fccc201208ca",
+    ".github/workflows/web-quality.yml": "9b8a61019d2a1736ba25504726bb314c06562d3e5f46af4eca0bf570a44d0b04",
+    ".github/workflows/settings-browser-shard.yml": "9752153395639f26af07c51c3d30659485209f44bae0cd8d74404c817a8d1364",
+    "apps/api/tests/test_source_detector.py": "694d70dccafaacad1f28713a59b79d0385c8162b29036d7d479e3a76b3bbe45a",
+    "scripts/ci/api_shard_plugin.py": "d8ef7729ebb118ecf2c12a2405e1e3d975993046021eee00c0f3de0cfa63d5f7",
+    "scripts/ci/api_shard_evidence.py": "0bd58dd861e68afc0bf45a499a2e7b1d4ac41ee6a8059c4bc39c9fbf08293dfa",
+    "scripts/ci/image_archive_identity.py": "79c041d15999224b96966d1bb4fa3bc6b36a2d384fc96e133391319d227badeb",
+    "scripts/ci/image_candidate.py": "5aa883179554a1c405d111323bbb1e98ad26242f941bce81f2450a321b3b85a5",
+    "scripts/ci/image-only-quality-reuse.py": "a927c81a7857d3b684773d858317d9d282b8f4063e820824c060f946d92dd9b0",
+    "scripts/ci/quality-schedule-v2.json": "b8bc9632a94b12f2fae7a5f051c0135e91f46c6ed118989410121cc6953db1ca",
+    "scripts/ci/quality_schedule.py": "1a39293be2b4ae48c00bb9450ed2c4f8adb51c18021074af724ac5697c1ce739",
+    "scripts/ci/quality-schedule.mjs": "573a48848b9772aaa24ccac547ba1663bb91fc2848a8a19ffa24afa322343f00",
+    "scripts/ci/quality_dag.py": "4028353b528e64fe788b86aa726e5ba85d2994d41803ff3573e48a98793b4961",
+    "scripts/ci/run-settings-shard.mjs": "ae3a8afc71cbb8f54564c61b0c6573feed7ba0a1a5d11158c0c9c33b87cba439",
+    "scripts/ci/quality-shard-evidence.mjs": "2ff6725fdc71a9e590503ead22f1f9d2f14fb0b8445382291f2a5d2733395571",
+    "scripts/ci/quality-shard-evidence.test.mjs": "32074c6019384e597225c104c77bd9beea108ac4469d0a37cd6287e0c2777db3",
+    "scripts/ci/release-image-sources.test.mjs": "a771b7da79e0a00e4b0a54f63ab8b597c89cf2292aaac8af10678506f819c4fe",
+    "scripts/ci/required-web-step.mjs": "880887830d060576194bfa8cb078f385e7775cc5d3def4cd51c30c3e0fb9036d",
+    "scripts/ci/settings-completion-timing.test.mjs": "e1a64fd13d726743995271f6c8db994a6ddce9b0a8c5ffd7dd49c7f5098ed2e7",
+    "scripts/ci/small-import-memory-gate.py": "c7894868e5d857d65f4d3ad24213c0990f459d564956b93edf42e366fb51b751",
+    "scripts/ci/test_api_shard_evidence.py": "66d327d90aff600f341d27ddbe8f3a1eb820a3917e2c9d7c054f4db6786a8cc2",
+    "scripts/ci/test_image_candidate.py": "351cadca39a9d99c8f6aabb13e2b9d37653e9f052673ad06a281eb5ad580f47d",
+    "scripts/ci/test_image_only_evidence_transport.py": "3f0d671cda1f92e276578ccf6e3c28ac4f2615a0fc44d2cc6a6168769d2d38c5",
+    "scripts/ci/test_image_only_quality_reuse.py": "62089f5efe965612f15ff0a43d6b77b5e17b23b68d5c2893c2737a35110656ec",
+    "scripts/ci/test_quality_scheduling.py": "8038188bfb1201e75b920e44631e75f2dcac4f0ccb48ccb49ef1dd108abe7f14",
+    "scripts/ci/test_required_web_gates.py": "5163777298a99fd0c661c8f19f02e151704f962be50a86f8b7733f1b50bf0c7d"
+  },
+  "validation": [
+    {
+      "name": "ux-full",
+      "exit_code": 0,
+      "elapsed_seconds": 26.90599999999904,
+      "log_sha256": "07859f9f2753e72a3511836613e7c3ec3d72c3d1ebb91d6b113c448783395171",
+      "passed": 2556
+    },
+    {
+      "name": "ci-node",
+      "exit_code": 0,
+      "elapsed_seconds": 14.06300000000192,
+      "log_sha256": "2721f68e0f22d91e2d4c0a53418b7dc0125b39065a9032df817519ca868f51bd",
+      "passed": 156
+    },
+    {
+      "name": "ci-python",
+      "exit_code": 0,
+      "elapsed_seconds": 6.609000000000378,
+      "log_sha256": "82e6c427b66b4582156826196005d0ce80bbf33d79bb5a40f65995f864ff2d99",
+      "tests": 138
+    },
+    {
+      "name": "api-source-detector",
+      "exit_code": 0,
+      "elapsed_seconds": 4.03099999999904,
+      "log_sha256": "e4b78c3ce9fb5ae09f5360f328c57740638dbef844f6d1888c7d1db24a4e504f",
+      "passed": 13
+    },
+    {
+      "name": "lint",
+      "exit_code": 0,
+      "elapsed_seconds": 14.610000000000582,
+      "log_sha256": "12318e1458c77defc58b71801a46646387fd5cfc66f98359491f30888decd8f2"
+    },
+    {
+      "name": "typecheck",
+      "exit_code": 0,
+      "elapsed_seconds": 25.95300000000134,
+      "log_sha256": "3a886aa7c38f13dc90ed1471a08cde474ab62f30e91d234f63f725267c422386"
+    },
+    {
+      "name": "actionlint",
+      "exit_code": 0,
+      "elapsed_seconds": 0.01599999999962165,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "migration-head",
+      "exit_code": 0,
+      "elapsed_seconds": 1.0,
+      "log_sha256": "73423f8cc296997f4c5fa5d11c6fbcf544629c61e9b90c2257f86f00f0243af5"
+    },
+    {
+      "name": "settings-full-collection",
+      "exit_code": 0,
+      "elapsed_seconds": 4.514999999999418,
+      "log_sha256": "bf3786a07049a1dd49e8d2d981a9c9fb53774b616ee0a5b433a5c889f98e9db0"
+    }
+  ],
+  "api_collection_only": {
+    "collection_only": true,
+    "count": 7010,
+    "identical_independent_collections": true,
+    "canonical_sorted_ids_sha256": "4c0a127076ef1f032c1be21fff9aab1cfe8f9219dec344b22e37d76dc4861c3e",
+    "only_id_change": "gzip-canjson-v2",
+    "elapsed_seconds": [
+      13.204000000001543,
+      11.1720000000023
+    ]
+  },
+  "settings_collection_only": {
+    "cases": 470,
+    "source_files": 60,
+    "original_body_timeout_bindings": 54
+  },
+  "real_native_controls": {
+    "two_count_shards_cases": 4,
+    "four_whole_file_shards_cases": 8,
+    "neither_can_substitute_for_470_release_cases": true
+  },
+  "archive_identity_control": {
+    "existing_verified_7134_archive_parser_control_only": true,
+    "log_sha256": "6be1dc1ad871385ce911482cbd02fa207f68bb8a7fd7e27c3056199889642d1e",
+    "not_new_image_execution_or_reuse": true,
+    "actual_config_ids_separate_from_engine_oci_ids": true
+  },
+  "candidate_chain": "non-deployable artifact ID/digest -> config/RootFS and five worker resource proofs -> all17 prerequisites -> same archive publication -> independent original-candidate byte verification",
+  "original_api_test_content_changed": false,
+  "only_api_parameter_id_change": "gzip-canjson-v2",
+  "original_settings_tests_and_reader_workflow_unchanged": true,
+  "no_new_timeout_skip_retry_or_threshold_relaxation": true,
+  "preserved_original_files": 4688,
+  "user_tsbuildinfo_sha256": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135",
+  "validation_runtime": {
+    "node": "v20.13.1",
+    "python": "3.11.7",
+    "host": "Windows"
+  },
+  "full_ci_dispatched_at_this_checkpoint": false,
+  "full_runtime_execution_and_two_green_timing_runs_pending": true,
+  "cold_warm_cache_behavior_pending_actual_observation": true,
+  "target20_25_minutes_not_measured": true,
+  "production_unchanged": "71342129/schema20261112_0061",
+  "application_redeployment_required": false,
+  "product_acceptance_owned_by_user": true,
+  "no_web_search_or_interactive_login": true
+}

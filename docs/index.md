@@ -1,12 +1,14 @@
 # 文档导航
 
-## 当前：第二轮 CI 提速实施中 — 2026-11-17
+## 当前：第二轮CI调度已实现并通过本地检查，待完整实测 — 2026-11-17
 
-43907985394/2e5d51d已失败，仅Web shard1的五项旧工作流断言失败。现已定点修复，
-完整UX2556、CI Node152/Python124及静态检查通过；尚非新完整CI验收。
-[修复证据](evidence/reliability-2026-11-16/ci-scheduling-mounted-contract-repair.json) /
-[唯一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)记录已批准的API4/Settings4/Web3、
-独立restore及提前候选镜像方案。20–25分钟是待实测目标，不是已取得收益；生产不变。
+指定五项旧断言已独立提交8adaf9f。19-job候选实现API4/Settings4/Web3、独立restore1和
+提前非发布镜像；原覆盖/超时/资源门禁不变。UX2556、Node156/Python138、格式识别13、
+静态检查及真实四片blob控制通过，不能代替完整Linux/浏览器/内存执行。
+[本地证据](evidence/reliability-2026-11-16/ci-scheduling-v2-local-verification.json) /
+[发布合同](system/RELEASE_SAFETY_BASELINE.md) /
+[唯一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+两次新完整成功、缓存模式与正式耗时/runner分钟仍待验证；20–25分钟仍是目标，生产不变。
 
 ## 前一检查点：71342129 已部署并独立核验 — 2026-11-17
 

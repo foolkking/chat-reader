@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { loadSchedule } from "./quality-schedule.mjs";
 
 const read = (file) => readFileSync(new URL(`../../${file}`, import.meta.url), "utf8").replaceAll("\r\n", "\n");
 
@@ -7,7 +8,7 @@ const read = (file) => readFileSync(new URL(`../../${file}`, import.meta.url), "
 // YAML/DAG semantics are independently checked by required_web_gates.py.
 export function requiredWebStep(name, {
   workflow = read(".github/workflows/web-quality.yml"),
-  assignment = JSON.parse(read("scripts/ci/quality-scheduling-contract.json")).web_assignment,
+  assignment = loadSchedule().web.assignment,
 } = {}) {
   const shard = assignment[name];
   assert.ok(Number.isInteger(shard) && shard > 0, "A required shard assignment is missing.");

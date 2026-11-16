@@ -5,6 +5,7 @@ import unittest
 
 import yaml
 from required_web_gates import validate_required_web_gate
+from quality_schedule import active_web_contract
 
 ROOT = Path(__file__).resolve().parents[2]
 NAMES = (
@@ -20,7 +21,7 @@ class RequiredWebGatesTests(unittest.TestCase):
     def setUp(self):
         self.main = yaml.safe_load((ROOT / ".github/workflows/build-release-images.yml").read_text("utf8"))
         self.web = yaml.safe_load((ROOT / ".github/workflows/web-quality.yml").read_text("utf8"))
-        self.contract = json.loads((ROOT / "scripts/ci/quality-scheduling-contract.json").read_text("utf8"))
+        self.contract = active_web_contract()
 
     def check(self):
         for name in NAMES:

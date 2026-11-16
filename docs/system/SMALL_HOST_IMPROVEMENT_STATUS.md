@@ -3,7 +3,7 @@
 更新时间：**2026-11-17，Asia/Shanghai**。本页是本目标的状态入口；
 详细方案、历次失败和实验记录保留在原账本，不再把每个检查点重复当作“当前状态”。
 
-## 当前：第二轮CI提速实施中（2026-11-17）
+## 当前：第二轮CI调度实现、本地验证通过，等待新完整实测（2026-11-17）
 
 - 用户批准完成时长优先：API4、Settings4、Web3独立runner按原完整单元耗时均衡；
   restore1提前独立运行，镜像构建与五项资源门禁提前，但全部质量通过前只产非发布候选。
@@ -11,8 +11,23 @@
   五项断言仍查父workflow，浏览器门禁未进入。完整UX2556现已本地通过，另有CI Node152、
   Python124（含6项真实DAG正/负控制）、lint/typecheck和Actionlint通过。
   [证据](../evidence/reliability-2026-11-16/ci-scheduling-mounted-contract-repair.json)不冒称新Linux/浏览器验收。
-- 本轮先独立提交该修复，再实施新调度与完整证据消费者。19个job/峰值14runner是目标拓扑；
-  两次新完整成功CI、冷/热缓存可运行性及20–25分钟目标尚待实测，不沿用失败运行当收益。
+- 五项断言修复已独立提交8adaf9f；新候选实现19个job/初始14独立runner。版本化LPT清单按
+  API完整文件、Settings原60文件、Web完整门禁分配；保留旧冻结合同。
+- API每片先收集全部7010项，逐例setup/call/teardown与原生JUnit核对，聚合拒绝跨进程collection
+  漂移、重复/遗漏、重试及新增skip；唯一测试修改是gzip参数显式ID。Settings四片原生blob/JSON
+  按原470集合与原54处测试体超时核对；restore1原新数据库流程独立执行，聚合不启动服务或构建。
+- 提前镜像只产非发布候选。五项真实资源报告绑定运行和实际worker镜像；候选同时保存真实config
+  ID、完整RootFS及经导出图验证的engine/OCI ID。所有质量通过后按精确artifact ID/摘要下载，
+  原包不重建；最后独立消费者重新读取原候选制品核对，不只相信revision标签。
+- 本地完整UX2556、CI Node156/Python138、格式识别13、lint/typecheck/Actionlint通过；两次
+  独立7010 collection一致，Settings470源码/超时绑定与真实四片blob小型控制通过。
+  [本地证据](../evidence/reliability-2026-11-16/ci-scheduling-v2-local-verification.json)不是全量API、
+  Settings470+restore1、Reader或五项内存本轮执行验收。
+- 提交前`diff --check`另发现新API子工作流末尾空行，已仅去除多余空行；YAML结构相同，
+  原回执不改写，[最终源绑定](../evidence/reliability-2026-11-16/ci-scheduling-v2-precommit-final.json)记录该非功能修正。
+- 下一步选择性提交/推送，普通空quality-source派发；新真实55分钟等待后自行检查。至少两次
+  新完整成功CI、冷/热缓存可运行性、关键路径/排队调度/runner分钟及20–25分钟目标尚待实测；
+  不沿用失败运行当收益，不重放旧CI或创建自动安排。
 - 全部原用例、fixture隔离、超时、Reader同机比较和五项内存门禁保留。用户资料和旧失败证据不改；
   不重跑旧CI，不更改生产71342129/schema0061，不因CI-only改动重新部署。
 

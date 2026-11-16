@@ -1,6 +1,34 @@
 # Testing
 
-## Latest: required mounted-gate contract repaired — 2026-11-17
+## Current: versioned19-job scheduling candidate — 2026-11-17
+
+The full dispatch uses four isolated PostgreSQL API runners, four single-worker
+Settings fixtures, three Web runners, independent fresh restore, unchanged
+same-runner Reader comparison, three evidence aggregators, image preparation,
+publication and independent inspection. No original test/native/resource budget
+is relaxed. The immutable v1 execution contract remains; v2 LPT assignments and
+timing-source hashes live in `scripts/ci/quality-schedule-v2.json`.
+
+API reports bind the complete7010 collection, selected whole-file IDs, every
+setup/call/teardown and native JUnit. Four collections must agree exactly; only
+the original three skips are admitted. Settings keeps470 cases from60 unchanged
+files, workers1, no retries, and original runtime timeouts. It writes genuine
+blob/JSON plus run/source/selection digests; aggregation independently merges
+four blobs and compares all attempts, including the separate restore1 evidence.
+The aggregate starts no service and builds no Web bundle.
+
+Controls: `python -m unittest discover -s scripts/ci -p 'test_*.py' -v`,
+`node --test scripts/ci/*.test.mjs`, and the original complete
+`node --test scripts/ux/*.test.mjs`. On Windows expand the glob to actual paths.
+Local UX2556, Node156, Python138, detector13, lint/typecheck, Actionlint and0061
+head pass. Two complete API collections are identical; Settings470 collection
+and source budgets match. Actual small two-way and four-way Playwright blob runs
+exercise merging/rejection, not a replacement for470 release cases.
+[Local evidence](evidence/reliability-2026-11-16/ci-scheduling-v2-local-verification.json).
+Full Linux/native/resource execution, at least two new successful CI timings
+and observed cold/warm cache behavior remain pending.
+
+## Previous local checkpoint: required mounted-gate contract repaired — 2026-11-17
 
 The five retained mounted-gate assertions now inspect the reusable Web workflow,
 accept only the exact required shard assignment, and retain their original

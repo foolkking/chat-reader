@@ -8,7 +8,7 @@ import { test } from "node:test";
 import { summarizeGateEvidence } from "../../apps/web/e2e/gate-summary.mjs";
 import {
   SETTINGS_CASE_COUNT, WEB_GATE_GROUPS, mergeSettingsReports, mergeWebSummaries,
-  prepareSettingsBlobs, verifyNativeShardUnion, frozenSettingsRuntimeTimeouts,
+  prepareSettingsBlobs, verifyNativeShardUnion, frozenSettingsRuntimeTimeouts, validateRestoreReport,
 } from "./quality-shard-evidence.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -200,7 +200,7 @@ for (const [name, mutate] of [
 test("artifact consumer preserves raw evidence and rejects ambiguous or linked summaries and overwrites", () => {
   const root = ownedTemp("quality-artifact-control-");
   const fixture = webFixture();
-  for (const index of [1, 2]) {
+  for (const index of [1, 2, 3]) {
     write(path.join(root, `shard-${index}/original/apps/web/test-results/web-shard-gate-summary.json`), fixture[index - 1]);
     write(path.join(root, `shard-${index}/original/_temp/node-browser/control.png`), "synthetic PNG bytes");
   }
@@ -296,4 +296,88 @@ test("synthetic ${file} second", () => expect("retained").toContain("tain"));`);
   assert.equal(merged.config.projects.length, 2, "native merge retains the two physical shard configurations");
   assert.ok(merged.config.projects.every((project) => project.id === undefined && project.metadata.actualWorkers === 1));
   assert.throws(() => mergeSettingsReports(collection, reports, merged, SHA, timeouts), /original470/);
+});
+
+test("four genuine whole-file blob reports preserve every native attempt and reject wrong assignment or retry", () => {
+  const root = ownedTemp("quality-weighted-four-control-");
+  const webRequire = createRequire(path.join(REPO, "apps/web/package.json"));
+  const entry = webRequire.resolve("@playwright/test");
+  const packageFile = createRequire(webRequire.resolve("@playwright/test/package.json")).resolve("playwright/package.json");
+  const cli = path.join(path.dirname(packageFile), "cli.js");
+  const config = path.join(root, "weighted.config.ts");
+  write(config, `import { defineConfig } from ${JSON.stringify(entry)};
+export default defineConfig({
+  testDir: ${JSON.stringify(root)}, testMatch: "weighted-*.spec.ts",
+  fullyParallel: false, workers: 1, timeout: 90000,
+  outputDir: ${JSON.stringify(path.join(root, "native-results"))},
+  reporter: [["json"], ["blob", { outputDir: process.env.PLAYWRIGHT_BLOB_OUTPUT_DIR }]],
+});`);
+  const assignment = {};
+  for (let index = 1; index <= 4; index++) {
+    const file = `weighted-${index}.spec.ts`;
+    assignment[file] = index;
+    write(path.join(root, file), `import { test, expect } from ${JSON.stringify(entry)};
+test("retained file ${index}", () => expect(${index}).toBe(${index}));
+test("retained original budget ${index}", () => { test.setTimeout(120000); expect(true).toBe(true); });`);
+  }
+  const collected = path.join(root, "collection.json");
+  let result = command([cli, "test", `--config=${config}`, "--list", "--reporter=json"],
+    { env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: collected } });
+  assert.equal(result.status, 0, result.stderr);
+  const collection = JSON.parse(fs.readFileSync(collected));
+  const reports = [];
+  const mergeDir = path.join(root, "merge");
+  fs.mkdirSync(mergeDir);
+  for (let index = 1; index <= 4; index++) {
+    const report = path.join(root, `native-${index}.json`);
+    const blobDir = path.join(root, `blobs-${index}`);
+    result = command([cli, "test", `--config=${config}`, `weighted-${index}\\.spec\\.ts$`], {
+      env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: report,
+        PLAYWRIGHT_BLOB_OUTPUT_DIR: blobDir, PLAYWRIGHT_BLOB_OUTPUT_NAME: `settings-${index}.zip` },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    reports.push(JSON.parse(fs.readFileSync(report)));
+    fs.copyFileSync(path.join(blobDir, `settings-${index}.zip`), path.join(mergeDir, `settings-${index}.zip`),
+      fs.constants.COPYFILE_EXCL);
+  }
+  const mergedFile = path.join(root, "merged.json");
+  result = command([cli, "merge-reports", "--reporter=json", mergeDir],
+    { env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_NAME: mergedFile } });
+  assert.equal(result.status, 0, result.stderr);
+  const merged = JSON.parse(fs.readFileSync(mergedFile));
+  const timeouts = new Map(collection.suites.flatMap((suite) => suite.specs.map((spec) =>
+    [spec.id, spec.title.includes("budget") ? 120_000 : 90_000])));
+  const validate = (native = reports, combined = merged, owners = assignment) =>
+    verifyNativeShardUnion(collection, native, combined, timeouts, owners);
+  assert.equal(validate().cases.size, 8);
+  assert.deepEqual(validate().shardCounts, [2, 2, 2, 2]);
+  assert.throws(() => validate(reports.slice(1)), /shard count/);
+  assert.throws(() => validate([reports[0], reports[0], ...reports.slice(2)]), /assignment/);
+  assert.throws(() => validate(reports, merged, { ...assignment, "weighted-1.spec.ts": 2 }), /assignment/);
+  const retry = clone(reports);
+  retry[0].suites[0].specs[0].tests[0].results.push({ ...retry[0].suites[0].specs[0].tests[0].results[0], retry: 1 });
+  assert.throws(() => validate(retry), /retried/);
+  const changed = clone(merged);
+  changed.suites[0].specs[0].tests[0].results[0].duration++;
+  assert.throws(() => validate(reports, changed), /differs/);
+  assert.throws(() => mergeSettingsReports(collection, reports, merged, SHA, timeouts, assignment), /original470/);
+});
+
+test("independent restore requires its actual original180-second native pass, never a count-only summary", () => {
+  const report = nativeReport(["restore-original"]);
+  const spec = report.suites[0].specs[0];
+  spec.file = "system-archive-new-instance.spec.ts";
+  spec.tests[0].timeout = 180_000;
+  assert.equal(validateRestoreReport(report).size, 1);
+  for (const mutate of [
+    (r) => { r.suites[0].specs[0].tests[0].timeout++; },
+    (r) => { r.suites[0].specs[0].tests[0].results = []; },
+    (r) => { r.suites[0].specs[0].tests[0].results[0].status = "skipped"; },
+    (r) => { r.suites[0].specs[0].file = "settings-other.spec.ts"; },
+    (r) => { r.config.workers = 2; },
+  ]) {
+    const altered = clone(report);
+    mutate(altered);
+    assert.throws(() => validateRestoreReport(altered));
+  }
 });

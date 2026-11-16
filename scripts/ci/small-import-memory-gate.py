@@ -52,7 +52,9 @@ def main(*, bounded_case: str | None = None, memory_mib: int = 320) -> None:
     if docker("image", "inspect", "-f", '{{ index .Config.Labels "org.opencontainers.image.revision" }}', image) != revision:
         raise SystemExit("Worker image does not match the source under test.")
     report = {"revision": revision, "passed": False, "real_sensor": True,
-              "memory_limit_bytes": memory_mib * MIB, "memory_swap_limit_bytes": memory_mib * MIB}
+              "memory_limit_bytes": memory_mib * MIB, "memory_swap_limit_bytes": memory_mib * MIB,
+              "image_engine_id": docker("image", "inspect", "-f", "{{.Id}}", image),
+              "run_id": os.environ["GITHUB_RUN_ID"], "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"]}
     database = "chat_reader" if bounded_case is None else "chat_reader_bounded_" + bounded_case
     common = [
         "--network", "host", "--volume", volume + ":/data",
@@ -159,7 +161,9 @@ fi
         inspection = json.loads(docker("container", "inspect", name))[0]
         delta = max(0, final["peak"] - baseline["current"])
         if (
-            delta > 64 * MIB or final["oom"] or final["oom_kill"] or final["failcnt"] != baseline["failcnt"]
+            inspection["Config"]["Image"] != image
+            or docker("image", "inspect", "-f", "{{.Id}}", image) != report["image_engine_id"]
+            or delta > 64 * MIB or final["oom"] or final["oom_kill"] or final["failcnt"] != baseline["failcnt"]
             or inspection["State"]["OOMKilled"] or not inspection["State"]["Running"]
             or inspection["RestartCount"] != 0
             or inspection["HostConfig"]["Memory"] != memory_mib * MIB
@@ -167,6 +171,7 @@ fi
         ):
             raise RuntimeError("The worker exceeded its real memory/no-OOM contract.")
         report.update(verified, archive_bytes=fixture["archive_bytes"],
+                      worker_image_id=inspection["Image"],
                       baseline_bytes=baseline["current"], peak_bytes=final["peak"],
                       workspace_peak_delta_bytes=delta, oom=0, oom_kill=0,
                       failcnt_delta=final["failcnt"] - baseline["failcnt"], restarts=0,

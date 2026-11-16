@@ -340,12 +340,12 @@ class OfficialQualityTests(unittest.TestCase):
     def test_full_producer_does_not_require_a_not_yet_created_downstream_consumer(self):
         run, jobs = full_source_fixture()
         jobs["jobs"] = [item for item in jobs["jobs"] if item["name"] != "inspect-release-artifact"]
-        jobs["total_count"] = 9
+        jobs["total_count"] = 18
         self.assertEqual(len(gate.verified_jobs(
             run, jobs, source_sha=HEAD, source_run="9001", attempt=1, reuse=False,
-        )), 8)
+        )), 17)
         jobs["jobs"].pop(0)
-        jobs["total_count"] = 8
+        jobs["total_count"] = 17
         with self.assertRaises(gate.GateError):
             gate.verified_jobs(run, jobs, source_sha=HEAD,
                                source_run="9001", attempt=1, reuse=False)
@@ -426,12 +426,13 @@ class QualityEvidenceTests(unittest.TestCase):
 
 
 class ProducerConsumerControlsTests(unittest.TestCase):
-    def test_full_branch_requires_four_successes_and_reuse_requires_four_explicit_skips(self):
+    def test_full_branch_requires_all_quality_and_candidate_successes_and_reuse_four_explicit_skips(self):
         for reuse in (False, True):
             desired = "skipped" if reuse else "success"
-            needs = {name: {"result": desired} for name in gate.NEEDS_NAMES}
+            names = gate.NEEDS_NAMES if reuse else (*gate.NEEDS_NAMES, "image-preparation")
+            needs = {name: {"result": desired} for name in names}
             gate.validate_needs(needs, reuse=reuse)
-            for name in gate.NEEDS_NAMES:
+            for name in names:
                 with self.subTest(reuse=reuse, name=name):
                     with self.assertRaises(gate.GateError):
                         gate.validate_needs({**needs, name: {"result": "failure"}}, reuse=reuse)

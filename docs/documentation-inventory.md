@@ -1,5 +1,15 @@
 # Markdown 文档台账
 
+## 第二轮CI实现与本地验证同步 — 2026-11-17
+
+定点更新Project State、导航、唯一状态台账、Testing、Release Safety及证据索引；
+新增`ci-scheduling-v2-local-verification.json`。记录19-job源码、API4/Settings4/Web3完整
+覆盖证明、独立restore与提前非发布镜像准入边界，区分engine/OCI ID和真实config ID。
+本地UX2556、Node156/Python138、格式识别13和静态检查通过；7010双collection和真实四片
+blob小型控制不是全量执行。两次新完整成功与实际耗时/缓存验证待完成。旧JSON与用户资料
+保留，不扩展历史image-only授权，不触发生产部署或重写README/AGENTS。
+`ci-scheduling-v2-precommit-final.json`补充提交前空行修正后的精确源码SHA，原本地验证回执保留。
+
 ## 第二轮CI实施：指定失败修复的独立检查点 — 2026-11-17
 
 定点同步当前状态、导航、唯一台账、测试和Release Safety边界；新增

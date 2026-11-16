@@ -110,7 +110,7 @@ def test_detect_canjson_v1() -> None:
     ("filename", "content"),
     [
         ("fixture.canonical.jsonl", _canjson_v2()),
-        ("fixture.canonical.jsonl.gz", gzip.compress(_canjson_v2())),
+        pytest.param("fixture.canonical.jsonl.gz", gzip.compress(_canjson_v2()), id="gzip-canjson-v2"),
     ],
 )
 def test_detect_canjson_v2(filename: str, content: bytes) -> None:

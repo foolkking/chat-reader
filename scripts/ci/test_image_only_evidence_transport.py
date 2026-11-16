@@ -389,7 +389,7 @@ class EvidenceGetTransportTests(unittest.TestCase):
         self.assertEqual(endpoints, list(responses))
         self.assertEqual(proof["workflow_run_id"], "9001")
         self.assertEqual(proof["sha"], "b" * 40)
-        self.assertEqual(len(proof["quality_jobs"]), 8)
+        self.assertEqual(len(proof["quality_jobs"]), 17)
         self.assertEqual(proof["verified_evidence"], [])
         self.assertFalse(any("artifact" in endpoint or "logs" in endpoint
                              or gate.BASE_RUN in endpoint for endpoint in endpoints))
@@ -425,7 +425,7 @@ class EvidenceGetTransportTests(unittest.TestCase):
             "GITHUB_REF": "refs/heads/master", "RUNNER_TEMP": str(self.cache),
             "TEMP": str(self.cache), "TMP": str(self.cache),
             "QUALITY_JOB_RESULTS": json.dumps({
-                name: {"result": "success"} for name in gate.NEEDS_NAMES
+                name: {"result": "success"} for name in (*gate.NEEDS_NAMES, "image-preparation")
             }),
         }
         with patch.dict(os.environ, environment, clear=True), \

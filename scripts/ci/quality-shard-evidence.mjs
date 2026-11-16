@@ -3,14 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
+import { loadSchedule, SCHEDULE_SHA256, validateSettingsSources } from "./quality-schedule.mjs";
 
 export const SETTINGS_CASE_COUNT = 470;
-export const WEB_GATE_GROUPS = [
-  ["adaptive-import-recovery", "csp-enforcement", "focused-online-security", "share-focus",
-    "source-editor-mutation", "source-editor-cleanup", "upload-token-atomicity"],
-  ["context-files", "markdown-image-viewer", "reading-stability", "pdfjs-maintained-line",
-    "default-pwa", "single-owner-auth", "pwa-negative"],
-];
+export const WEB_GATE_GROUPS = loadSchedule().web.gate_groups;
 const WEB_GATE_IDS = [
   "adaptive-import-recovery", "csp-enforcement", "context-files", "focused-online-security",
   "share-focus", "source-editor-mutation", "source-editor-cleanup", "upload-token-atomicity",
@@ -38,7 +34,7 @@ function sameIds(actual, expected, rule) {
 
 export function mergeWebSummaries(summaries, sourceSha, generatedAt = new Date().toISOString()) {
   requireSha(sourceSha);
-  requireEvidence(Array.isArray(summaries) && summaries.length === 2, "exactly two Web shards required");
+  requireEvidence(Array.isArray(summaries) && summaries.length === 3, "exactly three Web shards required");
   const gates = new Map();
   summaries.forEach((summary, index) => {
     const expected = WEB_GATE_GROUPS[index];
@@ -70,6 +66,7 @@ export function mergeWebSummaries(summaries, sourceSha, generatedAt = new Date()
 
 function nativeCases(report, {
   collection = false, shard = null, merged = false, referenceProject = null, runtimeTimeouts = null,
+  shardCount = 2, weighted = false,
 } = {}) {
   requireEvidence(report && Array.isArray(report.suites) && Array.isArray(report.errors)
     && report.errors.length === 0, "native Playwright report missing or errored");
@@ -77,9 +74,9 @@ function nativeCases(report, {
   // Native blob merge retains both physical project configurations, sums their
   // workers, and emits projectName instead of projectId. Bind that representation
   // to the one original selected project; do not rewrite the original reports.
-  requireEvidence(config?.version === "1.62.0" && config.workers === (merged ? 2 : 1) && config.fullyParallel === false
+  requireEvidence(config?.version === "1.62.0" && config.workers === (merged ? shardCount : 1) && config.fullyParallel === false
     && config.globalTimeout === 0 && config.maxFailures === 0
-    && Array.isArray(config.projects) && config.projects.length === (merged ? 2 : 1)
+    && Array.isArray(config.projects) && config.projects.length === (merged ? shardCount : 1)
     && config.projects.every((project) => project.retries === 0 && project.repeatEach === 1
       && project.timeout === 90_000), "original native configuration changed");
   const project = merged ? referenceProject : config.projects[0];
@@ -91,7 +88,8 @@ function nativeCases(report, {
   }
   if (collection) requireEvidence(config.shard === null, "full unsharded collection required");
   if (merged) requireEvidence(config.shard === null, "native combined report required");
-  if (shard) requireEvidence(isDeepStrictEqual(config.shard, { current: shard, total: 2 }),
+  if (weighted) requireEvidence(config.shard === null, "weighted whole-file selection cannot also use count sharding");
+  if (shard && !weighted) requireEvidence(isDeepStrictEqual(config.shard, { current: shard, total: shardCount }),
     "native report does not belong to the declared shard");
   requireEvidence(report.stats && ["expected", "skipped", "unexpected", "flaky"]
     .every((key) => Number.isInteger(report.stats[key]) && report.stats[key] >= 0)
@@ -186,11 +184,19 @@ export function frozenSettingsRuntimeTimeouts(collection) {
 
 // This primitive is also exercised with small, genuinely executed native blob
 // reports. The release entry point below separately fixes the original 470.
-export function verifyNativeShardUnion(collection, shardReports, merged, runtimeTimeouts = null) {
-  requireEvidence(Array.isArray(shardReports) && shardReports.length === 2, "exactly two Settings shards required");
+export function verifyNativeShardUnion(collection, shardReports, merged, runtimeTimeouts = null, assignment = null) {
+  const shardCount = assignment ? 4 : 2;
+  requireEvidence(Array.isArray(shardReports) && shardReports.length === shardCount, "exact Settings shard count required");
   const expected = nativeCases(collection, { collection: true, runtimeTimeouts });
   if (runtimeTimeouts) sameIds([...runtimeTimeouts.keys()], [...expected.keys()], "runtime timeout case set changed");
-  const shards = shardReports.map((report, index) => nativeCases(report, { shard: index + 1 }));
+  const shards = shardReports.map((report, index) => {
+    const cases = nativeCases(report, { shard: index + 1, shardCount, weighted: assignment !== null });
+    if (assignment) {
+      sameIds([...cases.keys()], [...expected].filter(([, entry]) =>
+        assignment[entry.identity.file] === index + 1).map(([id]) => id), "wrong weighted file assignment");
+    }
+    return cases;
+  });
   const union = new Map();
   for (const shard of shards) {
     for (const [id, entry] of shard) {
@@ -201,7 +207,7 @@ export function verifyNativeShardUnion(collection, shardReports, merged, runtime
     }
   }
   sameIds([...union.keys()], [...expected.keys()], "original Settings collection missing or replaced");
-  const mergedCases = nativeCases(merged, { merged: true, referenceProject: collection.config.projects[0] });
+  const mergedCases = nativeCases(merged, { merged: true, referenceProject: collection.config.projects[0], shardCount });
   sameIds([...mergedCases.keys()], [...union.keys()], "native blob merge has missing or extra cases");
   for (const [id, entry] of mergedCases) {
     requireEvidence(isDeepStrictEqual(entry, union.get(id)), "native blob merge differs from original shard attempts");
@@ -209,9 +215,9 @@ export function verifyNativeShardUnion(collection, shardReports, merged, runtime
   return { cases: mergedCases, shardCounts: shards.map((shard) => shard.size) };
 }
 
-export function mergeSettingsReports(collection, shardReports, merged, sourceSha, runtimeTimeouts = null) {
+export function mergeSettingsReports(collection, shardReports, merged, sourceSha, runtimeTimeouts = null, assignment = null) {
   requireSha(sourceSha);
-  const { cases, shardCounts } = verifyNativeShardUnion(collection, shardReports, merged, runtimeTimeouts);
+  const { cases, shardCounts } = verifyNativeShardUnion(collection, shardReports, merged, runtimeTimeouts, assignment);
   requireEvidence(cases.size === SETTINGS_CASE_COUNT, "complete original470 Settings cases required");
   const attempts = [...cases.values()].map((entry) => entry.result);
   const started = Math.min(...attempts.map((result) => Date.parse(result.startTime)));
@@ -278,12 +284,15 @@ function writeJson(file, value) {
   fs.mkdirSync(path.dirname(absolute), { recursive: true });
   fs.writeFileSync(absolute, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", flag: "wx" });
 }
-function settingsInputs(root) {
-  return [1, 2].map((index) => {
+export function settingsInputs(root, weighted = false, identity = {
+  source: process.env.GITHUB_SHA, run: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT,
+}) {
+  const schedule = weighted ? validateSettingsSources() : null;
+  return (weighted ? [1, 2, 3, 4] : [1, 2]).map((index) => {
     const files = filesUnder(path.join(root, `shard-${index}`));
     const reportFile = uniqueFile(files, "/settings-shard-report.json");
     const report = readJson(reportFile);
-    const cases = nativeCases(report, { shard: index });
+    const cases = nativeCases(report, { shard: index, weighted });
     const summary = readJson(uniqueFile(files, "/apps/web/test-results/settings-shard-gate-summary.json"));
     requireEvidence(summary.schema_version === 1 && summary.overall_status === "PASS"
       && isDeepStrictEqual(summary.counts, { PASS: 1, FAIL: 0, NOT_VERIFIED: 0, SKIPPED: 0 })
@@ -292,19 +301,58 @@ function settingsInputs(root) {
     requireEvidence(gate.gate_id === `settings-stages-1-4-shard-${index}`
       && gate.status === "PASS" && gate.evidence_status === "passed" && gate.test_count === cases.size
       && isDeepStrictEqual(gate.result_counts, passCounts(cases.size)), "Settings shard summary disagrees with native attempts");
+    if (weighted) {
+      const selection = readJson(uniqueFile(files, "/settings-selection.json"));
+      const collectionFile = uniqueFile(files, "/settings-shard-collection.json");
+      const collection = nativeCases(readJson(collectionFile), { collection: true });
+      requireEvidence(collection.size === 470, "original full collection required in every shard");
+      const selectedFiles = Object.keys(schedule.settings.assignment)
+        .filter((file) => schedule.settings.assignment[file] === index).sort();
+      const blob = uniqueFile(files, `/settings-blob-report/settings-${index}.zip`);
+      requireEvidence(selection.schema_version === 2 && selection.schedule_sha256 === SCHEDULE_SHA256
+        && selection.source_sha === identity.source && selection.run_id === identity.run
+        && selection.run_attempt === identity.attempt && selection.shard === index
+        && isDeepStrictEqual(selection.selected_files, selectedFiles)
+        && selection.collection_sha256 === sha256(fs.readFileSync(collectionFile))
+        && selection.report_sha256 === sha256(fs.readFileSync(reportFile))
+        && selection.blob_sha256 === sha256(fs.readFileSync(blob)), "Settings native source or content binding changed");
+      sameIds([...new Set([...cases.values()].map((entry) => entry.identity.file))],
+        selectedFiles, "weighted Settings files missing or misplaced");
+      sameIds([...collection.keys()], weightedCollectionIds(root, files), "inconsistent full cross-process collection");
+    }
     return { index, files, reportFile, report, summary };
   });
 }
 
-export function prepareSettingsBlobs(root, outputDir) {
-  const inputs = settingsInputs(root);
+function weightedCollectionIds(root, currentFiles) {
+  const files = filesUnder(path.join(root, "shard-1"));
+  const reference = nativeCases(readJson(uniqueFile(files, "/settings-shard-collection.json")), { collection: true });
+  const current = nativeCases(readJson(uniqueFile(currentFiles, "/settings-shard-collection.json")), { collection: true });
+  requireEvidence(isDeepStrictEqual([...current], [...reference]), "full cross-process collection identity changed");
+  return [...reference.keys()];
+}
+
+export function validateRestoreReport(report) {
+  const cases = nativeCases(report);
+  requireEvidence(report.config.shard === null && cases.size === 1, "one independent restore execution required");
+  const entry = [...cases.values()][0];
+  requireEvidence(entry.identity.file === "system-archive-new-instance.spec.ts"
+    && entry.identity.timeout === 180_000, "original restore source or deadline changed");
+  const source = fs.readFileSync(path.join(REPO, "apps/web/e2e/system-archive-new-instance.spec.ts"), "utf8").replaceAll("\r\n", "\n");
+  requireEvidence(sha256(source) === "5917266c4fdc384af526be8e6fc30845bf86bb0631b6b5e0841ec58f38e9b3b4",
+    "original restore test source changed");
+  return cases;
+}
+
+export function prepareSettingsBlobs(root, outputDir, weighted = false) {
+  const inputs = settingsInputs(root, weighted);
   const blobs = inputs.map(({ index, files }) => {
     const matches = files.filter((file) => /\/settings-blob-report\/[^/]+\.zip$/.test(file.replaceAll("\\", "/")));
     requireEvidence(matches.length === 1 && path.basename(matches[0]).endsWith(`-${index}.zip`)
       && fs.statSync(matches[0]).size > 0, "one original native blob per declared shard required");
     return matches[0];
   });
-  requireEvidence(new Set(blobs.map((file) => path.basename(file))).size === 2, "duplicate native blob filename");
+  requireEvidence(new Set(blobs.map((file) => path.basename(file))).size === inputs.length, "duplicate native blob filename");
   requireEvidence(!fs.existsSync(outputDir), "native blob output already exists; no overwrite allowed");
   // writeJson applies the same no-linked-ancestor check before creating output.
   writeJson(path.join(outputDir, "native-blob-inputs.json"), {
@@ -324,27 +372,58 @@ function main() {
   if (mode === "merge-web") {
     requireEvidence(args.length === 3, "invalid Web merge invocation");
     const [root, output, sourceSha] = args;
-    const summaries = [1, 2].map((index) => readJson(uniqueFile(
+    const summaries = [1, 2, 3].map((index) => readJson(uniqueFile(
       filesUnder(path.join(root, `shard-${index}`)), "/apps/web/test-results/web-shard-gate-summary.json",
     )));
     writeJson(output, mergeWebSummaries(summaries, sourceSha));
   } else if (mode === "prepare-settings-blobs") {
     requireEvidence(args.length === 2, "invalid native blob preparation invocation");
-    prepareSettingsBlobs(...args);
+    prepareSettingsBlobs(...args, true);
   } else if (mode === "merge-settings") {
     requireEvidence(args.length === 5, "invalid Settings merge invocation");
     const [root, collectionFile, mergedFile, output, sourceSha] = args;
-    const inputs = settingsInputs(root);
+    const inputs = settingsInputs(root, true);
     requireEvidence(inputs.every((input) => input.summary.source_sha === sourceSha), "wrong Settings shard source");
     const collection = readJson(collectionFile);
     const result = mergeSettingsReports(collection, inputs.map((input) => input.report),
-      readJson(mergedFile), sourceSha, frozenSettingsRuntimeTimeouts(collection));
+      readJson(mergedFile), sourceSha, frozenSettingsRuntimeTimeouts(collection),
+      loadSchedule().settings.assignment);
     result.coverage.native_report_sha256 = {
       collection: sha256(fs.readFileSync(collectionFile)), merged: sha256(fs.readFileSync(mergedFile)),
       shards: inputs.map((input) => sha256(fs.readFileSync(input.reportFile))),
     };
     writeJson(path.join(output, "settings-stages-1-4/gate-evidence.json"), result.evidence);
     writeJson(path.join(output, "settings-shard-coverage.json"), result.coverage);
+  } else if (mode === "record-restore") {
+    requireEvidence(args.length === 3, "invalid restore binding invocation");
+    const [report, blob, output] = args;
+    validateRestoreReport(readJson(report));
+    requireSha(process.env.GITHUB_SHA);
+    requireEvidence(/^[1-9][0-9]*$/.test(process.env.GITHUB_RUN_ID)
+      && /^[1-9][0-9]*$/.test(process.env.GITHUB_RUN_ATTEMPT), "restore run identity missing");
+    writeJson(output, {
+      schema_version: 1, source_sha: process.env.GITHUB_SHA,
+      run_id: process.env.GITHUB_RUN_ID, run_attempt: process.env.GITHUB_RUN_ATTEMPT,
+      report_sha256: sha256(fs.readFileSync(report)), blob_sha256: sha256(fs.readFileSync(blob)),
+    });
+  } else if (mode === "verify-restore") {
+    requireEvidence(args.length === 3, "invalid restore invocation");
+    const [root, output, source] = args;
+    const files = filesUnder(root);
+    const reportFile = uniqueFile(files, "/settings-restore-report.json");
+    validateRestoreReport(readJson(reportFile));
+    const binding = readJson(uniqueFile(files, "/settings-restore-binding.json"));
+    requireEvidence(binding.schema_version === 1 && binding.source_sha === source
+      && binding.source_sha === process.env.GITHUB_SHA && binding.run_id === process.env.GITHUB_RUN_ID
+      && binding.run_attempt === process.env.GITHUB_RUN_ATTEMPT
+      && binding.report_sha256 === sha256(fs.readFileSync(reportFile))
+      && binding.blob_sha256 === sha256(fs.readFileSync(uniqueFile(files, "/settings-restore-blob/restore.zip"))),
+    "wrong restore run, attempt or native report binding");
+    const evidence = readJson(uniqueFile(files, "/system-archive-new-instance/gate-evidence.json"));
+    requireEvidence(evidence.schema_version === 2 && evidence.gate_id === "system-archive-new-instance"
+      && evidence.status === "passed" && evidence.test_count === 1
+      && isDeepStrictEqual(evidence.result_counts, passCounts(1)), "restore gate summary disagrees with native case");
+    writeJson(path.join(output, "system-archive-new-instance/gate-evidence.json"), evidence);
   } else {
     throw new EvidenceError("unknown quality shard evidence invocation");
   }

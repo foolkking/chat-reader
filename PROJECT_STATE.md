@@ -1,21 +1,23 @@
 # Project State
 
-## Latest: mounted CI contract repair verified locally; second scheduling round in progress — 2026-11-17
+## Latest: second-round CI implementation locally verified; full runs pending — 2026-11-17
 
-Run43907985394/attempt1 at2e5d51d is completed/failure. Its only failed job is
-Web shard1: five retained UX tests still searched the parent workflow for steps
-now owned by the reusable Web workflow. The repaired tests require the exact
-shard condition and original commands/evidence; semantic negative controls
-verify the caller/aggregator/publisher chain. Full UX2556, CI Node152/Python124,
-lint/typecheck and Actionlint pass locally. This is not a new full CI pass.
-[Scoped proof](docs/evidence/reliability-2026-11-16/ci-scheduling-mounted-contract-repair.json).
+The repeated43907985394 failure was five stale mounted-workflow assertions,
+not a new runtime regression; the separate repair is commit8adaf9f.
+The second-round candidate now has19 jobs: API4, Settings4, Web3 weighted
+whole-unit shards; independent restore1; and early non-deployable image preparation.
+All original quality/resource gates precede publication of the exact tested
+candidate. Engine/OCI IDs are distinguished from actual image config IDs.
 
-The approved next step is API4/Settings4/Web3 isolated, weighted scheduling,
-an independent restore gate and early non-deployable image preparation.
-Implementation and two new complete successful timing runs remain pending.
-No test/resource budget is relaxed; production71342129/schema0061 is unchanged
-and does not need redeployment for CI-only work. The
-[single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current status.
+Local UX2556, CI Node156/Python138, detector13, lint/typecheck, Actionlint and
+single head0061 pass. Two independent7010-case API collections match, with only
+the explicit stable gzip ID; Settings470 collection/source-timeout binding and
+genuine four-way native blob controls pass. These are not full Linux/browser
+or five-memory-case execution acceptance. [Implementation proof](docs/evidence/reliability-2026-11-16/ci-scheduling-v2-local-verification.json).
+Two new complete green CI runs, observed cache modes, timing and runner-minute
+comparison remain required.20–25minutes is a target, not a measured result.
+Production71342129/schema0061 is unchanged; no CI-only redeployment.
+The [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current status.
 
 ## Previous checkpoint: ZIP fix deployed; first scheduling repair — 2026-11-17
 

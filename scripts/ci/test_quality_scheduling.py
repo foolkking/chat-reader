@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import copy
 import importlib.util
 import json
 from pathlib import Path
@@ -9,6 +10,8 @@ import re
 import unittest
 
 import yaml
+from quality_schedule import load_schedule
+from quality_dag import validate_dag
 
 
 REPO = Path(__file__).resolve().parents[2]
@@ -42,11 +45,36 @@ class QualitySchedulingTests(unittest.TestCase):
         cls.settings = load(".github/workflows/settings-browser-shard.yml")
         cls.web_job = cls.web["jobs"]["gates"]
         cls.settings_job = cls.settings["jobs"]["matrix"]
+        cls.schedule = load_schedule()
+        cls.api = load(".github/workflows/api-quality-shard.yml")
 
-    def test_original_api_image_memory_and_independent_consumer_jobs_are_structurally_unchanged(self):
-        for name, job in self.contract["unchanged_jobs"].items():
-            with self.subTest(job=name):
-                self.assertEqual(self.main["jobs"][name], job)
+    def test_original_api_image_memory_and_independent_consumer_contracts_are_retained(self):
+        originals = self.contract["unchanged_jobs"]
+        original_api = originals["api-quality"]
+        current = self.api["jobs"]["suite"]
+        self.assertEqual(current["env"], {**original_api["env"], "CI_QUALITY_SHARD": "${{ inputs.shard }}"})
+        for step in original_api["steps"]:
+            if step.get("name") == "API full suite":
+                actual = named(current["steps"], step["name"])
+                self.assertEqual(actual["env"], step["env"])
+                for part in ["pytest -vv --capture=tee-sys -o faulthandler_timeout=120",
+                             "-p api_shard_plugin", '--ci-shard="$CI_QUALITY_SHARD"',
+                             '--ci-evidence="$RUNNER_TEMP/api-execution.json"',
+                             '--junitxml="$RUNNER_TEMP/api-junit.xml"']:
+                    self.assertIn(part, actual["run"])
+                self.assertNotRegex(actual["run"], r"--(?:ignore|deselect|lf|ff|maxfail)|\|\| true|pytest.* -[km] ")
+            else:
+                self.assertIn(step, current["steps"])
+        prepared = self.main["jobs"]["image-preparation"]
+        original_build = originals["build-images"]
+        self.assertEqual(prepared["env"], original_build["env"])
+        start = next(i for i, step in enumerate(original_build["steps"]) if "docker/setup-buildx-action@" in step.get("uses", ""))
+        end = original_build["steps"].index(named(original_build["steps"], "Package images and provenance"))
+        positions = [prepared["steps"].index(step) for step in original_build["steps"][start:end]]
+        self.assertEqual(positions, sorted(positions), "Original image build and all five memory gates keep order")
+        inspector = dict(self.main["jobs"]["inspect-release-artifact"])
+        inspector["steps"] = inspector["steps"][:-1]
+        self.assertEqual(inspector, originals["inspect-release-artifact"])
 
     def test_reader_has_its_original_independent_workflow_without_the_unconsumed_api_dependency(self):
         self.assertEqual(self.main["jobs"]["reading-performance-comparison"],
@@ -57,32 +85,35 @@ class QualitySchedulingTests(unittest.TestCase):
         self.assertIn('exit "$candidate_failed"', comparison)
         self.assertNotIn("download-artifact", comparison)
 
-    def test_two_explicit_callers_per_family_have_no_shared_runner_or_cross_quality_dependency(self):
-        self.assertEqual(len(self.main["jobs"]), 10)
-        for family, filename in [
-            ("web", "web-quality.yml"), ("settings", "settings-browser-shard.yml"),
+    def test_fixed_explicit_callers_have_no_shared_runner_or_cross_quality_dependency(self):
+        self.assertEqual(len(self.main["jobs"]), 19)
+        for family, filename, count in [
+            ("api", "api-quality-shard.yml", 4), ("web", "web-quality.yml", 3),
+            ("settings", "settings-browser-shard.yml", 4),
         ]:
-            for index in (1, 2):
+            for index in range(1, count + 1):
                 with self.subTest(family=family, shard=index):
                     self.assertEqual(self.main["jobs"][f"{family}-quality-shard-{index}"], {
                         "if": "${{ inputs.quality_source_run_id == '' }}",
                         "uses": f"./.github/workflows/{filename}", "with": {"shard": index},
                     })
-        for workflow, name in [(self.web, "gates"), (self.settings, "matrix")]:
+        for workflow, name in [(self.web, "gates"), (self.settings, "matrix"), (self.api, "suite")]:
             self.assertEqual(set(workflow["jobs"]), {name})
             self.assertEqual(workflow["jobs"][name]["runs-on"], "ubuntu-latest")
             self.assertNotIn("strategy", workflow["jobs"][name])
             self.assertNotIn("needs", workflow["jobs"][name])
 
-    def test_aggregators_require_both_fresh_successful_shards_and_keep_original_build_dependencies(self):
-        for family in ("web", "settings"):
+    def test_aggregators_require_all_fresh_shards_restore_and_original_build_dependencies(self):
+        for family, count in (("api", 4), ("web", 3), ("settings", 4)):
             job = self.main["jobs"][f"{family}-quality"]
-            dependencies = [f"{family}-quality-shard-{index}" for index in (1, 2)]
+            dependencies = [f"{family}-quality-shard-{index}" for index in range(1, count + 1)]
+            if family == "settings":
+                dependencies.append("settings-restore")
             self.assertEqual(job["needs"], dependencies)
             self.assertEqual(job["if"], "${{ !cancelled() && inputs.quality_source_run_id == '' && "
                              + " && ".join(f"needs.{name}.result == 'success'" for name in dependencies) + " }}")
         self.assertEqual(self.main["jobs"]["build-images"]["needs"], [
-            "api-quality", "web-quality", "settings-quality", "reading-performance-comparison",
+            "api-quality", "web-quality", "settings-quality", "reading-performance-comparison", "image-preparation",
         ])
 
     def test_every_original_web_command_environment_and_assigned_gate_executes_without_reduction(self):
@@ -90,7 +121,7 @@ class QualitySchedulingTests(unittest.TestCase):
         for original in self.contract["web_steps"]:
             with self.subTest(step=original["name"]):
                 current = named(steps, original["name"])
-                assigned = self.contract["web_assignment"].get(original["name"])
+                assigned = self.schedule["web"]["assignment"].get(original["name"])
                 self.assertEqual(current.get("if"),
                                  f"${{{{ inputs.shard == {assigned} }}}}" if assigned else original.get("if"))
                 self.assertEqual({key: value for key, value in current.items() if not (assigned and key == "if")},
@@ -101,8 +132,11 @@ class QualitySchedulingTests(unittest.TestCase):
         self.assertEqual(len(original_ids), 14)
         self.assertEqual(len(original_ids), len(set(original_ids)))
         summary = named(self.web_job["steps"], "Build machine-readable browser gate summary")
-        expected = ("${{ inputs.shard == 1 && '" + ",".join(self.contract["web_gate_groups"][0])
-                    + "' || '" + ",".join(self.contract["web_gate_groups"][1]) + "' }}")
+        groups = self.schedule["web"]["gate_groups"]
+        self.assertEqual(sorted(gate for group in groups for gate in group), sorted(original_ids))
+        expected = ("${{ inputs.shard == 1 && '" + ",".join(groups[0])
+                    + "' || inputs.shard == 2 && '" + ",".join(groups[1])
+                    + "' || '" + ",".join(groups[2]) + "' }}")
         self.assertEqual(summary["env"]["PLAYWRIGHT_EXPECTED_GATES"], expected)
         upload = named(self.web_job["steps"], "Upload non-deployable quality evidence")
         self.assertEqual(upload["with"]["path"], self.contract["web_original_artifact_paths"])
@@ -125,9 +159,10 @@ class QualitySchedulingTests(unittest.TestCase):
 
     def test_reusable_workflows_explicitly_keep_every_original_global_fixture_input(self):
         self.assertEqual(self.main["env"], self.contract["global_env"])
-        for workflow in (self.web, self.settings):
+        for workflow in (self.web, self.settings, self.api):
             self.assertEqual(workflow["env"], self.contract["global_env"])
         self.assertEqual(self.main["jobs"]["settings-quality"]["env"], self.contract["settings_env"])
+        self.assertEqual(self.main["jobs"]["settings-restore"]["env"], self.contract["settings_env"])
         expected = {
             **self.contract["settings_env"],
             "PLAYWRIGHT_GATE_ID": "${{ format('settings-stages-1-4-shard-{0}', inputs.shard) }}",
@@ -141,15 +176,16 @@ class QualitySchedulingTests(unittest.TestCase):
             **self.contract["settings_matrix"]["env"],
             "PLAYWRIGHT_BLOB_OUTPUT_DIR": "${{ runner.temp }}/settings-blob-report",
             "PLAYWRIGHT_JSON_OUTPUT_NAME": "${{ runner.temp }}/settings-shard-report.json",
+            "PLAYWRIGHT_BLOB_OUTPUT_NAME": "settings-${{ inputs.shard }}.zip",
         })
         self.assertFalse(any("${{ runner." in str(value) for value in self.settings_job["env"].values()))
 
-    def test_settings_matrix_only_adds_native_sharding_and_a_separate_shard_summary(self):
+    def test_settings_matrix_only_adds_reviewed_whole_file_selection_and_separate_summary(self):
         original = self.contract["settings_matrix"]
         current = named(self.settings_job["steps"], original["name"])
         command = ("pnpm --filter web exec playwright test --config=playwright.config.ts "
                    "'e2e/settings-.*\\.spec\\.ts' e2e/context-admin-bundles.spec.ts")
-        expected_run = original["run"].replace(command, command + ' --shard="$CI_QUALITY_SHARD/2"').replace(
+        expected_run = original["run"].replace(command, "node scripts/ci/run-settings-shard.mjs").replace(
             "PLAYWRIGHT_EXPECTED_GATES=settings-stages-1-4 node apps/web/e2e/gate-summary.mjs apps/web/test-results apps/web/test-results/settings-gate-summary.json",
             'PLAYWRIGHT_EXPECTED_GATES="$PLAYWRIGHT_GATE_ID" node apps/web/e2e/gate-summary.mjs apps/web/test-results apps/web/test-results/settings-shard-gate-summary.json',
         )
@@ -159,6 +195,7 @@ class QualitySchedulingTests(unittest.TestCase):
                 **original["env"],
                 "PLAYWRIGHT_BLOB_OUTPUT_DIR": "${{ runner.temp }}/settings-blob-report",
                 "PLAYWRIGHT_JSON_OUTPUT_NAME": "${{ runner.temp }}/settings-shard-report.json",
+                "PLAYWRIGHT_BLOB_OUTPUT_NAME": "settings-${{ inputs.shard }}.zip",
             },
             "run": expected_run,
         })
@@ -166,19 +203,31 @@ class QualitySchedulingTests(unittest.TestCase):
 
     def test_original_independent_restore_command_and_its_fresh_database_are_unchanged(self):
         original = self.contract["settings_restore"]
-        current = named(self.main["jobs"]["settings-quality"]["steps"], original["name"])
-        self.assertEqual(current, original)
+        job = self.main["jobs"]["settings-restore"]
+        current = named(job["steps"], original["name"])
+        self.assertNotIn("needs", job)
+        self.assertEqual(job["if"], "${{ inputs.quality_source_run_id == '' }}")
+        self.assertEqual(current["run"], original["run"].replace(
+            "PLAYWRIGHT_EXPECTED_GATES=settings-stages-1-4,system-archive-new-instance",
+            "PLAYWRIGHT_EXPECTED_GATES=system-archive-new-instance"))
+        self.assertEqual(current["env"], {
+            "PLAYWRIGHT_JSON_OUTPUT_NAME": "${{ runner.temp }}/settings-restore-report.json",
+            "PLAYWRIGHT_BLOB_OUTPUT_DIR": "${{ runner.temp }}/settings-restore-blob",
+            "PLAYWRIGHT_BLOB_OUTPUT_NAME": "restore.zip",
+        })
         self.assertIn('CREATE DATABASE "chat_reader_archive_restore"', current["run"])
         self.assertFalse(any(step.get("name") == original["name"] for step in self.settings_job["steps"]))
 
-    def test_native_blob_and_json_merge_precedes_restore_and_is_not_a_count_only_echo(self):
+    def test_native_blob_and_json_aggregate_requires_independent_restore_and_no_services(self):
         steps = self.main["jobs"]["settings-quality"]["steps"]
         merge = named(steps, "Collect original Settings selection and merge genuine Playwright blobs")
         self.assertEqual(merge["env"], {"E2E_CONTEXT_ADMIN": "1"})
         self.assertIn("--list --reporter=json", merge["run"])
         self.assertIn("playwright merge-reports --reporter=json", merge["run"])
         self.assertIn("quality-shard-evidence.mjs merge-settings", merge["run"])
-        self.assertLess(steps.index(merge), steps.index(named(steps, self.contract["settings_restore"]["name"])))
+        body = json.dumps(steps)
+        self.assertNotRegex(body, r"uvicorn|import_worker|alembic|postgres-service|pnpm --filter web build|playwright install")
+        self.assertIn("quality-shard-evidence.mjs verify-restore", body)
         self.assertNotRegex(merge["run"], r"echo.*(?:470|passed)|\|\| true|exit 0|--(?:grep|workers|retries)")
         source = read("scripts/ci/quality-shard-evidence.mjs")
         self.assertIn("export const SETTINGS_CASE_COUNT = 470", source)
@@ -194,6 +243,7 @@ class QualitySchedulingTests(unittest.TestCase):
         for file in [
             ".github/workflows/build-release-images.yml", ".github/workflows/web-quality.yml",
             ".github/workflows/settings-browser-shard.yml", ".github/workflows/reading-performance.yml",
+            ".github/workflows/api-quality-shard.yml",
         ]:
             value = read(file)
             self.assertNotRegex(value, re.compile(r"^\s*timeout-minutes:|continue-on-error:", re.M), file)
@@ -237,9 +287,10 @@ class QualitySchedulingTests(unittest.TestCase):
             "api-quality", "web-quality", "settings-quality", "reading-performance-comparison / compare",
         ))
         expected = [
-            "api-quality", "web-quality-shard-1 / gates", "web-quality-shard-2 / gates", "web-quality",
-            "settings-quality-shard-1 / matrix", "settings-quality-shard-2 / matrix", "settings-quality",
-            "reading-performance-comparison / compare",
+            *[f"api-quality-shard-{i} / suite" for i in range(1, 5)], "api-quality",
+            *[f"web-quality-shard-{i} / gates" for i in range(1, 4)], "web-quality",
+            *[f"settings-quality-shard-{i} / matrix" for i in range(1, 5)],
+            "settings-restore", "settings-quality", "reading-performance-comparison / compare", "image-preparation",
         ]
         self.assertEqual(list(policy.FULL_QUALITY_NAMES), expected)
         self.assertEqual(policy.BASE_RUN, "43578495558")
@@ -247,6 +298,55 @@ class QualitySchedulingTests(unittest.TestCase):
         self.assertEqual(policy.REPAIR_SHA, "74f4636e9d29098fb9a30bb42bdb7ada696373f8")
         self.assertEqual(policy.PATCH_SHA256, "7c64c286ccb658c6c4f80a2868744c843fe3a036f51d66c41fbd155e02b47d01")
         self.assertEqual(policy.SELECTOR_PATCH_SHA256, "c73ffa3cc3d1dd9e046be767522eb7071a3ed4f9f90665cd86f835f2d224144f")
+
+    def test_preparation_is_non_deployable_and_full_publisher_cannot_rebuild(self):
+        prep = self.main["jobs"]["image-preparation"]
+        self.assertNotIn("needs", prep)
+        self.assertEqual(prep["if"], "${{ inputs.quality_source_run_id == '' }}")
+        upload = named(prep["steps"], "Upload non-deployable image candidate only")
+        self.assertEqual(upload["with"]["name"], "non-deployable-image-candidate-${{ github.sha }}-${{ github.run_attempt }}")
+        self.assertNotIn("release-manifest.json", upload["with"]["path"])
+        publisher = self.main["jobs"]["build-images"]
+        self.assertIn("needs.image-preparation.result == 'success'", publisher["if"])
+        for step in publisher["steps"]:
+            if "docker build " in step.get("run", ""):
+                self.assertEqual(step["if"], "${{ inputs.quality_source_run_id != '' }}")
+        promote = named(publisher["steps"], "Promote exact prepared candidate after every quality gate")
+        self.assertEqual(promote["if"], "${{ inputs.quality_source_run_id == '' }}")
+        self.assertIn("--artifact-id", promote["run"])
+        self.assertIn("--artifact-digest", promote["run"])
+        self.assertIn("--quality", promote["run"])
+        self.assertNotIn("continue-on-error", promote)
+
+    def test_real_dag_and_missing_wrong_skipped_or_bypassed_edges(self):
+        validate_dag(self.main)
+        mutations = []
+        for family, count in (("api", 4), ("web", 3), ("settings", 4)):
+            for index in range(1, count + 1):
+                name = f"{family}-quality-shard-{index}"
+                mutations += [
+                    (name + " missing", lambda d, n=name: d["jobs"].pop(n)),
+                    (name + " wrong assignment", lambda d, n=name: d["jobs"][n]["with"].update(shard=0)),
+                    (name + " conditional bypass", lambda d, n=name: d["jobs"][n].update({"continue-on-error": True})),
+                ]
+            mutations.append((family + " omitted dependency", lambda d, f=family: d["jobs"][f"{f}-quality"]["needs"].pop()))
+        for name in ("settings-restore", "image-preparation"):
+            mutations.append((name + " late", lambda d, n=name: d["jobs"][n].update(needs="api-quality")))
+        for name in ("api-quality", "web-quality", "settings-quality", "image-preparation"):
+            mutations.append((name + " unpublished dependency", lambda d, n=name: d["jobs"]["build-images"]["needs"].remove(n)))
+        mutations += [
+            ("wrong candidate artifact", lambda d: named(d["jobs"]["build-images"]["steps"],
+             "Promote exact prepared candidate after every quality gate")["env"].update(CANDIDATE_ARTIFACT_ID="123")),
+            ("early deployable manifest", lambda d: named(d["jobs"]["image-preparation"]["steps"],
+             "Upload non-deployable image candidate only")["with"].update(path="release-manifest.json")),
+            ("consumer bypass", lambda d: d["jobs"]["inspect-release-artifact"].update({"continue-on-error": True})),
+        ]
+        for name, mutate in mutations:
+            with self.subTest(mutation=name):
+                changed = copy.deepcopy(self.main)
+                mutate(changed)
+                with self.assertRaises((AssertionError, KeyError)):
+                    validate_dag(changed)
 
 
 if __name__ == "__main__":

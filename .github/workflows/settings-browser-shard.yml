@@ -55,7 +55,7 @@ jobs:
       - name: Validate fixed independent shard
         shell: bash
         run: |
-          case "$CI_QUALITY_SHARD" in 1|2) ;; *) exit 1 ;; esac
+          case "$CI_QUALITY_SHARD" in 1|2|3|4) ;; *) exit 1 ;; esac
 
       - name: Record Settings completion timing mode
         shell: bash
@@ -109,6 +109,7 @@ jobs:
           E2E_CONTEXT_ADMIN: "1"
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ runner.temp }}/settings-blob-report
           PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/settings-shard-report.json
+          PLAYWRIGHT_BLOB_OUTPUT_NAME: settings-${{ inputs.shard }}.zip
         run: |
           cd apps/api
           uvicorn settings_browser_fixture:app --app-dir tests --host 127.0.0.1 --port 8000 --no-access-log > "$RUNNER_TEMP/settings-api.log" 2>&1 &
@@ -126,7 +127,7 @@ jobs:
           cd ../..
           /usr/bin/time -f 'phase=settings-matrix\nelapsed_seconds=%e\nmax_rss_kb=%M\nexit_code=%x' \
             -o "$RUNNER_TEMP/settings-matrix-timing.txt" \
-            pnpm --filter web exec playwright test --config=playwright.config.ts 'e2e/settings-.*\.spec\.ts' e2e/context-admin-bundles.spec.ts --shard="$CI_QUALITY_SHARD/2"
+            node scripts/ci/run-settings-shard.mjs
           PLAYWRIGHT_EXPECTED_GATES="$PLAYWRIGHT_GATE_ID" node apps/web/e2e/gate-summary.mjs apps/web/test-results apps/web/test-results/settings-shard-gate-summary.json
 
       - name: Upload settings quality evidence
@@ -138,6 +139,8 @@ jobs:
             apps/web/test-results
             ${{ runner.temp }}/settings-blob-report
             ${{ runner.temp }}/settings-shard-report.json
+            ${{ runner.temp }}/settings-shard-collection.json
+            ${{ runner.temp }}/settings-selection.json
             ${{ runner.temp }}/settings-completion-mode.txt
             ${{ runner.temp }}/settings-build-timing.txt
             ${{ runner.temp }}/settings-matrix-timing.txt
