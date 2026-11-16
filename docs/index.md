@@ -1,6 +1,6 @@
 # 文档导航
 
-## 当前：71342129 已部署并独立核验；接续优化 CI 耗时 — 2026-11-16
+## 当前：71342129 已部署并独立核验；修复首轮 CI 后等待完整复跑 — 2026-11-17
 
 ZIP 辅助子目录中的 Markdown 默认不再作为对话导入；只选择安全归一后的最外层正文，
 更深文件需正文引用或显式启用。详见[源码合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16)。
@@ -11,8 +11,14 @@ ZIP 辅助子目录中的 Markdown 默认不再作为对话导入；只选择安
 零issue只读附件审计和保护文件复核通过；具体边界见[发布证据](evidence/reliability-2026-11-16/ci-zip-markdown-production-release.json)。
 产品验收由用户完成，不因技术部署而改标通过。
 
-15文件CI调度候选已审查并在主工作区[重新本地验证](evidence/reliability-2026-11-16/ci-scheduling-verification.json)，保留全部质量/资源门禁；当前收益尚未用新完整CI实测。
-按新源码选择性提交/推送、普通完整CI、真实55分钟等待并自行检查结果；失败继续修复。
+首轮优化完整CI `43888192134/attempt1`（`c4e825f`）在43分29秒失败于两个Web shard；
+API、Reader、两个Settings shard及原470聚合/restore通过，下游镜像/制品跳过。根因已定位并最小修复：
+普通Web shard不再错误运行依赖历史Git树的image-only策略测试，Markdown测试接受代码已有的中英文按钮名；
+未放宽断言、超时或其他门禁。修复本地Node152、Python16+102、lint/typecheck和Actionlint通过，
+浏览器门禁仍待新一轮精确普通完整CI。失败时长不算提速收益；修复与复跑边界见
+[失败回执](evidence/reliability-2026-11-16/ci-scheduling-failure-43888192134.json)、
+[修复验证](evidence/reliability-2026-11-16/ci-scheduling-repair-verification.json)和
+[唯一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。CI-only修复不需重新部署应用。
 见[唯一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
 
 ## 部署前检查点：ZIP CI通过、现役恢复、fresh部署待容量（历史）— 2026-11-16

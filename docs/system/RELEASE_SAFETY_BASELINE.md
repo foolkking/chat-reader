@@ -1,6 +1,6 @@
 # Release Safety Baseline
 
-## Current full-CI scheduling contract — source candidate 2026-11-16
+## Current full-CI scheduling contract — repair pending exact re-run, 2026-11-17
 
 Ordinary empty-quality-source mode now requires eight quality jobs: the complete API suite,
 two isolated Web shards plus strict fourteen-gate aggregation, two isolated Settings shards plus
@@ -17,11 +17,25 @@ one passing attempt with no retry/skip/failure, and matching merged blob/JSON at
 bind the exact per-case runtime limit rather than assuming the default90s or relaxing all limits.
 The actual four-case native control exercises this difference; it cannot replace470-case execution.
 
-[Scoped local verification](../evidence/reliability-2026-11-16/ci-scheduling-verification.json) is not
-optimized-CI acceptance or a measured saving. Run ordinary full CI once, wait a new real3300 seconds
-on both UTC and monotonic clocks, self-check/repair failures and independently verify native/resource
-artifacts before claiming success. Product acceptance remains user-owned. Production is already
-71342129/schema0061; these CI-only changes do not require an application redeploy.
+[Initial candidate evidence](../evidence/reliability-2026-11-16/ci-scheduling-verification.json) is
+local-only, not CI acceptance. Its first ordinary full run, `43888192134/attempt1` at `c4e825f`,
+failed after43m29s in both Web shards; API/Reader/Settings and strict470+restore1 passed, but
+aggregation and image/inspect jobs did not run, so no release artifacts exist. Official evidence
+identifies two independent test-integration issues: image-only Git-history controls ran in a shallow
+ordinary-Web checkout, and a Web test queried only English while the existing interface label is
+Chinese. The minimal repair moves no policy boundary, preserves the dedicated image-only tests,
+accepts both exact existing names, and does not alter assertions or the90-second test budget.
+[Failure](../evidence/reliability-2026-11-16/ci-scheduling-failure-43888192134.json) and
+[local repair proof](../evidence/reliability-2026-11-16/ci-scheduling-repair-verification.json)
+preserve the source and official evidence hashes. Local Node152/Python16+102, lint/typecheck and
+Actionlint pass; the browser suite was not run locally.
+
+After selective commit/push, run a fresh ordinary full CI with empty quality source, wait a new real
+3300 seconds on both UTC and monotonic clocks, self-check/repair failures, and independently verify
+all required native/resource artifacts before claiming success or savings. Compare elapsed time only
+for a fully green run; the failed43m29s duration is not speedup evidence. Product acceptance remains
+user-owned. Production is already71342129/schema0061; these CI-only changes do not require an
+application redeploy.
 
 ## Current release execution boundary — 2026-11-15
 

@@ -1,6 +1,6 @@
 # Testing
 
-## Latest: ZIP Markdown-resource full CI and production verification pass; user acceptance remains pending — 2026-11-16
+## Latest: ZIP Markdown-resource production verified; first optimized CI failed and was repaired — 2026-11-17
 
 Exact71342129 / CI43820675687 attempt1 ordinary full CI passes all six jobs in3467 seconds;
 a fresh3300-second UTC/monotonic wait and independent OCI/application-artifact proof completed.
@@ -11,12 +11,21 @@ attachment SHA audit. No migration or restore drill ran. See
 [production proof](evidence/reliability-2026-11-16/ci-zip-markdown-production-release.json).
 The backup client's missing local projection is recorded alongside the independently verified remote
 completion receipt; it was not retried or relabelled. Product acceptance (real user ZIP/device/workflow)
-remains user-owned. CI scheduling optimization now has [reviewed local proof](evidence/reliability-2026-11-16/ci-scheduling-verification.json):
-Node152, Python15+102, source-only53, lint/typecheck and Actionlint pass. Settings470/235+235
-are collection only; four genuine native attempts test blob/JSON identity and original body timeouts.
-The retained mistaken runtime selection failed5 unserved-localhost cases while53 source controls passed;
-correct pure-source selection then passes53/0skip, without changing runtime tests. No complete optimized
-CI acceptance or measured saving is implied.
+remains user-owned. The first optimized ordinary full CI, `43888192134/attempt1`
+at `c4e825f`, failed after43m29s: both Web shards failed, preventing the aggregate
+and release-image jobs. API7007/3 original skips, Reader, Settings235+235 and
+strict Settings470+restore1 passed. Root causes were confined to a misplaced
+image-only Git-history suite in one shallow Web checkout and an English-only
+locator for a button already labelled in Chinese in the interface. A minimal
+repair retains every original assertion,90-second budget, gate and dedicated
+image-only policy test; it passes local Node152, scheduling Python16, separate
+image-only policy Python102, lint/typecheck and Actionlint1.7.12.
+[Failure evidence](evidence/reliability-2026-11-16/ci-scheduling-failure-43888192134.json) and
+[repair evidence](evidence/reliability-2026-11-16/ci-scheduling-repair-verification.json)
+preserve exact source/log hashes. Browser execution still requires a new
+ordinary full CI and a fresh real55-minute UTC/monotonic wait. The failed
+43m29s run is not optimization/speedup evidence; no production redeploy is
+needed for CI-only changes.
 
 ## Pre-deployment ZIP Markdown-resource CI and local verification checkpoint (historical) — 2026-11-16
 

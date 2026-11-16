@@ -1,6 +1,6 @@
 # Project State
 
-## Latest: ZIP Markdown attachment fix deployed; CI scheduling optimization resumes — 2026-11-16
+## Latest: ZIP Markdown attachment fix deployed; CI scheduling repair awaits fresh full run — 2026-11-17
 
 The ZIP importer now defaults to the outermost Markdown layer after safe wrapper
 normalization; deeper Markdown files are resources unless referenced or explicitly
@@ -27,15 +27,26 @@ image-load receipt remains a failure; images were not reloaded to fabricate
 success. The backup phase's local wrapper returned no projection, but the remote
 completion receipt was independently verified and was not retried.
 
-CI scheduling optimization is the remaining engineering task. The reviewed
-15-file proposal passes Node152, Python15+102, source-only53, lint/typecheck and
-Actionlint1.7.12 locally. Its strict native merge binds the original60 Settings
-files and54 body-timeout declarations; no original case/deadline is changed.
-[Scoped proof](docs/evidence/reliability-2026-11-16/ci-scheduling-verification.json).
-There is no optimized complete-CI run or measured saving yet. Selectively
-commit/push, run ordinary full CI with empty quality source, perform a new real
-55-minute UTC/monotonic wait, self-check failures and measure actual wall time.
-User owns product acceptance; do not infer acceptance from deployment or CI.
+The first optimized ordinary full CI, **43888192134/attempt1** at exact commit
+**c4e825f**, failed after **43m29s**: both Web shards failed, so Web aggregation
+and image/release jobs were skipped and no deployable artifacts were produced.
+API, Reader and both Settings shards passed; the original Settings470 aggregation
+and restore1 also passed. The failures were traced to image-only historical
+policy suites redundantly running in a shallow ordinary-Web checkout, and an
+English-only locator against an existing Chinese accessible label. A minimal
+repair removes only that misplaced invocation, accepts either exact existing
+button label, and adds a scheduling regression guard; no product/runtime code,
+assertion, timeout or gate was relaxed. The exact official failure and local
+repair evidence are [here](docs/evidence/reliability-2026-11-16/ci-scheduling-failure-43888192134.json)
+and [here](docs/evidence/reliability-2026-11-16/ci-scheduling-repair-verification.json).
+
+The repair passes Node152, scheduling Python16, the separate image-only policy
+suite102, lint/typecheck and Actionlint1.7.12 locally. The unchanged browser
+gate still requires a new exact-source ordinary full CI with empty quality
+source, followed by a fresh real55-minute UTC/monotonic wait and independent
+result/artifact review. The failed 43m29s run is not successful speedup evidence;
+measure savings only against a complete green run. User owns product acceptance;
+CI-only repairs do not require redeploying the already verified production app.
 The [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) tracks the work.
 
 ## Historical checkpoint before 71342129 production deployment — 2026-11-16

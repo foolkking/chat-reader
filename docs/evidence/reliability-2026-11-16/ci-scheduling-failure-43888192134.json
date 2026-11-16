@@ -1,0 +1,388 @@
+{
+  "schema": "chat-reader-ci-scheduling-first-run-failure/v1",
+  "recorded_at": "2026-11-16T15:58:55.166550+00:00",
+  "status": "exact_ordinary_full_ci_failed_preserved_no_release_artifacts",
+  "head_sha": "c4e825f873744e1f1aa6f5544ed94a97c665b11b",
+  "workflow_run_id": 43888192134,
+  "attempt": 1,
+  "workflow_id": 328268956,
+  "workflow_path": ".github/workflows/build-release-images.yml",
+  "quality_source_run_id": "",
+  "first_read_after_fresh_wait": {
+    "monotonic_seconds": 3300.0,
+    "utc_seconds": 3300.00311,
+    "both_at_least_3300_seconds": true
+  },
+  "official_run": {
+    "created_at": "2026-11-16T14:40:21Z",
+    "updated_at": "2026-11-16T15:23:50Z",
+    "created_to_updated_seconds": 2609.0,
+    "conclusion": "failure"
+  },
+  "jobs": [
+    {
+      "name": "api-quality",
+      "job_id": 133371945559,
+      "conclusion": "success",
+      "started_at": "2026-11-16T14:40:29Z",
+      "completed_at": "2026-11-16T15:23:49Z",
+      "duration_seconds": 2600.0
+    },
+    {
+      "name": "reading-performance-comparison / compare",
+      "job_id": 133371945989,
+      "conclusion": "success",
+      "started_at": "2026-11-16T14:40:29Z",
+      "completed_at": "2026-11-16T14:49:05Z",
+      "duration_seconds": 516.0
+    },
+    {
+      "name": "web-quality-shard-2 / gates",
+      "job_id": 133371946061,
+      "conclusion": "failure",
+      "started_at": "2026-11-16T14:40:29Z",
+      "completed_at": "2026-11-16T14:55:31Z",
+      "duration_seconds": 902.0
+    },
+    {
+      "name": "settings-quality-shard-2 / matrix",
+      "job_id": 133371946110,
+      "conclusion": "success",
+      "started_at": "2026-11-16T14:40:29Z",
+      "completed_at": "2026-11-16T15:02:25Z",
+      "duration_seconds": 1316.0
+    },
+    {
+      "name": "web-quality-shard-1 / gates",
+      "job_id": 133371946191,
+      "conclusion": "failure",
+      "started_at": "2026-11-16T14:40:29Z",
+      "completed_at": "2026-11-16T14:43:17Z",
+      "duration_seconds": 168.0
+    },
+    {
+      "name": "settings-quality-shard-1 / matrix",
+      "job_id": 133371946300,
+      "conclusion": "success",
+      "started_at": "2026-11-16T14:40:29Z",
+      "completed_at": "2026-11-16T15:13:46Z",
+      "duration_seconds": 1997.0
+    },
+    {
+      "name": "web-quality",
+      "job_id": 133381488724,
+      "conclusion": "skipped",
+      "started_at": "2026-11-16T14:55:31Z",
+      "completed_at": "2026-11-16T14:55:31Z",
+      "duration_seconds": 0.0
+    },
+    {
+      "name": "settings-quality",
+      "job_id": 133392788315,
+      "conclusion": "success",
+      "started_at": "2026-11-16T15:13:49Z",
+      "completed_at": "2026-11-16T15:17:22Z",
+      "duration_seconds": 213.0
+    },
+    {
+      "name": "build-images",
+      "job_id": 133399122555,
+      "conclusion": "skipped",
+      "started_at": "2026-11-16T15:23:49Z",
+      "completed_at": "2026-11-16T15:23:49Z",
+      "duration_seconds": 0.0
+    },
+    {
+      "name": "inspect-release-artifact",
+      "job_id": 133399124189,
+      "conclusion": "skipped",
+      "started_at": "2026-11-16T15:23:50Z",
+      "completed_at": "2026-11-16T15:23:49Z",
+      "duration_seconds": -1.0
+    }
+  ],
+  "failed_steps": {
+    "api-quality": [],
+    "reading-performance-comparison / compare": [],
+    "web-quality-shard-2 / gates": [
+      {
+        "name": "Release H Markdown and image Viewer checks",
+        "conclusion": "failure"
+      }
+    ],
+    "settings-quality-shard-2 / matrix": [],
+    "web-quality-shard-1 / gates": [
+      {
+        "name": "Quality scheduling source and real-report controls",
+        "conclusion": "failure"
+      }
+    ],
+    "settings-quality-shard-1 / matrix": [],
+    "web-quality": [],
+    "settings-quality": [],
+    "build-images": [],
+    "inspect-release-artifact": []
+  },
+  "api_run_summary": {
+    "passed": 7007,
+    "skipped": 3,
+    "warnings": 5,
+    "suite_seconds": 2375.22
+  },
+  "verified_web_gate_summaries": {
+    "web_shard_1": {
+      "source_sha": "c4e825f873744e1f1aa6f5544ed94a97c665b11b",
+      "overall_status": "NOT_VERIFIED",
+      "counts": {
+        "PASS": 0,
+        "FAIL": 0,
+        "NOT_VERIFIED": 7,
+        "SKIPPED": 0
+      },
+      "gates": [
+        {
+          "gate_id": "adaptive-import-recovery",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        },
+        {
+          "gate_id": "csp-enforcement",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        },
+        {
+          "gate_id": "focused-online-security",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        },
+        {
+          "gate_id": "share-focus",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        },
+        {
+          "gate_id": "source-editor-mutation",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        },
+        {
+          "gate_id": "source-editor-cleanup",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        },
+        {
+          "gate_id": "upload-token-atomicity",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        }
+      ]
+    },
+    "web_shard_2": {
+      "source_sha": "c4e825f873744e1f1aa6f5544ed94a97c665b11b",
+      "overall_status": "FAIL",
+      "counts": {
+        "PASS": 1,
+        "FAIL": 1,
+        "NOT_VERIFIED": 5,
+        "SKIPPED": 0
+      },
+      "gates": [
+        {
+          "gate_id": "context-files",
+          "status": "PASS",
+          "test_count": 38,
+          "result_counts": {
+            "passed": 38,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          },
+          "reason": null
+        },
+        {
+          "gate_id": "markdown-image-viewer",
+          "status": "FAIL",
+          "test_count": 31,
+          "result_counts": {
+            "passed": 30,
+            "failed": 0,
+            "timedOut": 1,
+            "skipped": 0,
+            "interrupted": 0
+          },
+          "reason": null
+        },
+        {
+          "gate_id": "reading-stability",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        },
+        {
+          "gate_id": "pdfjs-maintained-line",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        },
+        {
+          "gate_id": "default-pwa",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        },
+        {
+          "gate_id": "single-owner-auth",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        },
+        {
+          "gate_id": "pwa-negative",
+          "status": "NOT_VERIFIED",
+          "test_count": null,
+          "result_counts": null,
+          "reason": "evidence_missing"
+        }
+      ]
+    },
+    "settings": {
+      "source_sha": "c4e825f873744e1f1aa6f5544ed94a97c665b11b",
+      "overall_status": "PASS",
+      "counts": {
+        "PASS": 2,
+        "FAIL": 0,
+        "NOT_VERIFIED": 0,
+        "SKIPPED": 0
+      },
+      "gates": [
+        {
+          "gate_id": "settings-stages-1-4",
+          "status": "PASS",
+          "test_count": 470,
+          "result_counts": {
+            "passed": 470,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          },
+          "reason": null
+        },
+        {
+          "gate_id": "system-archive-new-instance",
+          "status": "PASS",
+          "test_count": 1,
+          "result_counts": {
+            "passed": 1,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          },
+          "reason": null
+        }
+      ]
+    }
+  },
+  "root_causes": {
+    "shard_1_policy_controls": "The new ordinary-full Web shard redundantly executed image-only lineage suites. Its checkout is intentionally shallow; two source-equivalence test class setups cannot git-show the historical image-only baseline (54 tests collected, two class setup errors). These controls remain in the dedicated image-only build step; the full-quality shard only needs scheduling/Web source controls.",
+    "shard_2_markdown_viewer": "An unchanged test timed out waiting for the Edit Markdown source button. The retained failure page shows the existing Simplified Chinese accessible label while the trace confirms that the test queried only the English name. The error surfaced in finally cleanup after the outer 90-second test timeout cancelled the pending click; it does not prove the API delete took 90 seconds. Repair the test locator to accept either exact localized label; retain the 90-second test budget."
+  },
+  "official_failure_logs": [
+    {
+      "name": "web-quality-shard-2 / gates",
+      "bytes": 131032,
+      "sha256": "356381ab2fafddfb052f7d15902fe4b707a59a0d0d33e34839ae59e6a81d1c27"
+    },
+    {
+      "name": "web-quality-shard-1 / gates",
+      "bytes": 143260,
+      "sha256": "2a8db0838bf839dd525ca6559f2bd4bc5df303001a6d01a1cff62d64e6ec2045"
+    }
+  ],
+  "official_failure_artifacts": [
+    {
+      "name": "settings-quality-shard-1-c4e825f873744e1f1aa6f5544ed94a97c665b11b-1",
+      "size_in_bytes": 10211095,
+      "digest": "sha256:5088086780da67688c88f8e1b607e7565fff73702505a862471036cd9d92f482",
+      "member_count": 122,
+      "verified_size_sha_crc_and_safe_paths": true
+    },
+    {
+      "name": "settings-quality-shard-2-c4e825f873744e1f1aa6f5544ed94a97c665b11b-1",
+      "size_in_bytes": 7255070,
+      "digest": "sha256:89329423c2ecafd93455c4d32584ddfa7127f3464a42b66478bfcb4f6f863cfe",
+      "member_count": 100,
+      "verified_size_sha_crc_and_safe_paths": true
+    },
+    {
+      "name": "settings-quality-evidence-c4e825f873744e1f1aa6f5544ed94a97c665b11b-1",
+      "size_in_bytes": 21379683,
+      "digest": "sha256:958a939561fe119af646e220b2ff7f78e967cb15970a326c52c59e80857e93db",
+      "member_count": 239,
+      "verified_size_sha_crc_and_safe_paths": true
+    },
+    {
+      "name": "reading-performance-comparison",
+      "size_in_bytes": 4051349,
+      "digest": "sha256:8b68786790dad75051a13d16bbf165376ef3372d3b12177ace6b1425847ea8da",
+      "member_count": 101,
+      "verified_size_sha_crc_and_safe_paths": true
+    },
+    {
+      "name": "web-quality-shard-1-c4e825f873744e1f1aa6f5544ed94a97c665b11b-1",
+      "size_in_bytes": 1033,
+      "digest": "sha256:e211dd2bb2a01e4f563693b046a2fc402eb4c476b5670bd29739e05b9cc76542",
+      "member_count": 3,
+      "verified_size_sha_crc_and_safe_paths": true
+    },
+    {
+      "name": "web-quality-shard-2-c4e825f873744e1f1aa6f5544ed94a97c665b11b-1",
+      "size_in_bytes": 9237962,
+      "digest": "sha256:495b4b43336f65105ddfc6737df59ec3ee4c532fddbebea5fd40a1acc12db45b",
+      "member_count": 155,
+      "verified_size_sha_crc_and_safe_paths": true
+    }
+  ],
+  "trace_evidence": {
+    "error_context_bytes": 12155,
+    "error_context_sha256": "f317d9f9b21ba3d7e29e89f226dceb98df3e3a7f6185fe2f48fde7c4085eed81",
+    "trace_zip_bytes": 293556,
+    "trace_zip_sha256": "375139e7fdf84b4add0a33dd8ad25a5b0417a62caac4847b915f1477e13487bc",
+    "test_trace_bytes": 9315,
+    "test_trace_sha256": "d9329c12c4ab93af2837d7676b788d55dd311b7affcb1b39edf927c6f172d213",
+    "test_timeout_ms": 90000,
+    "failed_click_elapsed_ms": 89150,
+    "failed_click_source_line": 30
+  },
+  "release_gate": {
+    "web_aggregate": "skipped",
+    "build_images": "skipped",
+    "inspect_release_artifact": "skipped",
+    "deployable_artifact_produced": false,
+    "no_production_mutation": true,
+    "source_or_product_acceptance": false
+  },
+  "failed_run_elapsed_is_not_successful_speedup_evidence": true,
+  "raw_logs_and_artifacts_retained_outside_repository": true,
+  "no_user_import_payload_or_credentials_persisted": true
+}

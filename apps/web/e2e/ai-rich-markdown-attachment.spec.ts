@@ -27,7 +27,7 @@ test("Markdown and image attachments use the unified Viewer without weakening Ri
   try {
     await page.goto(`/conversations/${conversationId}`);
     const message = page.locator(`#message-${messageId}`);
-    await message.getByRole("button", { name: "Edit Markdown source" }).click();
+    await message.getByRole("button", { name: /Edit Markdown source|编辑 Markdown 源码/ }).click();
     const attachmentInput = page.getByTestId("source-editor-attachment-input");
     await attachmentInput.setInputFiles({
       name: "rich-markdown-fixture.md",

@@ -1,5 +1,24 @@
 # 事实证据索引
 
+## 首轮优化完整CI失败、原因确认及局部修复 — 2026-11-17
+
+精确候选 `c4e825f` 的普通完整CI `43888192134/attempt1` 在43分29秒后失败：
+API7007/3原skip、Reader、Settings两个shard及严格470聚合/独立restore1通过；
+两个Web shard失败，Web总聚合、build-images和inspect跳过，没有可部署制品或生产变更。
+真实的新55分钟UTC/monotonic等待已完成；失败运行的2609秒不作为优化收益。
+[失败回执](reliability-2026-11-16/ci-scheduling-failure-43888192134.json)
+按SHA绑定官方日志和artifact完整性、两项根因及修复门禁。原始日志/制品保存在
+任务私有临时目录，不归档用户正文或凭据。精确派发和首次读取（含新鲜双时钟等待）
+另见[dispatch回执](reliability-2026-11-16/ci-scheduling-dispatch.json)及
+[first-read回执](reliability-2026-11-16/ci-scheduling-first-read.json)。
+
+定点修复从普通Web shard移除错误重放的image-only历史Git树测试；原策略测试仍在专用
+image-only分支。另一处仅让测试locator接受界面已有的英文或简体中文精确按钮名，
+保留原断言/90秒限时。新增调度控制确保这两个分支不会再混淆。
+[修复验证](reliability-2026-11-16/ci-scheduling-repair-verification.json)记录本地
+Node152、Python16+102、lint/typecheck、Actionlint1.7.12通过；浏览器测试仍待新精确
+完整CI。**新运行尚未派发/验收，尚未证明提速**，CI-only修复不要求应用重部署。
+
 ## 71342129生产部署及独立验证通过；产品验收仍归用户 — 2026-11-16
 
 [脱敏发布证据](reliability-2026-11-16/ci-zip-markdown-production-release.json)共4,958 bytes，SHA-256 `fd17ce5d79dbe32ac0c087833d472e9d4256951dde855316415d85b8c9cc7d5a`。

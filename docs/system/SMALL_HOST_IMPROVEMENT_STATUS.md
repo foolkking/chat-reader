@@ -1,9 +1,9 @@
 # 小机器优化目标：收尾总览与剩余路线
 
-更新时间：**2026-11-16，Asia/Shanghai**。本页是本目标的状态入口；
+更新时间：**2026-11-17，Asia/Shanghai**。本页是本目标的状态入口；
 详细方案、历次失败和实验记录保留在原账本，不再把每个检查点重复当作“当前状态”。
 
-## 当前：ZIP修复已部署并独立验证；继续实测 CI 优化（2026-11-16）
+## 当前：ZIP修复已部署并独立验证；修复首轮CI后继续实测优化（2026-11-17）
 
 用户优先要求修复ZIP中`assets/`、`files/`及其他任意辅助子目录Markdown被导入成对话的问题。
 71342129按最外层Markdown正文默认选择，深层成员只作为被引用资源或显式启用的正文；
@@ -14,7 +14,8 @@
 - **发布准备**：精确获准的一个传输包删除并以新实际容量准入；新的2463/0061五组件停写备份、零issue完整只读附件SHA审计通过。保留旧备份及八个保护文件；不重放早期failed-load或旧发布phase。
 - **备份回执**：本机backup phase没有取得投影，退出码4294967295；随后独立核验服务器成功回执SHA且未重试。原本机交付失败记录保留，不能改写为本机命令成功。
 - **产品验收**：仍由用户负责。没有以生产运行门禁代替用户ZIP、真实设备/流程或备份恢复验收。
-- **下一步CI优化**：15源文件已审查并选择性同步，Node152/Python15+102/source-only53、lint/typecheck、Actionlint通过。原60个Settings文件/54处测试体超时由源码SHA绑定，未改预算；真实4例blob控制复现并验证list/执行超时区别。Settings470的235+235仍仅collection。保持全部原门禁，选择性提交后跑普通完整CI，新的真实55分钟等待后自行检查/修失败，并比较实际墙钟耗时；[本地专项证据](../evidence/reliability-2026-11-16/ci-scheduling-verification.json)不冒称收益实测。
+- **首轮优化CI失败与修复**：精确 `c4e825f` 的普通完整CI `43888192134/attempt1` 于43分29秒结束失败。API、Reader、Settings两shard及严格Settings470+restore1通过；两个Web shard失败，聚合及build/inspect跳过，没有发布制品或生产变更。官方日志表明，普通Web shard错误重跑了只属于image-only分支且依赖历史Git树的策略测试；另一测试只查英文按钮名，而现有界面提供中英文名称。修复仅移除错误调用、接受两个精确既有标签并加source contract guard；原断言/90秒预算及image-only分支原测试均保留。完整失败分析见[回执](../evidence/reliability-2026-11-16/ci-scheduling-failure-43888192134.json)。
+- **当前待办**：上述修复本地Node152、调度Python16、单独image-only策略Python102、lint/typecheck及Actionlint1.7.12通过；Playwright浏览器门禁未在本机运行，必须由新精确普通完整CI覆盖。修复证据见[这里](../evidence/reliability-2026-11-16/ci-scheduling-repair-verification.json)。选择性提交/推送后用空quality source派发完整CI，新做真实55分钟UTC/monotonic等待，首次读取后自行检查/修复并核验制品。43分29秒失败运行不算提速；仅完整成功运行可与已验证3467秒基线比较。应用已部署，CI-only修复无需重部署；产品验收仍由用户负责。
 
 [本次部署独立证据](../evidence/reliability-2026-11-16/ci-zip-markdown-production-release.json) /
 [CI制品证明](../evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json)。

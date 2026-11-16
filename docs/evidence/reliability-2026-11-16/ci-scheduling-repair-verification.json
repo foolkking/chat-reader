@@ -1,0 +1,96 @@
+{
+  "schema": "chat-reader-ci-scheduling-first-failure-repair-verification/v1",
+  "recorded_at": "2026-11-16T15:59:43.962787+00:00",
+  "status": "local_controls_pass_new_exact_ordinary_full_ci_required",
+  "base_head": "c4e825f873744e1f1aa6f5544ed94a97c665b11b",
+  "first_run_failure_evidence": {
+    "path": "docs/evidence/reliability-2026-11-16/ci-scheduling-failure-43888192134.json",
+    "sha256": "e19d487ad2ad7c7c6ae3b5b97547e98701f86a9a69ce1a867b7aa257f73e0e31",
+    "workflow_run_id": 43888192134
+  },
+  "repair_scope": {
+    "files": {
+      ".github/workflows/web-quality.yml": {
+        "raw_sha256": "aba7ba217c6517a45d5eb9afd780800c5e4c768a50b9960ed9eb1f71f3d9d22c",
+        "normalized_lf_sha256": "9a842fa005c927cf31a04a860e985d7c0b5d59237dde5c3e281f431b111d3f56"
+      },
+      "apps/web/e2e/ai-rich-markdown-attachment.spec.ts": {
+        "raw_sha256": "84daa4d631df6b6b53adf0b6297a84db193cee45895a5f2f81f274aed4677a8a",
+        "normalized_lf_sha256": "84daa4d631df6b6b53adf0b6297a84db193cee45895a5f2f81f274aed4677a8a"
+      },
+      "scripts/ci/test_quality_scheduling.py": {
+        "raw_sha256": "c131f6e5cbf7f0dce31517ccdea822ff38f9e1541911305238edd0500c2a9643",
+        "normalized_lf_sha256": "c131f6e5cbf7f0dce31517ccdea822ff38f9e1541911305238edd0500c2a9643"
+      }
+    },
+    "source_changes": {
+      "ordinary_full_web_shard_no_longer_replays_image_only_git_history_policy_suites": "Those exact suites remain in their original image-only-only build step; scheduling and genuine shard controls remain executed in ordinary full mode.",
+      "markdown_attachment_test_accepts_exact_existing_en_and_zh_accessible_names": "No test is skipped, no assertion reduced, no browser gate changed, and original 90000ms test budget remains."
+    },
+    "application_runtime_or_product_code_changed": false
+  },
+  "local_controls": {
+    "node": 152,
+    "scheduling_python": 16,
+    "image_only_policy_python_outside_ordinary_shard": 102,
+    "web_lint_exit": 0,
+    "web_typecheck_exit": 0,
+    "actionlint_version": "1.7.12",
+    "actionlint_exit": 0,
+    "shellcheck_or_pyflakes_claimed": false,
+    "playwright_browser_suite_executed_locally": false,
+    "playwright_browser_suite_required_in_next_exact_full_ci": true,
+    "results_file_sha256": "02770e1c7bfda8d16541f93e993fb2fbbcd8348d21a4a0e966c40e01d96320d5",
+    "logs": [
+      {
+        "name": "ci-node-controls",
+        "exit_code": 0,
+        "log_bytes": 29993,
+        "log_sha256": "29ca345b2e433240faa86f8661a880fac60863212fbad450f940898d4097752f"
+      },
+      {
+        "name": "scheduling-python",
+        "exit_code": 0,
+        "log_bytes": 3672,
+        "log_sha256": "bc23347672f5b748a796bb859197f712cab13336a99ccb3f5414833c84d0acf0"
+      },
+      {
+        "name": "release-policy-python",
+        "exit_code": 0,
+        "log_bytes": 19861,
+        "log_sha256": "10fbff86436e6fdc98b373c59a37d196f4fb7a12f1ce60175e3e34328a7189b1"
+      },
+      {
+        "name": "web-lint",
+        "exit_code": 0,
+        "log_bytes": 165,
+        "log_sha256": "12318e1458c77defc58b71801a46646387fd5cfc66f98359491f30888decd8f2"
+      },
+      {
+        "name": "web-typecheck",
+        "exit_code": 0,
+        "log_bytes": 167,
+        "log_sha256": "aa20d92019c6f343df25737f2fb387600f706e5c4ed22ec26aad2dae4d52af71"
+      },
+      {
+        "name": "actionlint",
+        "exit_code": 0,
+        "log_bytes": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  "protected_user_state": {
+    "tsbuildinfo_sha256_before_and_after": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135",
+    "unchanged": true
+  },
+  "ci_scope": {
+    "quality_source_run_id": "",
+    "original_api_reader_settings_restore_web_native_resource_memory_and_release_gates_retained": true,
+    "old_image_only_source_authorization_or_lineage_not_expanded": true,
+    "new_full_run_dispatched": false,
+    "optimized_success_or_savings_claimed": false,
+    "production_application_redeploy_required": false,
+    "product_acceptance_owned_by_user": true
+  }
+}

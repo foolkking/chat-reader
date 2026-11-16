@@ -112,6 +112,17 @@ class QualitySchedulingTests(unittest.TestCase):
         final_upload = named(self.main["jobs"]["web-quality"]["steps"], "Upload non-deployable quality evidence")
         self.assertIn("${{ runner.temp }}/web-shards", final_upload["with"]["path"])
 
+    def test_full_web_shard_runs_its_contract_controls_without_replaying_image_only_history_controls(self):
+        control = named(self.web_job["steps"], "Quality scheduling source and real-report controls")
+        self.assertEqual(control["if"], "${{ inputs.shard == 1 }}")
+        self.assertIn("test_quality_scheduling.py", control["run"])
+        self.assertIn("quality-shard-evidence.test.mjs", control["run"])
+        self.assertNotIn("test_image_only", control["run"])
+        image_only = named(self.main["jobs"]["build-images"]["steps"], "Image-only release policy negative controls")
+        self.assertEqual(image_only["if"], "${{ inputs.quality_source_run_id != '' }}")
+        self.assertIn("test_image_only_quality_reuse.py", image_only["run"])
+        self.assertIn("test_image_only_selector_lineage.py", image_only["run"])
+
     def test_reusable_workflows_explicitly_keep_every_original_global_fixture_input(self):
         self.assertEqual(self.main["env"], self.contract["global_env"])
         for workflow in (self.web, self.settings):
