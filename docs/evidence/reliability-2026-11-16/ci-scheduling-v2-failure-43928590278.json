@@ -1,0 +1,518 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-16T19:40:21.852021+00:00",
+  "source_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+  "run_id": 43928590278,
+  "attempt": 1,
+  "conclusion": "failure",
+  "quality_source_run_id": "",
+  "failures": {
+    "image-preparation": "Pinned base-source shell admitted only old build-images job; failed before build/resource tests.",
+    "api-quality-shard-4 / suite": "Retained migration source assertion searched the parent instead of the required API reusable workflow.",
+    "web-quality-shard-1 / gates": "New native reporter control required TEMP, absent on hosted Linux which supplies RUNNER_TEMP.",
+    "web-quality-shard-3 / gates": "Nine retained Playwright release assertions/mutations still assumed ten jobs/two-way shards."
+  },
+  "first_result_read_requested_at": "2026-11-16T19:20:31.972909+00:00",
+  "fresh_monotonic_wait_seconds": 3300.0,
+  "fresh_utc_wait_seconds": 3300.000406,
+  "jobs": [
+    {
+      "id": 133514619767,
+      "name": "settings-quality-shard-1 / matrix",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:25:12Z",
+      "completed_at": "2026-11-16T18:39:31Z"
+    },
+    {
+      "id": 133514619847,
+      "name": "settings-quality-shard-3 / matrix",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:25:12Z",
+      "completed_at": "2026-11-16T18:39:20Z"
+    },
+    {
+      "id": 133514619855,
+      "name": "api-quality-shard-2 / suite",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:34:25Z"
+    },
+    {
+      "id": 133514619856,
+      "name": "image-preparation",
+      "conclusion": "failure",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:25:22Z"
+    },
+    {
+      "id": 133514619941,
+      "name": "api-quality-shard-3 / suite",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:31:55Z"
+    },
+    {
+      "id": 133514619956,
+      "name": "settings-quality-shard-2 / matrix",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:39:18Z"
+    },
+    {
+      "id": 133514620055,
+      "name": "api-quality-shard-4 / suite",
+      "conclusion": "failure",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:34:40Z"
+    },
+    {
+      "id": 133514620092,
+      "name": "api-quality-shard-1 / suite",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:38:40Z"
+    },
+    {
+      "id": 133514620204,
+      "name": "web-quality-shard-1 / gates",
+      "conclusion": "failure",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:26:20Z"
+    },
+    {
+      "id": 133514620282,
+      "name": "web-quality-shard-2 / gates",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:43:24Z"
+    },
+    {
+      "id": 133514620318,
+      "name": "reading-performance-comparison / compare",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:34:25Z"
+    },
+    {
+      "id": 133514620409,
+      "name": "settings-quality-shard-4 / matrix",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:41:25Z"
+    },
+    {
+      "id": 133514620891,
+      "name": "settings-restore",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:28:34Z"
+    },
+    {
+      "id": 133514623309,
+      "name": "web-quality-shard-3 / gates",
+      "conclusion": "failure",
+      "started_at": "2026-11-16T18:25:13Z",
+      "completed_at": "2026-11-16T18:34:04Z"
+    },
+    {
+      "id": 133522982929,
+      "name": "api-quality",
+      "conclusion": "skipped",
+      "started_at": "2026-11-16T18:38:40Z",
+      "completed_at": "2026-11-16T18:38:40Z"
+    },
+    {
+      "id": 133524679277,
+      "name": "settings-quality",
+      "conclusion": "success",
+      "started_at": "2026-11-16T18:41:28Z",
+      "completed_at": "2026-11-16T18:41:54Z"
+    },
+    {
+      "id": 133525915786,
+      "name": "web-quality",
+      "conclusion": "skipped",
+      "started_at": "2026-11-16T18:43:25Z",
+      "completed_at": "2026-11-16T18:43:24Z"
+    },
+    {
+      "id": 133525917279,
+      "name": "build-images",
+      "conclusion": "skipped",
+      "started_at": "2026-11-16T18:43:25Z",
+      "completed_at": "2026-11-16T18:43:24Z"
+    },
+    {
+      "id": 133525918406,
+      "name": "inspect-release-artifact",
+      "conclusion": "skipped",
+      "started_at": "2026-11-16T18:43:25Z",
+      "completed_at": "2026-11-16T18:43:24Z"
+    }
+  ],
+  "api": {
+    "collected_in_each_process": 7010,
+    "cross_process_collections_equal_including_order": true,
+    "selected_union_exact_no_duplicates": true,
+    "case_results": {
+      "passed": 7006,
+      "failed": 1,
+      "skipped": 3
+    },
+    "shard_counts": [
+      1157,
+      4144,
+      955,
+      754
+    ]
+  },
+  "settings_official_native_summary": [
+    {
+      "gate_id": "settings-stages-1-4",
+      "status": "passed",
+      "test_count": 470,
+      "result_counts": {
+        "passed": 470,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      }
+    },
+    {
+      "gate_id": "system-archive-new-instance",
+      "status": "passed",
+      "test_count": 1,
+      "result_counts": {
+        "passed": 1,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      }
+    }
+  ],
+  "official_logs": [
+    {
+      "id": 133514619767,
+      "name": "settings-quality-shard-1 / matrix",
+      "filename": "job-133514619767.log-get01",
+      "bytes": 192322,
+      "sha256": "3b7d1bdc20eef443dcc5bb2858871c78aebedd95edc02756a509787ec9377912"
+    },
+    {
+      "id": 133514619847,
+      "name": "settings-quality-shard-3 / matrix",
+      "filename": "job-133514619847.log-get01",
+      "bytes": 207186,
+      "sha256": "f6a7fb45daf951479d5c0264b9fbef7ea727f8c94b450e574b4f89e385348242"
+    },
+    {
+      "id": 133514619855,
+      "name": "api-quality-shard-2 / suite",
+      "filename": "job-133514619855.log-get01",
+      "bytes": 908886,
+      "sha256": "2aa490772b37be04ef7dd796cbd4b80071c33a38130bf045546e00c4825ba137"
+    },
+    {
+      "id": 133514619856,
+      "name": "image-preparation",
+      "filename": "job-133514619856.log-get01",
+      "bytes": 31537,
+      "sha256": "107a486664633cd7cbe3413d0190045951633512c8b7551c28df7503261603e3"
+    },
+    {
+      "id": 133514619941,
+      "name": "api-quality-shard-3 / suite",
+      "filename": "job-133514619941.log-get01",
+      "bytes": 261755,
+      "sha256": "359713c5c7d081b13429dab43c5b961e4d522de53ddd48fd68f76fb66edfd33d"
+    },
+    {
+      "id": 133514619956,
+      "name": "settings-quality-shard-2 / matrix",
+      "filename": "job-133514619956.log-get01",
+      "bytes": 207067,
+      "sha256": "817da8e1428558a3d0c104f0d8a31ac44e7de981d5a47c44b303bcd4af17d0e7"
+    },
+    {
+      "id": 133514620055,
+      "name": "api-quality-shard-4 / suite",
+      "filename": "job-133514620055.log-get01",
+      "bytes": 316552,
+      "sha256": "a473e5be72488101880a3f0554361635201d594c1de53f57b4f68a4dfd596730"
+    },
+    {
+      "id": 133514620092,
+      "name": "api-quality-shard-1 / suite",
+      "filename": "job-133514620092.log-get01",
+      "bytes": 297509,
+      "sha256": "a6f62767286302363a45914310ddacc2aaac6a504c6e56afc96099ae6695014d"
+    },
+    {
+      "id": 133514620204,
+      "name": "web-quality-shard-1 / gates",
+      "filename": "job-133514620204.log-get01",
+      "bytes": 127056,
+      "sha256": "827f3fd32e98b6b7b087247b69d3a239457ae7e2bb8f18aa2de1119adfa852d7"
+    },
+    {
+      "id": 133514620282,
+      "name": "web-quality-shard-2 / gates",
+      "filename": "job-133514620282.log-get01",
+      "bytes": 173125,
+      "sha256": "99809a4a2b49ccc7f81497104c9bf84f1c317fe9cf21207f9e484b396fb2faaa"
+    },
+    {
+      "id": 133514620318,
+      "name": "reading-performance-comparison / compare",
+      "filename": "job-133514620318.log-get01",
+      "bytes": 20497969,
+      "sha256": "efef81d6b2a30d2d0a097f0f19bc4e308c140b5c768bcec650b7cdbe52341c08"
+    },
+    {
+      "id": 133514620409,
+      "name": "settings-quality-shard-4 / matrix",
+      "filename": "job-133514620409.log-get01",
+      "bytes": 202553,
+      "sha256": "5f4fcc23606e483ef7c8afa9df7a668f2608dfc3114c52c6fe23e7af275dc2dc"
+    },
+    {
+      "id": 133514620891,
+      "name": "settings-restore",
+      "filename": "job-133514620891.log-get01",
+      "bytes": 125275,
+      "sha256": "1c22a54f56476acebf91338ab2a992c247538a49e37a77bcb0cfba26148c4546"
+    },
+    {
+      "id": 133514623309,
+      "name": "web-quality-shard-3 / gates",
+      "filename": "job-133514623309.log-get01",
+      "bytes": 709353,
+      "sha256": "759bbb5df4b2797ff24590bb8b0c2f0c37f73067bfd0301ba2fe5dfd229db191"
+    },
+    {
+      "id": 133524679277,
+      "name": "settings-quality",
+      "filename": "job-133524679277.log-get01",
+      "bytes": 128220,
+      "sha256": "87cbe9d2b24de7c183e8d6a3ed6d58b45b49fcb2037f75137213d498efb128c9"
+    }
+  ],
+  "official_artifacts": [
+    {
+      "created_at": "2026-11-16T18:41:20Z",
+      "digest": "sha256:5ac360c653deb4e588b4f58ad3be48070e59a5a283fe7a88ff3344c13c6a3931",
+      "expired": false,
+      "id": 14259880018,
+      "name": "settings-quality-shard-4-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 5460396,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14259880018.zip-get01",
+      "member_count": 76,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:43:19Z",
+      "digest": "sha256:36f6e262630b2c181b08af32445682f437381821f33ff6cefdfe0ff2269e2a3f",
+      "expired": false,
+      "id": 14259730640,
+      "name": "web-quality-shard-2-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 13065342,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14259730640.zip-get01",
+      "member_count": 281,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:38:36Z",
+      "digest": "sha256:3befc6549303acf9befa4f6449b7494f0834f3417c1daa4b14bddaf0e4d071a2",
+      "expired": false,
+      "id": 14259270356,
+      "name": "api-quality-shard-1-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 199062,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14259270356.zip-get01",
+      "member_count": 2,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:39:16Z",
+      "digest": "sha256:383253e953863abf1ab528bebd467ccc2a7bcd293e53452fc77b0ad6aaee6948",
+      "expired": false,
+      "id": 14258860702,
+      "name": "settings-quality-shard-3-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 5340566,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14258860702.zip-get01",
+      "member_count": 69,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:41:52Z",
+      "digest": "sha256:5c55d971e11c91bfe78986c9b1cde1aab6d8f1189350fa720ebaab4850097971",
+      "expired": false,
+      "id": 14258776119,
+      "name": "settings-quality-evidence-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 21545497,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14258776119.zip-get01",
+      "member_count": 277,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:39:23Z",
+      "digest": "sha256:a321cfc731177a59e3c29eb93340db1b04f03c0a01125a5b4763b04251365c69",
+      "expired": false,
+      "id": 14258555842,
+      "name": "settings-quality-shard-1-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 3011580,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14258555842.zip-get01",
+      "member_count": 50,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:34:00Z",
+      "digest": "sha256:a214619ddbeefcc9d128ec4e0eb1fda4692de526c8763e18e1d1166786997bc3",
+      "expired": false,
+      "id": 14257803107,
+      "name": "web-quality-shard-3-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 6412584,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14257803107.zip-get01",
+      "member_count": 141,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:31:53Z",
+      "digest": "sha256:54ed16ea7fe87fd95c3921f9ce28a3654ff1bff57c0a1337125e43c0d108b44c",
+      "expired": false,
+      "id": 14257648177,
+      "name": "api-quality-shard-3-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 192601,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14257648177.zip-get01",
+      "member_count": 2,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:34:21Z",
+      "digest": "sha256:2746f0402fec5a9050a96f1b9010835094a66b0731eb1bf81b8b76975ca1b065",
+      "expired": false,
+      "id": 14257553804,
+      "name": "api-quality-shard-2-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 398905,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14257553804.zip-get01",
+      "member_count": 2,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:26:15Z",
+      "digest": "sha256:49ad41c601dac03c2527f146f2e633d2a6c060ce4685e3e5300dbb1d6dbe8cf3",
+      "expired": false,
+      "id": 14257547115,
+      "name": "web-quality-shard-1-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 788,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14257547115.zip-get01",
+      "member_count": 2,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:39:13Z",
+      "digest": "sha256:f407c3e4c056de550683c58cfdb8767e926f25739931962f0c4e0050762e10b1",
+      "expired": false,
+      "id": 14257424764,
+      "name": "settings-quality-shard-2-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 3803476,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14257424764.zip-get01",
+      "member_count": 55,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:34:38Z",
+      "digest": "sha256:b99c9ad13db0c574dd26c62f42d0613b9bf355dfdbe90e2f4814c1a52e81dd81",
+      "expired": false,
+      "id": 14257179397,
+      "name": "api-quality-shard-4-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 180568,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14257179397.zip-get01",
+      "member_count": 2,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:34:22Z",
+      "digest": "sha256:cb453994f683a80559d6dbcfdbaf86cdd89634e291490dbfccd6dca38539a6c7",
+      "expired": false,
+      "id": 14256644762,
+      "name": "reading-performance-comparison",
+      "size_in_bytes": 4061806,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14256644762.zip-get01",
+      "member_count": 101,
+      "verified_size_digest_crc_safe_paths": true
+    },
+    {
+      "created_at": "2026-11-16T18:28:30Z",
+      "digest": "sha256:165e4a53a331d47785baeb8c2319ac559c2364b420616eeaca935220fc843f25",
+      "expired": false,
+      "id": 14256209008,
+      "name": "settings-restore-evidence-f209b0c256a3dd80ca492dd567b06ac0f4768cc8-1",
+      "size_in_bytes": 17751,
+      "workflow_run": {
+        "head_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+        "id": 43928590278
+      },
+      "filename": "artifact-14256209008.zip-get01",
+      "member_count": 11,
+      "verified_size_digest_crc_safe_paths": true
+    }
+  ],
+  "download_size_digest_crc_verified": true,
+  "deployable_artifacts": 0,
+  "not_successful_speedup_evidence": true,
+  "production_changed": false
+}

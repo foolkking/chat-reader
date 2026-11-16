@@ -33,6 +33,17 @@ Local controls are verified, not complete CI acceptance:
 Two new successful full runs and measured timing/cache behavior are still needed.
 No product/API/schema/offline-format or production deployment change.
 
+The first19-job run43928590278 failed closed before publication. The reviewed
+repair admits only the two actual image jobs in the existing digest-pinned
+base helper, locates the required migration gate in the API reusable workflow,
+uses explicit hosted/local temporary roots, and retains all original release
+source assertions while extending them to the full19-job dependency chain.
+The actual88-case Playwright source contract now also runs before Web build;
+the complete browser/security gate remains mandatory. No historical image-only
+whitelist, release condition, runtime timeout or five-case memory budget changes.
+[Failure](../evidence/reliability-2026-11-16/ci-scheduling-v2-failure-43928590278.json) /
+[local repair](../evidence/reliability-2026-11-16/ci-scheduling-v2-contract-repair.json).
+
 ## Earlier mounted workflow contract correction — 2026-11-17
 
 The five mounted UX assertions follow the required reusable Web shard instead

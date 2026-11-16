@@ -28,6 +28,21 @@ exercise merging/rejection, not a replacement for470 release cases.
 Full Linux/native/resource execution, at least two new successful CI timings
 and observed cold/warm cache behavior remain pending.
 
+The first19-job run43928590278 failed at four integration contracts; original
+Settings470+restore1 and Reader passed, while API had7006pass/1fail/3skip.
+[Failure](evidence/reliability-2026-11-16/ci-scheduling-v2-failure-43928590278.json).
+The repair retains the API migration check in the real reusable workflow and
+the complete Playwright release-source suite (51 original, now88 cases).
+`node scripts/ci/run-release-source-controls.mjs` runs those actual source-only
+Playwright cases before building Web, using task-owned output and no server;
+it does not replace the full browser gate. Native control fixtures require
+explicit RUNNER_TEMP or TEMP, never an implicit system-temp fallback.
+Local UX2556, CI Node159/Python139, source Playwright88, migration source1 and
+static checks pass. Windows empty-store and offline fresh-checkout installs
+also pass; original CRLF-checkout diagnostic failures remain recorded.
+[Repair evidence](evidence/reliability-2026-11-16/ci-scheduling-v2-contract-repair.json)
+is not new full Linux/native/resource acceptance or measured speedup.
+
 ## Previous local checkpoint: required mounted-gate contract repaired — 2026-11-17
 
 The five retained mounted-gate assertions now inspect the reusable Web workflow,

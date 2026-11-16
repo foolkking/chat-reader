@@ -9,6 +9,12 @@
 [发布合同](system/RELEASE_SAFETY_BASELINE.md) /
 [唯一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
 两次新完整成功、缓存模式与正式耗时/runner分钟仍待验证；20–25分钟仍是目标，生产不变。
+首个19-job运行43928590278失败于四处合同适配遗漏，非原mounted五项再次失败；
+Settings470+restore1、Reader通过，API7006/1失败/3原skip。已保留
+[失败证据](evidence/reliability-2026-11-16/ci-scheduling-v2-failure-43928590278.json)；
+修复本地UX2556、Node159/Python139及提前执行的原Playwright安全断言扩展88通过。
+[定点修复与缓存诊断](evidence/reliability-2026-11-16/ci-scheduling-v2-contract-repair.json)
+不是新完整成功或提速验收。
 
 ## 前一检查点：71342129 已部署并独立核验 — 2026-11-17
 

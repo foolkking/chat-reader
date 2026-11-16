@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
 
-export const SCHEDULE_SHA256 = "b8bc9632a94b12f2fae7a5f051c0135e91f46c6ed118989410121cc6953db1ca";
+export const SCHEDULE_SHA256 = "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee";
 export const ORIGINAL_SHA256 = "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c";
 export const digest = (data) => crypto.createHash("sha256").update(data).digest("hex");
 const read = (file) => fs.readFileSync(new URL(file, import.meta.url), "utf8").replaceAll("\r\n", "\n");

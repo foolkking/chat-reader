@@ -2,9 +2,10 @@
 # CI-only base preparation. Never build an application image or change its pin.
 set -euo pipefail
 
-if [[ "$#" != 0 || "${GITHUB_ACTIONS:-}" != true || "${GITHUB_JOB:-}" != build-images \
+if [[ "$#" != 0 || "${GITHUB_ACTIONS:-}" != true \
+  || ( "${GITHUB_JOB:-}" != build-images && "${GITHUB_JOB:-}" != image-preparation ) \
   || ! "${GITHUB_RUN_ID:-}" =~ ^[0-9]+$ || ! -f "${GITHUB_ENV:-}" || ! -w "$GITHUB_ENV" ]]; then
-  echo "An existing build-images CI environment file and run identity are required." >&2
+  echo "An existing build-images or image-preparation CI environment file and run identity are required." >&2
   exit 1
 fi
 

@@ -147,7 +147,22 @@ test("normal production bundles do not expose the PWA negative fault bridge", as
 });
 
 const releaseQualityJobs = ["api-quality", "web-quality", "settings-quality", "reading-performance-comparison"];
-const shardQualityJobs = ["web-quality-shard-1", "web-quality-shard-2", "settings-quality-shard-1", "settings-quality-shard-2"];
+const publisherPrerequisites = [...releaseQualityJobs, "image-preparation"];
+const qualityFamilies = [
+  ["api", 4, "api-quality-shard.yml"],
+  ["web", 3, "web-quality.yml"],
+  ["settings", 4, "settings-browser-shard.yml"],
+] as const;
+const familyDependencies = (family: string) => {
+  const entry = qualityFamilies.find(([name]) => name === family);
+  if (!entry) throw new Error(`Unknown quality family: ${family}`);
+  return [
+    ...Array.from({ length: entry[1] }, (_, index) => `${family}-quality-shard-${index + 1}`),
+    ...(family === "settings" ? ["settings-restore"] : []),
+  ];
+};
+const shardQualityJobs = qualityFamilies.flatMap(([family, count]) =>
+  Array.from({ length: count }, (_, index) => `${family}-quality-shard-${index + 1}`));
 const readReleaseWorkflow = () => fs.readFileSync(
   path.resolve(process.cwd(), "../../.github/workflows/build-release-images.yml"), "utf8",
 ).replace(/\r\n/g, "\n");
@@ -166,15 +181,15 @@ function releaseStep(job: string, name: string) {
 
 function assertReleaseQualityGate(workflow: string) {
   expect(workflow).toMatch(/workflow_dispatch:\n {4}inputs:\n {6}quality_source_run_id:\n {8}description: [^\n]+\n {8}required: false\n {8}default: ''\n {8}type: string/);
-  expect([...workflow.matchAll(/^ {2}[a-z][a-z0-9-]*:\n/gm)]).toHaveLength(10);
-  for (const name of ["api-quality", "reading-performance-comparison", ...shardQualityJobs]) {
+  expect([...workflow.matchAll(/^ {2}[a-z][a-z0-9-]*:\n/gm)]).toHaveLength(19);
+  for (const name of ["settings-restore", "image-preparation", "reading-performance-comparison", ...shardQualityJobs]) {
     expect(releaseJob(workflow, name).split("\n").slice(0, 2).join("\n")).toBe(
       `  ${name}:\n    if: \${{ inputs.quality_source_run_id == '' }}`,
     );
   }
-  for (const [family, filename] of [["web", "web-quality.yml"], ["settings", "settings-browser-shard.yml"]]) {
-    const dependencies = [1, 2].map((index) => `${family}-quality-shard-${index}`);
-    for (const index of [1, 2]) {
+  for (const [family, count, filename] of qualityFamilies) {
+    const dependencies = familyDependencies(family);
+    for (let index = 1; index <= count; index += 1) {
       expect(releaseJob(workflow, `${family}-quality-shard-${index}`).trimEnd()).toBe([
         `  ${family}-quality-shard-${index}:`,
         "    if: ${{ inputs.quality_source_run_id == '' }}",
@@ -195,13 +210,13 @@ function assertReleaseQualityGate(workflow: string) {
   expect(reader).not.toMatch(/^ {4}needs:/m);
 
   const builder = releaseJob(workflow, "build-images");
-  const successes = releaseQualityJobs.map((name) => `needs.${name}.result == 'success'`).join(" && ");
-  const skips = releaseQualityJobs.map((name) => `needs.${name}.result == 'skipped'`).join(" && ");
+  const successes = publisherPrerequisites.map((name) => `needs.${name}.result == 'success'`).join(" && ");
+  const skips = publisherPrerequisites.map((name) => `needs.${name}.result == 'skipped'`).join(" && ");
   // Nonempty input only reaches the pinned source/lineage verifier below; it
   // is not permission to publish when fresh full-mode quality was skipped.
   expect(builder.split("\n").slice(0, 3).join("\n")).toBe([
     "  build-images:",
-    `    needs: [${releaseQualityJobs.join(", ")}]`,
+    `    needs: [${publisherPrerequisites.join(", ")}]`,
     `    if: \${{ !cancelled() && ((inputs.quality_source_run_id == '' && ${successes}) || (inputs.quality_source_run_id != '' && ${skips})) }}`,
   ].join("\n"));
   expect(releaseStep(builder, "Record verified release quality provenance")).toBe([
@@ -228,9 +243,17 @@ function assertReleaseQualityGate(workflow: string) {
     "Build Web image",
     "Inspect release images",
     "Package images and provenance",
+    "Promote exact prepared candidate after every quality gate",
     "Upload deployable release artifact",
   ]) {
-    expect(releaseStep(builder, name), `${name} must not be conditional`).not.toMatch(/^ {8}if:/m);
+    const step = releaseStep(builder, name);
+    if (name === "Record verified release quality provenance" || name === "Upload deployable release artifact") {
+      expect(step, `${name} must not be conditional`).not.toMatch(/^ {8}if:/m);
+    } else {
+      const condition = name === "Promote exact prepared candidate after every quality gate" ? "==" : "!=";
+      expect(step.match(/^ {8}if:.*$/gm)).toEqual([`        if: \${{ inputs.quality_source_run_id ${condition} '' }}`]);
+    }
+    expect(step).not.toMatch(/continue-on-error|\|\| true|exit 0/);
     const position = builder.indexOf(`      - name: ${name}\n`);
     expect(position, `${name} must follow its prerequisite`).toBeGreaterThan(previousStep);
     previousStep = position;
@@ -238,6 +261,52 @@ function assertReleaseQualityGate(workflow: string) {
   expect(builder.indexOf("docker build")).toBeGreaterThan(
     builder.indexOf("      - name: Record verified release quality provenance\n"),
   );
+  const promotion = releaseStep(builder, "Promote exact prepared candidate after every quality gate");
+  expect(promotion).toContain("CANDIDATE_ARTIFACT_ID: ${{ needs.image-preparation.outputs.artifact_id }}");
+  expect(promotion).toContain("CANDIDATE_ARTIFACT_DIGEST: ${{ needs.image-preparation.outputs.artifact_digest }}");
+  expect(promotion).toContain("CANDIDATE_ATTEMPT: ${{ needs.image-preparation.outputs.producer_attempt }}");
+  expect(promotion).toContain('test "$CANDIDATE_ATTEMPT" = "$GITHUB_RUN_ATTEMPT"');
+  expect(promotion).toContain("python3 scripts/ci/image_candidate.py promote");
+  expect(promotion).toContain('--quality "$RUNNER_TEMP/quality-verification.json"');
+  expect(promotion).toContain('--artifact-id "$CANDIDATE_ARTIFACT_ID" --artifact-digest "$CANDIDATE_ARTIFACT_DIGEST"');
+  expect(promotion).not.toContain("docker build");
+
+  const preparation = releaseJob(workflow, "image-preparation");
+  expect(preparation).not.toMatch(/^ {4}needs:/m);
+  let preparedStep = -1;
+  for (const name of [
+    "Require clean exact-source preparation", "Prepare pinned image bases with official-source fallback",
+    "Build API and worker image", "Verify real 320 MiB worker ZIP analysis and commit without swap",
+    "Verify bounded ZIP 100 and 500 MiB sources and long Markdown",
+    "Verify real ORM memory-control-plane status and source guards", "Build Web image",
+    "Inspect release images", "Package non-deployable exact tested candidate", "Upload non-deployable image candidate only",
+  ]) {
+    const step = releaseStep(preparation, name);
+    expect(step, `${name} is mandatory before candidate upload`).not.toMatch(/^ {8}if:|continue-on-error|\|\| true|exit 0/m);
+    const position = preparation.indexOf(`      - name: ${name}\n`);
+    expect(position).toBeGreaterThan(preparedStep);
+    preparedStep = position;
+  }
+  const candidateUpload = releaseStep(preparation, "Upload non-deployable image candidate only");
+  expect(candidateUpload).toContain("name: non-deployable-image-candidate-${{ github.sha }}-${{ github.run_attempt }}");
+  expect(candidateUpload).toContain("            image-candidate.json");
+  expect(candidateUpload).not.toContain("release-manifest.json");
+  expect(releaseStep(preparation, "Package non-deployable exact tested candidate")).toContain("test ! -e release-manifest.json");
+  const restore = releaseJob(workflow, "settings-restore");
+  expect(restore).not.toMatch(/^ {4}needs:/m);
+  expect(releaseStep(restore, "System archive restore into a fresh PostgreSQL instance")).not.toMatch(/^ {8}if:/m);
+  for (const [family, names] of [
+    ["api", ["Require full original collection and native per-case execution"]],
+    ["web", ["Require the complete original Web gate union"]],
+    ["settings", ["Collect original Settings selection and merge genuine Playwright blobs",
+      "Verify independent restore and complete Settings summary"]],
+  ] as const) {
+    for (const name of names) {
+      expect(releaseStep(releaseJob(workflow, `${family}-quality`), name)).not.toMatch(
+        /^ {8}if:|continue-on-error|\|\| true|exit 0/m,
+      );
+    }
+  }
 
   const consumer = releaseJob(workflow, "inspect-release-artifact");
   expect(consumer.split("\n").slice(0, 3).join("\n")).toBe(
@@ -265,8 +334,14 @@ function assertReleaseQualityGate(workflow: string) {
   expect(consumer.indexOf("docker load")).toBeGreaterThan(
     consumer.indexOf("      - name: Inspect downloaded release archive independently\n"),
   );
+  const candidateConsumer = releaseStep(consumer, "Verify promoted candidate and resource identity independently");
+  expect(candidateConsumer).toContain("        if: ${{ inputs.quality_source_run_id == '' }}");
+  expect(candidateConsumer).toContain("run: python3 ../scripts/ci/image_candidate.py consume");
+  expect(candidateConsumer).not.toMatch(/continue-on-error|\|\| true|exit 0/);
 
-  expect(workflow).toContain('SETTINGS_POSTGRES_INTEGRATION: "1"');
+  const apiWorkflow = fs.readFileSync(path.resolve(process.cwd(), "../../.github/workflows/api-quality-shard.yml"), "utf8");
+  expect(apiWorkflow).toContain('SETTINGS_POSTGRES_INTEGRATION: "1"');
+  expect(apiWorkflow).toContain("python scripts/verify_migration_state.py --require-current");
   expect(workflow).toContain('E2E_SETTINGS_MAILBOX: "1"');
   expect(workflow).not.toMatch(/continue-on-error:\s*true/);
   expect(workflow.indexOf("name: Upload non-deployable quality evidence")).toBeGreaterThanOrEqual(0);
@@ -287,7 +362,7 @@ const unsafeReleaseMutations = [
     name: "a nonempty default quality source",
     mutate: (workflow: string) => workflow.replace("        default: ''", "        default: '43578495558'"),
   },
-  ...releaseQualityJobs.flatMap((name) => [
+  ...publisherPrerequisites.flatMap((name) => [
     {
       name: `skipping fresh ${name} in full mode`,
       mutate: (workflow: string) => mutateReleaseJob(workflow, name, "quality_source_run_id == ''", "quality_source_run_id != ''"),
@@ -295,8 +370,8 @@ const unsafeReleaseMutations = [
     {
       name: `omitting the ${name} build dependency`,
       mutate: (workflow: string) => mutateReleaseJob(workflow, "build-images",
-        `    needs: [${releaseQualityJobs.join(", ")}]`,
-        `    needs: [${releaseQualityJobs.filter((job) => job !== name).join(", ")}]`),
+        `    needs: [${publisherPrerequisites.join(", ")}]`,
+        `    needs: [${publisherPrerequisites.filter((job) => job !== name).join(", ")}]`),
     },
     {
       name: `accepting skipped ${name} as fresh quality`,
@@ -400,8 +475,8 @@ const unsafeReleaseMutations = [
       '--producer-attempt "$ARTIFACT_PRODUCER_ATTEMPT"', '--producer-attempt "1"'),
   },
   ...shardQualityJobs.flatMap((name) => {
-    const family = name.startsWith("web-") ? "web" : "settings";
-    const index = name.endsWith("-1") ? 1 : 2;
+    const family = name.split("-")[0];
+    const index = Number(name.split("-").at(-1));
     return [
       {
         name: `skipping fresh ${name} in full mode`,
@@ -416,8 +491,8 @@ const unsafeReleaseMutations = [
       {
         name: `omitting ${name} from its aggregator`,
         mutate: (workflow: string) => mutateReleaseJob(workflow, `${family}-quality`,
-          `    needs: [${family}-quality-shard-1, ${family}-quality-shard-2]`,
-          `    needs: [${family}-quality-shard-${index === 1 ? 2 : 1}]`),
+          `    needs: [${familyDependencies(family).join(", ")}]`,
+          `    needs: [${familyDependencies(family).filter((dependency) => dependency !== name).join(", ")}]`),
       },
       {
         name: `accepting skipped ${name} in its aggregator`,
@@ -426,6 +501,30 @@ const unsafeReleaseMutations = [
       },
     ];
   }),
+  {
+    name: "omitting the independent restore result",
+    mutate: (workflow: string) => mutateReleaseJob(workflow, "settings-quality",
+      `    needs: [${familyDependencies("settings").join(", ")}]`,
+      `    needs: [${familyDependencies("settings").filter((name) => name !== "settings-restore").join(", ")}]`),
+  },
+  {
+    name: "an early deployable manifest in candidate upload",
+    mutate: (workflow: string) => mutateReleaseJob(workflow, "image-preparation",
+      "            image-candidate.json", "            image-candidate.json\n            release-manifest.json"),
+  },
+  {
+    name: "a candidate artifact from an unrelated producer",
+    mutate: (workflow: string) => workflow.replace(
+      "CANDIDATE_ARTIFACT_ID: ${{ needs.image-preparation.outputs.artifact_id }}", 'CANDIDATE_ARTIFACT_ID: "123"'),
+  },
+  {
+    name: "a rebuild instead of exact tested candidate promotion",
+    mutate: (workflow: string) => workflow.replace("python3 scripts/ci/image_candidate.py promote", "docker build ."),
+  },
+  {
+    name: "a missing independent candidate identity verification",
+    mutate: (workflow: string) => workflow.replace("python3 ../scripts/ci/image_candidate.py consume", "echo unverified-candidate"),
+  },
   {
     name: "an unconsumed serial API wait before Reader comparison",
     mutate: (workflow: string) => mutateReleaseJob(workflow, "reading-performance-comparison",

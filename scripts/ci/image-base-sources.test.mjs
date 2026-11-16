@@ -103,6 +103,16 @@ test("both primary pins are pulled, platform-checked and published without chang
   assert.equal(result.env, `${result.original}PYTHON_BASE_IMAGE=${pins.python}\nNODE_BASE_IMAGE=${pins.node}\n`);
 });
 
+test("the dedicated non-deployable preparation job uses the same exact pinned base contract", () => {
+  const result = run({ GITHUB_JOB: "image-preparation" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(result.calls, Object.values(pins).flatMap(pin => [
+    `DOCKER pull --platform linux/amd64 ${pin}`,
+    `DOCKER image inspect --format {{.Os}}/{{.Architecture}} ${pin}`,
+  ]));
+  assert.equal(result.env, `${result.original}PYTHON_BASE_IMAGE=${pins.python}\nNODE_BASE_IMAGE=${pins.node}\n`);
+});
+
 test("a transient failure retries the same immutable official source", () => {
   const result = run({ MOCK_PYTHON: "retry" });
   assert.equal(result.status, 0, result.stderr);
@@ -155,6 +165,7 @@ for (const env of [
   { PYTHON_BASE_IMAGE: `${pins.python}\nINJECT=value` },
   { PYTHON_BASE_IMAGE: pins.python.replace(/.$/, "g") },
   { GITHUB_ACTIONS: "" }, { GITHUB_JOB: "production" },
+  { GITHUB_JOB: "image-preparation-extra" }, { GITHUB_JOB: "web-quality" },
   { GITHUB_RUN_ID: "invalid" }, { GITHUB_ENV: "" },
 ]) {
   test(`invalid pin/CI context is rejected before any Docker call: ${JSON.stringify(env)}`, () => {

@@ -93,7 +93,12 @@ class ApiShardTests(unittest.TestCase):
 
     def test_real_pytest_lifecycle_junit_and_independent_collection(self):
         # Small actual executions validate the reporter mechanics, not the7010 release gate.
-        root = Path(tempfile.mkdtemp(prefix="api-native-control-", dir=os.environ["TEMP"]))
+        # Hosted Linux exposes RUNNER_TEMP, while local Windows uses the explicit
+        # task TEMP directory. Never fall back to the system temporary directory.
+        temp_root = os.environ.get("RUNNER_TEMP") or os.environ.get("TEMP")
+        self.assertTrue(temp_root, "An explicit task temporary directory is required")
+        self.assertTrue(Path(temp_root).is_dir())
+        root = Path(tempfile.mkdtemp(prefix="api-native-control-", dir=temp_root))
         root.joinpath("pytest.ini").write_text("[pytest]\n", encoding="utf8")
         for index in range(1, 5):
             folder = root / "tests"

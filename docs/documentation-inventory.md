@@ -9,6 +9,11 @@
 blob小型控制不是全量执行。两次新完整成功与实际耗时/缓存验证待完成。旧JSON与用户资料
 保留，不扩展历史image-only授权，不触发生产部署或重写README/AGENTS。
 `ci-scheduling-v2-precommit-final.json`补充提交前空行修正后的精确源码SHA，原本地验证回执保留。
+`ci-scheduling-v2-dispatch-f209b0c.json`记录推送后唯一新普通完整CI及新55分钟等待起点，
+不读取/继承旧运行结果，不以派发记录冒充成功。
+随后新增`ci-scheduling-v2-failure-43928590278.json`和`ci-scheduling-v2-contract-repair.json`，
+定点同步四处合同失败、原断言完整保留及88项提前Playwright源控制、UX2556、Node159/Python139
+和Windows冷/离线缓存诊断。旧JSON、原本地失败和历史运行不覆盖；新的完整成功仍待验证。
 
 ## 第二轮CI实施：指定失败修复的独立检查点 — 2026-11-17
 

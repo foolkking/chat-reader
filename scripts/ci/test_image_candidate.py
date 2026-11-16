@@ -15,6 +15,12 @@ from image_archive_identity import identities
 SOURCE, RUN, ATTEMPT = "b" * 40, "17", "1"
 
 
+def control_directory(prefix):
+    temp_root = os.environ.get("RUNNER_TEMP") or os.environ.get("TEMP")
+    assert temp_root and Path(temp_root).is_dir(), "An explicit task temporary directory is required"
+    return Path(tempfile.mkdtemp(prefix=prefix, dir=temp_root))
+
+
 def memory(images):
     base = {
         "revision": SOURCE, "passed": True, "real_sensor": True, "run_id": RUN, "run_attempt": ATTEMPT,
@@ -41,7 +47,7 @@ def memory(images):
 
 class ImageCandidateTests(unittest.TestCase):
     def setUp(self):
-        self.root = Path(tempfile.mkdtemp(prefix="image-candidate-control-", dir=os.environ["TEMP"]))
+        self.root = control_directory("image-candidate-control-")
         self.images = {role: {"config_id": "sha256:" + ("a" if role != "web" else "b") * 64,
                               "platform": "linux/amd64", "rootfs": ["sha256:" + "d" * 64]}
                        for role in gate.ROLES}
@@ -155,7 +161,7 @@ class ImageCandidateTests(unittest.TestCase):
 
 class ImageArchiveTests(unittest.TestCase):
     def fixture(self, mutation=None):
-        root = Path(tempfile.mkdtemp(prefix="image-archive-control-", dir=os.environ["TEMP"]))
+        root = control_directory("image-archive-control-")
         entries, members = [], {}
         for role in ("api", "web"):
             config = {"architecture": "amd64", "os": "linux",

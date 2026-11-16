@@ -514,7 +514,7 @@
       "tests/test_message_markdown_copy.py": "19dc1d80f4ad7f47f15a9caacb37f950e25e742e7fc59600c70434c9508d1770",
       "tests/test_message_markdown_copy_postgres.py": "d451914356c81aae0ba1b618dc1b31afa5ad654225378f5b720e96df78f34824",
       "tests/test_message_version_history_api.py": "07b4bbce7324e2fa6065198d3735573e7bbc9e8554e45b11e048dad8549d819f",
-      "tests/test_migration_integrity.py": "9411e44381f6de52ee61e7b02cf20abc21d143f516d679b6cac4259630ad6e79",
+      "tests/test_migration_integrity.py": "f7838b4f373b9db467e9304435f69cc538e8834a427ae9aba6689a4a666b4d5c",
       "tests/test_my_shares.py": "50aed4b14ecf580e690cff804f93eb2eacea796600a35b68567fd7c5506220c4",
       "tests/test_my_shares_postgres.py": "411dff9b050e32f15618d8ab464c227a6c1a2f9af9d89f0755fbeb0dfaeb71df",
       "tests/test_noise_renderer_protection_contract.py": "63862b7ff4bf76378bcd5f953db651fa925a3174e39c8ca5cc9295d1461f9b05",

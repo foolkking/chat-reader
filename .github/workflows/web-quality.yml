@@ -120,6 +120,7 @@ jobs:
           python -m unittest discover -s scripts/ci -p 'test_api_shard_evidence.py' -v
           python -m unittest discover -s scripts/ci -p 'test_image_candidate.py' -v
           node --test scripts/ci/quality-shard-evidence.test.mjs
+          node scripts/ci/run-release-source-controls.mjs
 
       - name: Offline shell reconciliation regressions
         if: ${{ inputs.shard == 1 }}

@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-16T19:40:21.928079+00:00",
+  "parent_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+  "status": "local_contract_repair_verified_full_ci_required",
+  "repairs": [
+    "Admit only build-images or image-preparation in the original pinned-base shell; all source/platform/retry bounds unchanged.",
+    "Retain original API migration assertion but locate the actual required reusable step; add semantic DAG/skip/command rejection controls.",
+    "Native API/image control fixtures accept explicit RUNNER_TEMP or TEMP; no implicit system-temp fallback.",
+    "Retain all original51 Playwright source-contract cases, expand to88 and execute before Web build; complete browser gate remains."
+  ],
+  "schedule_assignment_counts_and_weights_unchanged": true,
+  "schedule_only_source_binding_update": {
+    "path": "tests/test_migration_integrity.py",
+    "previous_sha256": "9411e44381f6de52ee61e7b02cf20abc21d143f516d679b6cac4259630ad6e79",
+    "new_sha256": "f7838b4f373b9db467e9304435f69cc538e8834a427ae9aba6689a4a666b4d5c"
+  },
+  "source_lf_sha256": {
+    ".github/workflows/web-quality.yml": "f20132ca43e6391751f5974af82d348fa2b149df05f593926068ed85d7b43df8",
+    "apps/api/tests/test_migration_integrity.py": "f7838b4f373b9db467e9304435f69cc538e8834a427ae9aba6689a4a666b4d5c",
+    "apps/web/e2e/release-security-baseline.spec.ts": "23e3bb983364a79d96fbd653529fa54c3742fea7ba612a8a1711094e5eb4d977",
+    "scripts/ci/image-base-sources.sh": "170e8a8c71c39cddf6a9f07b246e93fadcdd195a41ee25ff082368865c48ab5f",
+    "scripts/ci/image-base-sources.test.mjs": "f8ef284db7be6eb3fe70b31d7ba83f2cb99fffd581ac7f05df3fc0c03aad8711",
+    "scripts/ci/quality-schedule-v2.json": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
+    "scripts/ci/quality-schedule.mjs": "43b6622303e1bf94bd1e8b60b2904b1285de3e424e86181383d6c236b08d5438",
+    "scripts/ci/quality_schedule.py": "ef2c6982f8aa058532b01e490d50423a7a569ace92b2e1169f16186d96bcc922",
+    "scripts/ci/test_api_shard_evidence.py": "9c2e95433a317abd8805573a768b3d550f48ff427ecab22d2f0c00c64ae45795",
+    "scripts/ci/test_image_candidate.py": "c1690c8b16d66e22579133d4505a7d75f3bb1cbbdbb12c3e465723637e3cd63f",
+    "scripts/ci/test_quality_scheduling.py": "55b294d3fbf6480e8755df79ab8675dd9937947074d226601ae04a0f8e663db0",
+    "scripts/ci/run-release-source-controls.mjs": "b8b278e8be0364e567f714a5ab62a954b72c4d9255212c3451edfcede0d9d80a"
+  },
+  "validation": [
+    {
+      "name": "ux-full",
+      "exit_code": 0,
+      "elapsed_seconds": 28.71900000000096,
+      "log_sha256": "6c0f2bda1379fe4b7cc9d55c1c5736df502e3ec8c66300c8daf103e04e0ed26a"
+    },
+    {
+      "name": "ci-node",
+      "exit_code": 0,
+      "elapsed_seconds": 14.375,
+      "log_sha256": "0793ff5c877d4cdbcd28815389253991dd07e83d43112a8acd2f73d2ce1f27cc"
+    },
+    {
+      "name": "ci-python",
+      "exit_code": 0,
+      "elapsed_seconds": 7.21900000000096,
+      "log_sha256": "c15ba2dab0f18f0e91a36fd2e3392ba63f501c7227c3f4b4438b6984199693c3"
+    },
+    {
+      "name": "source-security-native",
+      "exit_code": 0,
+      "elapsed_seconds": 6.5,
+      "log_sha256": "95b9640ed8ca39590f65c07bacc2a944fa1952793c1c5429e82e7dc403257206"
+    },
+    {
+      "name": "api-migration-source",
+      "exit_code": 0,
+      "elapsed_seconds": 7.34400000000096,
+      "log_sha256": "966e39d9a6fb6896a77147ea4956660c2bcb08fa1a067bd7a64bf00e9a74b178"
+    },
+    {
+      "name": "lint",
+      "exit_code": 0,
+      "elapsed_seconds": 27.96799999999712,
+      "log_sha256": "12318e1458c77defc58b71801a46646387fd5cfc66f98359491f30888decd8f2"
+    },
+    {
+      "name": "typecheck",
+      "exit_code": 0,
+      "elapsed_seconds": 43.82900000000154,
+      "log_sha256": "2de30b44397d3c8febcaca482bbf7f402b01eeafaf83f9724b07b50bda7d7665"
+    },
+    {
+      "name": "actionlint",
+      "exit_code": 0,
+      "elapsed_seconds": 0.3899999999994179,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "migration-head",
+      "exit_code": 0,
+      "elapsed_seconds": 0.9380000000019209,
+      "log_sha256": "73423f8cc296997f4c5fa5d11c6fbcf544629c61e9b90c2257f86f00f0243af5"
+    },
+    {
+      "name": "runner-temp-only-test_api_shard_evidence.py",
+      "exit_code": 0,
+      "elapsed_seconds": 2.812999999998283,
+      "log_sha256": "0afdeac4ce3daf59dc8e47820cc730bb092a7cad9d2a8af3ef133fa9c067eb8c"
+    },
+    {
+      "name": "runner-temp-only-test_image_candidate.py",
+      "exit_code": 0,
+      "elapsed_seconds": 0.4220000000022992,
+      "log_sha256": "903f1665df968b8cc0f514fdfda912ba02aa4e162f2f9e4d68d08dd42d4057d7"
+    }
+  ],
+  "counts": {
+    "ux": 2556,
+    "ci_node": 159,
+    "ci_python": 139,
+    "source_playwright": 88,
+    "migration_source": 1
+  },
+  "native_source_before": {
+    "failed": 9,
+    "passed": 42,
+    "log_sha256": "c2b63e75bf6db12d1f427b644fb68ca352331d196d110016de616ee30cbf4bc0"
+  },
+  "initial_source_runner_no_tests_error_retained": {
+    "log_sha256": "d0d4b894696619a94016b722b9d923acc1e0ced89f4aa0b8afcfd509887a0460"
+  },
+  "local_dependency_cache_diagnostics": {
+    "result.json": {
+      "receipt_sha256": "36075fb0718db605304d5011c36b9cb7cb4d2fa1a266464f14eb07377d13e78f",
+      "recorded_at": "2026-11-16T18:46:40.585077+00:00",
+      "source_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+      "host": "Windows",
+      "results": [
+        {
+          "name": "owned-detached-checkout",
+          "exit_code": 0,
+          "elapsed_seconds": 2.5930000000007567,
+          "log_sha256": "9349c76dba6657781104572396da9552cc3e5f73334ab10e5691eeeac1c91bbb"
+        },
+        {
+          "name": "pnpm-cold-empty-store",
+          "exit_code": 0,
+          "elapsed_seconds": 56.09300000000076,
+          "log_sha256": "2c931029a0963f88afef5bc07366f1cecc6f5929eb3b3251d03f403248fd55fa"
+        },
+        {
+          "name": "pnpm-warm-offline-store",
+          "exit_code": 0,
+          "elapsed_seconds": 1.5,
+          "log_sha256": "44f3d0f98a4e6257a1cbda7e6d93ad76252fc383656a0acacbd5c6c38c7374c8"
+        },
+        {
+          "name": "installed-ci-node-controls",
+          "exit_code": 0,
+          "elapsed_seconds": 14.84400000000096,
+          "log_sha256": "ec1f3517a8d54037e55e233999fa60664cd658a8f38a2e0780572f58fdc037a3"
+        },
+        {
+          "name": "installed-complete-ux-controls",
+          "exit_code": 1,
+          "elapsed_seconds": 28.53099999999904,
+          "log_sha256": "377e96b718abf047d7c934f758755d9bc977dda449deadb1ee9409c01d039b79"
+        }
+      ],
+      "all_requested_commands_completed": false,
+      "not_a_cold_full_linux_ci_run": true,
+      "no_production_change_or_user_cache_deletion": true,
+      "owned_detached_checkout_and_all_evidence_retained": true
+    },
+    "continuation-01/result.json": {
+      "receipt_sha256": "f1de6356320ef80b93a20bf892bd36df439137c86dcdf8bfec38a4637a27f131",
+      "recorded_at": "2026-11-16T18:54:32.080592+00:00",
+      "source_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+      "host": "Windows",
+      "results": [
+        {
+          "name": "complete-ux-exact-git-lf",
+          "exit_code": 0,
+          "elapsed_seconds": 27.139999999999418,
+          "log_sha256": "f6bfcfa08cbd1d131445365497ed8efa80f8c548745750b2f2e0ad9b4d627b08"
+        },
+        {
+          "name": "pip-cold-hashed-download",
+          "exit_code": 0,
+          "elapsed_seconds": 22.4529999999977,
+          "log_sha256": "4e90ebc2a8fa01415b7e6c6a50d3dced17bed993d5bdfdc5b682e734222b9c0a"
+        },
+        {
+          "name": "pip-offline-hashed-install",
+          "exit_code": 0,
+          "elapsed_seconds": 13.03099999999904,
+          "log_sha256": "43dce683048115773dae6da60737daf9377b2a0f5a0f743032093008e79b7490"
+        },
+        {
+          "name": "installed-python-ci-controls",
+          "exit_code": 1,
+          "elapsed_seconds": 12.40599999999904,
+          "log_sha256": "4f8d5adfd44db4620dc99f14f8389a8ec5c8db3ce29ff75c02c27a56d689164a"
+        }
+      ],
+      "normalized_owned_checkout_files": [
+        {
+          "path": "apps/web/features/import/import-panel.tsx",
+          "before_raw_sha256": "6fc4b3ca9722b763c5883609c907827d1dd90e71d1629e8d086a109cad141522",
+          "after_exact_git_sha256": "b6064766664699fa831beeef46753d68d3c9eb155e2e749048be4f6599b5fd4a",
+          "only_checkout_crlf_changed": true
+        },
+        {
+          "path": "apps/web/features/exporting/offline-export-panel.tsx",
+          "before_raw_sha256": "887e8fddbea118e87fff1090a219c4c8b2c1d000dff59629474a3c9a0b40159e",
+          "after_exact_git_sha256": "c0b1bb789814a4dcb1ff530e559f980686786bcde884ed18f1a064fb3681fea3",
+          "only_checkout_crlf_changed": true
+        },
+        {
+          "path": "apps/web/features/offline/library-shell.tsx",
+          "before_raw_sha256": "83014445d5e2910b4c5ef720c527d258a0a9a8dfa6a3464b28cd6ad7c8ac6b25",
+          "after_exact_git_sha256": "a4d73ec470568f9aebf4d8deb36315b039d9a69f777597dbdb115b4fc5d6f1fc",
+          "only_checkout_crlf_changed": true
+        }
+      ],
+      "all_requested_commands_completed": false,
+      "not_a_cold_full_linux_ci_run": true,
+      "no_global_or_production_changes": true
+    },
+    "continuation-02/result.json": {
+      "receipt_sha256": "921693337fda2273ea0acf5ea353bd58ff871949a5d9ad7e6e351d02bac9bdef",
+      "recorded_at": "2026-11-16T19:05:20.426628+00:00",
+      "exit_code": 0,
+      "elapsed_seconds": 7.265999999999622,
+      "log_sha256": "d99d073e7b335be4acea0921cb9e52c0b1d0f911bf5a52d70a7166ac736b5b10",
+      "cold_dependency_installs_and_offline_install_verified_not_full_linux_ci": true,
+      "old_failure_logs_unchanged": true,
+      "only_owned_temporary_checkout_changed": true
+    },
+    "warm-fresh-checkout-probe/result.json": {
+      "receipt_sha256": "b9583e2c43f9c34504f7a1a4570eb85f4391f036603ed6ad3fa599287cb7d3d9",
+      "recorded_at": "2026-11-16T19:18:12.178573+00:00",
+      "source_sha": "f209b0c256a3dd80ca492dd567b06ac0f4768cc8",
+      "host": "Windows",
+      "results": [
+        {
+          "name": "owned-lf-checkout",
+          "exit_code": 0,
+          "elapsed_seconds": 2.610000000000582,
+          "log_sha256": "d6ca3caad05192734a51ef035ef0e92247d185a0e2a5c7a6462e3fbd760c7afa"
+        },
+        {
+          "name": "offline-install-in-empty-checkout",
+          "exit_code": 0,
+          "elapsed_seconds": 9.03099999999904,
+          "log_sha256": "322ed46f86176bd99883f9bb316a6557e77ade33b6760d969f79c3822f2d4bca"
+        },
+        {
+          "name": "complete-ci-node-controls",
+          "exit_code": 0,
+          "elapsed_seconds": 15.9220000000023,
+          "log_sha256": "1f580bb92c29a13420828fcaa5f78573585aed25899bca4f0675ea5c049496f5"
+        },
+        {
+          "name": "complete-ux-controls",
+          "exit_code": 0,
+          "elapsed_seconds": 29.860000000000582,
+          "log_sha256": "7e9dd1fbd159c09704e5d79d94f16b44d0edc80de420585f97160e13edaab67d"
+        }
+      ],
+      "prior_cold_store_reused_in_new_empty_checkout": true,
+      "all_requested_commands_completed": true,
+      "not_full_linux_ci_or_production_acceptance": true
+    }
+  },
+  "cache_limitations": "Windows task-owned empty pnpm/pip stores and offline fresh checkout; not cold full Linux CI. Original CRLF-only checkout diagnostic failures retained; exact committed bytes restored only in owned temp checkouts.",
+  "user_tsbuildinfo_sha256": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135",
+  "no_product_schema_data_or_production_change": true,
+  "two_new_full_green_runs_and_actual_timings_still_required": true
+}

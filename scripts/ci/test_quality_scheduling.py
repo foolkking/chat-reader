@@ -151,11 +151,38 @@ class QualitySchedulingTests(unittest.TestCase):
         self.assertEqual(control["if"], "${{ inputs.shard == 1 }}")
         self.assertIn("test_quality_scheduling.py", control["run"])
         self.assertIn("quality-shard-evidence.test.mjs", control["run"])
+        self.assertIn("node scripts/ci/run-release-source-controls.mjs", control["run"])
+        self.assertLess(self.web_job["steps"].index(control),
+                        self.web_job["steps"].index(named(self.web_job["steps"], "Web production build (timed)")))
         self.assertNotIn("test_image_only", control["run"])
         image_only = named(self.main["jobs"]["build-images"]["steps"], "Image-only release policy negative controls")
         self.assertEqual(image_only["if"], "${{ inputs.quality_source_run_id != '' }}")
         self.assertIn("test_image_only_quality_reuse.py", image_only["run"])
         self.assertIn("test_image_only_selector_lineage.py", image_only["run"])
+
+    def test_all_api_shards_require_the_original_real_migration_gate(self):
+        def check(workflow):
+            validate_dag(self.main)
+            job = workflow["jobs"]["suite"]
+            self.assertNotIn("if", job)
+            self.assertNotIn("continue-on-error", job)
+            gate = named(job["steps"], "Alembic single-head and current validation")
+            self.assertEqual(gate, {
+                "name": "Alembic single-head and current validation",
+                "run": "cd apps/api\npython scripts/verify_migration_state.py --require-current\n",
+            })
+            self.assertGreater(job["steps"].index(gate),
+                               job["steps"].index(named(job["steps"], "API full suite")))
+
+        check(self.api)
+        for key, value in (("if", "${{ false }}"), ("continue-on-error", True),
+                           ("run", "echo migration-passed"), ("run", "python -m alembic heads"),
+                           ("run", "cd apps/api\npython scripts/verify_migration_state.py --require-current || true\n")):
+            with self.subTest(key=key, value=value):
+                unsafe = copy.deepcopy(self.api)
+                named(unsafe["jobs"]["suite"]["steps"], "Alembic single-head and current validation")[key] = value
+                with self.assertRaises(AssertionError):
+                    check(unsafe)
 
     def test_reusable_workflows_explicitly_keep_every_original_global_fixture_input(self):
         self.assertEqual(self.main["env"], self.contract["global_env"])

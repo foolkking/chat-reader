@@ -1,6 +1,6 @@
 # Project State
 
-## Latest: second-round CI implementation locally verified; full runs pending — 2026-11-17
+## Latest: second-round CI contract failures repaired; fresh full runs pending — 2026-11-17
 
 The repeated43907985394 failure was five stale mounted-workflow assertions,
 not a new runtime regression; the separate repair is commit8adaf9f.
@@ -17,7 +17,24 @@ or five-memory-case execution acceptance. [Implementation proof](docs/evidence/r
 Two new complete green CI runs, observed cache modes, timing and runner-minute
 comparison remain required.20–25minutes is a target, not a measured result.
 Production71342129/schema0061 is unchanged; no CI-only redeployment.
-The [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current status.
+Both commits are pushed. Candidate **f209b0c / CI43928590278 attempt1** failed
+after the fresh55-minute wait. Four integration omissions were identified:
+the pinned-base helper admitted only the old image job; a migration assertion
+still searched the parent workflow; native Python controls assumed TEMP;
+and Playwright security assertions still assumed ten jobs. No release artifact.
+Settings470+restore1 and Reader passed; actual API executed7006pass/1fail/3skip,
+with identical7010 collections across all four runners.
+[Failure](docs/evidence/reliability-2026-11-16/ci-scheduling-v2-failure-43928590278.json).
+The local repair retains all original assertions and adds early actual
+Playwright source controls:88pass, UX2556, CI Node159/Python139, migration source1,
+lint/typecheck/Actionlint and RUNNER_TEMP-only fixtures pass.
+LPT assignments/weights and all original resource/native bounds are unchanged;
+only the migration test's source binding changes.
+[Repair](docs/evidence/reliability-2026-11-16/ci-scheduling-v2-contract-repair.json).
+Owned Windows cold/offline dependency checks pass, not cold full Linux acceptance.
+[Dispatch](docs/evidence/reliability-2026-11-16/ci-scheduling-v2-dispatch-f209b0c.json).
+Two new complete green runs and measured savings remain required. The
+[single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current status.
 
 ## Previous checkpoint: ZIP fix deployed; first scheduling repair — 2026-11-17
 

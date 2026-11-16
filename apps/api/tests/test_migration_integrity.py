@@ -56,7 +56,7 @@ def test_ci_migration_gates_use_dynamic_single_head_verifier() -> None:
     root = Path(__file__).resolve().parents[3]
     expected_command = "python scripts/verify_migration_state.py --require-current"
     for relative_path in (
-        ".github/workflows/build-release-images.yml",
+        ".github/workflows/api-quality-shard.yml",
         ".github/workflows/performance-characterization.yml",
     ):
         source = (root / relative_path).read_text(encoding="utf-8")

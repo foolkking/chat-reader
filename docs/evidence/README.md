@@ -10,6 +10,12 @@ blob小型控制通过。提前镜像为非发布候选，完整质量通过后�
 新完整成功与真实计时/缓存观察仍待完成。旧失败、旧回执、用户修改与生产状态均保留。
 [提交前最终源绑定](reliability-2026-11-16/ci-scheduling-v2-precommit-final.json)保留首次暂存检查
 发现的API子工作流末尾空行问题，仅去除多余空行并重验YAML/Actionlint；原本地JSON不覆盖。
+[新派发](reliability-2026-11-16/ci-scheduling-v2-dispatch-f209b0c.json)为f209b0c/
+43928590278 attempt1普通完整模式；新真实55分钟等待后已确认failure，无发布制品。
+[四处合同失败](reliability-2026-11-16/ci-scheduling-v2-failure-43928590278.json)保留15日志/14制品；
+[本地修复](reliability-2026-11-16/ci-scheduling-v2-contract-repair.json)记录UX2556、Node159/
+Python139、原Playwright源合同扩展88、迁移source1及静态/显式临时目录检查。
+Windows冷/离线依赖诊断保留初始CRLF失败，不替代完整LinuxCI；未宣称提速。
 
 ## 指定Web shard失败与完整UX修复验证 — 2026-11-17
 

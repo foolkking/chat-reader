@@ -25,8 +25,21 @@
   Settings470+restore1、Reader或五项内存本轮执行验收。
 - 提交前`diff --check`另发现新API子工作流末尾空行，已仅去除多余空行；YAML结构相同，
   原回执不改写，[最终源绑定](../evidence/reliability-2026-11-16/ci-scheduling-v2-precommit-final.json)记录该非功能修正。
-- 下一步选择性提交/推送，普通空quality-source派发；新真实55分钟等待后自行检查。至少两次
-  新完整成功CI、冷/热缓存可运行性、关键路径/排队调度/runner分钟及20–25分钟目标尚待实测；
+- f209b0c的普通完整CI43928590278/attempt1已在新真实55分钟双时钟等待后读取，正式failure。
+  镜像准备helper只允许旧job名、API迁移断言仍查父workflow、Linux原生控制缺TEMP、
+  Playwright安全断言/负向变更仍按10-job结构；不是原mounted五项再次失败。
+  [失败证据](../evidence/reliability-2026-11-16/ci-scheduling-v2-failure-43928590278.json)
+  绑定15官方日志/14完整digest与CRC核验制品。实际四份7010 collection顺序相同；
+  API7006通过/1失败/3原skip，Settings470+独立restore1及聚合、Reader成功；无可部署制品。
+- 定点修复保留所有旧断言，支持精确image-preparation身份、显式RUNNER_TEMP，
+  迁移检查跟随真实API子workflow并增加DAG拒绝控制；原51项Playwright源合同扩至88项，
+  新增构建前实际运行，完整浏览器门禁仍保留。本地UX2556、Node159/Python139、源Playwright88、
+  migration source1、lint/typecheck/Actionlint及无TEMP/只有RUNNER_TEMP控制通过。
+  [修复证据](../evidence/reliability-2026-11-16/ci-scheduling-v2-contract-repair.json)
+  保留原9失败/42通过；调度权重/分片/7010集合不变，仅迁移测试source SHA随实际路径修正更新。
+- 独立Windows临时checkout实测pnpm空store下载610包及新空checkout离线复用610包、
+  pip空cache哈希下载及离线安装通过；原CRLF造成的临时测试失败与实际修正字节均保留。
+  这不是冷缓存完整LinuxCI。至少两次新完整成功、正式关键路径/排队调度/runner分钟仍待验证；
   不沿用失败运行当收益，不重放旧CI或创建自动安排。
 - 全部原用例、fixture隔离、超时、Reader同机比较和五项内存门禁保留。用户资料和旧失败证据不改；
   不重跑旧CI，不更改生产71342129/schema0061，不因CI-only改动重新部署。
