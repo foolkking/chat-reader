@@ -1,6 +1,59 @@
 # 事实证据索引
 
-## ZIP Markdown附件修复：当前取证边界 — 2026-11-16
+## 71342129生产部署及独立验证通过；产品验收仍归用户 — 2026-11-16
+
+[脱敏发布证据](reliability-2026-11-16/ci-zip-markdown-production-release.json)共4,958 bytes，SHA-256 `fd17ce5d79dbe32ac0c087833d472e9d4256951dde855316415d85b8c9cc7d5a`。
+71342129/CI43820675687 attempt1六job全绿、57分47秒；真实55分钟等待及独立OCI/应用制品证明见
+[CI回执](reliability-2026-11-16/ci-zip-markdown-independent-release.json)。生产指针于21:46 +08:00
+原子切换至71342129/schema0061，21:49独立运行、TLS/匿名边界、备份及保护文件验证通过；未迁移。
+精确获准的单个传输包已删除且本机完整副本保留；新的停写0061五组件备份和3,027对象只读SHA
+附件审计通过。早期失败load和本机备份包装器无projection记录均保留，服务器备份完成回执另行独立核实，
+不重试。真实用户ZIP/设备/工作流或恢复演练不是本次技术验证范围；产品验收由用户完成。
+
+## CI调度候选重新审查与本地验证 — 2026-11-16
+
+[新本地专项证据](reliability-2026-11-16/ci-scheduling-verification.json)（6,703 bytes，SHA-256 `2b841a7130f5daf070ef16fdbe5f73ba0ab6b435df1165b60dbb68629edc39cb`）
+绑定15源文件、主树Node152/Python15+102/source-only53、lint/typecheck、Actionlint与日志SHA。
+原60个Settings测试文件与54处原测试体timeout绑定，不以宽松最大值代替逐例预算；4例真实native blob
+验证list/执行时间限制区别，但不是470执行验收。一次误选5个无本机服务的runtime用例失败保留，后续
+纯源码53通过。尚无优化后的新完整CI或实测节约；CI全模式8 quality/10 total，原API、14 Web、
+Settings470+restore1、Reader原生及五memory均保留，固定image-only来源不扩展。
+
+## 部署前检查点：ZIP CI全绿、加载后容量拒绝、现役曾恢复（历史）— 2026-11-16
+
+[独立完整CI/制品证明](reliability-2026-11-16/ci-zip-markdown-independent-release.json)
+原字节34,511 bytes，绑定71342129/43820675687 attempt1：六job/57分47秒、
+新真实55分钟UTC/monotonic等待、API7007/原3skip/213 portable逐项PASSED、
+Web14/mounted45、Settings470+restore1、Reader9/27 cold与原五memory全部通过。
+六日志/五artifact、35 OCI blobs/23 diff IDs/393 API文件/Web revision独立核验，
+原first-read仍保留in_progress，不重写历史。
+
+[清理前readiness](reliability-2026-11-16/ci-zip-markdown-production-readiness.json)
+仅投影当时读数：现役2463/0061，保留11月16日备份五组件/8成员完整SHA、
+四gzip/tar、PG TOC、恢复镜像和八文件保全通过；首个container fence失败保留，
+具体原因未证明。当时容量拒绝、限定旧备份+dnf清单待确认，未清理、停服、
+加载镜像、备份恢复、migration或部署；预测可释放容量不作为清理结果。
+
+[清理候选控制与新只读预检](reliability-2026-11-16/ci-zip-markdown-cleanup-controls.json)
+绑定最终Linux74/0skip、宿主Python3.6.8重叠20项及真实listdir(fd)/scandir(fd)
+支持检查。原native02父目录移动后fixture误删、缺dataclasses模块失败及无stdout
+探针失败保留；不补造未保留的具体原因。17:26清理前预检的11容器/两树边界通过，
+容量仍拒绝、确认false；预测约89MiB余量不冒称实际释放或部署准入，不归档private
+closed context，不代验新的完整备份SHA/CRC/TOC、恢复或生产磁盘。
+
+[两项清理、加载后容量拒绝与现役恢复](reliability-2026-11-16/ci-zip-markdown-production-resumption.json)
+保存15,632-byte脱敏聚合及14个原回执/driver SHA，不归档private context。
+17:51精确清理02完成，17:58独立191条journal、完整保留备份及八文件通过。
+候选镜像已完整加载，原容量门禁失败和journal保留；18:56三个原2463/0061服务
+恢复并撤除任务屏障，19:02独立11容器/健康/配置/匿名TLS/八文件SHA通过。
+首次只读复核因交接摘要抄错保护cycle拒绝，原失败与新独占复核均保留，没有生产写操作。
+最新仍差31.4MiB；169.4MiB传输包尚未获准删除，唯一旧备份/镜像/数据/日志保全。
+没有候选应用、新停写0061备份、clean附件审计或migration；不伪造load成功或重放旧阶段。
+
+[隔离CI本地证明](reliability-2026-11-16/ci-scheduling-isolated-verification.json)
+原字节保留7134/15源文件和日志SHA、150/14/102/source-only53及静态检查，
+Settings470/235+235仅collection，真实blob merge4不代验470，原失败保留。
+收益没有新完整CI实测，ZIP成功部署后才接回。
 
 本轮保留原目录白名单不足、v1源变更/部分提交、旧资源计数/告警序号的实际
 失败日志；[最终专项证据](reliability-2026-11-16/ci-zip-markdown-verification.json)
@@ -8,9 +61,9 @@
 矩阵和后续旧catalog绑定、夹具字段名/包装失败单列，不相加或改写。
 [1424输入](reliability-2026-11-16/ci-zip-markdown-inputs.json)核验七文件checkpoint、
 19个protected及用户cache，PG仅停止本轮独立库并保留资料。lint/typecheck、
-head0061及原CI Node89/Python100通过，不代替完整CI、五资源门禁或新部署；
-collection7010/portable213不是执行PASS。
-CI优化12文件完整字节保全，原六job/source-proof一并恢复；当前优先级见
+head0061及原CI Node89/Python100通过，不代替后来独立完整CI或新部署；
+此前collection7010/portable213不是执行PASS。
+最初CI优化12文件完整字节保全，后续隔离候选扩为15；原六job/source-proof一并恢复，当前优先级见
 [唯一台账](../system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
 2463的发布证据及所有原始失败回执不改写；不落盘真实正文、身份、凭据或env值。
 

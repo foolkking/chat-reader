@@ -1,20 +1,42 @@
 # 部署与运行环境
 
-## ZIP Markdown资源候选的发布边界 — 2026-11-16
+## 当前生产：71342129 / schema0061 — 已部署并独立验证（2026-11-16）
+
+2026-11-16 21:46 +08:00原子发布指针切换到71342129；21:49独立复核精确候选镜像、
+完整运行配置、API/Web健康、真实worker heartbeat、HTTPS/TLS/匿名访问边界及备份保护。
+没有migration，数据库head仍为`20261112_0061`。worker继续使用640MiB memory、1280MiB swap和45秒stop timeout。
+[本次脱敏发布证据](../evidence/reliability-2026-11-16/ci-zip-markdown-production-release.json)。
+此次部署不表示用户产品验收、真实用户ZIP/设备验收或备份恢复演练已完成。
+后续唯一工程目标为保留原质量/资源门禁的CI调度优化和新完整CI实测；详见
+[Small Host状态台账](SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+## 部署前检查点：ZIP Markdown修复CI通过、生产仍2463/0061（历史）— 2026-11-16
 
 用户将ZIP附件误识别提升为当前优先级，CI优化已在工作树外保全暂停。
 本候选不改变schema0061、生产配置、worker资源或卷布局；最后独立已验身份仍
-2463f298/0061。原六job/full-source证明已一并恢复，需新普通完整CI、真实55分钟
-等待和独立精确制品，再做fresh容量/自然完成活动任务/独立五组件备份/匹配服务
-及原子指针复核。不得复用已完成63/64/74/75的旧候选/0060前态回执。
-原两备份、八文件保护、env、dirty checkout及新用户来源保持，不清队列、
-取消新任务或自动downgrade。见[唯一台账](SMALL_HOST_IMPROVEMENT_STATUS.md)。
+2463f298/0061。71342129/43820675687普通完整六job、真实新55分钟等待和
+[独立精确制品](../evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json)
+已通过，7134镜像已加载且完整config/RootFS核验，但原加载后容量门禁拒绝。
+具体两项清理获确认并完成，只留已完整验证的11月16日旧备份，dnf根目录保留。
+18:56仅恢复三个原2463/0061容器并撤除精确任务屏障；19:02独立11容器/健康/
+配置/匿名TLS/八文件复核通过，原640MiB memory/1280MiB swap和指针均不变。
+新实际容量仍差31.4MiB；169.4MiB服务器传输包的额外删除尚未获准，
+全部镜像、日志、数据及保护文件保留。没有新备份、clean附件审计、migration、
+候选应用启动或备份恢复。[本轮证据](../evidence/reliability-2026-11-16/ci-zip-markdown-production-resumption.json)。
+旧readiness/失败字节不改写；现役恢复后须新baseline/cycle及已加载镜像接续，
+不重放原hold/load、不重复docker load或借不存在的load成功回执执行旧后续阶段。
+后续先阻断新写入、自然排空，再fresh核验无active/真实idle后停worker，做新独立
+五组件备份/完整零issue SHA审计/只读0061/匹配服务和原子指针复核。
+不得复用已完成63/64/74/75的旧候选/0060前态；0061合法finished历史不要求为0。
+配置保全包括现役2463 runtime-images override，全部属性和完整Mounts声明仅允许
+顺序等价。原当前/恢复镜像、业务数据、日志、八文件保护、env和dirty checkout
+保持，不取消新任务或自动downgrade。见[唯一台账](SMALL_HOST_IMPROVEMENT_STATUS.md)。
 最终相关API615/6、ZIP98及真实PG36/0skip通过，测试库已停止；
-[专项证据](../evidence/reliability-2026-11-16/ci-zip-markdown-verification.json)不替代
-新精确CI、镜像、备份和运行核验。fresh发布前态现为0061，不借用旧0060→0061
+[专项证据](../evidence/reliability-2026-11-16/ci-zip-markdown-verification.json)是完整CI
+之前的检查点，不替代新备份和运行核验。fresh发布前态现为0061，不借用旧0060→0061
 的执行/备份条件，不重复迁移或把已恢复使用的数据固定成旧停写计数。
 
-## 当前2463f298/schema0061已上线 — 2026-11-16
+## 前一发布：2463f298/schema0061曾上线 — 2026-11-16
 
 最新55分钟自行查看/失败持续修复/成功部署指示覆盖下方历史暂停边界。
 普通完整CI使用空quality source，不继承旧质量、资源或制品；不配置项目

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Fail-closed, one-off reuse of the November 14 *quality* results.
 
-The normal empty-input workflow still runs all four quality jobs. The opt-in
+The normal empty-input workflow runs all four quality families, including
+every fixed independent Web/Settings shard and their aggregators. The opt-in
 now requires the fixed source -> null-repair -> selector-fixture-repair lineage.
 Only the separately approved, SHA-bound selector test may change; application,
 dependency, quality-test, resource-gate and arbitrary workflow changes fail.
@@ -38,6 +39,14 @@ OLD_FAILURE = b'(record.analysis_summary or {}).get("failure", {}).get("code")'
 NEW_FAILURE = b'((record.analysis_summary or {}).get("failure") or {}).get("code")'
 QUALITY_NAMES = (
     "api-quality", "web-quality", "settings-quality", "reading-performance-comparison / compare",
+)
+# Full mode must never accept the historical six-job topology after sharding.
+# The approved image-only source retains its original exact six-job contract.
+FULL_QUALITY_NAMES = (
+    "api-quality",
+    "web-quality-shard-1 / gates", "web-quality-shard-2 / gates", "web-quality",
+    "settings-quality-shard-1 / matrix", "settings-quality-shard-2 / matrix", "settings-quality",
+    "reading-performance-comparison / compare",
 )
 NEEDS_NAMES = ("api-quality", "web-quality", "settings-quality", "reading-performance-comparison")
 EVIDENCE_GET_TIMEOUT_SECONDS = 180
@@ -325,9 +334,10 @@ def verified_jobs(run, jobs, *, source_sha, source_run, attempt, reuse):
     for job in jobs["jobs"]:
         require(job["name"] not in by_name, "Duplicate source job name.")
         by_name[job["name"]] = job
-    allowed_jobs = set(QUALITY_NAMES) | {"build-images", "inspect-release-artifact"}
-    require(set(QUALITY_NAMES) | {"build-images"} <= set(by_name) <= allowed_jobs,
-            "The original quality/image release gate is required.")
+    quality_names = QUALITY_NAMES if reuse else FULL_QUALITY_NAMES
+    allowed_jobs = set(quality_names) | {"build-images", "inspect-release-artifact"}
+    require(set(quality_names) | {"build-images"} <= set(by_name) <= allowed_jobs,
+            "The complete exact-source quality/image release gate is required.")
     if reuse:
         require(set(by_name) == allowed_jobs, "The completed original six-job release gate is required.")
         require(source_run == BASE_RUN and source_sha == BASE_SHA and attempt == BASE_ATTEMPT,
@@ -343,7 +353,7 @@ def verified_jobs(run, jobs, *, source_sha, source_run, attempt, reuse):
         require(failures == ["Verify real 320 MiB worker ZIP analysis and commit without swap"],
                 "The source did not fail at the reviewed memory control-plane step.")
     result = []
-    for name in QUALITY_NAMES:
+    for name in quality_names:
         job = by_name[name]
         require(job["status"] == "completed" and job["conclusion"] == "success",
                 f"Required source quality job did not pass: {name}")

@@ -40,6 +40,12 @@ class ExactSelectorLineageTests(unittest.TestCase):
                 gate.SELECTOR_PATCH, gate.SELECTOR_CONTROL_TEST,
             )
         }
+        # This fixture models the immutable, approved historical selector repair,
+        # not a later full-CI scheduling candidate in the ambient worktree.
+        cls.repair_bytes[gate.WORKFLOW] = gate.approved_selector_workflow(
+            cls.blobs[cls.repair_tree[gate.WORKFLOW][1]],
+            cls.repair_bytes[gate.SELECTOR_PATCH],
+        )
         # Historical byte evidence is deliberately NOT newline-normalized.
         cls.repair_bytes.update({
             name: (gate.REPO / name).read_bytes() for name in gate.SELECTOR_HISTORICAL_EVIDENCE

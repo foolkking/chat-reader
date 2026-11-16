@@ -1,0 +1,280 @@
+{
+  "recorded_at": "2026-11-16T09:29:10.802335+00:00",
+  "status": "cleanup_controls_and_read_only_preview_verified_execution_not_authorized",
+  "candidate": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+  "current_revision": "2463f2985c367e681c3443b1b485e57f2925b313",
+  "current_schema": "20261112_0061",
+  "native_batches_overlap_not_additive": {
+    "01": {
+      "recorded_at": "2026-11-16T08:58:02.969139+00:00",
+      "passed": true,
+      "tests_executed": 58,
+      "expected_test_methods": 58,
+      "source_sha256": {
+        "checked_cleanup.py": "bc84703978a781e295f3845d62c719163776dbd22767af3ff70aa40e65f5f98b",
+        "release_cleanup.py": "ea5ac73d65508fd19cbf5b92ffbd986165b43bdfbc4050332f1023a648de5d5e",
+        "test_checked_cleanup.py": "bf7193ca6f6e7f0b0871484c4013378eaae0d33fbebd193bae7786d6fb1b3147",
+        "fresh_snapshot.py": "69a7c54b3b52477e4b6402e2ca3ec6fa5cf10c90aab9290f2e54577bb777fa39",
+        "retained_integrity.py": "09dd44dd8588058e6f5eafbb66c2b5e5be4140740412557c5cc72579c1e49d5a"
+      },
+      "driver_sha256": "734e37bbfbc90abf54d660c6de2ae0b5a33c03151c9ad6aa3f5a1bb2ef32b970",
+      "outcome": {
+        "exit_code": 0,
+        "oom_killed": false,
+        "restart_count": 0,
+        "start_cli_exit_code": 0
+      },
+      "original_local_containers_unchanged": true,
+      "original_local_container_count": 10,
+      "tests_log_sha256": "0a8dc5fd66a0fdea41ec98a9f9cba3217f8d4c5a602e88e0e3971a34132a6f14"
+    },
+    "02": {
+      "recorded_at": "2026-11-16T09:01:45.523468+00:00",
+      "passed": false,
+      "tests_executed": 59,
+      "expected_test_methods": 59,
+      "source_sha256": {
+        "checked_cleanup.py": "bc84703978a781e295f3845d62c719163776dbd22767af3ff70aa40e65f5f98b",
+        "release_cleanup.py": "ea5ac73d65508fd19cbf5b92ffbd986165b43bdfbc4050332f1023a648de5d5e",
+        "test_checked_cleanup.py": "54dd04984999f6c72ba4a41881987b03f842a22ad2d6588396c3e4f711f2cd28",
+        "fresh_snapshot.py": "69a7c54b3b52477e4b6402e2ca3ec6fa5cf10c90aab9290f2e54577bb777fa39",
+        "retained_integrity.py": "09dd44dd8588058e6f5eafbb66c2b5e5be4140740412557c5cc72579c1e49d5a"
+      },
+      "driver_sha256": "734e37bbfbc90abf54d660c6de2ae0b5a33c03151c9ad6aa3f5a1bb2ef32b970",
+      "outcome": {
+        "exit_code": 1,
+        "oom_killed": false,
+        "restart_count": 0,
+        "start_cli_exit_code": 1
+      },
+      "original_local_containers_unchanged": true,
+      "original_local_container_count": 10,
+      "tests_log_sha256": "5dd23f68057d9bfc406be70c458a8a58397338785c03b0e6ab6f87382125a58b"
+    },
+    "03": {
+      "recorded_at": "2026-11-16T09:06:13.885311+00:00",
+      "passed": true,
+      "tests_executed": 72,
+      "expected_test_methods": 72,
+      "source_sha256": {
+        "checked_cleanup.py": "ba4c06d08c91c03781f1408665abb85805a74287546196dbedc822a8000fefc3",
+        "release_cleanup.py": "e8c911d17a0363265e768f271cda05a0097c1a3df6cb5d382eb29c46429e90d2",
+        "test_checked_cleanup.py": "900979fb0a9d3dfb434a03eaea34e27fc03f42e99cb16e29b0540c22aef343e3",
+        "fresh_snapshot.py": "69a7c54b3b52477e4b6402e2ca3ec6fa5cf10c90aab9290f2e54577bb777fa39",
+        "retained_integrity.py": "09dd44dd8588058e6f5eafbb66c2b5e5be4140740412557c5cc72579c1e49d5a"
+      },
+      "driver_sha256": "734e37bbfbc90abf54d660c6de2ae0b5a33c03151c9ad6aa3f5a1bb2ef32b970",
+      "outcome": {
+        "exit_code": 0,
+        "oom_killed": false,
+        "restart_count": 0,
+        "start_cli_exit_code": 0
+      },
+      "original_local_containers_unchanged": true,
+      "original_local_container_count": 11,
+      "tests_log_sha256": "040c34c87d352c6473cddde8d9a1204d1efb6b811dbc7d03a91767ec1fa2568f"
+    },
+    "04": {
+      "recorded_at": "2026-11-16T09:22:45.906763+00:00",
+      "passed": true,
+      "tests_executed": 73,
+      "expected_test_methods": 73,
+      "source_sha256": {
+        "checked_cleanup.py": "5bd804aea8b324daccbe7efb085c84ff8c42fc8c4ccdab0198b6263e52f66a75",
+        "release_cleanup.py": "f024398c4b42a00d05d56a98c2140c39647e9d1ea0398c8dfc24f7fb3244fbe0",
+        "test_checked_cleanup.py": "b411eb5f215a045b2d05fc218674cb343de7862376a4335262d99745a02a9d51",
+        "fresh_snapshot.py": "69a7c54b3b52477e4b6402e2ca3ec6fa5cf10c90aab9290f2e54577bb777fa39",
+        "retained_integrity.py": "09dd44dd8588058e6f5eafbb66c2b5e5be4140740412557c5cc72579c1e49d5a"
+      },
+      "driver_sha256": "734e37bbfbc90abf54d660c6de2ae0b5a33c03151c9ad6aa3f5a1bb2ef32b970",
+      "outcome": {
+        "exit_code": 0,
+        "oom_killed": false,
+        "restart_count": 0,
+        "start_cli_exit_code": 0
+      },
+      "original_local_containers_unchanged": true,
+      "original_local_container_count": 11,
+      "tests_log_sha256": "ecea24e46bba961ed3f2d1dcd67f4b671222e7170dec29cf12e72f3b31f8cf49"
+    },
+    "05": {
+      "recorded_at": "2026-11-16T09:25:24.514306+00:00",
+      "passed": true,
+      "tests_executed": 74,
+      "expected_test_methods": 74,
+      "source_sha256": {
+        "checked_cleanup.py": "cf0f8920b7f642c3d5d023256c6803929a66cb37956c7361744a1cad1a00fc79",
+        "release_cleanup.py": "f024398c4b42a00d05d56a98c2140c39647e9d1ea0398c8dfc24f7fb3244fbe0",
+        "test_checked_cleanup.py": "3a8dc6ae8fdc7fed79bfa9554aab5a5217a917aa68213526e5a1a0b39f6e2ed2",
+        "fresh_snapshot.py": "69a7c54b3b52477e4b6402e2ca3ec6fa5cf10c90aab9290f2e54577bb777fa39",
+        "retained_integrity.py": "09dd44dd8588058e6f5eafbb66c2b5e5be4140740412557c5cc72579c1e49d5a"
+      },
+      "driver_sha256": "734e37bbfbc90abf54d660c6de2ae0b5a33c03151c9ad6aa3f5a1bb2ef32b970",
+      "outcome": {
+        "exit_code": 0,
+        "oom_killed": false,
+        "restart_count": 0,
+        "start_cli_exit_code": 0
+      },
+      "original_local_containers_unchanged": true,
+      "original_local_container_count": 11,
+      "tests_log_sha256": "b010c903eae107a17728aac6dfb90dd4b9b87adb761c4297e8ba7d3cdab79b99"
+    }
+  },
+  "final_native_scope": {
+    "tests_executed": 74,
+    "skipped": 0,
+    "filesystem": "actual_task_owned_linux_tmpfs_not_production_disk",
+    "host_orchestration_reads": "synthetic_adapters_not_real_pg_or_backup_crc_acceptance",
+    "original_local_containers_unchanged": true,
+    "failed_native02_stopped_owned_container_retained_not_restarted": true,
+    "successful_owned_test_containers_only_removed_after_exact_identity_and_exit_checks": true
+  },
+  "retained_failures": {
+    "native02": "one_real_parent_move_error_after_outside_fixture_file_unlink;58_passes_1_error",
+    "native02_fix": "repeat_named_parent_chain_after_durable_intent_before_final_unlink",
+    "host_module01": {
+      "status": "module_load_failed_before_root_or_apply",
+      "error_class": "ModuleNotFoundError",
+      "missing_module": "dataclasses"
+    },
+    "host_module02": {
+      "exit_code": 1,
+      "stdout_projection_absent": true,
+      "specific_original_error_not_retained_or_proven": true
+    },
+    "preview01": {
+      "exit_code": 1,
+      "stdout_projection_absent": true,
+      "later_module01_independently_proves_prior_checked_source_dataclasses_unavailable": true
+    },
+    "all_original_receipts_logs_and_native_source_copies_preserved": true
+  },
+  "actual_host_compatibility": {
+    "error_count": 0,
+    "failure_count": 0,
+    "immutable_model_properties_passed": true,
+    "listdir_descriptor_supported": true,
+    "no_cleanup_target_open_no_execute_no_journal_no_service_or_data_mutation": true,
+    "pure_controls_passed": true,
+    "python_version": [
+      3,
+      6,
+      8
+    ],
+    "scandir_descriptor": {
+      "error_class": "TypeError",
+      "supported": false
+    },
+    "skip_count": 0,
+    "status": "host_modules_and_pure_controls_checked_no_cleanup_target_opened",
+    "tests_executed": 20,
+    "module_source_sha256": {
+      "checked_cleanup": "cf0f8920b7f642c3d5d023256c6803929a66cb37956c7361744a1cad1a00fc79",
+      "release_cleanup": "f024398c4b42a00d05d56a98c2140c39647e9d1ea0398c8dfc24f7fb3244fbe0",
+      "pure_control_source": "3a8dc6ae8fdc7fed79bfa9554aab5a5217a917aa68213526e5a1a0b39f6e2ed2"
+    },
+    "pure20_overlap_final74_not_additive": true,
+    "no_dataclasses_fromisoformat_backport_install_or_pathname_fd_fallback": true
+  },
+  "fresh_metadata_preview": {
+    "recorded_at": "2026-11-16T09:26:23.625803+00:00",
+    "status": "fresh_two_target_metadata_preview_no_cleanup_or_deployment",
+    "execution_confirmation": false,
+    "runtime": {
+      "active": {
+        "active_execution_rows": 0,
+        "active_imports": 0,
+        "active_jobs": 0,
+        "lock_waits": 0
+      },
+      "container_count": 11,
+      "current_revision": "2463f2985c367e681c3443b1b485e57f2925b313",
+      "head": [
+        "20261112_0061"
+      ],
+      "quiescent_observation_not_permission_to_stop": true,
+      "worker": [
+        {
+          "age_seconds": 23.23203,
+          "heartbeat_at": "2026-11-16T09:25:44.144099+00:00",
+          "state": "idle"
+        }
+      ]
+    },
+    "counts": {
+      "cache": {
+        "complete_links_owner_permissions_devices_and_mount_boundaries_verified": true,
+        "directories": 26,
+        "file_logical_bytes": 230601374,
+        "files": 59,
+        "tree_allocated_bytes": 230952960
+      },
+      "keep": {
+        "complete_links_owner_permissions_devices_and_mount_boundaries_verified": true,
+        "directories": 0,
+        "file_logical_bytes": 3687325327,
+        "files": 8,
+        "tree_allocated_bytes": 3687374848
+      },
+      "old": {
+        "complete_links_owner_permissions_devices_and_mount_boundaries_verified": true,
+        "directories": 0,
+        "file_logical_bytes": 3653483938,
+        "files": 8,
+        "tree_allocated_bytes": 3653521408
+      }
+    },
+    "capacity": {
+      "available_bytes": 3569446912,
+      "estimated_reclaimable_bytes": 3884474368,
+      "original_combined_required_bytes": 7360783109,
+      "original_headroom_and_pre_staging_archive_all_retained": true,
+      "predicted_margin_bytes_not_an_actual_cleanup_result": 93138171
+    },
+    "all_eleven_original_containers_unchanged_across_read_only_preview": true,
+    "current_restore_and_older_twelve_role_tags_config_ids_verified": true,
+    "not_new_full_backup_sha_crc_toc_or_restore_acceptance": true,
+    "predicted_reclamation_not_actual_cleanup_or_capacity_admission": true
+  },
+  "remaining": [
+    "explicit_confirmation_of_Nov10_backup_and_dnf_cache_only_with_service_data_retention",
+    "fresh1200second_context_and_replanned_trees_not_this_old_preview",
+    "actual_full_retained_backup_and_recovery_chain_checks_before_any_unlink",
+    "two_target_cleanup_then_independent_preservation_and_original_fresh_capacity_admission",
+    "new_exact7134_staging_natural_drain_independent_stopped2463_backup_readonly0061_rollout",
+    "resume_isolated_ci_optimization_only_after_zip_deployment_then_fresh_full_ci_elapsed_measurement"
+  ],
+  "boundaries": {
+    "no_production_cleanup_service_stop_image_load_new_backup_migration_restore_or_deployment": true,
+    "no_real_user_source_replay_or_new_import_cancellation": true,
+    "no_ci_resubmission_rewait_or_automation": true,
+    "user_product_acceptance_not_relabelled": true,
+    "private_closed_context_files_and_identities_not_archived": true,
+    "new_execution_requires_explicit_confirmation_not_general_goal_or_metadata_preview": true
+  },
+  "raw_input_sha256": {
+    "native-01/result.json": "63ab68a146819a0c490a0e924a35e9959e4ccb2e3a80cb26e5d635bc1511c954",
+    "native-01/tests.log": "0a8dc5fd66a0fdea41ec98a9f9cba3217f8d4c5a602e88e0e3971a34132a6f14",
+    "native-02/result.json": "077c1f38895814549e813e03b7c95e48aedcf622c367f93a133daf4b015eb404",
+    "native-02/tests.log": "5dd23f68057d9bfc406be70c458a8a58397338785c03b0e6ab6f87382125a58b",
+    "native-03/result.json": "139db5cfd5624f939c9e6133a91c9721dfaed1d1236eec48acb4d962d0213afa",
+    "native-03/tests.log": "040c34c87d352c6473cddde8d9a1204d1efb6b811dbc7d03a91767ec1fa2568f",
+    "native-04/result.json": "56a51ff45a14674310bb748d167701a0e5866428b6f771bfd0525b1a0334c525",
+    "native-04/tests.log": "ecea24e46bba961ed3f2d1dcd67f4b671222e7170dec29cf12e72f3b31f8cf49",
+    "native-05/result.json": "be507f696c757c835eb7dd5086cfb5bd17746cd1d63a81c7e257c580dc78e003",
+    "native-05/tests.log": "b010c903eae107a17728aac6dfb90dd4b9b87adb761c4297e8ba7d3cdab79b99",
+    "host-runtime-probe.json": "81aaec1221607fcf6191ed00be044dcb03474f429b7f746d8e9eb40775ea3f79",
+    "host-module-compatibility-01.json": "772f0eee054603a39cd85cf27bbffc7acf9cdb917d94e21babe6b3146104e6da",
+    "host-module-compatibility-02.json": "c23f7f36f5b45c4af0ca387deba07881bb69a0a0cabbfd1c09c56ae9852efce3",
+    "host-module-compatibility-03.json": "1d4491f9370eba46e52c70d00a6d6481bc6797dec3012e4c4e1eee8a61110635",
+    "preview-01.json": "d66e9b0753af6a0d7b065150439d5e0fbe5dd8ddda958f95676d831e4118cf2c",
+    "preview-02.json": "388ceb910f1dfcd1d9586de97136b47391cf24413a15835bafe9984884a10911"
+  },
+  "current_driver_source_sha256": {
+    "run_native_controls.py": "734e37bbfbc90abf54d660c6de2ae0b5a33c03151c9ad6aa3f5a1bb2ef32b970",
+    "probe_host_compatibility.py": "41904912035fde5ea08a7c5cc0b2af39afb1849be780fb643b16237951ac6f97",
+    "preview_cleanup.py": "09622fe87012323ed80be1beda5727bf5848a160f97bfcc9d80bdac6b6560bf3",
+    "read_cleanup_preview.py": "ed1d06e96ee398f786c0cc2c347cfd99f6aa426088233243c578e8905c54c42f"
+  }
+}

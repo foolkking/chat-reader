@@ -15,7 +15,7 @@ import unittest
 from unittest.mock import patch
 import zipfile
 
-from test_image_only_quality_reuse import browser_summary, source_fixture, zip_fixture
+from test_image_only_quality_reuse import browser_summary, full_source_fixture, source_fixture, zip_fixture
 
 
 spec = importlib.util.spec_from_file_location(
@@ -367,11 +367,10 @@ class EvidenceGetTransportTests(unittest.TestCase):
         self.assertEqual(self.clock.sleeps, [])
 
     def full_source_fixture(self):
-        run, jobs = source_fixture()
-        run.update(id=9001, head_sha="b" * 40, status="in_progress", conclusion=None)
-        for job in jobs["jobs"]:
-            job.update(run_id=9001, head_sha="b" * 40)
-        jobs["jobs"][4].update(status="in_progress", conclusion=None)
+        run, jobs = full_source_fixture()
+        next(job for job in jobs["jobs"] if job["name"] == "build-images").update(
+            status="in_progress", conclusion=None,
+        )
         responses = {
             "actions/runs/9001": json.dumps(run).encode(),
             "actions/runs/9001/attempts/1/jobs?per_page=100": json.dumps(jobs).encode(),
@@ -390,7 +389,7 @@ class EvidenceGetTransportTests(unittest.TestCase):
         self.assertEqual(endpoints, list(responses))
         self.assertEqual(proof["workflow_run_id"], "9001")
         self.assertEqual(proof["sha"], "b" * 40)
-        self.assertEqual(len(proof["quality_jobs"]), 4)
+        self.assertEqual(len(proof["quality_jobs"]), 8)
         self.assertEqual(proof["verified_evidence"], [])
         self.assertFalse(any("artifact" in endpoint or "logs" in endpoint
                              or gate.BASE_RUN in endpoint for endpoint in endpoints))

@@ -1,14 +1,41 @@
 # 文档导航
 
-## 当前优先级：ZIP Markdown附件误识别 — 2026-11-16
+## 当前：71342129 已部署并独立核验；接续优化 CI 耗时 — 2026-11-16
 
-CI调度优化已保全暂停；先修任意辅助子目录Markdown默认误作对话的问题。
+ZIP 辅助子目录中的 Markdown 默认不再作为对话导入；只选择安全归一后的最外层正文，
+更深文件需正文引用或显式启用。详见[源码合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16)。
+
+71342129 / CI43820675687 attempt1 普通完整 CI 六 job 全绿，耗时57分47秒；真实55分钟
+双时钟等待及独立制品核验完成。生产于**2026-11-16 21:46 +08:00**原子切换到
+**71342129 / schema0061**，21:49 +08:00独立核验通过，未执行迁移。新的0061停写备份、
+零issue只读附件审计和保护文件复核通过；具体边界见[发布证据](evidence/reliability-2026-11-16/ci-zip-markdown-production-release.json)。
+产品验收由用户完成，不因技术部署而改标通过。
+
+15文件CI调度候选已审查并在主工作区[重新本地验证](evidence/reliability-2026-11-16/ci-scheduling-verification.json)，保留全部质量/资源门禁；当前收益尚未用新完整CI实测。
+按新源码选择性提交/推送、普通完整CI、真实55分钟等待并自行检查结果；失败继续修复。
+见[唯一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
+
+## 部署前检查点：ZIP CI通过、现役恢复、fresh部署待容量（历史）— 2026-11-16
+
+任意辅助子目录Markdown误作对话的修复已提交71342129；
+普通完整CI43820675687 attempt1六job全绿，**57分47秒**，新真实55分钟双时钟
+等待和[独立制品核验](evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json)
+完成。API7007/3原skip、213 portable（含ZIP98）、Web14、Settings470+restore1、
+Reader9/27 cold及原五memory通过。不是产品验收或已经部署。
 见[源码合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16) /
 [唯一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
-最终相关API615/6原环境skip（含新增ZIP98全部通过）、真实PG36/0skip及
-[1424输入/失败保全证据](evidence/reliability-2026-11-16/ci-zip-markdown-verification.json)
-通过，不是完整CI。最后已验生产为2463f298/0061；还需普通完整CI、新真实55分钟
-等待、独立制品和fresh部署，成功后才接回CI优化。用户负责产品验收。
+现役仍2463f298/0061；两项具体清理获确认并完成，只留11月16日旧备份，
+dnf根目录、镜像、数据及八文件保全。7134镜像已完整加载，但原容量门禁拒绝；
+18:56恢复三个原现役容器并撤除任务屏障，19:02独立健康/保全复核通过。
+最新仍差约31.4MiB；仅提议额外删除已验证且本机完整保留的169.4MiB传输包，
+尚未获准。未启动候选应用、创建新备份或迁移，不重放旧hold/load。
+[清理、失败与恢复证据](evidence/reliability-2026-11-16/ci-zip-markdown-production-resumption.json) /
+[清理前readiness](evidence/reliability-2026-11-16/ci-zip-markdown-production-readiness.json)。
+[受限清理控制与新只读预检](evidence/reliability-2026-11-16/ci-zip-markdown-cleanup-controls.json)
+完成Linux74/0skip及真实Python3.6.8宿主20项重叠纯控制；17:26清理前元数据预检的
+拒绝/confirmation false和预测约89MiB余量原样保留，不冒充后续实际释放或准入。
+隔离CI优化现为[15文件本地候选](evidence/reliability-2026-11-16/ci-scheduling-isolated-verification.json)，
+实际完整CI收益未测；ZIP成功部署后才接回。用户负责产品验收。
 
 ## 上一发布：2463f298/0061已部署（随后CI优化已暂停）— 2026-11-16
 

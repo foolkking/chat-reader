@@ -147,6 +147,7 @@ test("normal production bundles do not expose the PWA negative fault bridge", as
 });
 
 const releaseQualityJobs = ["api-quality", "web-quality", "settings-quality", "reading-performance-comparison"];
+const shardQualityJobs = ["web-quality-shard-1", "web-quality-shard-2", "settings-quality-shard-1", "settings-quality-shard-2"];
 const readReleaseWorkflow = () => fs.readFileSync(
   path.resolve(process.cwd(), "../../.github/workflows/build-release-images.yml"), "utf8",
 ).replace(/\r\n/g, "\n");
@@ -165,15 +166,33 @@ function releaseStep(job: string, name: string) {
 
 function assertReleaseQualityGate(workflow: string) {
   expect(workflow).toMatch(/workflow_dispatch:\n {4}inputs:\n {6}quality_source_run_id:\n {8}description: [^\n]+\n {8}required: false\n {8}default: ''\n {8}type: string/);
-  expect([...workflow.matchAll(/^ {2}[a-z][a-z0-9-]*:\n/gm)]).toHaveLength(6);
-  for (const name of releaseQualityJobs) {
+  expect([...workflow.matchAll(/^ {2}[a-z][a-z0-9-]*:\n/gm)]).toHaveLength(10);
+  for (const name of ["api-quality", "reading-performance-comparison", ...shardQualityJobs]) {
     expect(releaseJob(workflow, name).split("\n").slice(0, 2).join("\n")).toBe(
       `  ${name}:\n    if: \${{ inputs.quality_source_run_id == '' }}`,
     );
   }
-  expect(releaseJob(workflow, "reading-performance-comparison")).toContain(
-    "    needs: [api-quality]\n    uses: ./.github/workflows/reading-performance.yml",
-  );
+  for (const [family, filename] of [["web", "web-quality.yml"], ["settings", "settings-browser-shard.yml"]]) {
+    const dependencies = [1, 2].map((index) => `${family}-quality-shard-${index}`);
+    for (const index of [1, 2]) {
+      expect(releaseJob(workflow, `${family}-quality-shard-${index}`).trimEnd()).toBe([
+        `  ${family}-quality-shard-${index}:`,
+        "    if: ${{ inputs.quality_source_run_id == '' }}",
+        `    uses: ./.github/workflows/${filename}`,
+        "    with:",
+        `      shard: ${index}`,
+      ].join("\n"));
+    }
+    expect(releaseJob(workflow, `${family}-quality`).split("\n").slice(0, 3).join("\n")).toBe([
+      `  ${family}-quality:`,
+      "    if: ${{ !cancelled() && inputs.quality_source_run_id == '' && "
+        + dependencies.map((name) => `needs.${name}.result == 'success'`).join(" && ") + " }}",
+      `    needs: [${dependencies.join(", ")}]`,
+    ].join("\n"));
+  }
+  const reader = releaseJob(workflow, "reading-performance-comparison");
+  expect(reader).toContain("    uses: ./.github/workflows/reading-performance.yml");
+  expect(reader).not.toMatch(/^ {4}needs:/m);
 
   const builder = releaseJob(workflow, "build-images");
   const successes = releaseQualityJobs.map((name) => `needs.${name}.result == 'success'`).join(" && ");
@@ -379,6 +398,39 @@ const unsafeReleaseMutations = [
     name: "an independent proof for a different producer attempt",
     mutate: (workflow: string) => mutateReleaseJob(workflow, "inspect-release-artifact",
       '--producer-attempt "$ARTIFACT_PRODUCER_ATTEMPT"', '--producer-attempt "1"'),
+  },
+  ...shardQualityJobs.flatMap((name) => {
+    const family = name.startsWith("web-") ? "web" : "settings";
+    const index = name.endsWith("-1") ? 1 : 2;
+    return [
+      {
+        name: `skipping fresh ${name} in full mode`,
+        mutate: (workflow: string) => mutateReleaseJob(workflow, name,
+          "quality_source_run_id == ''", "quality_source_run_id != ''"),
+      },
+      {
+        name: `repeating another ${family} shard instead of ${name}`,
+        mutate: (workflow: string) => mutateReleaseJob(workflow, name,
+          `      shard: ${index}`, `      shard: ${index === 1 ? 2 : 1}`),
+      },
+      {
+        name: `omitting ${name} from its aggregator`,
+        mutate: (workflow: string) => mutateReleaseJob(workflow, `${family}-quality`,
+          `    needs: [${family}-quality-shard-1, ${family}-quality-shard-2]`,
+          `    needs: [${family}-quality-shard-${index === 1 ? 2 : 1}]`),
+      },
+      {
+        name: `accepting skipped ${name} in its aggregator`,
+        mutate: (workflow: string) => mutateReleaseJob(workflow, `${family}-quality`,
+          `needs.${name}.result == 'success'`, `needs.${name}.result == 'skipped'`),
+      },
+    ];
+  }),
+  {
+    name: "an unconsumed serial API wait before Reader comparison",
+    mutate: (workflow: string) => mutateReleaseJob(workflow, "reading-performance-comparison",
+      "    uses: ./.github/workflows/reading-performance.yml",
+      "    needs: [api-quality]\n    uses: ./.github/workflows/reading-performance.yml"),
   },
 ];
 

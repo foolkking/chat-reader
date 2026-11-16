@@ -1,0 +1,264 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-16T08:35:21.492697+00:00",
+  "status": "zip_ci_verified_retained_backup_verified_capacity_refused_no_cleanup_or_deployment",
+  "head_sha": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+  "workflow_run_id": 43820675687,
+  "attempt": 1,
+  "ci": {
+    "ordinary_full_mode_quality_source": "",
+    "all_six_jobs_success": true,
+    "created_at": "2026-11-16T07:00:09Z",
+    "last_job_completed_at": "2026-11-16T07:57:56+00:00",
+    "elapsed_created_to_last_job_completed_seconds": 3467,
+    "job_seconds": {
+      "api-quality": 2318,
+      "settings-quality": 3109,
+      "web-quality": 2689,
+      "reading-performance-comparison / compare": 483,
+      "build-images": 328,
+      "inspect-release-artifact": 19
+    },
+    "independent_proof_filename": "ci-zip-markdown-independent-release.json",
+    "independent_proof_sha256": "805e5dc71560fb76998656db2b2d2d4de0310949f80614dc9ea299bba0bf133c",
+    "first_read_sha256": "c9e43b84ef38f7d6e930c6b2aa4e1e8c52665195e482faa67352df8a6b98a00a",
+    "real_fresh_3300_second_utc_and_monotonic_wait_completed": true,
+    "original_first_read_in_progress_bytes_not_rewritten": true
+  },
+  "production_observation": {
+    "snapshot_recorded_at": "2026-11-16T08:06:44.607991+00:00",
+    "revision": "2463f2985c367e681c3443b1b485e57f2925b313",
+    "schema": "20261112_0061",
+    "container_count": 11,
+    "api_web_postgres_healthy": true,
+    "worker_running_and_observed_idle": true,
+    "worker_memory_limit_bytes": 671088640,
+    "worker_memory_swap_limit_bytes": 1342177280,
+    "active_imports_jobs_execution_rows_lock_waits": {
+      "active_imports": 0,
+      "active_jobs": 0,
+      "active_execution_rows": 0,
+      "lock_waits": 0
+    },
+    "finished_execution_rows_are_legal": 1,
+    "existing_runtime_override_included_in_configuration_protection": true,
+    "not_a_new_live_snapshot_at_document_archival_time": true
+  },
+  "retained_backup": {
+    "name": "chat-reader-20261116T024231Z",
+    "source_sha": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+    "schema": "20261108_0060",
+    "members": {
+      "MANIFEST": {
+        "bytes": 629,
+        "inode": 1315515,
+        "links": 1,
+        "sha256": "636a433d1a86d9585ad08a9b29c4898ee54aba76616242e31d2a5c3613c699f2"
+      },
+      "SHA256SUMS": {
+        "bytes": 403,
+        "inode": 1315514,
+        "links": 1,
+        "sha256": "7961d0a7d9566d5ded90ef13705da10f75411e99a2143df508663faff265125b"
+      },
+      "assets.tar.gz": {
+        "bytes": 1348328189,
+        "inode": 1315512,
+        "links": 1,
+        "sha256": "db79eb4d604eb5a96685bca2780583a17b5c62be02435a83b772ae568d18833e"
+      },
+      "exports.tar.gz": {
+        "bytes": 6366,
+        "inode": 1315509,
+        "links": 1,
+        "sha256": "d1e96d743f9334d7c30266c42625a3639b7d8cd618cc1a3ab25d1d43aa0bf7d4"
+      },
+      "imports.tar.gz": {
+        "bytes": 692186792,
+        "inode": 1315508,
+        "links": 1,
+        "sha256": "145046e164032c10ab32ddcdc2911654abc73dc0806fdbe4474baa1954bbaaca"
+      },
+      "offline.tar.gz": {
+        "bytes": 1302720418,
+        "inode": 1315511,
+        "links": 1,
+        "sha256": "4e2394188335bdf9185e8990a8f6bd163dce9e7f5a37a4de609b6d45dc82c5d6"
+      },
+      "postgres.dump": {
+        "bytes": 344023867,
+        "inode": 1315505,
+        "links": 1,
+        "sha256": "9bb27e7d00037e32602ed6dcb1e00eb94b7361d8ce7a1ad0a0c3cb04859b5230"
+      },
+      "postgres.toc": {
+        "bytes": 58663,
+        "inode": 1315507,
+        "links": 1,
+        "sha256": "5cc34ae2dbde663e3c6c5f5fbc6a40ca27ed0952ab090eb55799bb8c185eeef7"
+      }
+    },
+    "component_checksums": {
+      "assets.tar.gz": "db79eb4d604eb5a96685bca2780583a17b5c62be02435a83b772ae568d18833e",
+      "exports.tar.gz": "d1e96d743f9334d7c30266c42625a3639b7d8cd618cc1a3ab25d1d43aa0bf7d4",
+      "imports.tar.gz": "145046e164032c10ab32ddcdc2911654abc73dc0806fdbe4474baa1954bbaaca",
+      "offline.tar.gz": "4e2394188335bdf9185e8990a8f6bd163dce9e7f5a37a4de609b6d45dc82c5d6",
+      "postgres.dump": "9bb27e7d00037e32602ed6dcb1e00eb94b7361d8ce7a1ad0a0c3cb04859b5230"
+    },
+    "gzip_crc_count": 4,
+    "tar_stream_count": 4,
+    "postgres_toc_verified": true,
+    "four_matching_restore_role_image_config_ids": {
+      "api": "sha256:deb0a217758d2f12a61ecab20aa5bb2cd9fb0e7542d9ed272bb13843b5f7b3ee",
+      "import-worker": "sha256:deb0a217758d2f12a61ecab20aa5bb2cd9fb0e7542d9ed272bb13843b5f7b3ee",
+      "migrate": "sha256:deb0a217758d2f12a61ecab20aa5bb2cd9fb0e7542d9ed272bb13843b5f7b3ee",
+      "web": "sha256:dbd58f080ab26701f968a1133875be1b1dbe24f02b5f897dc859ec898ce828a3"
+    },
+    "all_five_components_independent_no_shared_hardlinks": true,
+    "restore_not_executed": true
+  },
+  "eight_file_protection": {
+    "all_bytes_inode_uid_gid_mode_mtime_atime_retained": true,
+    "bytes": 3359426,
+    "files": 8,
+    "no_move_restore_delete_or_scope_expansion": true,
+    "outside_runtime_cleanup": true,
+    "scope_sha256": "b217f35bf0889730a0d383e179e85b0f1cb3ad894f469b074b147976451e63f8"
+  },
+  "retained_check_failure_history": {
+    "initial_failure_receipt": {
+      "filename": "retained-full-integrity.json",
+      "sha256": "c6be99bf06ea59bbc6f65af5f51ee1a9730fcfd810aa2417278877148fa411e8",
+      "recorded_at": "2026-11-16T08:17:37.826067+00:00",
+      "exit_code": 1,
+      "remote_source_sha256": "c476dcd2090222290e29164377e7de0373d77a4b10f0eddfbc9c308da45ebe09"
+    },
+    "initial_failure_category": "container_changed",
+    "initial_failure_not_relabelled_pass": true,
+    "initial_specific_cause_not_proven": true,
+    "independent_diagnostic_receipt": {
+      "filename": "container-fence-diag.json",
+      "sha256": "d58760e7242e814de0110e42964fde949fef2ab4502c98ab9d1e570382824578",
+      "recorded_at": "2026-11-16T08:19:20.787508+00:00",
+      "exit_code": 0,
+      "remote_source_sha256": "f4b27097cccc212b093ce1da49c0e59287b7cb1eba12982b642ce75f951bc62c"
+    },
+    "later_success_receipt": {
+      "filename": "retained-full-integrity-02.json",
+      "sha256": "cbf6f764d3d8526046094a7db8603f1c4f1e5ff862b4dc2e9c4ff40139dfed57",
+      "recorded_at": "2026-11-16T08:22:16.444665+00:00",
+      "exit_code": 0,
+      "remote_source_sha256": "86290b7312ef1923e13e19b914b5242dfd08614679dc9a5893ee5d2a74d2f357"
+    },
+    "only_complete_mount_array_order_equivalence_allowed_all_attributes_retained": true,
+    "local_method_controls_executed": 6,
+    "local_method_controls_log_sha256": "dfe3dc635e00609fc1a33fbb00dbb5af3c3db51c27420d4781391ceaf8fc583b"
+  },
+  "capacity_pre_staging_budget": {
+    "snapshot_available_bytes": 3579215872,
+    "inventory_available_bytes": 3578920960,
+    "conservative_observed_available_bytes": 3578920960,
+    "database_bytes": 2050382871,
+    "business_component_allocated_bytes": {
+      "assets": 1476579328,
+      "exports": 770048,
+      "imports": 1232601088,
+      "offline": 1304752128
+    },
+    "image_archive_bytes": 177589998,
+    "image_archive_expanded_bytes": 178501632,
+    "original_reserve_bytes": {
+      "backup": 268435456,
+      "image": 536870912,
+      "transfer": 134217728
+    },
+    "combined_required_bytes_before_kib_rounding": 7360701189,
+    "admission_passed": false,
+    "original_staged_shell_preflight_not_yet_executed": true,
+    "never_reduce_budget_using_inferred_compression": true
+  },
+  "cleanup_review": {
+    "general_keep_one_old_backup_authorization_received": true,
+    "exact_two_item_confirmation_received": false,
+    "proposed_old_backup": "chat-reader-20261110T155821Z",
+    "proposed_old_backup_allocated_bytes": 3653521408,
+    "proposed_pure_cache_path": "/var/cache/dnf",
+    "proposed_pure_cache_allocated_bytes": 230952960,
+    "estimated_reclaimable_bytes_not_actual_cleanup_result": 3884474368,
+    "predicted_available_bytes_not_actual_cleanup_result": 7463395328,
+    "predicted_margin_before_kib_rounding_bytes": 102694139,
+    "post_cleanup_fresh_original_capacity_gate_required": true,
+    "retain_all_live_and_restore_images_business_data_logs_and_protected_files": true,
+    "unknown_release_entries_held": 1,
+    "cleanup_executed": false
+  },
+  "isolated_ci_optimization": {
+    "source_files": 15,
+    "base_head": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+    "source_and_log_sha256_reverified": true,
+    "byte_preserved_local_receipt_filename": "ci-scheduling-isolated-verification.json",
+    "byte_preserved_local_receipt_sha256": "4b3ac2804c6d5f11f26a26820ce96269ab28fb4520b4302d4ba681ce055f48f0",
+    "not_committed_dispatched_or_full_ci_accepted": true,
+    "settings470_and235_plus235_are_collection_not_browser_passes": true,
+    "actual_ci_time_savings_not_measured": true,
+    "resume_only_after_zip_fix_deployment": true
+  },
+  "source_receipts": [
+    {
+      "filename": "snapshot-01.json",
+      "sha256": "b34d6ae8877ec2db92fdc246102472afc41ac5588a1724b62f4e009d9e695fd9",
+      "recorded_at": "2026-11-16T08:06:42.197234+00:00",
+      "exit_code": 0,
+      "remote_source_sha256": "69a7c54b3b52477e4b6402e2ca3ec6fa5cf10c90aab9290f2e54577bb777fa39"
+    },
+    {
+      "filename": "space-inventory.json",
+      "sha256": "74c73b818243e481db2c8d1de161d29b9bb760c4abe5fec708e76e3140004db2",
+      "recorded_at": "2026-11-16T08:15:51.088194+00:00",
+      "exit_code": 0,
+      "remote_source_sha256": "1928fb8fbb30508ae816425ee4b188e171c428b5dc1f91885ddd2cd9e5a00c17"
+    },
+    {
+      "filename": "retained-full-integrity-02.json",
+      "sha256": "cbf6f764d3d8526046094a7db8603f1c4f1e5ff862b4dc2e9c4ff40139dfed57",
+      "recorded_at": "2026-11-16T08:22:16.444665+00:00",
+      "exit_code": 0,
+      "remote_source_sha256": "86290b7312ef1923e13e19b914b5242dfd08614679dc9a5893ee5d2a74d2f357"
+    },
+    {
+      "filename": "retained-full-integrity.json",
+      "sha256": "c6be99bf06ea59bbc6f65af5f51ee1a9730fcfd810aa2417278877148fa411e8",
+      "recorded_at": "2026-11-16T08:17:37.826067+00:00",
+      "exit_code": 1,
+      "remote_source_sha256": "c476dcd2090222290e29164377e7de0373d77a4b10f0eddfbc9c308da45ebe09"
+    },
+    {
+      "filename": "container-fence-diag.json",
+      "sha256": "d58760e7242e814de0110e42964fde949fef2ab4502c98ab9d1e570382824578",
+      "recorded_at": "2026-11-16T08:19:20.787508+00:00",
+      "exit_code": 0,
+      "remote_source_sha256": "f4b27097cccc212b093ce1da49c0e59287b7cb1eba12982b642ce75f951bc62c"
+    }
+  ],
+  "boundaries": {
+    "production_cleanup": false,
+    "production_service_stop": false,
+    "image_load": false,
+    "migration": false,
+    "backup_restore": false,
+    "new_production_backup": false,
+    "deployment": false,
+    "new_commit_push_or_ci_dispatch": false,
+    "automation_or_new_task": false,
+    "user_sources_replayed_or_modified": false,
+    "product_acceptance_owned_by_user": true
+  },
+  "remaining": [
+    "Exact two-item cleanup confirmation, then a checked narrow executor and independent preservation verification.",
+    "Fresh original capacity admission and exact-source staging from7134 and this verified artifact.",
+    "Block new writes before natural task drain; stop worker only after fresh real idle/no-active proof.",
+    "New independent five-component stopped-write backup from2463/schema0061 and complete zero-issue SHA audit.",
+    "Read-only0061 verification, exact OCI/config/RootFS service rollout, atomic three-key pointer and independent health/TLS/access checks.",
+    "Resume isolated CI scheduling candidate, selective ordinary full CI, fresh55-minute wait and actual timing comparison."
+  ]
+}

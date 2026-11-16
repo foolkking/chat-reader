@@ -16,12 +16,16 @@ const sources = {
   node: "public.ecr.aws/docker/library/node:22.13.1-alpine@sha256:e2b39f7b64281324929257d0f8004fb6cb4bf0fdfb9aa8cedb235a766aec31da",
 };
 
-function job(name) {
+function jobFrom(source, name) {
   const marker = `\n  ${name}:\n`;
-  const start = workflow.indexOf(marker);
+  const start = source.indexOf(marker);
   assert.notEqual(start, -1, `Missing job ${name}`);
-  return workflow.slice(start + marker.length).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0];
+  return source.slice(start + marker.length).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0];
 }
+const job = (name) => jobFrom(workflow, name);
+const webFixture = jobFrom(read(".github/workflows/web-quality.yml"), "gates");
+const settingsShardFixture = jobFrom(read(".github/workflows/settings-browser-shard.yml"), "matrix");
+const fixture = (name) => name === "web-quality" ? webFixture : job(name);
 
 function pinnedAction(body, action) {
   const escaped = action.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -32,7 +36,7 @@ function pinnedAction(body, action) {
 
 for (const name of ["api-quality", "web-quality", "settings-quality"]) {
   test(`${name} starts the pinned PostgreSQL fixture with bounded official-source fallback`, () => {
-    const body = job(name);
+    const body = fixture(name);
     assert.doesNotMatch(body, /^    services:/m);
     assert.match(body, /id: postgres\n        run: bash scripts\/ci\/postgres-service\.sh start/);
     assert.doesNotMatch(body, /^\s*timeout-minutes:/m);
@@ -92,7 +96,7 @@ test("both image builds explicitly select the accepted Linux amd64 platform", ()
 });
 
 test("the registry source contract runs as an additive CI check", () => {
-  assert.match(job("web-quality"), /run: node --test scripts\/ci\/release-image-sources\.test\.mjs scripts\/ci\/postgres-service\.test\.mjs scripts\/ci\/image-base-sources\.test\.mjs(?:\n|$)/);
+  assert.match(webFixture, /run: node --test scripts\/ci\/release-image-sources\.test\.mjs scripts\/ci\/postgres-service\.test\.mjs scripts\/ci\/image-base-sources\.test\.mjs(?:\n|$)/);
 });
 
 test("both pinned bases are prepared before building without retrying application builds", () => {
@@ -172,3 +176,24 @@ for (const [name, prefix] of [["web-quality", "release-a-quality-evidence"], ["s
     assert.doesNotMatch(job(name), /overwrite:\s*true/);
   });
 }
+
+for (const [family, file] of [["web", "web-quality.yml"], ["settings", "settings-browser-shard.yml"]]) {
+  test(`${family} runs both fixed shards on separate reusable runners without cross-quality dependencies`, () => {
+    for (const index of [1, 2]) {
+      const body = job(`${family}-quality-shard-${index}`);
+      assert.match(body, /^    if: \$\{\{ inputs\.quality_source_run_id == '' \}\}\n/);
+      assert.ok(body.includes(`    uses: ./.github/workflows/${file}\n    with:\n      shard: ${index}\n`));
+      assert.doesNotMatch(body, /^    (?:needs|runs-on|strategy):/m);
+    }
+  });
+}
+
+test("each Settings shard retains its own pinned fixture, client port, migration and shutdown", () => {
+  pinnedAction(settingsShardFixture, "actions/checkout");
+  assert.match(settingsShardFixture, /CI_POSTGRES_PORT: "65438"/);
+  assert.match(settingsShardFixture, /DATABASE_URL: postgresql\+psycopg:\/\/chat_reader:chat_reader_ci@127\.0\.0\.1:65438\/chat_reader(?:\n|$)/);
+  assert.match(settingsShardFixture, /id: postgres\n        run: bash scripts\/ci\/postgres-service\.sh start/);
+  assert.ok(settingsShardFixture.indexOf("postgres-service.sh start") < settingsShardFixture.indexOf("python -m alembic upgrade head"));
+  assert.match(settingsShardFixture, /if: \$\{\{ always\(\) && steps\.postgres\.outcome == 'success' \}\}\n        run: bash scripts\/ci\/postgres-service\.sh stop/);
+  assert.doesNotMatch(settingsShardFixture, /^\s*(?:services|timeout-minutes|continue-on-error):/m);
+});

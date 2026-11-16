@@ -1,18 +1,47 @@
 # 生产部署
 
-## 当前优先级：ZIP附件识别修复的fresh发布 — 2026-11-16
+## 当前生产：71342129 / schema0061 已部署并独立核验 — 2026-11-16
+
+生产指针已于2026-11-16 21:46 +08:00原子切换到71342129；21:49独立核验精确镜像、
+API/worker/Web配置与健康、worker心跳、HTTPS/TLS/匿名边界、备份及八个保护文件通过。
+未执行迁移，schema仍为20261112_0061；worker仍为640MiB memory/1280MiB swap/45秒停止。
+部署和CI技术证据见[71342129发布回执](evidence/reliability-2026-11-16/ci-zip-markdown-production-release.json)。
+用户产品验收尚未由Codex执行。接续工作是审查并实测CI调度优化，不重复本次发布或镜像加载。
+
+## 部署前状态记录：ZIP完整CI通过、fresh发布曾等待容量（历史）— 2026-11-16
 
 用户暂缓CI优化，先修任意辅助子目录Markdown附件默认误作对话的问题。
 [源码合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16) /
 [唯一台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)记录本候选及回归边界。
-原六job和全部门禁恢复；本次需选择性提交/推送、空quality source的普通完整CI、
-新真实55分钟双时钟等待、独立制品核验，再做新部署。schema仍0061，无新迁移。
+71342129已选择性提交/推送，空quality source的普通完整CI43820675687 attempt1
+六job全绿，57分47秒；新真实55分钟双时钟等待及
+[独立制品核验](evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json)
+已完成，不重复派发或等待。schema仍0061，无新迁移。
 2463的63/64/74/75已完成且绑定旧前态，不能重放给本候选；必须新容量、
-自然完成活动任务/旧租约释放、新独立五组件备份、精确镜像及独立运行健康。
-不终止用户新导入、不清队列/volume、不覆盖env或dirty checkout；原两备份与
-八文件可逆保护保留。部署成功后才恢复CI优化；用户负责产品验收。
+先阻断新写入，再等活动任务自然完成/旧租约释放；fresh无active且真实idle后
+才停worker。新独立五组件备份、完整零issue SHA审计、只读0061、精确镜像及独立
+运行健康；不终止新导入、清队列/volume或覆盖env/dirty checkout。
+[本轮清理、容量拒绝与现役恢复](evidence/reliability-2026-11-16/ci-zip-markdown-production-resumption.json)
+记录两项具体清理获确认并完成、191条journal及完整保留备份独立复核。
+7134暂存/hold通过，镜像加载一次且完整config/RootFS核验通过，但原容量门禁拒绝。
+18:56三个原2463/0061容器恢复，任务屏障撤除；19:02独立健康/配置/八文件复核通过。
+最新available6,808,376KiB对required6,840,568KiB，仍差约31.4MiB。仅提议删除本轮
+已完整保留在本机且服务器镜像已加载的169.4MiB传输包，尚未获新单独授权。
+唯一11月16日旧备份、全部镜像/数据/日志/八文件不动；没有新备份、候选clean
+附件审计、migration或候选应用启动。该旧备份来源3564cbf/0060，不能代替
+现役2463/0061的新独立停写备份。部署成功后才恢复隔离CI优化，产品验收归用户。
+恢复后的启动时间已变；下一轮须新baseline/cycle和已加载镜像接续协议，
+不重放原hold/load、再次docker load、伪造load成功或直接执行旧backup/rollout。
+[清理前readiness](evidence/reliability-2026-11-16/ci-zip-markdown-production-readiness.json)
+和所有失败原字节保留，不将其旧“待确认”改写成新的执行回执。
+[受限清理候选](evidence/reliability-2026-11-16/ci-zip-markdown-cleanup-controls.json)
+最终Linux74/0skip、实际Python3.6.8宿主20项重叠纯控制通过，旧失败保留。
+宿主不支持dataclasses/fromisoformat/scandir(fd)，使用stdlib模型、严格UTC及
+listdir(fd)，不安装backport。17:26清理前只读元数据预检仍容量拒绝；其确认false，
+预测约89MiB余量不是实际清理或准入。获确认后仍需fresh计划/完整备份核验，
+不重放旧预检或让本机fixture代验生产；实际后续结果以本轮新回执为准。
 [最终专项615/6、ZIP98及PG36/0skip](evidence/reliability-2026-11-16/ci-zip-markdown-verification.json)
-已通过，独立测试库停止且资料保留；这是新普通完整CI前的本地证据，不继承
+已通过，独立测试库停止且资料保留；这是完整CI之前的本地检查点，不继承
 2463的CI/镜像、停写快照或发布阶段，也不替代新的制品和运行准入。
 
 ## 上一发布已完成（接续CI优化随后暂停）— 2026-11-16

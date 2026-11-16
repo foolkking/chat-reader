@@ -1,0 +1,137 @@
+{
+  "schema": "chat-reader-ci-scheduling-reviewed-source-verification/v1",
+  "recorded_at": "2026-11-16T14:31:16.783693+00:00",
+  "base_head": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+  "status": "reviewed_local_candidate_before_first_new_ordinary_full_ci",
+  "production": {
+    "live_revision": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+    "schema": "20261112_0061",
+    "release_evidence": "ci-zip-markdown-production-release.json",
+    "new_deployment_required_for_these_ci_only_changes": false,
+    "product_acceptance_owned_by_user": true
+  },
+  "source_lf_sha256": {
+    ".github/workflows/build-release-images.yml": "d00d61bf213f79a68fa73144c922d3a886ff83728d94af63bf848c420ac3340d",
+    "apps/web/e2e/release-security-baseline.spec.ts": "0641d9c7f99053033528e94086ec4c103824769552b7f2d17d67e3549ed56bab",
+    "apps/web/playwright.config.ts": "6194537b942382d5ec6f502505cedb2557c0c280e59ec48975ca3b344bfca891",
+    "scripts/ci/image-only-quality-reuse.py": "28e6e881fe708129fbf380fda98668884f5accbc2560e7ff5ab5f1199adc838d",
+    "scripts/ci/release-image-sources.test.mjs": "7e5b1e0013078c98b1607929d8a7a5e2f966a71fddb6c4b088b2b84c31eafe41",
+    "scripts/ci/settings-completion-timing.test.mjs": "3f2df94058838376172c3e371fdd6c9da13e92744e938c56980d63b100351318",
+    "scripts/ci/test_image_only_evidence_transport.py": "566050737df83912a26a481617da9a19dae1ca7bd382c1862d2e1fc83152345d",
+    "scripts/ci/test_image_only_quality_reuse.py": "22b2f0cfa34542f4cafd42d81ed28a654d5b22bd8a812b940ad3adc308465ee3",
+    "scripts/ci/test_image_only_selector_lineage.py": "4a636645ac86e600e4107c5e3315a0a4116bc3e3500bc662e3ff55b8a81674e1",
+    ".github/workflows/settings-browser-shard.yml": "854bd59303ee9594e1d5b0e2c8d022464aa8ee2815bb11861d89358503b491b8",
+    ".github/workflows/web-quality.yml": "800051a9fe74ee2c5763eafec37eb5a5aa9b4c5355030110f6ccfc55852f6913",
+    "scripts/ci/quality-scheduling-contract.json": "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c",
+    "scripts/ci/quality-shard-evidence.mjs": "509f0cb5d455ab72399b2298352bb69a79e2a59108367553191c28b9e02b30f2",
+    "scripts/ci/quality-shard-evidence.test.mjs": "2a7c40262e0368c93b3fddb008057950b03e355da0e54c4d1b9f3eed960c84fe",
+    "scripts/ci/test_quality_scheduling.py": "08066123f07f288b5768f28b189639e73725e1e8af166b47a92f8c9c642096c5"
+  },
+  "topology": {
+    "quality_jobs": 8,
+    "total_jobs": 10,
+    "web_shards": 2,
+    "web_original_gates": 14,
+    "settings_shards": 2,
+    "settings_original_cases": 470,
+    "settings_restore_cases": 1,
+    "reader_unconsumed_api_dependency_removed": true,
+    "api_full_suite_and_five_original_memory_cases_unchanged": true,
+    "historical_image_only_source_and_lineage_not_expanded": true
+  },
+  "local_results": {
+    "node": 152,
+    "scheduling_python": 15,
+    "release_policy_python": 102,
+    "source_only_playwright": 53,
+    "lint_exit": 0,
+    "typecheck_exit": 0,
+    "actionlint_version": "1.7.12",
+    "actionlint_exit": 0,
+    "shellcheck_or_pyflakes_claimed": false,
+    "settings_collection_only": [
+      470,
+      235,
+      235
+    ],
+    "genuine_native_blob_merge_cases": 4,
+    "native_timeout_override_control_executed": true,
+    "optimized_complete_ci_run_or_savings_measured": false
+  },
+  "strict_runtime_timeout_binding": {
+    "frozen_contract_lf_sha256": "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c",
+    "original_settings_source_revision": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+    "unchanged_source_files": 60,
+    "body_level_timeout_declarations": 54,
+    "affected_expanded_cases": 137,
+    "no_test_body_or_deadline_changed": true,
+    "reason": "Native --list reports the default90s; unchanged test bodies apply their existing exact individual timeout during execution. Source-bound location mapping is required; no broad relaxed maximum."
+  },
+  "retained_failures": {
+    "unconfigured_local_browser_selection": {
+      "source_only_command_selected_runtime_cases_by_mistake": true,
+      "passed_source_controls": 53,
+      "failed_live_service_cases": 5,
+      "reason": "No local serving stack was started; localhost connections refused. Original runtime cases/assertions unchanged. Correct source-only selection reran53/0skip."
+    },
+    "isolated_historical_failure_receipts_preserved": true
+  },
+  "raw_input_protection": {
+    "historical_reliability_json_unchanged": 122,
+    "user_unrelated_file_count": 14,
+    "user_tsbuildinfo_sha256": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135",
+    "preexisting_newline_only_ci_sources_backed_up_before_selective_sync": true
+  },
+  "log_fingerprints": {
+    "validation-04/actionlint.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "validation-04/ci-node-controls.log": {
+      "bytes": 29996,
+      "sha256": "a2a66dc4954808408316394e8655e61f1ed2fb11df394e50ce711a3fe5d11f88"
+    },
+    "validation-04/policy-python.log": {
+      "bytes": 19861,
+      "sha256": "09d358235099569f875811c25354c876506999cd6ade3f5df0ddfdc83f8f7183"
+    },
+    "validation-04/scheduling-python.log": {
+      "bytes": 3429,
+      "sha256": "4e2ff1905824cd78b4df2f4d18488f5095b6db5005afcafd9ba5d90b16f0775c"
+    },
+    "web-validation-02/lint.log": {
+      "bytes": 165,
+      "sha256": "12318e1458c77defc58b71801a46646387fd5cfc66f98359491f30888decd8f2"
+    },
+    "web-validation-02/settings-full-collection.log": {
+      "bytes": 55485,
+      "sha256": "bf3786a07049a1dd49e8d2d981a9c9fb53774b616ee0a5b433a5c889f98e9db0"
+    },
+    "web-validation-02/settings-shard-1-collection.log": {
+      "bytes": 27472,
+      "sha256": "d9b3ecac60aab0e38056e593548468f9b7afcbd1a6505f2e0f0774f5e9c4e587"
+    },
+    "web-validation-02/settings-shard-2-collection.log": {
+      "bytes": 28057,
+      "sha256": "58a1cec73fd84e46c18282172b214d15f2baaff9ef98406df2745ae959c9374f"
+    },
+    "web-validation-02/source-only.log": {
+      "bytes": 18835,
+      "sha256": "f5b8b294b267a1e2b8fece62979a42658142b5ed570a19322373424595f4e756"
+    },
+    "web-validation-02/typecheck.log": {
+      "bytes": 167,
+      "sha256": "aa20d92019c6f343df25737f2fb387600f706e5c4ed22ec26aad2dae4d52af71"
+    },
+    "web-validation-03/source-only.log": {
+      "bytes": 7186,
+      "sha256": "a55159e06ec5a1502cfb9b668343dc169d0f553975037589709d52d8ac4992d0"
+    }
+  },
+  "remaining": [
+    "selective_commit_normal_push_and_one_empty_quality_source_full_ci",
+    "fresh_real3300_second_utc_and_monotonic_wait_then_self_check_and_repair_failures",
+    "independent_official_native_resource_artifact_provenance_check_and_actual_wall_time_comparison"
+  ],
+  "no_automation_or_user_source_replay": true
+}

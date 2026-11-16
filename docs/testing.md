@@ -1,6 +1,24 @@
 # Testing
 
-## ZIP Markdown-resource candidate verification — 2026-11-16
+## Latest: ZIP Markdown-resource full CI and production verification pass; user acceptance remains pending — 2026-11-16
+
+Exact71342129 / CI43820675687 attempt1 ordinary full CI passes all six jobs in3467 seconds;
+a fresh3300-second UTC/monotonic wait and independent OCI/application-artifact proof completed.
+Production is independently verified at71342129/schema0061 with exact images/configuration, API/Web health,
+worker heartbeat, HTTPS/TLS/access boundaries, a fresh stopped-source backup and complete clean read-only
+attachment SHA audit. No migration or restore drill ran. See
+[CI proof](evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json) and
+[production proof](evidence/reliability-2026-11-16/ci-zip-markdown-production-release.json).
+The backup client's missing local projection is recorded alongside the independently verified remote
+completion receipt; it was not retried or relabelled. Product acceptance (real user ZIP/device/workflow)
+remains user-owned. CI scheduling optimization now has [reviewed local proof](evidence/reliability-2026-11-16/ci-scheduling-verification.json):
+Node152, Python15+102, source-only53, lint/typecheck and Actionlint pass. Settings470/235+235
+are collection only; four genuine native attempts test blob/JSON identity and original body timeouts.
+The retained mistaken runtime selection failed5 unserved-localhost cases while53 source controls passed;
+correct pure-source selection then passes53/0skip, without changing runtime tests. No complete optimized
+CI acceptance or measured saving is implied.
+
+## Pre-deployment ZIP Markdown-resource CI and local verification checkpoint (historical) — 2026-11-16
 
 Current source prioritizes the ZIP attachment fix, including arbitrary deeper
 directories, wrapper-relative paths, manual body/owner choices and old catalog
@@ -20,18 +38,57 @@ pass;1424 inputs,19 protected files and the user's tsbuildinfo are unchanged.
 [Scoped verification](evidence/reliability-2026-11-16/ci-zip-markdown-verification.json) /
 [exact inputs](evidence/reliability-2026-11-16/ci-zip-markdown-inputs.json) preserve
 all actual failures, including the later legacy binding and fixture/wrapper
-failures. Actual full collection7010 is not execution acceptance;213 portable
-IDs (old115 plus ZIP98) require individual PASSED outcomes in the fresh CI.
+failures. Earlier full collection7010 was not execution acceptance; the new
+exact CI executes7007 passes/3 original Linux skips/5 warnings, and all213 portable
+IDs (old115 plus ZIP98) individually PASSED.
 The six local skips are four Windows symlink privileges and two unconfigured
 Exporter sources; real user ZIPs are not replayed to remove them.
-This is not full Linux/PWA,
-exact-image memory, CI or deployment acceptance. All six original jobs and five
-resource/native gates require fresh ordinary full CI with empty quality source,
-then a new real55-minute UTC/monotonic wait. See the
-[single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md); CI optimization remains
-preserved and paused until this product fix is deployed.
+Those local checks did not establish full Linux/PWA or exact-image acceptance.
+The subsequent71342129/43820675687 attempt1 ordinary full CI, empty quality
+source, passes all six jobs in3467 seconds after the real fresh3300-second
+UTC/monotonic wait. Web14/mounted45, Settings470+independent restore1, Reader9/
+all27 cold/original64+12+4/cold Viewer and all five original memory cases pass.
+[Byte-preserved independent proof](evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json)
+verifies five official artifacts/six logs,35 OCI blobs/23 real diff IDs,
+393 API files and Web revision. Original suite-selection skips remain visible;
+no product acceptance follows from this technical success.
 
-## Exact full CI and independent production verification pass — 2026-11-16
+[Production readiness](evidence/reliability-2026-11-16/ci-zip-markdown-production-readiness.json)
+verifies the retained backup/restore chain/eight protected files but refuses
+current capacity. Its first container fence failure is preserved with an
+unproven specific cause; six local complete-Mounts-order controls and a new
+independent full backup read pass without ignoring real attribute differences.
+That pre-cleanup snapshot did not perform cleanup, restore, migration, service
+stop or deployment; its bytes remain unchanged, not the later operation status.
+[Cleanup controls](evidence/reliability-2026-11-16/ci-zip-markdown-cleanup-controls.json)
+execute74 final native Linux methods/0skip on owned tmpfs, with synthetic host
+adapters. Native02's real outside-parent fixture unlink remains58 passes/1error;
+the fix repeats the named parent chain after journal fsync. Actual Python3.6.8
+executes20 overlapping pure controls and proves listdir(fd) support/scandir(fd)
+TypeError; immutable stdlib models and strict UTC need no backports.
+The17:26 read-only metadata preview passes tree/runtime preservation but refuses
+capacity, keeps confirmation false and does not renew complete backup SHA/CRC/
+TOC acceptance. These pre-cleanup scopes do not add together or establish
+production cleanup.
+[Actual cleanup and current resumption](evidence/reliability-2026-11-16/ci-zip-markdown-production-resumption.json)
+records the subsequently confirmed two-target cleanup, independently verified
+191-entry journal, full retained-backup SHA/4 gzip/4 tar/PG TOC and eight files.
+Exact candidate images load once, but the original post-load capacity fails.
+The three ORIGINAL2463/0061 services resume at18:56 +08:00; independent19:02
+checks11 containers, configuration/health/heartbeat/TLS and protected-file SHA.
+The observer's initial mistranscribed protection-cycle rejection is retained;
+the corrected exclusive read-only observation passes without server mutations.
+Latest capacity still lacks31.4MiB; the extra transmission-file cleanup is not
+authorized. No candidate application, new stopped0061 backup, clean attachment
+audit or migration ran. Full backup streams were checked at17:58, not rerun by
+the19:02 metadata/control-SHA observation. This is not user product acceptance.
+[Isolated CI candidate](evidence/reliability-2026-11-16/ci-scheduling-isolated-verification.json)
+passes local Node150/Python14+102/source-only53/static checks; Settings470/
+235+235 are collection, and genuine blob merge4 is not release470 acceptance.
+See the [single ledger](system/SMALL_HOST_IMPROVEMENT_STATUS.md): resume only
+after ZIP deployment, with fresh complete CI and measured elapsed time.
+
+## Previous 2463/schema0061 release: exact CI and production verification (historical) — 2026-11-16
 
 Exact2463f298/43737444629 attempt1 runs ordinary full mode with empty quality
 source. All six jobs pass in3483 seconds after the real fresh3300-second

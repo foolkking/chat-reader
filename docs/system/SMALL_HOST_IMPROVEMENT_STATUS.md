@@ -3,16 +3,33 @@
 更新时间：**2026-11-16，Asia/Shanghai**。本页是本目标的状态入口；
 详细方案、历次失败和实验记录保留在原账本，不再把每个检查点重复当作“当前状态”。
 
-## 新授权：可靠性治理（ZIP附件修复优先，CI优化暂停，用户负责验收）
+## 当前：ZIP修复已部署并独立验证；继续实测 CI 优化（2026-11-16）
+
+用户优先要求修复ZIP中`assets/`、`files/`及其他任意辅助子目录Markdown被导入成对话的问题。
+71342129按最外层Markdown正文默认选择，深层成员只作为被引用资源或显式启用的正文；
+兼容边界见[Archive合同](ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16)。
+
+- **CI**：普通完整CI43820675687 attempt1六job全绿，57分47秒；真实55分钟UTC/monotonic等待、独立制品证明均已完成。不是CI优化后的新耗时。
+- **生产**：2026-11-16 21:46 +08:00原子切换至71342129/schema0061；21:49独立镜像、运行健康、TLS、匿名边界、备份及保护文件复核通过。无迁移；worker资源维持640MiB/1280MiB/45秒。
+- **发布准备**：精确获准的一个传输包删除并以新实际容量准入；新的2463/0061五组件停写备份、零issue完整只读附件SHA审计通过。保留旧备份及八个保护文件；不重放早期failed-load或旧发布phase。
+- **备份回执**：本机backup phase没有取得投影，退出码4294967295；随后独立核验服务器成功回执SHA且未重试。原本机交付失败记录保留，不能改写为本机命令成功。
+- **产品验收**：仍由用户负责。没有以生产运行门禁代替用户ZIP、真实设备/流程或备份恢复验收。
+- **下一步CI优化**：15源文件已审查并选择性同步，Node152/Python15+102/source-only53、lint/typecheck、Actionlint通过。原60个Settings文件/54处测试体超时由源码SHA绑定，未改预算；真实4例blob控制复现并验证list/执行超时区别。Settings470的235+235仍仅collection。保持全部原门禁，选择性提交后跑普通完整CI，新的真实55分钟等待后自行检查/修失败，并比较实际墙钟耗时；[本地专项证据](../evidence/reliability-2026-11-16/ci-scheduling-verification.json)不冒称收益实测。
+
+[本次部署独立证据](../evidence/reliability-2026-11-16/ci-zip-markdown-production-release.json) /
+[CI制品证明](../evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json)。
+
+## 历史授权与部署前检查点：ZIP修复待fresh部署、CI优化隔离，用户负责验收（已由上方当前状态取代）
 
 用户在收尾后批准实施“系统可靠性与精简体验”方案。以下为唯一当前台账；
-下方旧目标停止说明是前一检查点，不再阻止本次实施。生产已更新为2463f298/0061。
+下方旧目标停止说明是前一检查点，不再阻止本次实施。该检查点时生产为2463f298/0061；后续71342129部署见上方当前状态。
 11月13日用户明确接手剩余验收，授权本任务选择性提交/推送、等待完整精确
 源码CI，成功后备份/迁移/部署。保留原自动门禁及技术安全检查，不重放用户
-资料、不清理生产、不建立自动安排；未验收项不能因委托用户而改标通过。
+资料、不做未审查清理、不建立自动安排；未验收项不能因委托用户而改标通过。
+11月16日用户已确认两项具体清理，执行与独立复核完成；不扩大为其他文件授权。
 11月12日的一次本地检查点与随后本地工作限制保留为历史，不覆盖最新授权。
 
-### 11月16日最新：先修任意辅助目录Markdown附件，再fresh发布
+### 部署前历史检查点：ZIP CI全绿、清理后加载容量拒绝；现役曾恢复 — 2026-11-16
 
 用户暂停CI优化，优先修ZIP里`assets/`、`files/`及任意其他辅助子目录的Markdown
 被误作对话的问题。默认采用安全单包装归一后的最外层Markdown层级；更深成员
@@ -27,9 +44,10 @@ catalog v1可选分类/扫描标记保留人工排除与owner，启用新正文�
 人工启用新正文后，只按已核验的真实源SHA升级绑定。两lane过期分类在内存准入
 前返回409，非ZIP不进入ZIP校验；原预算不放宽。
 
-- 12份CI候选已raw SHA保全在本任务独立临时子目录；六tracked恢复HEAD内容，
+- 最初12份CI候选已raw SHA保全在本任务独立临时子目录；六tracked恢复HEAD内容，
   六新增移出工作树。原六job、Playwright与full/reuse来源证明必须一起恢复，
-  本发布不混入尚未验证的新八job合同。部署后按新HEAD对齐恢复，不重跑生成器。
+  本发布不混入新调度合同。随后独立7134工作树候选已扩为9 tracked+6新增，
+  共15源文件；部署后按新HEAD对齐恢复，不重跑生成器或覆盖用户改动。
 - 前一91-case ZIP专项全部通过，相关API矩阵608通过/6原环境skip；输入有独立
   checkpoint。补7个边界控制后的最终31-file相关矩阵**615通过/6原环境skip，
   621实际执行，20分19秒**，新增ZIP98全部逐项通过。36个原分析/owner/upload/bundle
@@ -40,18 +58,157 @@ catalog v1可选分类/扫描标记保留人工排除与owner，启用新正文�
 - [最终脱敏专项证据](../evidence/reliability-2026-11-16/ci-zip-markdown-verification.json) /
   [1424输入](../evidence/reliability-2026-11-16/ci-zip-markdown-inputs.json)绑定最终七个
   runtime/test输入、初次checkpoint、日志/JUnit、19个protected文件及12个暂停CI文件。
-- 完整API实际collection7010，只是收集，不是运行通过；6911个原稳定ID及
+- 此前完整API实际collection7010只是收集；6911个原稳定ID及
   115个旧portable控制保留，单个原gzip夹具ID只变真实mtime并验证原bytes。
-  新98个ZIP控制及旧115共213个portable ID必须在新正式CI逐个真实PASSED。
-- 无本轮新提交/推送/派发/精确镜像或生产操作；最后独立已验生产身份仍2463/
-  0061。原两备份、八文件可逆保护、服务器env/dirty checkout和新用户导入不动。
+  新正式CI已实际7007通过/3原Linux skip/5 warnings，7010执行，
+  新98个ZIP控制及旧115共213个portable ID全部逐个PASSED。
+- 已选择性提交/正常推送71342129，普通完整CI43820675687 attempt1全绿，质量
+  来源为空。新真实3300秒UTC/monotonic等待已完成；原first-read的in_progress
+  字节不改写，不重复提交/派发/启动等待器。精确镜像已加载并独立核验，
+  但原容量门禁失败，尚未启动候选应用或切换指针。
+- 两项获确认清理后只留已完整核验的11月16日旧备份；八文件、全部服务/恢复镜像、
+  服务器env/dirty checkout及业务数据保全。现役2463/0061三个原容器已恢复，
+  本轮没有新生产备份、clean附件审计、migration或候选部署。
+
+#### 本轮正式CI与独立制品
+
+[独立证明](../evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json)
+原字节归档34,511 bytes。完整运行从created到最后job完成**3467秒/57分47秒**；
+不是CI优化收益实测，旧运行及所有失败保留。
+
+| 门禁/job | 当前精确候选实测 |
+| --- | --- |
+| API | 7007/3原skip/5 warnings，213 portable逐项PASSED；job38分38秒 |
+| Web | 原14 gates、mounted45、64+12+4和cold Viewer通过；job44分49秒，保留原suite选择skip |
+| Settings | 原470/0skip，加独立restore1；job51分49秒 |
+| Reader | 主9及27 cold物理帧/原预算通过；job8分03秒，仍等待API |
+| 资源/镜像 | 原五例和所有native/memory/hash/OOM/restart断言；builder5分28秒、consumer19秒 |
+| 来源/内嵌 | 六官方日志/五artifact，35 OCI blobs/23真实diff IDs、393 API文件/Web revision全部精确核验 |
+
+#### 部署前容量阻断及服务恢复记录（历史）
+
+[本轮脱敏机器证据](../evidence/reliability-2026-11-16/ci-zip-markdown-production-resumption.json)
+绑定原清理/暂存/hold/load失败、唯一现役恢复和新独立只读回执，不改旧JSON字节。
+
+- 用户“我确认”仅批准`chat-reader-20261110T155821Z`与`/var/cache/dnf`内容。
+  **17:51 +08:00**清理02完成：旧备份8文件，缓存59文件/26目录；缓存根目录保留。
+  **17:58**独立逐项核对191条连续journal（93节点操作+1根操作，各自intent/completed）；
+  原11容器/12 role标签、保留备份完整SHA/4 gzip/4 tar/PG TOC及八文件均通过。
+  原独立KiB向上取整容量通过，但不是后续镜像加载后的准入。
+- 新7134暂存和原staged shell容量预检、只读plan通过。只阻断Nginx UID985到
+  `127.0.0.1`的TCP3000/8000，再等任务自然结束；两次真实idle/零活动后才停止
+  三个原应用容器，未请求取消新导入。PG与其他七容器不动，未修改Nginx配置。
+- 镜像实际加载一次后，独立验证Docker config ID、完整RootFS和精确OCI来源。
+  原load因容量拒绝，失败journal保留，不伪造load-completed，不再`docker load`。
+
+| 容量观察 | 原预算与实测结果 |
+| --- | --- |
+| 18:41加载后独立检查 | available6,816,780KiB；required6,840,568KiB；差23,788KiB，约23.2MiB |
+| 19:02现役恢复后新只读检查 | available6,808,376KiB；required6,840,568KiB；差32,192KiB，约31.4MiB |
+| 原余量 | 备份256MiB、Docker512MiB、任务传输128MiB全部保留；不按预计压缩率降低备份需求 |
+
+**18:56**仅恢复仍权威的2463/schema0061三个原容器，按API→worker→Web顺序；
+不是候选回退或启动旧0060 worker。核对完整配置、真实健康/心跳及原
+640MiB memory/1280MiB swap后，删除本任务精确防火墙规则和空维护锁。
+停写源卷完整fingerprint在重新开放前仍一致；候选镜像、传输包、失败日志均保留。
+**19:02**新独立只读核验11容器、原配置/指针、API/Web/PG健康、真实worker心跳、
+匿名/TLS与8个保护文件全部字节/metadata通过。复核器首次因交接摘要抄错保护cycle
+拒绝；原失败保留，新独占复核按字节绑定context与原COMPLETE确认，未对生产做写操作。
+
+保留备份`chat-reader-20261116T024231Z`仍来源3564cbf/schema0060，**不是现役
+2463/schema0061的新停写备份**。恢复后仅重验备份metadata/control SHA及八文件；
+完整备份SHA/gzip/tar/TOC由17:58独立检查证明，不冒称19:02重新执行。
+本轮候选clean附件SHA审计尚未运行，不能把3013+14预期对象数写成已通过。
+
+新的单独清理提案仅为本任务服务器镜像传输包：
+`/opt/chat-reader/releases/71342129b861925692f5ea587d2f3ab2fa3404f9/chat-reader-images.tar.gz`，
+177,589,998 bytes（约169.4MiB）。服务器/本机完整SHA相同、镜像已完整加载、
+该文件单link且未挂入任何服务；**尚未获准删除**。不动Docker镜像、唯一旧备份、
+日志、业务卷或八文件，预计释放不能代替新实际容量核验。
+
+现役恢复已改变真实启动时间；下一发布须新baseline/cycle及明确的已加载镜像接续
+协议。原hold/load及2463旧63/64/74/75都不能重放；backup/rollout不能借不存在的
+load成功回执直接执行。之后仍需自然排空、新独立五组件2463/0061停写备份、
+`BACKUP_DEDUPLICATE=0`、完整SHA/gzip/tar/PG TOC与零issue附件审计，再匹配服务/
+原子指针/独立健康。用户写入已恢复，不要求之后全卷或计数恒等停写快照。
+
+#### 清理前readiness与保留备份检查（历史，非当前清理状态）
+
+[脱敏readiness回执](../evidence/reliability-2026-11-16/ci-zip-markdown-production-readiness.json)
+绑定16:06 +08:00生产读数和16:22保留备份完整复核，不将文档归档时间冒充新live
+快照。11容器、API/Web/PG健康、worker运行且当时idle；活动import/job/execution/
+lock waits均0。0061已有1条合法finished execution，不能要求历史总行数0，
+本轮只读验证0061，不执行迁移。worker仍640MiB memory/1280MiB swap。
+保全检查包含原生产Compose与2463 runtime-images override，不只保护两份根配置。
+
+保留`chat-reader-20261116T024231Z`的8成员完整SHA、五独立组件、4 gzip CRC/
+tar stream、独立PG TOC、四role恢复镜像config ID全部通过；source3564cbf/schema0060，
+不是现役2463的停写备份。八文件全部字节/inode/uid/gid/mode/mtime/atime保留，
+未恢复、移动、删除或扩大集合。首次retained检查以`container_changed`拒绝，
+原失败回执保留；后续诊断属性全部一致不能证明首次具体原因。仅完整Mounts数组
+顺序等价的6本地方法控制通过，真实属性/缺项/重复/嵌套变化仍拒绝，独立02复核通过。
+
+16:06快照可用空间约**3.58GB**；未staging前原独立备份+全部原余量+镜像+传输合算
+需求**7,360,701,189 bytes**，当前容量拒绝。不是已执行staged shell preflight，
+不得利用估计压缩率降低需求；后续KiB rounding和新live容量仍须重新检查。
+
+| 清理前限定提案（当时待具体确认） | 处置边界/实测占用 |
+| --- | --- |
+| 11月10日旧备份 | 仅`chat-reader-20261110T155821Z`，3,653,521,408 allocated bytes；保留已完整核验11月16日备份 |
+| dnf缓存 | 仅`/var/cache/dnf`，230,952,960 allocated bytes；不删镜像/日志/业务数据 |
+
+两项预计释放3.62GiB，不是实际清理结果；按当时较低可用读数预计额外余裕约98MiB，
+因此确认、执行及独立保全后必须重新通过原容量准入。当前/恢复镜像、全部业务卷、
+日志和保护目录都保留；未知release entry仍HOLD，不做全局prune或扩大清理。
+
+#### 清理执行器与17:26清理前只读续检（历史）
+
+[聚合证明](../evidence/reliability-2026-11-16/ci-zip-markdown-cleanup-controls.json)
+保存五轮源/日志SHA及原失败；最终Linux74实际通过/0skip，真实目录fd、链接/
+特殊文件、文件替换、journal失败和部分完成控制都执行。宿主Python3.6.8另跑
+20项重叠纯合同/模型控制，不与74相加；宿主没有dataclasses/fromisoformat，
+且`scandir(fd)`实际TypeError。候选改用标准库NamedTuple、严格UTC解析及
+`listdir(fd)`，不安装backport或退回路径扫描。
+
+native02真实复现journal期间父目录移出scope后，旧fd仍删掉其fixture文件：
+59执行、58通过/1ERROR，原日志/源副本和已退出、非OOM失败容器保留，不重启。
+现在journal fsync后重新打开并比对完整named parent chain，再最终stat/unlink。
+后续72/73/74都是重叠控制，不合算覆盖。host probe02无stdout的原具体错误未保留，
+不补造原因；preview01失败和独立证明旧模块缺dataclasses的host01均保留。
+这些本机原生测试不是生产磁盘、真实PG/备份CRC/TOC或部署验收。
+
+17:26 +08:00新preview02只读元数据检查成功：11个原容器完整配置/生命周期
+前后不变，现役2463/schema0061，worker idle，active imports/jobs/execution/
+lock waits均0；合法finished历史不冻结。三代12个role镜像config ID均保留。
+旧备份8成员、保留备份8成员、dnf59文件/26目录的owner/permissions/device/
+link/mount边界通过；没有新的完整备份SHA/CRC/TOC或恢复验收。
+
+可用**3,569,446,912 bytes**，保持全部原余量的合算需求**7,360,783,109 bytes**，
+仍拒绝。两项预测释放3,884,474,368 bytes，预测余量93,138,171 bytes（约89MiB）
+不是实际清理结果。返回context的confirmation始终false；没有清理、停服、镜像
+加载、新备份、迁移、恢复或部署，不干预新用户导入或再次派发/等待CI。
+该轮preview不是后续实际清理确认或执行回执；旧context不能重放。
+实际两项清理、新容量拒绝和现役恢复见上方当前节；CI优化仍隔离。
+
+#### 隔离CI优化：本地候选已核验，尚无完整CI收益
+
+[原字节本地证明](../evidence/reliability-2026-11-16/ci-scheduling-isolated-verification.json)
+绑定7134/15文件及全部日志SHA；本次归档重验无漂移。Node150、scheduling
+Python14、release policy102、source-only Playwright53、lint/typecheck及
+Actionlint1.7.12通过。真实native blob合并仅执行2+2共4例，仍被release470
+准入拒绝；Settings470和235+235仅collection，不冒称浏览器全矩阵通过。
+原失败日志保留，不声称shellcheck/pyflakes、已提交、新完整CI或实测节省时间。
+候选仅去Reader无消费依赖、隔离runner划分全部Web14和Settings470，并严格聚合
+完整结果；全模式8 quality/10 total jobs，历史image-only六job及唯一旧来源不扩大。
+API完整suite、restore1、五memory和全部原生门槛保持。仅ZIP成功部署后接回并实测。
 
 | 下一步 | 必须边界 |
 | --- | --- |
-| 本候选回归与提交 | 完成相关API及旧数据/安全控制，选择性提交并正常推送，不混暂停CI或无关资料 |
-| 普通完整CI | 空quality source，原API/Web14/Settings470+restore1/Reader及五memory保留；新真实55分钟UTC/monotonic后自行查看，失败继续修 |
-| 本候选fresh部署 | 新容量、等待活动任务自然完成/旧租约释放、新独立五组件备份、schema0061/精确镜像、原子指针及独立健康；不重放2463的63/64/74/75 |
-| 恢复CI优化 | 仅在本产品修复成功部署后接回12保全文件；按新HEAD与新增ZIP用例对齐再实测，不删门禁或放宽预算 |
+| 本候选回归与提交 | 已完成7134，不混隔离CI或无关资料，不重复提交/推送 |
+| 普通完整CI | 已完成43820675687全绿、新真实55分钟等待及独立制品，不重复派发 |
+| 限定清理与容量 | 原两项已执行/独立复核；额外169.4MiB传输包尚未获准，之后仍需实际原容量准入，不扩大到镜像/日志/数据 |
+| 本候选fresh部署 | 当前服务已恢复，先新baseline/cycle及已加载镜像接续协议，不重放旧hold/load或伪造成功。自然排空后新独立2463/0061五组件备份，BACKUP_DEDUPLICATE=0，完整零issue SHA审计、精确镜像/原子指针/独立健康；不重放旧63/64/74/75 |
+| 恢复CI优化 | 仅在本产品修复成功部署后接回15文件候选；按新HEAD/ZIP控制对齐，普通完整CI及新55分钟等待后实测，不删门禁或放宽预算 |
 | 产品验收 | 用户负责；真实来源/实体设备/认证生产交互/备份恢复不因技术门禁而改标PASS |
 
 ### 上一11月16日发布：2463f298/0061已上线（CI优化随后已暂停）

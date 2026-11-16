@@ -50,6 +50,20 @@ def source_fixture():
     return run, {"total_count": len(jobs), "jobs": jobs}
 
 
+def full_source_fixture(*, run_id=9001, sha=HEAD, attempt=1):
+    run, jobs = source_fixture()
+    run.update(id=run_id, head_sha=sha, run_attempt=attempt, status="in_progress", conclusion=None)
+    for item in jobs["jobs"]:
+        item.update(run_id=run_id, head_sha=sha, run_attempt=attempt)
+    for index, name in enumerate(gate.FULL_QUALITY_NAMES):
+        if name not in gate.QUALITY_NAMES:
+            item = copy.deepcopy(jobs["jobs"][0])
+            item.update(id=100 + index, name=name)
+            jobs["jobs"].append(item)
+    jobs["total_count"] = len(jobs["jobs"])
+    return run, jobs
+
+
 def browser_summary(kind):
     ids = gate.WEB_GATE_IDS if kind == "web" else ("settings-stages-1-4", "system-archive-new-instance")
     cases = []
@@ -318,27 +332,43 @@ class OfficialQualityTests(unittest.TestCase):
                 gate.validate_artifact_metadata({**metadata, key: value}, specification)
 
     def test_normal_full_mode_can_accept_a_different_exact_tested_sha(self):
-        self.run.update(id=9001, head_sha=HEAD, run_attempt=2, status="in_progress", conclusion=None)
-        for job in self.jobs["jobs"]:
-            job.update(run_id=9001, head_sha=HEAD, run_attempt=2)
-        result = gate.verified_jobs(self.run, self.jobs, source_sha=HEAD, source_run="9001",
+        run, jobs = full_source_fixture(attempt=2)
+        result = gate.verified_jobs(run, jobs, source_sha=HEAD, source_run="9001",
                                     attempt=2, reuse=False)
-        self.assertEqual(len(result), 4)
+        self.assertEqual([item["name"] for item in result], list(gate.FULL_QUALITY_NAMES))
 
     def test_full_producer_does_not_require_a_not_yet_created_downstream_consumer(self):
-        self.run.update(id=9001, head_sha=HEAD, status="in_progress", conclusion=None)
-        self.jobs["jobs"].pop()
-        self.jobs["total_count"] = 5
-        for job in self.jobs["jobs"]:
-            job.update(run_id=9001, head_sha=HEAD)
+        run, jobs = full_source_fixture()
+        jobs["jobs"] = [item for item in jobs["jobs"] if item["name"] != "inspect-release-artifact"]
+        jobs["total_count"] = 9
         self.assertEqual(len(gate.verified_jobs(
-            self.run, self.jobs, source_sha=HEAD, source_run="9001", attempt=1, reuse=False,
-        )), 4)
-        self.jobs["jobs"].pop(0)
-        self.jobs["total_count"] = 4
+            run, jobs, source_sha=HEAD, source_run="9001", attempt=1, reuse=False,
+        )), 8)
+        jobs["jobs"].pop(0)
+        jobs["total_count"] = 8
         with self.assertRaises(gate.GateError):
-            gate.verified_jobs(self.run, self.jobs, source_sha=HEAD,
+            gate.verified_jobs(run, jobs, source_sha=HEAD,
                                source_run="9001", attempt=1, reuse=False)
+
+    def test_full_mode_rejects_the_old_six_job_set_even_if_all_original_families_pass(self):
+        run, jobs = source_fixture()
+        run.update(id=9001, head_sha=HEAD)
+        for item in jobs["jobs"]:
+            item.update(run_id=9001, head_sha=HEAD)
+        with self.assertRaises(gate.GateError):
+            gate.verified_jobs(run, jobs, source_sha=HEAD, source_run="9001", attempt=1, reuse=False)
+
+    def test_every_fixed_full_shard_must_complete_successfully_on_this_exact_attempt(self):
+        for name in set(gate.FULL_QUALITY_NAMES) - set(gate.QUALITY_NAMES):
+            for field, value in [
+                ("conclusion", "failure"), ("conclusion", "skipped"), ("conclusion", "cancelled"),
+                ("conclusion", None), ("status", "in_progress"), ("run_attempt", 2),
+                ("run_id", 1), ("head_sha", gate.BASE_SHA),
+            ]:
+                run, jobs = full_source_fixture()
+                next(item for item in jobs["jobs"] if item["name"] == name)[field] = value
+                with self.subTest(name=name, field=field, value=value), self.assertRaises(gate.GateError):
+                    gate.verified_jobs(run, jobs, source_sha=HEAD, source_run="9001", attempt=1, reuse=False)
 
 
 class QualityEvidenceTests(unittest.TestCase):

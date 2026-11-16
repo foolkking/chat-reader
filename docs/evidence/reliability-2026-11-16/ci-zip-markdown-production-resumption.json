@@ -1,0 +1,387 @@
+{
+  "schema": "zip7134-cleanup-loaded-capacity-current-resumption/v1",
+  "recorded_at": "2026-11-16T11:05:58.623099+00:00",
+  "status": "exact_two_target_cleanup_complete_current2463_resumed_candidate_deployment_capacity_blocked",
+  "candidate_sha": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+  "current_revision": "2463f2985c367e681c3443b1b485e57f2925b313",
+  "current_schema": "20261112_0061",
+  "completed_ci": {
+    "workflow_run_id": 43820675687,
+    "attempt": 1,
+    "mode": "ordinary_full_empty_quality_source",
+    "all_six_jobs": "success",
+    "elapsed_seconds": 3467,
+    "independent_release_proof_sha256": "805e5dc71560fb76998656db2b2d2d4de0310949f80614dc9ea299bba0bf133c"
+  },
+  "approved_cleanup": {
+    "recorded_at": "2026-11-16T09:51:16.554566+00:00",
+    "explicit_exact_two_target_confirmation": true,
+    "removed_old_backup": "chat-reader-20261110T155821Z",
+    "old": {
+      "all_intents_and_completions_durable": true,
+      "deleted_files": 8,
+      "deleted_logical_bytes": 3653483938,
+      "removed_directories": 0
+    },
+    "cache": {
+      "all_intents_and_completions_durable": true,
+      "deleted_files": 59,
+      "deleted_logical_bytes": 230601374,
+      "removed_directories": 26
+    },
+    "cache_root_retained": "/var/cache/dnf",
+    "retained_backup": "chat-reader-20261116T024231Z",
+    "reported_post_available_bytes": 7452409856,
+    "independent_journal": {
+      "aggregate_sha256": "976725d1642836559cee85175706cd66e61867bcf398d8c5658a28accee72ad0",
+      "all_intents_and_completions_verified": true,
+      "node_operations": 93,
+      "records": 191,
+      "root_operations": 1
+    },
+    "independent_capacity_after_cleanup": {
+      "all_original_headroom_and_ceil_rounding_retained": true,
+      "backup_required_kb": 6185176,
+      "device_admissions": [
+        {
+          "available_kb": 7277592,
+          "device": "64771",
+          "margin_kb": 89310,
+          "required_kb": 7188282
+        }
+      ],
+      "images_required_kb": 698606,
+      "pre_staging_archive_and_transfer_required_kb": 304500,
+      "staged_original_shell_preflight_still_required": true
+    },
+    "retained_full_integrity": {
+      "recorded_at": "2026-11-16T09:58:08.920935+00:00",
+      "status": "retained_backup_full_integrity_and_recovery_images_verified_no_cleanup",
+      "backup": "chat-reader-20261116T024231Z",
+      "source_sha": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+      "schema": "20261108_0060",
+      "gzip_crc_count": 4,
+      "tar_stream_count": 4,
+      "postgres_toc_verified": true,
+      "protection": {
+        "all_bytes_inode_uid_gid_mode_mtime_atime_retained": true,
+        "bytes": 3359426,
+        "files": 8,
+        "no_move_restore_delete_or_scope_expansion": true,
+        "outside_runtime_cleanup": true,
+        "scope_sha256": "b217f35bf0889730a0d383e179e85b0f1cb3ad894f469b074b147976451e63f8"
+      },
+      "restore_images_retained": true,
+      "restoration_not_executed": true
+    }
+  },
+  "loaded_candidate": {
+    "recorded_at": "2026-11-16T10:41:06.133504+00:00",
+    "config_and_complete_rootfs_independently_verified": true,
+    "candidate_application_never_started": true,
+    "load_admission_failed_category": "original_remaining_capacity_refused",
+    "original_device_admissions": {
+      "64771": {
+        "available_kb": 6816780,
+        "deficit_kb": 23788,
+        "required_kb": 6840568
+      }
+    },
+    "original_256_512_128mib_headrooms_not_reduced": true,
+    "original_failed_load_journal_sha256": "612745437b10e735649dc32fb0af8cfd668513c32c319913d321ef73dfc13b19",
+    "load_completed_receipt_not_fabricated": true,
+    "docker_load_must_not_be_replayed": true
+  },
+  "authoritative_current_service_resumption": {
+    "recorded_at": "2026-11-16T10:56:00.485353+00:00",
+    "status": "unchanged_authoritative2463_schema0061_services_resumed_before_candidate_rollout",
+    "three_original_containers_resumed_once_in_order": [
+      "api",
+      "import-worker",
+      "web"
+    ],
+    "current_pointer_not_changed": true,
+    "no_old0060_worker_rollback_or_downgrade": true,
+    "all_stopped_source_volume_fingerprints_matched_before_reopen": true,
+    "original_worker_memory_bytes": 671088640,
+    "original_worker_memory_swap_bytes": 1342177280,
+    "only_task_owned_temporary_firewall_rules_and_empty_guard_removed": true,
+    "no_new_backup_migration_or_candidate_application_start": true
+  },
+  "independent_live_verification": {
+    "candidate_loaded_images": {
+      "api": {
+        "id": "sha256:6f9aeace2ff6615683ab76d5409f2e0b6fbf8453d1cbbf51517df777917a98c7",
+        "rootfs_sha256": "84a4fd40a5ce03dffb52accb0a759755d19d2117804e106745b04e33cf8f32e2"
+      },
+      "import-worker": {
+        "id": "sha256:6f9aeace2ff6615683ab76d5409f2e0b6fbf8453d1cbbf51517df777917a98c7",
+        "rootfs_sha256": "84a4fd40a5ce03dffb52accb0a759755d19d2117804e106745b04e33cf8f32e2"
+      },
+      "migrate": {
+        "id": "sha256:6f9aeace2ff6615683ab76d5409f2e0b6fbf8453d1cbbf51517df777917a98c7",
+        "rootfs_sha256": "84a4fd40a5ce03dffb52accb0a759755d19d2117804e106745b04e33cf8f32e2"
+      },
+      "web": {
+        "id": "sha256:9333a33acfa3da83deedf0e829f1cf528f6ebee0fc779491e6167d987c7c8937",
+        "rootfs_sha256": "a042d1bf4614a49570a39ab2afc5f5e447defc8d567e70dc621a850cbc57b004"
+      }
+    },
+    "container_count": 11,
+    "current_revision": "2463f2985c367e681c3443b1b485e57f2925b313",
+    "database": {
+      "active_execution_rows": 0,
+      "active_imports": 0,
+      "active_jobs": 0,
+      "advisory_locks": 2,
+      "available_local_hash_object_counts": {
+        "asset_objects": 3013,
+        "context_objects": 14,
+        "skill_objects": 0
+      },
+      "canonical_counts": {
+        "asset_objects": 3013,
+        "attachments": 3173,
+        "conversations": 103,
+        "message_versions": 7985,
+        "messages": 7602
+      },
+      "database_bytes": 2050513943,
+      "execution_control_exists": true,
+      "head": [
+        "20261112_0061"
+      ],
+      "lock_waits": 0,
+      "structure": {
+        "asset_column": {
+          "nullable": "YES",
+          "type": "timestamp with time zone"
+        },
+        "execution_columns": [
+          "slot",
+          "token",
+          "task_kind",
+          "task_id",
+          "attempt",
+          "started_at",
+          "progress_at",
+          "stop_requested_at",
+          "stop_reason",
+          "source_disposition",
+          "finished_at"
+        ],
+        "primary_constraints": 1,
+        "unique_constraints": 1
+      },
+      "worker": [
+        {
+          "age_seconds": 29.379223,
+          "heartbeat_at": "2026-11-16T11:02:10.66085+00:00",
+          "state": "idle"
+        }
+      ]
+    },
+    "http_checks": {
+      "actual_https_health_and_http_redirect_stdout_sha256": "9a7e31ea4b4008b09503126434e4d2d3b3a20a1c5ef61b3055f0bc8c6b4d0c7d",
+      "anonymous_statuses": {
+        "/api/app-info": 401,
+        "/api/capabilities": 401,
+        "/api/conversations": 401,
+        "/api/health": 200,
+        "/api/internal/diagnostics": 404,
+        "/api/projects": 401
+      }
+    },
+    "live_capacity": {
+      "all_original_256_512_128mib_margins_retained": true,
+      "device_admissions": {
+        "64771": {
+          "available_kb": 6808376,
+          "deficit_kb": 32192,
+          "margin_kb": -32192,
+          "required_kb": 6840568
+        }
+      },
+      "live_observation_only_fresh_stopped_backup_admission_still_required": true,
+      "raw_volume_kb": {
+        "assets": 1441972,
+        "exports": 752,
+        "imports": 1203712,
+        "offline": 1274172
+      }
+    },
+    "no_cleanup_container_creation_or_lifecycle_write_image_load_backup_migration_or_replay": true,
+    "only_original_task_firewall_fence_and_empty_guard_absent": true,
+    "original_failed_load_journal_retained": true,
+    "other_seven_containers_and_postgres_unchanged": true,
+    "protection": {
+      "bytes": 3359426,
+      "exact_bytes_all_metadata_and_outside_runtime_mounts_rechecked": true,
+      "files": 8,
+      "scope_sha256": "b217f35bf0889730a0d383e179e85b0f1cb3ad894f469b074b147976451e63f8"
+    },
+    "recorded_at": "2026-11-16T11:02:40.137798+00:00",
+    "retained_backup": {
+      "full_sha_gzip_tar_toc_previously_verified_not_reexecuted": true,
+      "members_metadata_and_control_sha_rechecked": true,
+      "name": "chat-reader-20261116T024231Z",
+      "schema": "20261108_0060",
+      "source_sha": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2"
+    },
+    "runtime": {
+      "api": {
+        "config_sha256": "5d495ce6b3303bb15ca36559ddd7c7325dbc15eed69262b80e6c33996fa506d4",
+        "health": "healthy",
+        "host_config_sha256": "cddbbfa8abec06c3736fe066ffba1de68799b27222b665c063cd7120910ed830",
+        "identity_binding_sha256": "efcb6349d1a3c9d937271bafe0a1a807b95e28bf2d26d87d83248541d900bbaf",
+        "image_id": "sha256:8e723e0efc61c74f55aa41b934520b6cc97925904a6e6060a10d5ffc53479bc0",
+        "memory_limit_bytes": 0,
+        "memory_swap_limit_bytes": 0,
+        "restart_count": 0,
+        "source_sha": "2463f2985c367e681c3443b1b485e57f2925b313",
+        "started_at": "2026-11-16T10:53:28.793649702Z"
+      },
+      "import-worker": {
+        "config_sha256": "c5438b9b49dd833054bd05b8a08712ddff7e9a06e4f93babce09b0705f3506de",
+        "health": "fresh_database_heartbeat",
+        "host_config_sha256": "976a48ba70102651dc01b7e6f264592c9dc1445fe19f9c7c77c25c6fa12d0619",
+        "identity_binding_sha256": "b53c90c07413bdb0c59bdab04ec5a2d38ebbd8a4c11c370845536be7b18174e2",
+        "image_id": "sha256:8e723e0efc61c74f55aa41b934520b6cc97925904a6e6060a10d5ffc53479bc0",
+        "memory_limit_bytes": 671088640,
+        "memory_swap_limit_bytes": 1342177280,
+        "restart_count": 0,
+        "source_sha": "2463f2985c367e681c3443b1b485e57f2925b313",
+        "started_at": "2026-11-16T10:54:36.221597067Z"
+      },
+      "web": {
+        "config_sha256": "fa715ba1831ebde6344b6ef969446a163512f0563b425861d710c94adb4085cf",
+        "health": "healthy",
+        "host_config_sha256": "8c2ee3e70c1c6cfbcf977460d3f7417f551bb77b62f09f2f6e4a62ead0015adf",
+        "identity_binding_sha256": "74ec950b679cdedfe71883b208689cee3d95e18115a286f768eb1af4a75d10e4",
+        "image_id": "sha256:89856aaa3a5a7203f7d4cc2e60bd8f93681dee07e86e53fa07bb2a89daf2b3d8",
+        "memory_limit_bytes": 0,
+        "memory_swap_limit_bytes": 0,
+        "restart_count": 0,
+        "source_sha": "2463f2985c367e681c3443b1b485e57f2925b313",
+        "started_at": "2026-11-16T10:54:50.371827553Z"
+      }
+    },
+    "schema": [
+      "20261112_0061"
+    ],
+    "source_sha": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+    "status": "independent_current2463_schema0061_resumption_verified_candidate_not_deployed",
+    "transmission_file": {
+      "bytes": 177589998,
+      "deletion_authorized": false,
+      "not_mounted_into_any_service": true,
+      "server_copy_still_present": true,
+      "sha256": "c17ad4264007606972259812f84ea003596a2e6e2b570e59df7064673c8aa02c",
+      "single_link_root_owned": true
+    },
+    "user_writes_may_resume_no_frozen_volume_or_count_equality_required": true
+  },
+  "preserved_read_only_method_failure": {
+    "category": "original_eight_file_protection_cycle",
+    "cause": "The handoff summary mistranscribed the original protection cycle. A new exclusive read-only observer uses the byte-bound context and actual original complete receipt; the failed observer/result remain unchanged.",
+    "no_new_server_write_by_either_observer": true,
+    "candidate_or_data_failure_not_claimed": true
+  },
+  "remaining": {
+    "extra_transmission_file_cleanup_authorized": false,
+    "only_proposed_server_path": "/opt/chat-reader/releases/71342129b861925692f5ea587d2f3ab2fa3404f9/chat-reader-images.tar.gz",
+    "verified_local_complete_archive_retained": true,
+    "archive_sha256": "c17ad4264007606972259812f84ea003596a2e6e2b570e59df7064673c8aa02c",
+    "archive_bytes": 177589998,
+    "fresh_actual_capacity_admission_still_required": true,
+    "new_cycle_and_baseline_required_after_current_resumption": true,
+    "no_replay_of_old_hold_load_or_old2463_numbered_operations": true,
+    "new_independent_stopped2463_schema0061_five_component_backup_required": true,
+    "candidate_clean_attachment_sha_audit_executed": false,
+    "candidate_not_deployed": true,
+    "ci_optimization_remains_isolated_until_zip_deployment": true,
+    "product_acceptance_owned_by_user": true
+  },
+  "original_receipt_sources_sha256": {
+    "approved_cleanup_dispatch": {
+      "file": "approved-cleanup-02-dispatch.json",
+      "bytes": 1151,
+      "sha256": "010b1f0f2de60eba0e541aeffdf5ff7de89b4ee439775fbbbdd32337d3970ea7"
+    },
+    "approved_cleanup_completed": {
+      "file": "approved-cleanup-02-result.json",
+      "bytes": 1957,
+      "sha256": "a31c8e2cd31e9ad4cb3502301a26652f0b8d4b16684fb157bd3f4302e9a94288"
+    },
+    "independent_post_cleanup": {
+      "file": "independent-post-cleanup-01.json",
+      "bytes": 30103,
+      "sha256": "c98b028b4852bf7570d7f2382a1fa095643bb83f70bddf0c2554d45d7c9baaf2"
+    },
+    "exact_staging_completed": {
+      "file": "stage7134-completed.json",
+      "bytes": 24425,
+      "sha256": "1285bdb64820909a12f6045c374f4469b56448ca9c4c3383fa00ae278ff3ef2e"
+    },
+    "read_only_new_plan": {
+      "file": "zip7134-plan-result.json",
+      "bytes": 3004,
+      "sha256": "e6149008b671e6eee4e7726835f28833cc1fa5ee7ce521d527c4a91da75a743a"
+    },
+    "new_ingress_hold_and_stopped_sources": {
+      "file": "zip7134-hold-result.json",
+      "bytes": 3527,
+      "sha256": "7dfafe7cdc4ba55368d823f568bf1e30611beb2e6e1c18277c7985313e326904"
+    },
+    "actual_failed_load_admission": {
+      "file": "zip7134-load-result.json",
+      "bytes": 663,
+      "sha256": "82cdb4894958fad7528fafc9e7ad93a2d1a08ac9708ece5469cac1403bd62d56"
+    },
+    "independent_loaded_images_capacity_failure": {
+      "file": "loaded-capacity-independent-01.json",
+      "bytes": 8810,
+      "sha256": "81dd2996e9dfd8d12269cacbeb167ffcb2e312504139f64d1c8f2b395e65c61f"
+    },
+    "one_current_resumption_dispatch": {
+      "file": "current-service-resumption-01-dispatch.json",
+      "bytes": 220,
+      "sha256": "6207a8a7739fb025023e25ee4c34bd0ff8bfef1c3086593b7384f8465973b874"
+    },
+    "one_current_resumption_completed": {
+      "file": "current-service-resumption-01-result.json",
+      "bytes": 5865,
+      "sha256": "b1107cb0732b334241553e0231fecd60ab47aa5ebbf1d14302df7dceb009841f"
+    },
+    "original_independent_read_failure": {
+      "file": "current-resumption-independent-01.json",
+      "bytes": 380,
+      "sha256": "808d43ea6c7c12b6aa7a65948903aaf53833d242f96098fc6f82d96503cd4a4b"
+    },
+    "corrected_independent_read_completed": {
+      "file": "current-resumption-independent-02.json",
+      "bytes": 6903,
+      "sha256": "9e4385f40f5d9e87ca190c841135f92dc004250566ea7a92de32fc6bf4b1c642"
+    },
+    "corrected_read_only_driver": {
+      "file": "verify_current_service_resumption_02.py",
+      "bytes": 14887,
+      "sha256": "cba8543b85da9afd994d2cd86869e6d2dd4ffa085cd18d9f37025855b9637a91"
+    },
+    "original_read_only_driver": {
+      "file": "verify_current_service_resumption.py",
+      "bytes": 14884,
+      "sha256": "210d09beac2e0f5749e53b766b98925661b477405a6e14bc91fe03b81871ed66"
+    }
+  },
+  "privacy": {
+    "no_business_content_ids_tokens_private_storage_keys_credentials_or_environment_values": true,
+    "private_context_not_archived": true
+  },
+  "this_closeout": {
+    "new_ci_dispatch": false,
+    "git_commit_or_push": false,
+    "new_product_or_ci_source_changes": false,
+    "existing_evidence_bytes_preserved": true
+  }
+}

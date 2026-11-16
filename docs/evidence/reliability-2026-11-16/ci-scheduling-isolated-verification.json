@@ -1,0 +1,101 @@
+{
+  "schema": "chat-reader-isolated-ci-optimization-verification/v1",
+  "recorded_at": "2026-11-16T07:54:55.057477+00:00",
+  "base_head": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+  "status": "local_verified_candidate_not_submitted_or_full_ci_accepted",
+  "original_current_ci_source_and_user_workspace_preserved": true,
+  "deployment_preparation_deferred_until_current_ci_success": true,
+  "tracked_changed_count": 9,
+  "new_source_file_count": 6,
+  "source_file_sha256": {
+    ".github/workflows/build-release-images.yml": "be66cd78f7be80cd4090e99f0018cbceffd37d3edc7c9027522a8e941807d57f",
+    "apps/web/e2e/release-security-baseline.spec.ts": "0641d9c7f99053033528e94086ec4c103824769552b7f2d17d67e3549ed56bab",
+    "apps/web/playwright.config.ts": "2feda759ef7610614be6ce5e49b91ba4d56891581564b525725ba6053b9337cd",
+    "scripts/ci/image-only-quality-reuse.py": "28e6e881fe708129fbf380fda98668884f5accbc2560e7ff5ab5f1199adc838d",
+    "scripts/ci/release-image-sources.test.mjs": "7e5b1e0013078c98b1607929d8a7a5e2f966a71fddb6c4b088b2b84c31eafe41",
+    "scripts/ci/settings-completion-timing.test.mjs": "3f2df94058838376172c3e371fdd6c9da13e92744e938c56980d63b100351318",
+    "scripts/ci/test_image_only_evidence_transport.py": "566050737df83912a26a481617da9a19dae1ca7bd382c1862d2e1fc83152345d",
+    "scripts/ci/test_image_only_quality_reuse.py": "22b2f0cfa34542f4cafd42d81ed28a654d5b22bd8a812b940ad3adc308465ee3",
+    "scripts/ci/test_image_only_selector_lineage.py": "4a636645ac86e600e4107c5e3315a0a4116bc3e3500bc662e3ff55b8a81674e1",
+    ".github/workflows/settings-browser-shard.yml": "a79e420a367a810a64909f7b8c10ab703b8dbc098cf3c379cb7d21f77f6c7726",
+    ".github/workflows/web-quality.yml": "caec55327cc7d1cf576fe95d01ad816310340198b7fe3e161c531b772917f71d",
+    "scripts/ci/quality-scheduling-contract.json": "ba93dfb17ac00c68020794de8e30d22b2948d1165b8ee7ee40ab2c0e6d2eafe2",
+    "scripts/ci/quality-shard-evidence.mjs": "1b00a4ca26183cee214d99489f3e8a67eee34514e59e9806c782c1c0bd78b896",
+    "scripts/ci/quality-shard-evidence.test.mjs": "96009baf5481b4219d625d76dc81390ac0c47c5b0450bb038804e6331267cf4a",
+    "scripts/ci/test_quality_scheduling.py": "ec8e2f20efa0fdb3d8040af788ea4c972e8e95f15dfeb1de326378a67be65204"
+  },
+  "tests": {
+    "ci_node": {
+      "executed": 150,
+      "passed": 150,
+      "skipped": 0
+    },
+    "scheduling_python": {
+      "executed": 14,
+      "passed": 14
+    },
+    "release_policy_python": {
+      "executed": 102,
+      "passed": 102
+    },
+    "source_only_playwright": {
+      "executed": 53,
+      "passed": 53,
+      "skipped": 0
+    },
+    "genuine_native_blob_merge": {
+      "actual_executed_cases": 4,
+      "shard_cases": [
+        2,
+        2
+      ],
+      "too_few_cases_rejected_for_release470": true
+    },
+    "original_settings_collection": {
+      "collected": 470,
+      "shard_collections": [
+        235,
+        235
+      ],
+      "original_full_id_set_retained": true,
+      "not_browser_execution_acceptance": true
+    },
+    "actionlint": {
+      "version": "1.7.12",
+      "passed": true,
+      "original_failure_retained": true,
+      "optional_shellcheck_and_pyflakes_not_claimed": true
+    },
+    "lint": true,
+    "typecheck": true
+  },
+  "original_failures_preserved": [
+    "obsolete_six_job_source_assertions",
+    "contract_CRLF_digest_zero_collection_failure",
+    "actual_native_merge_project_representation_mismatch",
+    "invalid_runner_context_in_job_env"
+  ],
+  "remaining": [
+    "fresh_complete_exact_candidate_ci_and_independent_original_resource_and_native_artifact_checks",
+    "actual_wall_time_comparison_not_inferred_from_collection",
+    "reconcile_with_master_after_current_zip_release_without_mixing_sources"
+  ],
+  "evidence_sha256": {
+    "source-controls-red.log": "c3f1b3300198af1a95578938fac09084ce81c2f0625f58c57fe8d1e773f30646",
+    "scheduling-resume-initial.log": "a9e5ba33a47e0ffdb04f4c83cb5e5415639c51b44cab3c7eb5eaa906be66ca37",
+    "ci-node-green-1.log": "f9873b961a81d2a2a53d4dfafe614cdfc2cc9180adbc6e3554659648e55e3254",
+    "actionlint-1.log": "32c3b1d7cea15c6d1f78c13107bd01d0467139cc87d6ebb6daa0682fdad65d8b",
+    "ci-node-all-3.log": "c266ea117a7c577fbc5befb4eac0f6aa9a1116b9caec10128b0c0c340d84d8e4",
+    "scheduling-green-2.log": "3c258f20aa5ead34f8b3775e6fd4ba25a09ec7ebb2f8bf62417e2dd3c4ed278b",
+    "policy-green-2.log": "e225ea453444a0fc9f653766ae14f6f8e0ce053b5dc8bb3fde56812a6f2853fc",
+    "source-only-report.json": "76616dee671bb861d83dd27264d312b052bda82d9632793728d91c23c3e72641",
+    "actionlint-2.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lint-1.log": "7e62a21d019beab744bdbd2327f1284dc14130dbfc99b82c2ed5f1d52cca59a8",
+    "typecheck-1.log": "5fe25d97739cfe8fe169b72ae40d398e5d1dd7b47fbf4794d961a08cffff3224",
+    "settings-full-collection.json": "c1c8ea093df37dede02c51ce6c11d1102aeb9ee32908a02714162810deae8e5f",
+    "settings-shard-1-collection.json": "f4446eece7082edf0aafce8f0b0c93189285fa36e9fb56137940fead8c9f3e4c",
+    "settings-shard-2-collection.json": "c5aa75f17d336af09a6a7dfb5152378a4baa6824c6db74bf623f14dc9edf0c12"
+  },
+  "frozen_contract_lf_sha256": "ba93dfb17ac00c68020794de8e30d22b2948d1165b8ee7ee40ab2c0e6d2eafe2",
+  "no_task_automation_new_ci_dispatch_production_action_or_user_source_replay": true
+}

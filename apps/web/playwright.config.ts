@@ -25,6 +25,15 @@ const gateEvidenceReporter = process.env.PLAYWRIGHT_GATE_ID
       outputFile: `test-results/${gateId}/gate-evidence.json`,
     }]] as const
   : [];
+// Only isolated Settings shards enable these genuine Playwright reporters.
+// Their native blob/JSON results are independently merged and compared with
+// the full --list inventory; a count-only gate cannot prove shard coverage.
+const blobReporter = process.env.PLAYWRIGHT_BLOB_OUTPUT_DIR
+  ? [["blob", { outputDir: process.env.PLAYWRIGHT_BLOB_OUTPUT_DIR }]] as const
+  : [];
+const jsonReporter = process.env.PLAYWRIGHT_JSON_OUTPUT_NAME
+  ? [["json"]] as const
+  : [];
 
 export default defineConfig({
   testDir: "./e2e",
@@ -34,7 +43,7 @@ export default defineConfig({
   expect: { timeout: 60_000 },
   fullyParallel: false,
   workers: 1,
-  reporter: [["list"], ...gateEvidenceReporter],
+  reporter: [["list"], ...gateEvidenceReporter, ...blobReporter, ...jsonReporter],
   use: {
     baseURL,
     // Use Playwright's pinned full Chromium/new headless mode. The separate

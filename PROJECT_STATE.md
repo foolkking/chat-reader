@@ -1,6 +1,44 @@
 # Project State
 
-## Latest: ZIP Markdown-resource fix before resuming CI optimization — 2026-11-16
+## Latest: ZIP Markdown attachment fix deployed; CI scheduling optimization resumes — 2026-11-16
+
+The ZIP importer now defaults to the outermost Markdown layer after safe wrapper
+normalization; deeper Markdown files are resources unless referenced or explicitly
+enabled as a body. The source contract and compatibility boundaries are in the
+[archive import contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16).
+
+Commit **71342129** passed ordinary full CI **43820675687/attempt1** (all six jobs,
+57m47s) after a fresh real 55-minute UTC/monotonic wait. Independent release
+artifact verification is preserved in
+[CI evidence](docs/evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json).
+Production switched atomically to **71342129 / schema 20261112_0061** at
+**2026-11-16 21:46 +08:00**; independent image/runtime, health, TLS, backup and
+protection verification passed at **21:49 +08:00**. No migration ran. The worker
+remains at 640 MiB memory / 1280 MiB swap / 45-second stop timeout. The exact
+release record is [here](docs/evidence/reliability-2026-11-16/ci-zip-markdown-production-release.json).
+
+The approved single image-transfer file was deleted only after its full identity
+and authorization were rechecked; its complete local verified copy remains.
+Post-deletion capacity and a fresh continuation admission passed the original
+margins. A new stopped 2463/0061 five-component backup and a read-only, complete,
+zero-issue attachment audit (3,027 SHA-verified objects) passed. The prior
+11/16 backup and all eight protected files remain verified. An earlier failed
+image-load receipt remains a failure; images were not reloaded to fabricate
+success. The backup phase's local wrapper returned no projection, but the remote
+completion receipt was independently verified and was not retried.
+
+CI scheduling optimization is the remaining engineering task. The reviewed
+15-file proposal passes Node152, Python15+102, source-only53, lint/typecheck and
+Actionlint1.7.12 locally. Its strict native merge binds the original60 Settings
+files and54 body-timeout declarations; no original case/deadline is changed.
+[Scoped proof](docs/evidence/reliability-2026-11-16/ci-scheduling-verification.json).
+There is no optimized complete-CI run or measured saving yet. Selectively
+commit/push, run ordinary full CI with empty quality source, perform a new real
+55-minute UTC/monotonic wait, self-check failures and measure actual wall time.
+User owns product acceptance; do not infer acceptance from deployment or CI.
+The [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) tracks the work.
+
+## Historical checkpoint before 71342129 production deployment — 2026-11-16
 
 The user paused CI optimization to prioritize Markdown attachments in ZIPs,
 including arbitrarily named auxiliary directories. New generic inspection
@@ -9,21 +47,46 @@ deeper Markdown is excluded unless referenced as a file or explicitly enabled
 as a body. Existing review, dedicated exports and older catalog choices remain.
 [Current source contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#markdown-resource-selection--source-candidate-2026-11-16).
 
-Five API runtime files and scoped tests also close actual v1 source/partial
-commit gaps; original resource, CRC/scanner, ownership and rollback gates stay.
-CI scheduling changes are byte-preserved outside the worktree, with the original
-six-job workflow and its source proof restored together. Final 31-file API
-verification passes615/6 original environment skips, including all98 new ZIP
-cases; fresh PostgreSQL17 passes36/0skip. All1424 inputs,19 protected files and
-the user build cache are verified. [Scoped evidence](docs/evidence/reliability-2026-11-16/ci-zip-markdown-verification.json).
-No new commit, CI, image or deployment is accepted yet. Production's last
-verified identity is **2463f298 / 20261112_0061**.
+Committed/pushed **71342129 / CI43820675687 attempt1**, ordinary full mode with
+empty quality source, passes all six jobs in **57m47s** after the new real
+55-minute UTC/monotonic wait. API7007/3 original skips executes all213 portable
+controls, including ZIP98; Web14, mounted45, Settings470+restore1, Reader9/27 cold
+and all five original memory gates pass. Official artifacts, OCI graph/layers,
+393 API files and Web revision are independently verified.
+[Byte-preserved release proof](docs/evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json).
 
-Finish this fix, selectively commit/push ordinary full CI with empty quality
-source, perform a new real55-minute UTC/monotonic wait and independent artifact
-checks, then a fresh deployment. Only afterward restore/reconcile the paused CI
-optimization. Do not replay the completed2463 release or interrupt new imports;
-product acceptance remains user-owned. The
+Production remains **2463f298 / 20261112_0061**, not this candidate. The user
+confirmed the two exact cleanup targets: November10 backup removal and dnf cache
+contents only. Cleanup and independent191-record journal/full retained-backup
+verification pass; November16 backup, all service/recovery images and eight
+protected files remain. New staging/hold pass and7134 images are fully loaded,
+but the unchanged post-load capacity gate fails. The three ORIGINAL current
+containers resume once; the task-only ingress fence and empty guard are removed.
+Independent **19:02 +08:00** verifies11 containers, real health/heartbeat,
+anonymous/TLS boundaries, configuration and all eight protected files.
+Available6,808,376KiB versus required6,840,568KiB still lacks **31.4MiB**.
+Only the verified169.4MiB server transmission file is proposed for NEW approval;
+it has not been deleted. No candidate application or migration ran; a new
+stopped0061 backup and candidate clean-attachment audit are still required.
+[Cleanup, retained failure and current resumption](docs/evidence/reliability-2026-11-16/ci-zip-markdown-production-resumption.json).
+
+The pre-cleanup candidate passes74 native Linux controls/0skip;20 overlapping
+pure controls run on the actual Python3.6.8 host. It uses immutable stdlib models,
+strict UTC parsing and `listdir(fd)`, not unavailable dataclasses/fromisoformat/
+scandir(fd), backports or a pathname fallback. Original fixture/loader failures
+remain. A new17:26 +08:00 metadata-only preview verifies11 unchanged containers,
+idle/zero-active0061 and the two exact trees. Available3,569,446,912 bytes versus
+required7,360,783,109 still fails; predicted post-cleanup margin93,138,171 bytes
+is not actual reclamation or admission. That preview's confirmation remains
+false; the later approved cleanup has its own completed receipt above.
+[Controls and fresh read-only preview](docs/evidence/reliability-2026-11-16/ci-zip-markdown-cleanup-controls.json).
+
+CI optimization is isolated at7134:15 source files and their logs are reverified,
+but Settings shard collection is not browser acceptance and savings are unmeasured.
+[Local-only proof](docs/evidence/reliability-2026-11-16/ci-scheduling-isolated-verification.json).
+Resume it only after this ZIP fix's fresh deployment. Do not replay completed2463
+operations, interrupt new imports or lower capacity/resource gates; product
+acceptance remains user-owned. The
 [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns remaining work.
 
 ## Earlier: 2463f298 / schema0061 deployed; CI scheduling optimization — 2026-11-16

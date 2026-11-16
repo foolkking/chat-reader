@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "status": "71342129_deployed_and_independently_verified_product_acceptance_user_owned",
+  "recorded_at": "2026-11-16T21:49:18.796036+08:00",
+  "release": {
+    "source_revision": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+    "previous_live_revision": "2463f2985c367e681c3443b1b485e57f2925b313",
+    "release_cycle": "48a4aa8477c6ab26a3c185a6f9a58df23533e3bd560f6c86494aa832c4d73914",
+    "protocol": "loaded7134-no-migration-continuation/v1",
+    "pointer_advanced_atomically": true,
+    "pointer_directory_fsync_verified": true,
+    "ingress_reopened": true,
+    "no_migration": true,
+    "schema_head": "20261112_0061",
+    "finalized_at": "2026-11-16T21:46:18.973934+08:00",
+    "independently_verified_at": "2026-11-16T21:49:18.796036+08:00",
+    "verification_status": "independent_new7134_live_release_images0061_health_tls_backups_protection_verified",
+    "api_worker_migrate_image_config_id": "sha256:6f9aeace2ff6615683ab76d5409f2e0b6fbf8453d1cbbf51517df777917a98c7",
+    "web_image_config_id": "sha256:9333a33acfa3da83deedf0e829f1cf528f6ebee0fc779491e6167d987c7c8937",
+    "api_worker_web_host_configuration_exact_match": true,
+    "start_order": [
+      "api",
+      "import-worker",
+      "web"
+    ],
+    "api_web_health_and_worker_heartbeat_verified": true,
+    "worker_limits": {
+      "memory_mib": 640,
+      "swap_mib": 1280,
+      "stop_timeout_seconds": 45
+    },
+    "https_tls_and_http_redirect_verified": true,
+    "anonymous_statuses": {
+      "health": 200,
+      "app_info": 401,
+      "capabilities": 401,
+      "conversations": 401,
+      "projects": 401,
+      "internal_diagnostics": 404
+    }
+  },
+  "ci": {
+    "run_id": "43820675687",
+    "attempt": 1,
+    "mode": "ordinary_full",
+    "quality_source": "",
+    "jobs": 6,
+    "all_jobs_success": true,
+    "elapsed_seconds": 3467,
+    "fresh_wait_seconds": 3300,
+    "fresh_utc_and_monotonic_wait_completed": true,
+    "independent_ci_proof": {
+      "path": "ci-zip-markdown-independent-release.json",
+      "bytes": 34511,
+      "sha256": "805e5dc71560fb76998656db2b2d2d4de0310949f80614dc9ea299bba0bf133c"
+    }
+  },
+  "approved_transfer_disposal": {
+    "one_exact_file_authorized_and_deleted": true,
+    "bytes": 177589998,
+    "sha256": "c17ad4264007606972259812f84ea003596a2e6e2b570e59df7064673c8aa02c",
+    "local_complete_verified_copy_retained": true,
+    "no_other_transfer_or_image_cleanup": true,
+    "post_disposal_actual_capacity_kib": {
+      "available": 6980812,
+      "required": 6840592,
+      "margin": 140220
+    },
+    "continuation_fresh_capacity_kib": {
+      "available": 6971480,
+      "required": 6840624,
+      "all_original_margins_retained": true
+    }
+  },
+  "attachment_audit": {
+    "read_only": true,
+    "complete": true,
+    "applicable": true,
+    "clean": true,
+    "issue_count": 0,
+    "sha256_verified_objects": 3027,
+    "assets": 3013,
+    "contexts": 14,
+    "skills": 0
+  },
+  "backup": {
+    "new_stopped_source": "2463f2985c367e681c3443b1b485e57f2925b313",
+    "new_backup_name": "chat-reader-20261116T124202Z",
+    "schema": "20261112_0061",
+    "component_count": 5,
+    "member_count": 8,
+    "gzip_crc_count": 4,
+    "tar_stream_count": 4,
+    "postgres_toc_verified": true,
+    "no_old_backup_hardlinks": true,
+    "restore_executed": false,
+    "remote_completion_receipt_sha256": "64bf283b9e79fc8f1c85360c492a3a431ec998ecabba65368c8c0ffb3312108f",
+    "local_phase_projection": {
+      "exit_code": 4294967295,
+      "projection_missing": true,
+      "remote_success_receipt_independently_verified": true,
+      "remote_success_receipt_sha256": "64bf283b9e79fc8f1c85360c492a3a431ec998ecabba65368c8c0ffb3312108f",
+      "retry_performed": false
+    },
+    "previously_retained_backup": {
+      "name": "chat-reader-20261116T024231Z",
+      "source": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+      "schema": "20261108_0060",
+      "full_integrity_reverified": true
+    }
+  },
+  "protected_files": {
+    "count": 8,
+    "bytes": 3359426,
+    "scope_sha256": "b217f35bf0889730a0d383e179e85b0f1cb3ad894f469b074b147976451e63f8",
+    "all_bytes_and_metadata_retained": true,
+    "moved_restored_deleted_or_scope_expanded": false
+  },
+  "old_failed_load": {
+    "preserved_as_failure": true,
+    "converted_to_success_or_replayed": false,
+    "docker_load_repeated": false
+  },
+  "user_acceptance": {
+    "owner": "user",
+    "performed_by_codex": false,
+    "real_user_zip_replayed": false,
+    "real_device_or_user_workflow_acceptance_performed": false,
+    "production_backup_restore_drill_performed": false
+  },
+  "source_evidence": {
+    "ci_independent_release": "ci-zip-markdown-independent-release.json",
+    "new_loaded_continuation_backup_receipt_sha256": "64bf283b9e79fc8f1c85360c492a3a431ec998ecabba65368c8c0ffb3312108f",
+    "local_backup_wrapper_result": "new_continuation_delivery_without_projection_do_not_replay",
+    "release_finalize_and_independent_verify_exit_code": 0
+  }
+}

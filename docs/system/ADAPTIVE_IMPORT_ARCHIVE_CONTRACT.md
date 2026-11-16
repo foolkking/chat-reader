@@ -37,13 +37,18 @@ Stale ZIP classification requests return the refresh conflict before memory
 admission on both lanes; non-ZIP commits do not enter ZIP source verification.
 No migration, `.cr`, Share, Dexie or portable-package change is involved.
 
-This source is not yet a new CI or deployment acceptance. The last independently
-verified production identity is2463f298/schema0061. See the
-[single ledger](SMALL_HOST_IMPROVEMENT_STATUS.md) for current progress and the
+Exact71342129/43820675687 ordinary full CI and independent artifact verification
+now pass, including all98 ZIP controls within213 portable cases and the original
+five exact-image memory gates.
+[Independent release proof](../evidence/reliability-2026-11-16/ci-zip-markdown-independent-release.json).
+71342129 is now deployed at schema0061 and independently verified; the
+[release evidence](../evidence/reliability-2026-11-16/ci-zip-markdown-production-release.json)
+records the exact runtime/backup/health scope. User product acceptance remains
+user-owned. See the [single ledger](SMALL_HOST_IMPROVEMENT_STATUS.md) for current progress and the
 [final scoped verification](../evidence/reliability-2026-11-16/ci-zip-markdown-verification.json)
 for98 actually passed ZIP controls,615 related API passes/6 original local
 skips and36 real PostgreSQL passes. These scopes and older checkpoints overlap;
-they do not replace the fresh full CI or exact-image resource gates.
+the later full-CI proof, not their sum, establishes candidate technical acceptance.
 
 ## Recovery extension — released 2026-11-11
 

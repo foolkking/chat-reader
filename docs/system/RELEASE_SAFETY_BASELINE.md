@@ -1,5 +1,28 @@
 # Release Safety Baseline
 
+## Current full-CI scheduling contract — source candidate 2026-11-16
+
+Ordinary empty-quality-source mode now requires eight quality jobs: the complete API suite,
+two isolated Web shards plus strict fourteen-gate aggregation, two isolated Settings shards plus
+strict470-case native aggregation and original fresh-instance restore1, and the independent Reader
+workflow. Reader consumes no API artifact, so its redundant API wait is removed. Builder keeps the
+four original family dependencies and independently verifies all eight official job identities;
+the independent consumer repeats source/producer proof. Full mode has ten total jobs, while the
+old fixed six-job image-only authorization/source/lineage remains narrow and unchanged.
+
+Every original command/fixture/native memory boundary remains frozen in
+`scripts/ci/quality-scheduling-contract.json`; Settings native reports must have exact case-ID union,
+one passing attempt with no retry/skip/failure, and matching merged blob/JSON attempts. Native
+--list does not run body-level setTimeout: the original60 source hashes and54 original declarations
+bind the exact per-case runtime limit rather than assuming the default90s or relaxing all limits.
+The actual four-case native control exercises this difference; it cannot replace470-case execution.
+
+[Scoped local verification](../evidence/reliability-2026-11-16/ci-scheduling-verification.json) is not
+optimized-CI acceptance or a measured saving. Run ordinary full CI once, wait a new real3300 seconds
+on both UTC and monotonic clocks, self-check/repair failures and independently verify native/resource
+artifacts before claiming success. Product acceptance remains user-owned. Production is already
+71342129/schema0061; these CI-only changes do not require an application redeploy.
+
 ## Current release execution boundary — 2026-11-15
 
 The latest continuous repair/release authorization supersedes historical

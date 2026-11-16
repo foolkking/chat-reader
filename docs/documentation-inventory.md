@@ -1,6 +1,55 @@
 # Markdown 文档台账
 
-## ZIP Markdown附件优先修复与CI工作隔离 — 2026-11-16
+## 最新文档状态：71342129部署完成，CI优化继续 — 2026-11-16
+
+将项目当前事实从部署前阻断同步为71342129/schema0061已部署、独立验证；新增脱敏发布证据
+`ci-zip-markdown-production-release.json`（4,958 bytes，SHA-256 `fd17ce5d79dbe32ac0c087833d472e9d4256951dde855316415d85b8c9cc7d5a`）。
+同步Project State、导航、Small Host唯一台账、部署指南、部署环境合同、测试入口、证据索引及
+Archive合同；旧部署前记录保留并明确标为历史。旧JSON与用户原始工作区输入不改写。
+产品验收仍由用户负责；CI调度优化尚无新完整CI收益实测，不能宣称已提速。
+
+## CI调度执行合同同步 — 2026-11-16
+
+接回并审查15文件CI-only候选，新增`ci-scheduling-verification.json`，同步当前状态、导航、测试、
+唯一台账、证据入口及Release Safety合同。全模式固定8 quality/10 total；Web14完整聚合，Settings470
+真实blob/JSON逐例聚合并保留独立restore1，Reader不再等待不消费的API产物。新增原60文件SHA与54处
+测试体超时绑定，避免--list默认时间误判；未更改原测试或资源预算。新完整CI/55分钟等待与实际耗时
+比较仍待执行，不宣称CI通过或提速；原历史JSON、原本机运行失败和用户资料不改。
+
+## 部署前文档同步：清理完成、现役恢复、fresh发布待容量（历史）— 2026-11-16
+
+定点更新Project State、导航、部署/环境、测试、证据入口和唯一Small Host台账；
+不重整README/AGENTS、Archive源码合同、其他任务资料或历史JSON。
+新增`ci-zip-markdown-production-resumption.json`（15,632 bytes），记录两项具体
+确认后的清理、独立191条journal/保留备份复核、候选完整加载后的原容量拒绝、
+唯一现役2463/0061恢复与19:02独立运行/八文件检查；首次只读cycle抄错失败保留。
+最新实际差31.4MiB，额外169.4MiB传输包清理尚未获准；不扩大授权、放宽门槛、
+重放hold/load/旧2463操作或伪造load成功。新独立0061备份/clean审计/候选部署
+仍未执行；CI优化继续隔离。现有ci-zip-markdown-*的-text规则覆盖新证据，
+未修改产品/CI源码、提交/推送或派发新CI，用户cache及原证据字节保持。
+
+### 前一ZIP完整CI/保留备份同步（清理确认前历史）
+
+定点更新Project State、导航、Archive合同、部署/环境、测试、证据入口和唯一
+Small Host台账；README/AGENTS、原历史回执和其他任务资料不重整。
+新增`ci-zip-markdown-independent-release.json`原字节保存34,511-byte证明：
+7134/43820675687六job全绿、57分47秒和真实新55分钟双时钟等待，原全部质量/
+资源/OCI/内嵌源码通过。原first-read的in_progress与失败回执不改写。
+新增`ci-zip-markdown-production-readiness.json`只投影只读容量/保留备份/恢复镜像/
+八文件保全及首guard失败；原则只留一份旧备份授权不冒充两项具体清理确认。
+约3.58GB可用对7.36GB原预算仍拒绝，没有清理、停服、恢复、迁移或部署。
+新增`ci-scheduling-isolated-verification.json`原字节保存7134/15文件候选的本地证明，
+归档时重验源文件和日志SHA；Settings collection和blob merge4不代验470或CI收益。
+只在ZIP成功部署后恢复新完整CI实测；产品验收仍归用户。
+`.gitattributes`仅追加这两组新证据的-text字节保全规则，不改变已有归档。
+
+续跑定点追加`ci-zip-markdown-cleanup-controls.json`（13,342 bytes）：Linux最终
+74/0skip与实际Python3.6.8宿主重叠20项，保留真实父目录移动失败、旧缺dataclasses
+及无stdout探针失败。17:26新元数据预检仍容量拒绝/confirmation false，预测约
+89MiB余量不是清理结果；只链接同一台账，不归档private closed context或真实文件
+身份。该JSON沿用已有ci-zip-markdown-*的-text规则；无新CI或生产清理/部署。
+
+### 前一ZIP候选专项与工作隔离检查点
 
 更新Archive合同的默认正文层级、任意辅助目录Markdown资源、显式分类/归属、
 catalog v1可选标记兼容、原小预算准入和提交级SHA/整ZIP回滚边界。
