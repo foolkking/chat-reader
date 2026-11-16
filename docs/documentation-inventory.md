@@ -1,6 +1,17 @@
 # Markdown 文档台账
 
-## 第二轮CI实现与本地验证同步 — 2026-11-17
+## 第二轮CI两次完整成功与耗时收尾同步 — 2026-11-17
+
+定点同步Project State、导航、唯一Small Host台账、Testing、Release Safety和证据索引；
+新增`ci-scheduling-v2-two-green-results.json`，提交此前独立派发/首绿检查点而不覆盖旧JSON。
+精确3d46555的43942265966、43952795958均为普通完整attempt1/all19成功，独立native/API/
+原资源门禁与候选/发布同一镜像字节验证通过。记录20分39秒/22分24秒、61%–64%缩短、
+约16%runner分钟代价、峰值14及逐片/关键路径/排队调度；本机等待不计入CI时长。
+两次依赖缓存命中；完整冷缓存LinuxCI仍未验证，本机冷安装/离线复用不冒充全量。
+本次仅文档证据收尾，不另派发、部署、清理共享缓存或修改受测源码，保留用户修改。
+纯文档HEAD与实际受测3d46555明确区分。
+
+## 第二轮CI实现与本地验证同步（历史检查点）— 2026-11-17
 
 定点更新Project State、导航、唯一状态台账、Testing、Release Safety及证据索引；
 新增`ci-scheduling-v2-local-verification.json`。记录19-job源码、API4/Settings4/Web3完整
@@ -14,6 +25,10 @@ blob小型控制不是全量执行。两次新完整成功与实际耗时/缓存
 随后新增`ci-scheduling-v2-failure-43928590278.json`和`ci-scheduling-v2-contract-repair.json`，
 定点同步四处合同失败、原断言完整保留及88项提前Playwright源控制、UX2556、Node159/Python139
 和Windows冷/离线缓存诊断。旧JSON、原本地失败和历史运行不覆盖；新的完整成功仍待验证。
+修复提交3d46555及新run43942265966的身份/独立55分钟等待追加
+`ci-scheduling-v2-dispatch-3d46555.json`，未读取或宣称新CI结果。
+随后`ci-scheduling-v2-first-green.json`记录实际全19成功、完整独立制品与20分39秒/173.3runner
+分钟，并绑定同源码第二次完整运行43952795958的新55分钟等待；两轮和完整冷缓存验收不提前标通过。
 
 ## 第二轮CI实施：指定失败修复的独立检查点 — 2026-11-17
 

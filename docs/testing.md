@@ -1,6 +1,6 @@
 # Testing
 
-## Current: versioned19-job scheduling candidate — 2026-11-17
+## Current: versioned19-job scheduling, two full runs verified — 2026-11-17
 
 The full dispatch uses four isolated PostgreSQL API runners, four single-worker
 Settings fixtures, three Web runners, independent fresh restore, unchanged
@@ -25,8 +25,15 @@ head pass. Two complete API collections are identical; Settings470 collection
 and source budgets match. Actual small two-way and four-way Playwright blob runs
 exercise merging/rejection, not a replacement for470 release cases.
 [Local evidence](evidence/reliability-2026-11-16/ci-scheduling-v2-local-verification.json).
-Full Linux/native/resource execution, at least two new successful CI timings
-and observed cold/warm cache behavior remain pending.
+Full Linux/native/resource execution is now independently verified for exact
+3d46555 in two ordinary full attempt1 runs:43942265966 /43952795958, all19 jobs
+successful,20m39s /22m24s. Both preserve API7007pass/3 original skips, Web14,
+Settings470+restore1, Reader9/27cold, mounted45 and all five memory gates.
+Native reports and exact candidate/published image identity are reverified for
+each run, not inherited. [Two-run evidence](evidence/reliability-2026-11-16/ci-scheduling-v2-two-green-results.json).
+Both full runs restored dependency caches; **complete cold-cache Linux CI remains
+unverified**. The local Windows cold-install/offline controls below do not close
+that gap. The measured20–25minute target does not guarantee future run durations.
 
 The first19-job run43928590278 failed at four integration contracts; original
 Settings470+restore1 and Reader passed, while API had7006pass/1fail/3skip.
@@ -41,7 +48,8 @@ Local UX2556, CI Node159/Python139, source Playwright88, migration source1 and
 static checks pass. Windows empty-store and offline fresh-checkout installs
 also pass; original CRLF-checkout diagnostic failures remain recorded.
 [Repair evidence](evidence/reliability-2026-11-16/ci-scheduling-v2-contract-repair.json)
-is not new full Linux/native/resource acceptance or measured speedup.
+records only those local checks; the later two-run evidence separately establishes
+full Linux/native/resource success and measured timing. Historical failures remain.
 
 ## Previous local checkpoint: required mounted-gate contract repaired — 2026-11-17
 

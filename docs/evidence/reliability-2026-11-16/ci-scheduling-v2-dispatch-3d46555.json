@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "status": "ordinary_full_ci_dispatched_fresh55_minute_wait_running_not_result_acceptance",
+  "head_sha": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+  "workflow_run_id": 43942265966,
+  "workflow_run_attempt": 1,
+  "workflow_id": 328268956,
+  "quality_source_run_id": "",
+  "dispatch_requested_at": "2026-11-16T19:43:12.732499+00:00",
+  "dispatch_confirmed_at": "2026-11-16T19:43:20.000926+00:00",
+  "dispatch_request_count": 1,
+  "fresh_wait_started_at": "2026-11-16T19:43:37.972125+00:00",
+  "first_result_read_not_before": "2026-11-16T20:38:37.972125+00:00",
+  "fresh_wait_seconds": 3300,
+  "both_monotonic_and_utc_boundary_required": true,
+  "all19_jobs_and_original_native_resource_gates_required": true,
+  "old_run_not_cancelled_retried_or_reused": true,
+  "two_new_green_runs_still_required": true,
+  "production_not_modified": true,
+  "no_automation_or_interactive_login": true,
+  "raw_dispatch_sha256": "b4da3bea9c86f994c217f39edb6003ff59c6f18c2ab74bd47e9f04fe0da7b66c",
+  "raw_fresh_wait_sha256": "0b757362005ff45563ea6104c138dd248461a6ab3e99c0a16ebe42e32393c46f"
+}

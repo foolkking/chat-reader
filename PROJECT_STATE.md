@@ -1,6 +1,28 @@
 # Project State
 
-## Latest: second-round CI contract failures repaired; fresh full runs pending — 2026-11-17
+## Latest: two optimized full CI runs independently verified — 2026-11-17
+
+Exact source **3d465553bf1cf1ae4cd380bc35dfbaa090b341ec** passes two new,
+ordinary full runs, **43942265966 / 43952795958**, both attempt1 with all19 jobs
+and independent native/API/resource/OCI verification successful.
+Elapsed time is **20m39s / 22m24s**, versus57m47s baseline:37m08s /35m23s saved
+(64.3% /61.2%). Observed runner minutes rise149.1→173.3 /172.8, about16%;
+peak concurrency is14. These are observed timings, not a guaranteed duration
+or billed usage. Each new55-minute local wait is excluded from CI elapsed time.
+
+All original gates remain:7010 API cases/7007pass/3 original skips, Web14,
+Settings470+restore1, Reader9/27cold, mounted45 and five real memory cases.
+Native execution/collection, genuine blob merges, candidate-to-release byte
+identity,35 OCI blobs/23 layer diff IDs and393 embedded API files are verified.
+[Two-run evidence](docs/evidence/reliability-2026-11-16/ci-scheduling-v2-two-green-results.json) /
+[timing and remaining-verification ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md).
+Both full runs restored dependency caches. Task-owned Windows cold installs
+and fresh-checkout offline reuse passed, but **complete cold-cache Linux CI
+remains unverified**. No additional CI or deployment is part of this closeout.
+Production remains71342129/schema0061; product acceptance remains user-owned.
+Documentation-only closeout commits are not new CI-tested application revisions.
+
+### Historical implementation and repair checkpoints
 
 The repeated43907985394 failure was five stale mounted-workflow assertions,
 not a new runtime regression; the separate repair is commit8adaf9f.
@@ -14,8 +36,9 @@ single head0061 pass. Two independent7010-case API collections match, with only
 the explicit stable gzip ID; Settings470 collection/source-timeout binding and
 genuine four-way native blob controls pass. These are not full Linux/browser
 or five-memory-case execution acceptance. [Implementation proof](docs/evidence/reliability-2026-11-16/ci-scheduling-v2-local-verification.json).
-Two new complete green CI runs, observed cache modes, timing and runner-minute
-comparison remain required.20–25minutes is a target, not a measured result.
+At this implementation checkpoint, two new complete green CI runs, observed cache
+modes, timing and runner-minute comparison remained required;20–25minutes was
+only a target. The two-run results above now supersede that pending status.
 Production71342129/schema0061 is unchanged; no CI-only redeployment.
 Both commits are pushed. Candidate **f209b0c / CI43928590278 attempt1** failed
 after the fresh55-minute wait. Four integration omissions were identified:
@@ -33,8 +56,13 @@ only the migration test's source binding changes.
 [Repair](docs/evidence/reliability-2026-11-16/ci-scheduling-v2-contract-repair.json).
 Owned Windows cold/offline dependency checks pass, not cold full Linux acceptance.
 [Dispatch](docs/evidence/reliability-2026-11-16/ci-scheduling-v2-dispatch-f209b0c.json).
-Two new complete green runs and measured savings remain required. The
+At this repair checkpoint, two complete green runs and measured savings were still
+required; they are now recorded above. The
 [single ledger](docs/system/SMALL_HOST_IMPROVEMENT_STATUS.md) owns current status.
+Repair committed/pushed as **3d46555**; ordinary full **CI43942265966 attempt1**
+was dispatched at03:43 +08:00. Its fresh55-minute UTC/monotonic wait completed;
+independent success is recorded above, not inherited from the failed run.
+[Dispatch](docs/evidence/reliability-2026-11-16/ci-scheduling-v2-dispatch-3d46555.json).
 
 ## Previous checkpoint: ZIP fix deployed; first scheduling repair — 2026-11-17
 

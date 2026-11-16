@@ -1,6 +1,18 @@
 # 事实证据索引
 
-## 第二轮CI调度实现与本地控制 — 2026-11-17
+## 第二轮CI两次全绿及精确制品独立证明 — 2026-11-17
+
+[两轮最终证据](reliability-2026-11-16/ci-scheduling-v2-two-green-results.json)绑定精确源码
+3d46555、普通完整CI43942265966和43952795958（均attempt1、19 job成功）、38份官方日志、
+38份完整SHA核验制品及两份独立native/API/五内存/OCI证明。API7010/7007通过/3原skip、
+Web14、Settings470+restore1、Reader9/27cold、mounted45及原逐帧门禁均保留，候选镜像
+就是实际发布字节。运行耗时20分39秒/22分24秒，较57分47秒减少61%–64%；观察到的
+runner分钟149.1→173.3/172.8，峰值14。逐job耗时、排队与调度、关键路径及缓存命中
+一并记录；本机55分钟等待不算CI耗时，失败运行不作提速验收。
+两次均命中依赖缓存，**完整冷缓存LinuxCI未验证**；本机冷安装/离线复用不是替代。
+生产未操作，产品验收仍归用户；旧派发、失败及首绿检查点保持原字节。
+
+## 第二轮CI调度实现与本地控制（历史检查点）— 2026-11-17
 
 [本地验证](reliability-2026-11-16/ci-scheduling-v2-local-verification.json)绑定19-job候选源码、
 确定性完整分片清单和测试日志SHA。原UX2556、Node156/Python138、格式识别13及静态检查通过；
@@ -16,6 +28,11 @@ blob小型控制通过。提前镜像为非发布候选，完整质量通过后�
 [本地修复](reliability-2026-11-16/ci-scheduling-v2-contract-repair.json)记录UX2556、Node159/
 Python139、原Playwright源合同扩展88、迁移source1及静态/显式临时目录检查。
 Windows冷/离线依赖诊断保留初始CRLF失败，不替代完整LinuxCI；未宣称提速。
+[修复后新派发](reliability-2026-11-16/ci-scheduling-v2-dispatch-3d46555.json)绑定3d46555/
+43942265966 attempt1；新55分钟等待完成后全19成功，独立native/内存/镜像证明见
+[首轮全绿](reliability-2026-11-16/ci-scheduling-v2-first-green.json)。实测20分39秒/173.3runner分钟，
+该首绿回执记录第二次43952795958当时等待中、首读不早于11月17日05:39:14 +08:00；
+此后完整成功另见上方最终证据，不覆写首绿回执。
 
 ## 指定Web shard失败与完整UX修复验证 — 2026-11-17
 

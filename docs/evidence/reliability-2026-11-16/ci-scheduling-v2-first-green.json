@@ -1,0 +1,3150 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-16T20:45:14.244593+00:00",
+  "status": "first_full_green_and_artifacts_verified_confirmatory_run_waiting",
+  "first_green": {
+    "head_sha": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+    "workflow_run_id": 43942265966,
+    "attempt": 1,
+    "jobs": {
+      "image-preparation": "success",
+      "settings-restore": "success",
+      "api-quality-shard-3 / suite": "success",
+      "web-quality-shard-1 / gates": "success",
+      "api-quality-shard-4 / suite": "success",
+      "settings-quality-shard-4 / matrix": "success",
+      "api-quality-shard-1 / suite": "success",
+      "settings-quality-shard-1 / matrix": "success",
+      "settings-quality-shard-3 / matrix": "success",
+      "web-quality-shard-2 / gates": "success",
+      "web-quality-shard-3 / gates": "success",
+      "api-quality-shard-2 / suite": "success",
+      "reading-performance-comparison / compare": "success",
+      "settings-quality-shard-2 / matrix": "success",
+      "api-quality": "success",
+      "settings-quality": "success",
+      "web-quality": "success",
+      "build-images": "success",
+      "inspect-release-artifact": "success"
+    },
+    "web_gates": [
+      {
+        "gate_id": "adaptive-import-recovery",
+        "test_count": 15,
+        "result_counts": {
+          "passed": 14,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 1,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "csp-enforcement",
+        "test_count": 4,
+        "result_counts": {
+          "passed": 4,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "context-files",
+        "test_count": 38,
+        "result_counts": {
+          "passed": 38,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "focused-online-security",
+        "test_count": 132,
+        "result_counts": {
+          "passed": 132,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "share-focus",
+        "test_count": 2,
+        "result_counts": {
+          "passed": 2,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "source-editor-mutation",
+        "test_count": 121,
+        "result_counts": {
+          "passed": 121,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "source-editor-cleanup",
+        "test_count": 6,
+        "result_counts": {
+          "passed": 6,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "upload-token-atomicity",
+        "test_count": 18,
+        "result_counts": {
+          "passed": 18,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "markdown-image-viewer",
+        "test_count": 31,
+        "result_counts": {
+          "passed": 31,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "reading-stability",
+        "test_count": 35,
+        "result_counts": {
+          "passed": 35,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "pdfjs-maintained-line",
+        "test_count": 13,
+        "result_counts": {
+          "passed": 13,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "default-pwa",
+        "test_count": 1103,
+        "result_counts": {
+          "passed": 277,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 826,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "single-owner-auth",
+        "test_count": 24,
+        "result_counts": {
+          "passed": 24,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "pwa-negative",
+        "test_count": 28,
+        "result_counts": {
+          "passed": 28,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      }
+    ],
+    "settings_gates": [
+      {
+        "gate_id": "settings-stages-1-4",
+        "test_count": 470,
+        "result_counts": {
+          "passed": 470,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      },
+      {
+        "gate_id": "system-archive-new-instance",
+        "test_count": 1,
+        "result_counts": {
+          "passed": 1,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "status": "passed"
+      }
+    ],
+    "strict_native_scheduling_evidence": {
+      "source_sha": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+      "run_id": 43942265966,
+      "web_gates": 14,
+      "settings_original_cases": 470,
+      "shard_counts": [
+        59,
+        144,
+        144,
+        123
+      ],
+      "restore": 1,
+      "genuine_independent_blob_merge_equal": true,
+      "raw_collection_native_attempts_and_source_budgets_verified": true,
+      "all_nested_original_artifact_bytes_equal": [
+        {
+          "prefix": "web-shards/shard-1/",
+          "files": 385,
+          "complete_bytes_equal": true
+        },
+        {
+          "prefix": "web-shards/shard-2/",
+          "files": 281,
+          "complete_bytes_equal": true
+        },
+        {
+          "prefix": "web-shards/shard-3/",
+          "files": 192,
+          "complete_bytes_equal": true
+        },
+        {
+          "prefix": "settings-shards/shard-1/",
+          "files": 50,
+          "complete_bytes_equal": true
+        },
+        {
+          "prefix": "settings-shards/shard-2/",
+          "files": 55,
+          "complete_bytes_equal": true
+        },
+        {
+          "prefix": "settings-shards/shard-3/",
+          "files": 69,
+          "complete_bytes_equal": true
+        },
+        {
+          "prefix": "settings-shards/shard-4/",
+          "files": 76,
+          "complete_bytes_equal": true
+        },
+        {
+          "prefix": "settings-restore/",
+          "files": 11,
+          "complete_bytes_equal": true
+        }
+      ]
+    },
+    "reader_gate": {
+      "gate_id": "reader-capacity-candidate",
+      "test_count": 9,
+      "result_counts": {
+        "passed": 9,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "status": "passed"
+    },
+    "reader_cases": [
+      {
+        "profile": "math",
+        "messages": 1000,
+        "cold": [
+          {
+            "frames": 135,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999955,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 22,
+            "mounted_blocks_max": 77,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 128,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.700000000000273,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 22,
+            "mounted_blocks_max": 77,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 128,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.800000000000182,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 22,
+            "mounted_blocks_max": 77,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          }
+        ],
+        "warm": {
+          "frames": 43,
+          "wheel_samples": 12,
+          "p95_frame_ms": 16.700000000000728,
+          "longest_task_ms": 0,
+          "long_task_total_ms": 0,
+          "mounted_messages_max": 14,
+          "mounted_blocks_max": 49,
+          "all_physical_samples_verified": true,
+          "raw_scroll_monotonic": true
+        },
+        "measurement_sha256": "2c98d950b5383b6c14731845736f3dfc93055b14ea846587c951b66d82537458"
+      },
+      {
+        "profile": "math",
+        "messages": 10000,
+        "cold": [
+          {
+            "frames": 130,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.800000000000182,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 22,
+            "mounted_blocks_max": 77,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 133,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.700000000000273,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 22,
+            "mounted_blocks_max": 77,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 124,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999955,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 22,
+            "mounted_blocks_max": 77,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          }
+        ],
+        "warm": {
+          "frames": 42,
+          "wheel_samples": 12,
+          "p95_frame_ms": 16.700000000000728,
+          "longest_task_ms": 0,
+          "long_task_total_ms": 0,
+          "mounted_messages_max": 10,
+          "mounted_blocks_max": 35,
+          "all_physical_samples_verified": true,
+          "raw_scroll_monotonic": true
+        },
+        "measurement_sha256": "3ba8ebdaf666c0d96f0274a075d6b9890165674bc0c006e7927071beb764cc6e"
+      },
+      {
+        "profile": "math",
+        "messages": 398,
+        "cold": [
+          {
+            "frames": 127,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.800000000000182,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 22,
+            "mounted_blocks_max": 77,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 128,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.800000000000182,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 22,
+            "mounted_blocks_max": 77,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 122,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999955,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 22,
+            "mounted_blocks_max": 77,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          }
+        ],
+        "warm": {
+          "frames": 44,
+          "wheel_samples": 12,
+          "p95_frame_ms": 16.800000000000182,
+          "longest_task_ms": 0,
+          "long_task_total_ms": 0,
+          "mounted_messages_max": 14,
+          "mounted_blocks_max": 49,
+          "all_physical_samples_verified": true,
+          "raw_scroll_monotonic": true
+        },
+        "measurement_sha256": "68bed958282227a7f0c27b371209b5f481765ea3972049c320848788a2f0aa9f"
+      },
+      {
+        "profile": "mixed",
+        "messages": 1000,
+        "cold": [
+          {
+            "frames": 119,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999955,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 14,
+            "mounted_blocks_max": 56,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 119,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.700000000000273,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 14,
+            "mounted_blocks_max": 56,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 121,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.700000000000273,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 14,
+            "mounted_blocks_max": 56,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          }
+        ],
+        "warm": {
+          "frames": 41,
+          "wheel_samples": 12,
+          "p95_frame_ms": 16.800000000000182,
+          "longest_task_ms": 0,
+          "long_task_total_ms": 0,
+          "mounted_messages_max": 10,
+          "mounted_blocks_max": 40,
+          "all_physical_samples_verified": true,
+          "raw_scroll_monotonic": true
+        },
+        "measurement_sha256": "1f9f226eab47f238f2cd1f2699f7d1d5da604b53ec192650f157f3baa16084d3"
+      },
+      {
+        "profile": "mixed",
+        "messages": 10000,
+        "cold": [
+          {
+            "frames": 127,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.800000000000182,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 14,
+            "mounted_blocks_max": 56,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 122,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999955,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 14,
+            "mounted_blocks_max": 56,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 123,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.700000000000273,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 14,
+            "mounted_blocks_max": 56,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          }
+        ],
+        "warm": {
+          "frames": 41,
+          "wheel_samples": 12,
+          "p95_frame_ms": 16.700000000000728,
+          "longest_task_ms": 0,
+          "long_task_total_ms": 0,
+          "mounted_messages_max": 10,
+          "mounted_blocks_max": 40,
+          "all_physical_samples_verified": true,
+          "raw_scroll_monotonic": true
+        },
+        "measurement_sha256": "53a1c456d21ccae0b6af0fb1452fab111161e7fe7d61c434279b02adf3445997"
+      },
+      {
+        "profile": "mixed",
+        "messages": 398,
+        "cold": [
+          {
+            "frames": 117,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.800000000000182,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 14,
+            "mounted_blocks_max": 56,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 126,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.700000000000273,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 14,
+            "mounted_blocks_max": 56,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 124,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.700000000000273,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 14,
+            "mounted_blocks_max": 56,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          }
+        ],
+        "warm": {
+          "frames": 42,
+          "wheel_samples": 12,
+          "p95_frame_ms": 16.699999999999818,
+          "longest_task_ms": 0,
+          "long_task_total_ms": 0,
+          "mounted_messages_max": 10,
+          "mounted_blocks_max": 40,
+          "all_physical_samples_verified": true,
+          "raw_scroll_monotonic": true
+        },
+        "measurement_sha256": "762d244375e756f4c7ca4f61d28b70b14b308e428da0d2896ee2a116254f6b19"
+      },
+      {
+        "profile": "plain",
+        "messages": 10000,
+        "cold": [
+          {
+            "frames": 144,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.800000000000182,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 32,
+            "mounted_blocks_max": 48,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 132,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999727,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 32,
+            "mounted_blocks_max": 48,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 147,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999955,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 32,
+            "mounted_blocks_max": 48,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          }
+        ],
+        "warm": {
+          "frames": 48,
+          "wheel_samples": 12,
+          "p95_frame_ms": 16.700000000000728,
+          "longest_task_ms": 0,
+          "long_task_total_ms": 0,
+          "mounted_messages_max": 16,
+          "mounted_blocks_max": 24,
+          "all_physical_samples_verified": true,
+          "raw_scroll_monotonic": true
+        },
+        "measurement_sha256": "840d2da6ade5384304f697dbe7b92e14e8ffdf3b66e7b6e93245376b631d449f"
+      },
+      {
+        "profile": "plain",
+        "messages": 1000,
+        "cold": [
+          {
+            "frames": 142,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999955,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 32,
+            "mounted_blocks_max": 48,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 145,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.800000000000182,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 32,
+            "mounted_blocks_max": 48,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 143,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999727,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 32,
+            "mounted_blocks_max": 48,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          }
+        ],
+        "warm": {
+          "frames": 43,
+          "wheel_samples": 12,
+          "p95_frame_ms": 16.700000000000728,
+          "longest_task_ms": 0,
+          "long_task_total_ms": 0,
+          "mounted_messages_max": 16,
+          "mounted_blocks_max": 24,
+          "all_physical_samples_verified": true,
+          "raw_scroll_monotonic": true
+        },
+        "measurement_sha256": "4eb5c8a1c0e9647045436e9d006c09c0e01b9c66fee1541eda785188721b9610"
+      },
+      {
+        "profile": "plain",
+        "messages": 398,
+        "cold": [
+          {
+            "frames": 145,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999727,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 32,
+            "mounted_blocks_max": 48,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 143,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.800000000000182,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 32,
+            "mounted_blocks_max": 48,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          },
+          {
+            "frames": 124,
+            "wheel_samples": 30,
+            "p95_frame_ms": 16.799999999999955,
+            "longest_task_ms": 0,
+            "long_task_total_ms": 0,
+            "mounted_messages_max": 32,
+            "mounted_blocks_max": 48,
+            "all_physical_samples_verified": true,
+            "raw_scroll_monotonic": true
+          }
+        ],
+        "warm": {
+          "frames": 41,
+          "wheel_samples": 12,
+          "p95_frame_ms": 16.700000000000273,
+          "longest_task_ms": 0,
+          "long_task_total_ms": 0,
+          "mounted_messages_max": 16,
+          "mounted_blocks_max": 24,
+          "all_physical_samples_verified": true,
+          "raw_scroll_monotonic": true
+        },
+        "measurement_sha256": "36b3b300bdfdd20e9e5b008321f89347e059ecd849bbdd31d0164587d9e25300"
+      }
+    ],
+    "reader_mounted_groups": 45,
+    "memory_case_count": 5,
+    "memory_reports": [
+      {
+        "revision": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+        "memory_limit_bytes": 335544320,
+        "memory_swap_limit_bytes": 335544320,
+        "workspace_peak_delta_bytes": 22867968,
+        "baseline_bytes": 118804480,
+        "peak_bytes": 141672448,
+        "oom": 0,
+        "oom_kill": 0,
+        "restarts": 0
+      },
+      {
+        "revision": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+        "memory_limit_bytes": 335544320,
+        "memory_swap_limit_bytes": 335544320,
+        "workspace_peak_delta_bytes": 22708224,
+        "baseline_bytes": 118730752,
+        "peak_bytes": 141438976,
+        "oom": 0,
+        "oom_kill": 0,
+        "restarts": 0
+      },
+      {
+        "revision": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+        "memory_limit_bytes": 335544320,
+        "memory_swap_limit_bytes": 335544320,
+        "workspace_peak_delta_bytes": 47960064,
+        "baseline_bytes": 118460416,
+        "peak_bytes": 166420480,
+        "oom": 0,
+        "oom_kill": 0,
+        "restarts": 0
+      },
+      {
+        "revision": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+        "memory_limit_bytes": 671088640,
+        "memory_swap_limit_bytes": 671088640,
+        "workspace_peak_delta_bytes": 47644672,
+        "baseline_bytes": 118382592,
+        "peak_bytes": 166027264,
+        "oom": 0,
+        "oom_kill": 0,
+        "restarts": 0
+      },
+      {
+        "revision": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+        "memory_limit_bytes": 335544320,
+        "memory_swap_limit_bytes": 335544320,
+        "workspace_peak_delta_bytes": 17129472,
+        "baseline_bytes": 118743040,
+        "peak_bytes": 135872512,
+        "oom": 0,
+        "oom_kill": 0,
+        "restarts": 0
+      }
+    ],
+    "image_archive_sha256": "931f0605788c37f1bfe501417c6ea8199d7fe7c7893487ebd0dc10ee21373285",
+    "image_archive_bytes": 177593933,
+    "oci_blobs_verified": 35,
+    "application_layers_scanned": 23,
+    "forbidden_layer_paths": 0,
+    "images": {
+      "web": {
+        "image_id": "sha256:26d0016f34b4387cc7fef5a0a47f985c69e052dafaf648c41cffb0772504a1f4",
+        "config_id": "sha256:3495a3447051775c780457753f75f945adb4ea5a1e219f4528e6f4915dd54252",
+        "identity_graph": {
+          "oci_index_id": "sha256:26d0016f34b4387cc7fef5a0a47f985c69e052dafaf648c41cffb0772504a1f4",
+          "platform_manifest_id": "sha256:80947d617bd1a99feb7dd2a0c6eede3af11298486feedf34254b3f52b20b9612",
+          "config_id": "sha256:3495a3447051775c780457753f75f945adb4ea5a1e219f4528e6f4915dd54252",
+          "attestation_manifest_id": "sha256:c99ce395b5d1fd723b5ed6dd7fa558c07d4bd8d0ce91829be88ffec0524395cd",
+          "attestation_subject_verified": true
+        },
+        "layers": [
+          "blobs/sha256/1f3e46996e2966e4faa5846e56e76e3748b7315e2ded61476c24403d592134f0",
+          "blobs/sha256/1208b2c8ee11752eedc0a062e2ed09016338a11a9aa12c5c679ea4113965c71c",
+          "blobs/sha256/dfca9c0ec40b01da0a9a7300bf057e42dffcd607c33e50384da73d9042a4e728",
+          "blobs/sha256/e363dc60a06219119e4134e6484c4afdcb94f73c0d13d973abb7543b3acb820a",
+          "blobs/sha256/61ab9501508948ab6b08340c695932b0482b5ad92a2a0e7e04b84ee1579fb3a4",
+          "blobs/sha256/3fb8702b75bba1045b71cdb88d9e8d2592a4c3de417fef076fefe706a5ae8ec1",
+          "blobs/sha256/39081b237d28b914f8ec9b8688d816ca789127a990a3bc35baba553732ebb5bb",
+          "blobs/sha256/8890ceaa62c89f0b2b81f601375f570239ca6c06ad8ef88ebd3bd86fdeeac6a4",
+          "blobs/sha256/0478b7900a6bcbf76ecceeaa52f6bde164d3d85cb18ebbe9bc1ffc8be5a58beb"
+        ],
+        "os": "linux",
+        "architecture": "amd64"
+      },
+      "api": {
+        "image_id": "sha256:437e6029ebfaa6a8b9b56f584a39e2037cd541400b2f703819c13fdafdc45c80",
+        "config_id": "sha256:473d60a1043ca9003dc3a462a762a6aa51c16af8689f282159e70ea71567db04",
+        "identity_graph": {
+          "oci_index_id": "sha256:437e6029ebfaa6a8b9b56f584a39e2037cd541400b2f703819c13fdafdc45c80",
+          "platform_manifest_id": "sha256:cfc4fe3bd63ec3f355572714e82d809f02c17d3cc0bc100425039f95c27a3c1c",
+          "config_id": "sha256:473d60a1043ca9003dc3a462a762a6aa51c16af8689f282159e70ea71567db04",
+          "attestation_manifest_id": "sha256:d90a854c17919dabf7f84d7a39d1cbcbfd974100c26d42a13d55987a4f3d140f",
+          "attestation_subject_verified": true
+        },
+        "layers": [
+          "blobs/sha256/ecc510c1e359bdc007b39802570bb7e4dec7d6ebccf357c3201a74299113e05e",
+          "blobs/sha256/0f752a1982d6f819fc2c9e78ac1514c63f2f2e1dec7885ffd4cb6809ba4a26ca",
+          "blobs/sha256/759a7f30c31818dda4c97b407b24d93da479c306568d185ced927e1a749164f1",
+          "blobs/sha256/496c1a902b3a93cea3e54b90b79dbcaa0e58ad90c3fe9dd0a43c9557dc47f17d",
+          "blobs/sha256/43c58a2be4bdd52e6b4672f63c43fa88723603aaf22a162713bc34623dce3c56",
+          "blobs/sha256/356c80c647439a43127eaa510d737b8542c9cc7bb1362078139a9cdfb4f71456",
+          "blobs/sha256/4c7b2464ba9535d9378ba8367bdc09477dd592ac1fdaee88c784f80f85ea1c89",
+          "blobs/sha256/5f18d50b30fd1baa379e3903148e946f58cb73d14f1da4e780d8047ac8542fc9",
+          "blobs/sha256/3e2c82488d48d92037bf3aa0b3ba277a17102d5c6083d41bbd70f500523f8933",
+          "blobs/sha256/de6809ed3215d70475e9745f733ad0bbd6295c020877cb11ab7517bf92a6a613",
+          "blobs/sha256/0ad54da5695989255f03f2e07ff795bfd49ab6b33673991517eaed54b50b74eb",
+          "blobs/sha256/a054aa5548f3796775d8c37d79f7cad20c1b5ef3a11e192b164a4bc83533285a",
+          "blobs/sha256/d92b0a7d4c99df1bb6c76ec569f115434aa5cd28a39a8d5b47577e3b0516f573",
+          "blobs/sha256/029bd78aca0a51e543b59e2117cbc2d31c4de7a26eb9a51e6ce42f9d94819603"
+        ],
+        "os": "linux",
+        "architecture": "amd64"
+      },
+      "import-worker": {
+        "image_id": "sha256:437e6029ebfaa6a8b9b56f584a39e2037cd541400b2f703819c13fdafdc45c80",
+        "config_id": "sha256:473d60a1043ca9003dc3a462a762a6aa51c16af8689f282159e70ea71567db04",
+        "identity_graph": {
+          "oci_index_id": "sha256:437e6029ebfaa6a8b9b56f584a39e2037cd541400b2f703819c13fdafdc45c80",
+          "platform_manifest_id": "sha256:cfc4fe3bd63ec3f355572714e82d809f02c17d3cc0bc100425039f95c27a3c1c",
+          "config_id": "sha256:473d60a1043ca9003dc3a462a762a6aa51c16af8689f282159e70ea71567db04",
+          "attestation_manifest_id": "sha256:d90a854c17919dabf7f84d7a39d1cbcbfd974100c26d42a13d55987a4f3d140f",
+          "attestation_subject_verified": true
+        },
+        "layers": [
+          "blobs/sha256/ecc510c1e359bdc007b39802570bb7e4dec7d6ebccf357c3201a74299113e05e",
+          "blobs/sha256/0f752a1982d6f819fc2c9e78ac1514c63f2f2e1dec7885ffd4cb6809ba4a26ca",
+          "blobs/sha256/759a7f30c31818dda4c97b407b24d93da479c306568d185ced927e1a749164f1",
+          "blobs/sha256/496c1a902b3a93cea3e54b90b79dbcaa0e58ad90c3fe9dd0a43c9557dc47f17d",
+          "blobs/sha256/43c58a2be4bdd52e6b4672f63c43fa88723603aaf22a162713bc34623dce3c56",
+          "blobs/sha256/356c80c647439a43127eaa510d737b8542c9cc7bb1362078139a9cdfb4f71456",
+          "blobs/sha256/4c7b2464ba9535d9378ba8367bdc09477dd592ac1fdaee88c784f80f85ea1c89",
+          "blobs/sha256/5f18d50b30fd1baa379e3903148e946f58cb73d14f1da4e780d8047ac8542fc9",
+          "blobs/sha256/3e2c82488d48d92037bf3aa0b3ba277a17102d5c6083d41bbd70f500523f8933",
+          "blobs/sha256/de6809ed3215d70475e9745f733ad0bbd6295c020877cb11ab7517bf92a6a613",
+          "blobs/sha256/0ad54da5695989255f03f2e07ff795bfd49ab6b33673991517eaed54b50b74eb",
+          "blobs/sha256/a054aa5548f3796775d8c37d79f7cad20c1b5ef3a11e192b164a4bc83533285a",
+          "blobs/sha256/d92b0a7d4c99df1bb6c76ec569f115434aa5cd28a39a8d5b47577e3b0516f573",
+          "blobs/sha256/029bd78aca0a51e543b59e2117cbc2d31c4de7a26eb9a51e6ce42f9d94819603"
+        ],
+        "os": "linux",
+        "architecture": "amd64"
+      },
+      "migrate": {
+        "image_id": "sha256:437e6029ebfaa6a8b9b56f584a39e2037cd541400b2f703819c13fdafdc45c80",
+        "config_id": "sha256:473d60a1043ca9003dc3a462a762a6aa51c16af8689f282159e70ea71567db04",
+        "identity_graph": {
+          "oci_index_id": "sha256:437e6029ebfaa6a8b9b56f584a39e2037cd541400b2f703819c13fdafdc45c80",
+          "platform_manifest_id": "sha256:cfc4fe3bd63ec3f355572714e82d809f02c17d3cc0bc100425039f95c27a3c1c",
+          "config_id": "sha256:473d60a1043ca9003dc3a462a762a6aa51c16af8689f282159e70ea71567db04",
+          "attestation_manifest_id": "sha256:d90a854c17919dabf7f84d7a39d1cbcbfd974100c26d42a13d55987a4f3d140f",
+          "attestation_subject_verified": true
+        },
+        "layers": [
+          "blobs/sha256/ecc510c1e359bdc007b39802570bb7e4dec7d6ebccf357c3201a74299113e05e",
+          "blobs/sha256/0f752a1982d6f819fc2c9e78ac1514c63f2f2e1dec7885ffd4cb6809ba4a26ca",
+          "blobs/sha256/759a7f30c31818dda4c97b407b24d93da479c306568d185ced927e1a749164f1",
+          "blobs/sha256/496c1a902b3a93cea3e54b90b79dbcaa0e58ad90c3fe9dd0a43c9557dc47f17d",
+          "blobs/sha256/43c58a2be4bdd52e6b4672f63c43fa88723603aaf22a162713bc34623dce3c56",
+          "blobs/sha256/356c80c647439a43127eaa510d737b8542c9cc7bb1362078139a9cdfb4f71456",
+          "blobs/sha256/4c7b2464ba9535d9378ba8367bdc09477dd592ac1fdaee88c784f80f85ea1c89",
+          "blobs/sha256/5f18d50b30fd1baa379e3903148e946f58cb73d14f1da4e780d8047ac8542fc9",
+          "blobs/sha256/3e2c82488d48d92037bf3aa0b3ba277a17102d5c6083d41bbd70f500523f8933",
+          "blobs/sha256/de6809ed3215d70475e9745f733ad0bbd6295c020877cb11ab7517bf92a6a613",
+          "blobs/sha256/0ad54da5695989255f03f2e07ff795bfd49ab6b33673991517eaed54b50b74eb",
+          "blobs/sha256/a054aa5548f3796775d8c37d79f7cad20c1b5ef3a11e192b164a4bc83533285a",
+          "blobs/sha256/d92b0a7d4c99df1bb6c76ec569f115434aa5cd28a39a8d5b47577e3b0516f573",
+          "blobs/sha256/029bd78aca0a51e543b59e2117cbc2d31c4de7a26eb9a51e6ce42f9d94819603"
+        ],
+        "os": "linux",
+        "architecture": "amd64"
+      }
+    },
+    "embedded": {
+      "api_source_files": 393,
+      "web_embedded_revision_verified": true
+    },
+    "oci_index_platform_config_layer_graph_verified": true,
+    "application_layer_uncompressed_diff_ids_verified": 23,
+    "early_candidate_exact_artifact_and_config_ids_verified": true,
+    "api": {
+      "schema_version": 1,
+      "source_sha": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+      "run_id": "43942265966",
+      "run_attempt": "1",
+      "schedule_sha256": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
+      "collected": 7010,
+      "passed": 7007,
+      "skips": [
+        "tests/test_exporter_markdown_parser.py::test_real_paired_fixture_uses_bounded_fast_path",
+        "tests/test_import_preview_exporter_combo.py::test_real_exporter_pair_preview_commit_and_retry",
+        "tests/test_import_preview_exporter_combo.py::test_response_only_real_pair_preview"
+      ],
+      "shard_counts": [
+        1157,
+        4144,
+        955,
+        754
+      ],
+      "native_junit_and_lifecycle_match": true,
+      "new_portable_cases_passed": 213,
+      "raw_shards_match_aggregate": [
+        {
+          "prefix": "api-shards/shard-1/",
+          "files": 2,
+          "complete_bytes_equal": true
+        },
+        {
+          "prefix": "api-shards/shard-2/",
+          "files": 2,
+          "complete_bytes_equal": true
+        },
+        {
+          "prefix": "api-shards/shard-3/",
+          "files": 2,
+          "complete_bytes_equal": true
+        },
+        {
+          "prefix": "api-shards/shard-4/",
+          "files": 2,
+          "complete_bytes_equal": true
+        }
+      ],
+      "executed_case_ids_sha256": "9d98c7d8242008015e32a292d5992be4010f4ef1bac50cc2655c745daab51de6"
+    }
+  },
+  "raw_independent_proof_sha256": "8fecf2869c85dc0d0771a6097896ece8b18e632edbc4b3b9ab2d3a6f32e257b0",
+  "official_timings": {
+    "baseline": {
+      "run_id": 43820675687,
+      "head_sha": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+      "elapsed_seconds": 3467.0,
+      "total_runner_minutes": 149.1,
+      "observed_peak_concurrent_jobs": 3,
+      "jobs": {
+        "api-quality": {
+          "elapsed_seconds": 2318.0,
+          "ready_to_start_queue_and_dispatch_seconds": 5.0,
+          "started_at": "2026-11-16T07:00:14Z",
+          "completed_at": "2026-11-16T07:38:52Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Install API dependencies",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Prepare API test services",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Context runtime and distributed Bundle consistency",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "API full suite",
+              "elapsed_seconds": 2286.0
+            },
+            {
+              "name": "Alembic single-head and current validation",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "settings-quality": {
+          "elapsed_seconds": 3109.0,
+          "ready_to_start_queue_and_dispatch_seconds": 5.0,
+          "started_at": "2026-11-16T07:00:14Z",
+          "completed_at": "2026-11-16T07:52:03Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Record Settings completion timing mode",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 13.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Install and migrate disposable fixture",
+              "elapsed_seconds": 15.0
+            },
+            {
+              "name": "Build authenticated Web and install Chromium",
+              "elapsed_seconds": 101.0
+            },
+            {
+              "name": "Real settings, SMTP, offline and sync browser matrix",
+              "elapsed_seconds": 2914.0
+            },
+            {
+              "name": "System archive restore into a fresh PostgreSQL instance",
+              "elapsed_seconds": 42.0
+            },
+            {
+              "name": "Upload settings quality evidence",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "web-quality": {
+          "elapsed_seconds": 2689.0,
+          "ready_to_start_queue_and_dispatch_seconds": 5.0,
+          "started_at": "2026-11-16T07:00:14Z",
+          "completed_at": "2026-11-16T07:45:03Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 11.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Resolve pnpm store",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Restore pnpm store",
+              "elapsed_seconds": 5.0
+            },
+            {
+              "name": "Record pnpm cache evidence",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Install locked dependencies without lifecycle scripts",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Prepare test services",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Web lint",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Web typecheck",
+              "elapsed_seconds": 15.0
+            },
+            {
+              "name": "Web production build (timed)",
+              "elapsed_seconds": 64.0
+            },
+            {
+              "name": "Build dependency regressions",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Official release image source contract",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Settings completion timing source controls",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Offline shell reconciliation regressions",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Ordinary-user recovery and bounded attachment regressions",
+              "elapsed_seconds": 41.0
+            },
+            {
+              "name": "Dependency audit from official npm registry",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Start API and worker for browser integration",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Install Playwright Chromium",
+              "elapsed_seconds": 19.0
+            },
+            {
+              "name": "Mounted Viewer and retained mobile sheet regression",
+              "elapsed_seconds": 10.0
+            },
+            {
+              "name": "Image size commit, recovery and responsive controls",
+              "elapsed_seconds": 19.0
+            },
+            {
+              "name": "Formula reading, focus tools and timed return regression",
+              "elapsed_seconds": 256.0
+            },
+            {
+              "name": "Cross-device reading handoff and conflict recovery",
+              "elapsed_seconds": 14.0
+            },
+            {
+              "name": "Retained import stop and per-task recovery controls",
+              "elapsed_seconds": 68.0
+            },
+            {
+              "name": "Minimal administrator runtime and bounded read recovery",
+              "elapsed_seconds": 27.0
+            },
+            {
+              "name": "Failed and paused import source repair",
+              "elapsed_seconds": 51.0
+            },
+            {
+              "name": "Reader table export and recovery controls",
+              "elapsed_seconds": 23.0
+            },
+            {
+              "name": "Offline per-conversation recovery and capacity choices",
+              "elapsed_seconds": 19.0
+            },
+            {
+              "name": "Export option continuity and unknown-result recovery",
+              "elapsed_seconds": 23.0
+            },
+            {
+              "name": "Attachment ordered uploads and original-request recovery",
+              "elapsed_seconds": 13.0
+            },
+            {
+              "name": "Source save snapshots, receipts and real editor transactions",
+              "elapsed_seconds": 56.0
+            },
+            {
+              "name": "Reading success feedback and explicit copy recovery",
+              "elapsed_seconds": 19.0
+            },
+            {
+              "name": "Context and Skill upload proxy transport",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Adaptive Import recovery browser flow",
+              "elapsed_seconds": 57.0
+            },
+            {
+              "name": "Release H enforced CSP browser matrix",
+              "elapsed_seconds": 6.0
+            },
+            {
+              "name": "Context files, export and reader recovery",
+              "elapsed_seconds": 240.0
+            },
+            {
+              "name": "Focused online browser and security checks",
+              "elapsed_seconds": 98.0
+            },
+            {
+              "name": "Release H Share focus checks",
+              "elapsed_seconds": 8.0
+            },
+            {
+              "name": "Release H Source Editor and mutation cache checks",
+              "elapsed_seconds": 586.0
+            },
+            {
+              "name": "Source Editor content cleanup browser gate",
+              "elapsed_seconds": 43.0
+            },
+            {
+              "name": "Release I upload-token atomicity matrix",
+              "elapsed_seconds": 48.0
+            },
+            {
+              "name": "Release H Markdown and image Viewer checks",
+              "elapsed_seconds": 99.0
+            },
+            {
+              "name": "Reading geometry, image snapshots and cross-module recovery",
+              "elapsed_seconds": 139.0
+            },
+            {
+              "name": "PDF.js maintained-line browser checks",
+              "elapsed_seconds": 53.0
+            },
+            {
+              "name": "Default PWA baseline",
+              "elapsed_seconds": 256.0
+            },
+            {
+              "name": "Single-owner authentication browser gate",
+              "elapsed_seconds": 110.0
+            },
+            {
+              "name": "Release E production-build PWA negative matrix",
+              "elapsed_seconds": 145.0
+            },
+            {
+              "name": "Build machine-readable browser gate summary",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Upload non-deployable quality evidence",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Restore pnpm store",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "reading-performance-comparison / compare": {
+          "elapsed_seconds": 483.0,
+          "ready_to_start_queue_and_dispatch_seconds": 2.0,
+          "started_at": "2026-11-16T07:38:54Z",
+          "completed_at": "2026-11-16T07:46:57Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 6.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Install identical locked harness dependencies",
+              "elapsed_seconds": 43.0
+            },
+            {
+              "name": "Baseline then candidate on the same isolated runner",
+              "elapsed_seconds": 422.0
+            },
+            {
+              "name": "Preserve comparison measurements",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "build-images": {
+          "elapsed_seconds": 328.0,
+          "ready_to_start_queue_and_dispatch_seconds": 3.0,
+          "started_at": "2026-11-16T07:52:06Z",
+          "completed_at": "2026-11-16T07:57:34Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Record verified release quality provenance",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Run docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Prepare pinned image bases with official-source fallback",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Record image build metadata",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Record artifact producer attempt",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Build API and worker image",
+              "elapsed_seconds": 27.0
+            },
+            {
+              "name": "Start disposable PostgreSQL for the real memory gate",
+              "elapsed_seconds": 11.0
+            },
+            {
+              "name": "Verify real 320 MiB worker ZIP analysis and commit without swap",
+              "elapsed_seconds": 13.0
+            },
+            {
+              "name": "Verify bounded ZIP 100 and 500 MiB sources and long Markdown",
+              "elapsed_seconds": 121.0
+            },
+            {
+              "name": "Stop memory-gate PostgreSQL",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Preserve real memory-gate evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Verify real ORM memory-control-plane status and source guards",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Build Web image",
+              "elapsed_seconds": 106.0
+            },
+            {
+              "name": "Inspect release images",
+              "elapsed_seconds": 14.0
+            },
+            {
+              "name": "Package images and provenance",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Upload deployable release artifact",
+              "elapsed_seconds": 6.0
+            },
+            {
+              "name": "Post Run docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "inspect-release-artifact": {
+          "elapsed_seconds": 19.0,
+          "ready_to_start_queue_and_dispatch_seconds": 3.0,
+          "started_at": "2026-11-16T07:57:37Z",
+          "completed_at": "2026-11-16T07:57:56Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Require the successful producer's artifact reference",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Inspect downloaded release archive independently",
+              "elapsed_seconds": 10.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        }
+      },
+      "critical_path": [
+        "settings-quality",
+        "build-images",
+        "inspect-release-artifact"
+      ],
+      "critical_path_queue_and_dispatch_seconds": 11.0,
+      "queue_metric_note": "Time from dependencies completing/run creation to job start; includes dispatch overhead, not a billing claim."
+    },
+    "optimized": {
+      "run_id": 43942265966,
+      "head_sha": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+      "elapsed_seconds": 1239.0,
+      "total_runner_minutes": 173.28333333333333,
+      "observed_peak_concurrent_jobs": 14,
+      "jobs": {
+        "image-preparation": {
+          "elapsed_seconds": 255.0,
+          "ready_to_start_queue_and_dispatch_seconds": 5.0,
+          "started_at": "2026-11-16T19:43:23Z",
+          "completed_at": "2026-11-16T19:47:38Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 8.0
+            },
+            {
+              "name": "Require clean exact-source preparation",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Run docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+              "elapsed_seconds": 6.0
+            },
+            {
+              "name": "Prepare pinned image bases with official-source fallback",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Record image build metadata",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Record artifact producer attempt",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Build API and worker image",
+              "elapsed_seconds": 19.0
+            },
+            {
+              "name": "Start disposable PostgreSQL for the real memory gate",
+              "elapsed_seconds": 8.0
+            },
+            {
+              "name": "Verify real 320 MiB worker ZIP analysis and commit without swap",
+              "elapsed_seconds": 11.0
+            },
+            {
+              "name": "Verify bounded ZIP 100 and 500 MiB sources and long Markdown",
+              "elapsed_seconds": 80.0
+            },
+            {
+              "name": "Stop memory-gate PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Preserve real memory-gate evidence",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Verify real ORM memory-control-plane status and source guards",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Build Web image",
+              "elapsed_seconds": 90.0
+            },
+            {
+              "name": "Inspect release images",
+              "elapsed_seconds": 6.0
+            },
+            {
+              "name": "Package non-deployable exact tested candidate",
+              "elapsed_seconds": 5.0
+            },
+            {
+              "name": "Upload non-deployable image candidate only",
+              "elapsed_seconds": 6.0
+            },
+            {
+              "name": "Post Run docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "settings-restore": {
+          "elapsed_seconds": 215.0,
+          "ready_to_start_queue_and_dispatch_seconds": 5.0,
+          "started_at": "2026-11-16T19:43:23Z",
+          "completed_at": "2026-11-16T19:46:58Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Record Settings completion timing mode",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 11.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 14.0
+            },
+            {
+              "name": "Install and migrate disposable fixture",
+              "elapsed_seconds": 14.0
+            },
+            {
+              "name": "Build authenticated Web and install Chromium",
+              "elapsed_seconds": 99.0
+            },
+            {
+              "name": "System archive restore into a fresh PostgreSQL instance",
+              "elapsed_seconds": 45.0
+            },
+            {
+              "name": "Bind native fresh restore execution",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Upload settings quality evidence",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "api-quality-shard-3 / suite": {
+          "elapsed_seconds": 549.0,
+          "ready_to_start_queue_and_dispatch_seconds": 5.0,
+          "started_at": "2026-11-16T19:43:23Z",
+          "completed_at": "2026-11-16T19:52:32Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 12.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Install API dependencies",
+              "elapsed_seconds": 6.0
+            },
+            {
+              "name": "Prepare API test services",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Context runtime and distributed Bundle consistency",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "API full suite",
+              "elapsed_seconds": 518.0
+            },
+            {
+              "name": "Alembic single-head and current validation",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Preserve actual API execution and native JUnit",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "web-quality-shard-1 / gates": {
+          "elapsed_seconds": 1035.0,
+          "ready_to_start_queue_and_dispatch_seconds": 4.0,
+          "started_at": "2026-11-16T19:43:22Z",
+          "completed_at": "2026-11-16T20:00:37Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Validate fixed independent shard",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 11.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Resolve pnpm store",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Restore pnpm store",
+              "elapsed_seconds": 6.0
+            },
+            {
+              "name": "Record pnpm cache evidence",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Install locked dependencies without lifecycle scripts",
+              "elapsed_seconds": 10.0
+            },
+            {
+              "name": "Prepare test services",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Web lint",
+              "elapsed_seconds": 11.0
+            },
+            {
+              "name": "Web typecheck",
+              "elapsed_seconds": 18.0
+            },
+            {
+              "name": "Build dependency regressions",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Official release image source contract",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Settings completion timing source controls",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Quality scheduling source and real-report controls",
+              "elapsed_seconds": 12.0
+            },
+            {
+              "name": "Offline shell reconciliation regressions",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Ordinary-user recovery and bounded attachment regressions",
+              "elapsed_seconds": 45.0
+            },
+            {
+              "name": "Dependency audit from official npm registry",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Web production build (timed)",
+              "elapsed_seconds": 69.0
+            },
+            {
+              "name": "Start API and worker for browser integration",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Install Playwright Chromium",
+              "elapsed_seconds": 20.0
+            },
+            {
+              "name": "Formula reading, focus tools and timed return regression",
+              "elapsed_seconds": 261.0
+            },
+            {
+              "name": "Retained import stop and per-task recovery controls",
+              "elapsed_seconds": 69.0
+            },
+            {
+              "name": "Minimal administrator runtime and bounded read recovery",
+              "elapsed_seconds": 28.0
+            },
+            {
+              "name": "Failed and paused import source repair",
+              "elapsed_seconds": 51.0
+            },
+            {
+              "name": "Offline per-conversation recovery and capacity choices",
+              "elapsed_seconds": 21.0
+            },
+            {
+              "name": "Attachment ordered uploads and original-request recovery",
+              "elapsed_seconds": 14.0
+            },
+            {
+              "name": "Context and Skill upload proxy transport",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Adaptive Import recovery browser flow",
+              "elapsed_seconds": 60.0
+            },
+            {
+              "name": "Release H enforced CSP browser matrix",
+              "elapsed_seconds": 5.0
+            },
+            {
+              "name": "Reading geometry, image snapshots and cross-module recovery",
+              "elapsed_seconds": 148.0
+            },
+            {
+              "name": "Release E production-build PWA negative matrix",
+              "elapsed_seconds": 147.0
+            },
+            {
+              "name": "Build machine-readable browser gate summary",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Upload non-deployable quality evidence",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Restore pnpm store",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "api-quality-shard-4 / suite": {
+          "elapsed_seconds": 691.0,
+          "ready_to_start_queue_and_dispatch_seconds": 4.0,
+          "started_at": "2026-11-16T19:43:22Z",
+          "completed_at": "2026-11-16T19:54:53Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 11.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Install API dependencies",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Prepare API test services",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Context runtime and distributed Bundle consistency",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "API full suite",
+              "elapsed_seconds": 656.0
+            },
+            {
+              "name": "Alembic single-head and current validation",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Preserve actual API execution and native JUnit",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "settings-quality-shard-4 / matrix": {
+          "elapsed_seconds": 745.0,
+          "ready_to_start_queue_and_dispatch_seconds": 4.0,
+          "started_at": "2026-11-16T19:43:22Z",
+          "completed_at": "2026-11-16T19:55:47Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Validate fixed independent shard",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Record Settings completion timing mode",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 12.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 8.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Install and migrate disposable fixture",
+              "elapsed_seconds": 13.0
+            },
+            {
+              "name": "Build authenticated Web and install Chromium",
+              "elapsed_seconds": 78.0
+            },
+            {
+              "name": "Real settings, SMTP, offline and sync browser matrix",
+              "elapsed_seconds": 621.0
+            },
+            {
+              "name": "Upload settings quality evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "api-quality-shard-1 / suite": {
+          "elapsed_seconds": 811.0,
+          "ready_to_start_queue_and_dispatch_seconds": 4.0,
+          "started_at": "2026-11-16T19:43:22Z",
+          "completed_at": "2026-11-16T19:56:53Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 13.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Install API dependencies",
+              "elapsed_seconds": 11.0
+            },
+            {
+              "name": "Prepare API test services",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Context runtime and distributed Bundle consistency",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "API full suite",
+              "elapsed_seconds": 767.0
+            },
+            {
+              "name": "Alembic single-head and current validation",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Preserve actual API execution and native JUnit",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "settings-quality-shard-1 / matrix": {
+          "elapsed_seconds": 880.0,
+          "ready_to_start_queue_and_dispatch_seconds": 5.0,
+          "started_at": "2026-11-16T19:43:23Z",
+          "completed_at": "2026-11-16T19:58:03Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Validate fixed independent shard",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Record Settings completion timing mode",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 12.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Install and migrate disposable fixture",
+              "elapsed_seconds": 20.0
+            },
+            {
+              "name": "Build authenticated Web and install Chromium",
+              "elapsed_seconds": 96.0
+            },
+            {
+              "name": "Real settings, SMTP, offline and sync browser matrix",
+              "elapsed_seconds": 725.0
+            },
+            {
+              "name": "Upload settings quality evidence",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "settings-quality-shard-3 / matrix": {
+          "elapsed_seconds": 944.0,
+          "ready_to_start_queue_and_dispatch_seconds": 4.0,
+          "started_at": "2026-11-16T19:43:22Z",
+          "completed_at": "2026-11-16T19:59:06Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Validate fixed independent shard",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Record Settings completion timing mode",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 10.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 7.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Install and migrate disposable fixture",
+              "elapsed_seconds": 15.0
+            },
+            {
+              "name": "Build authenticated Web and install Chromium",
+              "elapsed_seconds": 116.0
+            },
+            {
+              "name": "Real settings, SMTP, offline and sync browser matrix",
+              "elapsed_seconds": 781.0
+            },
+            {
+              "name": "Upload settings quality evidence",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "web-quality-shard-2 / gates": {
+          "elapsed_seconds": 1146.0,
+          "ready_to_start_queue_and_dispatch_seconds": 5.0,
+          "started_at": "2026-11-16T19:43:23Z",
+          "completed_at": "2026-11-16T20:02:29Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Validate fixed independent shard",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 10.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Resolve pnpm store",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Restore pnpm store",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Record pnpm cache evidence",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Install locked dependencies without lifecycle scripts",
+              "elapsed_seconds": 14.0
+            },
+            {
+              "name": "Prepare test services",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Web production build (timed)",
+              "elapsed_seconds": 95.0
+            },
+            {
+              "name": "Start API and worker for browser integration",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Install Playwright Chromium",
+              "elapsed_seconds": 36.0
+            },
+            {
+              "name": "Image size commit, recovery and responsive controls",
+              "elapsed_seconds": 24.0
+            },
+            {
+              "name": "Cross-device reading handoff and conflict recovery",
+              "elapsed_seconds": 18.0
+            },
+            {
+              "name": "Export option continuity and unknown-result recovery",
+              "elapsed_seconds": 27.0
+            },
+            {
+              "name": "Source save snapshots, receipts and real editor transactions",
+              "elapsed_seconds": 68.0
+            },
+            {
+              "name": "Release H Share focus checks",
+              "elapsed_seconds": 11.0
+            },
+            {
+              "name": "Release H Source Editor and mutation cache checks",
+              "elapsed_seconds": 623.0
+            },
+            {
+              "name": "Release I upload-token atomicity matrix",
+              "elapsed_seconds": 62.0
+            },
+            {
+              "name": "Release H Markdown and image Viewer checks",
+              "elapsed_seconds": 119.0
+            },
+            {
+              "name": "Build machine-readable browser gate summary",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Upload non-deployable quality evidence",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Restore pnpm store",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "web-quality-shard-3 / gates": {
+          "elapsed_seconds": 961.0,
+          "ready_to_start_queue_and_dispatch_seconds": 4.0,
+          "started_at": "2026-11-16T19:43:22Z",
+          "completed_at": "2026-11-16T19:59:23Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Validate fixed independent shard",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 10.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Resolve pnpm store",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Restore pnpm store",
+              "elapsed_seconds": 6.0
+            },
+            {
+              "name": "Record pnpm cache evidence",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Install locked dependencies without lifecycle scripts",
+              "elapsed_seconds": 10.0
+            },
+            {
+              "name": "Prepare test services",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Web production build (timed)",
+              "elapsed_seconds": 61.0
+            },
+            {
+              "name": "Start API and worker for browser integration",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Install Playwright Chromium",
+              "elapsed_seconds": 19.0
+            },
+            {
+              "name": "Mounted Viewer and retained mobile sheet regression",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Reader table export and recovery controls",
+              "elapsed_seconds": 24.0
+            },
+            {
+              "name": "Reading success feedback and explicit copy recovery",
+              "elapsed_seconds": 19.0
+            },
+            {
+              "name": "Context files, export and reader recovery",
+              "elapsed_seconds": 238.0
+            },
+            {
+              "name": "Focused online browser and security checks",
+              "elapsed_seconds": 100.0
+            },
+            {
+              "name": "Source Editor content cleanup browser gate",
+              "elapsed_seconds": 41.0
+            },
+            {
+              "name": "PDF.js maintained-line browser checks",
+              "elapsed_seconds": 55.0
+            },
+            {
+              "name": "Default PWA baseline",
+              "elapsed_seconds": 250.0
+            },
+            {
+              "name": "Single-owner authentication browser gate",
+              "elapsed_seconds": 98.0
+            },
+            {
+              "name": "Build machine-readable browser gate summary",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Upload non-deployable quality evidence",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Restore pnpm store",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "api-quality-shard-2 / suite": {
+          "elapsed_seconds": 652.0,
+          "ready_to_start_queue_and_dispatch_seconds": 4.0,
+          "started_at": "2026-11-16T19:43:22Z",
+          "completed_at": "2026-11-16T19:54:14Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 14.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Install API dependencies",
+              "elapsed_seconds": 10.0
+            },
+            {
+              "name": "Prepare API test services",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Context runtime and distributed Bundle consistency",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "API full suite",
+              "elapsed_seconds": 613.0
+            },
+            {
+              "name": "Alembic single-head and current validation",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Preserve actual API execution and native JUnit",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "reading-performance-comparison / compare": {
+          "elapsed_seconds": 599.0,
+          "ready_to_start_queue_and_dispatch_seconds": 5.0,
+          "started_at": "2026-11-16T19:43:23Z",
+          "completed_at": "2026-11-16T19:53:22Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Install identical locked harness dependencies",
+              "elapsed_seconds": 36.0
+            },
+            {
+              "name": "Baseline then candidate on the same isolated runner",
+              "elapsed_seconds": 548.0
+            },
+            {
+              "name": "Preserve comparison measurements",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "settings-quality-shard-2 / matrix": {
+          "elapsed_seconds": 788.0,
+          "ready_to_start_queue_and_dispatch_seconds": 4.0,
+          "started_at": "2026-11-16T19:43:22Z",
+          "completed_at": "2026-11-16T19:56:30Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Validate fixed independent shard",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Record Settings completion timing mode",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Start pinned disposable PostgreSQL with official-source fallback",
+              "elapsed_seconds": 11.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 8.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Install and migrate disposable fixture",
+              "elapsed_seconds": 13.0
+            },
+            {
+              "name": "Build authenticated Web and install Chromium",
+              "elapsed_seconds": 76.0
+            },
+            {
+              "name": "Real settings, SMTP, offline and sync browser matrix",
+              "elapsed_seconds": 667.0
+            },
+            {
+              "name": "Upload settings quality evidence",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Stop owned disposable PostgreSQL",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "api-quality": {
+          "elapsed_seconds": 15.0,
+          "ready_to_start_queue_and_dispatch_seconds": 3.0,
+          "started_at": "2026-11-16T19:56:56Z",
+          "completed_at": "2026-11-16T19:57:11Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Download exact api shard 1 evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Download exact api shard 2 evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Download exact api shard 3 evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Download exact api shard 4 evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Require full original collection and native per-case execution",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Upload non-deployable API quality evidence",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Post Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "settings-quality": {
+          "elapsed_seconds": 32.0,
+          "ready_to_start_queue_and_dispatch_seconds": 3.0,
+          "started_at": "2026-11-16T19:59:09Z",
+          "completed_at": "2026-11-16T19:59:41Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Record Settings completion timing mode",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 8.0
+            },
+            {
+              "name": "Install report tooling only",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Download exact settings shard 1 evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Download exact settings shard 2 evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Download exact settings shard 3 evidence",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Download exact settings shard 4 evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Download exact independent fresh restore evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Collect original Settings selection and merge genuine Playwright blobs",
+              "elapsed_seconds": 5.0
+            },
+            {
+              "name": "Verify independent restore and complete Settings summary",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Upload settings quality evidence",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 1.0
+            }
+          ]
+        },
+        "web-quality": {
+          "elapsed_seconds": 18.0,
+          "ready_to_start_queue_and_dispatch_seconds": 3.0,
+          "started_at": "2026-11-16T20:02:32Z",
+          "completed_at": "2026-11-16T20:02:50Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Download exact web shard 1 evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Download exact web shard 2 evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Download exact web shard 3 evidence",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Require the complete original Web gate union",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Upload non-deployable quality evidence",
+              "elapsed_seconds": 3.0
+            },
+            {
+              "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        },
+        "build-images": {
+          "elapsed_seconds": 24.0,
+          "ready_to_start_queue_and_dispatch_seconds": 2.0,
+          "started_at": "2026-11-16T20:02:52Z",
+          "completed_at": "2026-11-16T20:03:16Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 4.0
+            },
+            {
+              "name": "Record verified release quality provenance",
+              "elapsed_seconds": 2.0
+            },
+            {
+              "name": "Record artifact producer attempt",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Promote exact prepared candidate after every quality gate",
+              "elapsed_seconds": 10.0
+            },
+            {
+              "name": "Upload deployable release artifact",
+              "elapsed_seconds": 5.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 1.0
+            }
+          ]
+        },
+        "inspect-release-artifact": {
+          "elapsed_seconds": 37.0,
+          "ready_to_start_queue_and_dispatch_seconds": 4.0,
+          "started_at": "2026-11-16T20:03:20Z",
+          "completed_at": "2026-11-16T20:03:57Z",
+          "steps": [
+            {
+              "name": "Set up job",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 5.0
+            },
+            {
+              "name": "Require the successful producer's artifact reference",
+              "elapsed_seconds": 0.0
+            },
+            {
+              "name": "Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+              "elapsed_seconds": 6.0
+            },
+            {
+              "name": "Inspect downloaded release archive independently",
+              "elapsed_seconds": 12.0
+            },
+            {
+              "name": "Verify promoted candidate and resource identity independently",
+              "elapsed_seconds": 9.0
+            },
+            {
+              "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "elapsed_seconds": 1.0
+            },
+            {
+              "name": "Complete job",
+              "elapsed_seconds": 0.0
+            }
+          ]
+        }
+      },
+      "critical_path": [
+        "web-quality-shard-2 / gates",
+        "web-quality",
+        "build-images",
+        "inspect-release-artifact"
+      ],
+      "critical_path_queue_and_dispatch_seconds": 14.0,
+      "queue_metric_note": "Time from dependencies completing/run creation to job start; includes dispatch overhead, not a billing claim."
+    },
+    "wall_seconds_saved": 2228.0,
+    "two_new_successful_runs_still_required_for_plan_acceptance": true,
+    "local55_minute_wait_excluded": true,
+    "not_guaranteed_or_controlled_causal_savings": true
+  },
+  "confirmatory_dispatch": {
+    "workflow_run_id": 43952795958,
+    "head_sha": "3d465553bf1cf1ae4cd380bc35dfbaa090b341ec",
+    "attempt": 1,
+    "quality_source_run_id": "",
+    "requested_at": "2026-11-16T20:43:53.963420+00:00",
+    "confirmed_at": "2026-11-16T20:44:00.793233+00:00",
+    "new_run_not_rerun_or_quality_reuse": true,
+    "fresh_wait_started_at": "2026-11-16T20:44:13.620301+00:00",
+    "first_read_not_before": "2026-11-16T21:39:13.620301+00:00",
+    "both_utc_and_monotonic_wait_required_seconds": 3300,
+    "result_not_read": true
+  },
+  "no_product_acceptance_or_production_deployment": true,
+  "second_complete_green_still_required": true,
+  "full_cold_dependency_cache_ci_not_claimed": true
+}

@@ -28,10 +28,17 @@ does not rebuild another image. The final inspector retains original checks and
 redownloads the original candidate for byte equality with the published archive.
 Missing/mismatched reports, attempts, configs or quality success reject publication.
 
-Local controls are verified, not complete CI acceptance:
+The original local-control checkpoint is preserved:
 [proof](../evidence/reliability-2026-11-16/ci-scheduling-v2-local-verification.json).
-Two new successful full runs and measured timing/cache behavior are still needed.
-No product/API/schema/offline-format or production deployment change.
+Exact3d46555 subsequently passes two new ordinary full runs43942265966 and
+43952795958, attempt1/all19 jobs. Independent native/API/memory/OCI checks and
+candidate-to-release byte identity pass separately for each run; observed elapsed
+times are20m39s /22m24s against57m47s baseline, with about16% more runner minutes.
+[Final two-run evidence](../evidence/reliability-2026-11-16/ci-scheduling-v2-two-green-results.json).
+Both full runs restored dependency caches. Full cold-cache Linux CI is still
+unverified; local cold dependency installation is not equivalent.
+No product/API/schema/offline-format or production deployment change. Later
+documentation-only commits do not change the exact CI-tested source identity.
 
 The first19-job run43928590278 failed closed before publication. The reviewed
 repair admits only the two actual image jobs in the existing digest-pinned

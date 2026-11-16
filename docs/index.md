@@ -1,20 +1,20 @@
 # 文档导航
 
-## 当前：第二轮CI调度已实现并通过本地检查，待完整实测 — 2026-11-17
+## 当前：第二轮CI两次全绿，实测20分39秒 / 22分24秒 — 2026-11-17
 
-指定五项旧断言已独立提交8adaf9f。19-job候选实现API4/Settings4/Web3、独立restore1和
-提前非发布镜像；原覆盖/超时/资源门禁不变。UX2556、Node156/Python138、格式识别13、
-静态检查及真实四片blob控制通过，不能代替完整Linux/浏览器/内存执行。
-[本地证据](evidence/reliability-2026-11-16/ci-scheduling-v2-local-verification.json) /
+精确修复提交3d46555的普通完整CI43942265966、43952795958均attempt1、19 job全绿，
+原API7010/7007通过/3跳过、Web14、Settings470+restore1、Reader及五项内存门禁、
+独立原生结果和镜像制品核验均通过。较57分47秒基线缩短61%–64%，观察到的总runner
+分钟增加约16%；峰值14。两次本机55分钟等待不计入CI耗时，不把失败运行当收益。
+[两轮完整证据](evidence/reliability-2026-11-16/ci-scheduling-v2-two-green-results.json) /
 [发布合同](system/RELEASE_SAFETY_BASELINE.md) /
 [唯一状态台账](system/SMALL_HOST_IMPROVEMENT_STATUS.md)。
-两次新完整成功、缓存模式与正式耗时/runner分钟仍待验证；20–25分钟仍是目标，生产不变。
-首个19-job运行43928590278失败于四处合同适配遗漏，非原mounted五项再次失败；
-Settings470+restore1、Reader通过，API7006/1失败/3原skip。已保留
-[失败证据](evidence/reliability-2026-11-16/ci-scheduling-v2-failure-43928590278.json)；
-修复本地UX2556、Node159/Python139及提前执行的原Playwright安全断言扩展88通过。
+两次均观察到依赖缓存命中；Windows空缓存安装/全新检出离线复用通过，
+**完整冷缓存LinuxCI仍未验证**。生产71342129/schema0061未变，不需CI-only重部署。
+指定五项旧断言已独立修复8adaf9f；首个19-job运行43928590278的四处合同适配遗漏见
+[失败证据](evidence/reliability-2026-11-16/ci-scheduling-v2-failure-43928590278.json)。
 [定点修复与缓存诊断](evidence/reliability-2026-11-16/ci-scheduling-v2-contract-repair.json)
-不是新完整成功或提速验收。
+作为历史保留，不用后续成功覆盖旧失败。详细分片、关键路径与剩余验证以唯一台账为准。
 
 ## 前一检查点：71342129 已部署并独立核验 — 2026-11-17
 
