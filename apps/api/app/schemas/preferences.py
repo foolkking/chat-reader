@@ -13,13 +13,35 @@ ReaderWidthMode = Literal["compact", "standard", "wide"]
 ReaderDensityMode = Literal["compact", "comfortable", "large"]
 SectionTocMode = Literal["visible", "rail"]
 ConversationSortMode = Literal[
-    "recent_read", "updated", "created", "imported", "title", "message_count", "custom"
+    "recent_read", "content_updated", "updated", "created", "imported", "title", "message_count", "custom"
 ]
 ProjectSortMode = Literal["recent_read", "updated", "created", "title", "conversation_count", "custom"]
 SortDirection = Literal["asc", "desc"]
 
 
+class ScopedSort(BaseModel):
+    mode: ConversationSortMode
+    direction: SortDirection
+
+
+class NavigationRules(BaseModel):
+    all: ScopedSort = Field(default_factory=lambda: ScopedSort(mode="content_updated", direction="desc"))
+    project_default: ScopedSort = Field(default_factory=lambda: ScopedSort(mode="imported", direction="desc"))
+    unclassified: ScopedSort = Field(default_factory=lambda: ScopedSort(mode="imported", direction="desc"))
+    blocks: Literal["projects_first", "unclassified_first"] = "projects_first"
+
+
+class NavigationBackup(NavigationRules):
+    project_mode: ProjectSortMode
+    project_direction: SortDirection
+
+
+class NavigationSort(NavigationRules):
+    recommendation_backup: NavigationBackup | None = None
+
+
 class UserPreferenceRead(BaseModel):
+    navigation_sort: NavigationSort = Field(default_factory=NavigationSort)
     theme_mode: ThemeMode
     locale_mode: LocaleMode
     reader_width_mode: ReaderWidthMode
@@ -38,6 +60,7 @@ class UserPreferenceRead(BaseModel):
 
 
 class UserPreferenceUpdate(BaseModel):
+    navigation_sort: NavigationSort | None = None
     theme_mode: ThemeMode | None = None
     locale_mode: LocaleMode | None = None
     reader_width_mode: ReaderWidthMode | None = None
@@ -55,7 +78,7 @@ class UserPreferenceUpdate(BaseModel):
 class PreferenceSyncRequest(BaseModel):
     operation_id: uuid.UUID
     changes: UserPreferenceUpdate
-    base_revisions: dict[str, int] = Field(max_length=12)
+    base_revisions: dict[str, int] = Field(max_length=13)
 
     @model_validator(mode="after")
     def matching_revisions(self):

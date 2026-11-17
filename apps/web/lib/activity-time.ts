@@ -1,5 +1,13 @@
 import type { ResolvedLocale } from "./types";
 
+export function sortTimeLabel(mode: string, locale: ResolvedLocale, importedFallback = false): string {
+  const labels: Record<string, [string, string]> = {
+    content_updated: importedFallback ? ["内容更新（回退到导入时间）", "Content updated (import time fallback)"] : ["内容更新", "Content updated"],
+    imported: ["导入", "Imported"], created: ["创建", "Created"], updated: ["资料修改", "Metadata modified"], recent_read: ["最近阅读", "Last read"],
+  };
+  return labels[mode]?.[locale === "zh-CN" ? 0 : 1] ?? "";
+}
+
 export function formatActivityTime(value: string | null | undefined, locale: ResolvedLocale, now = new Date()): string {
   if (!value) return locale === "zh-CN" ? "尚未阅读" : "Not read yet";
   const date = new Date(value);

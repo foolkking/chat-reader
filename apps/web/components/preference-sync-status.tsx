@@ -34,12 +34,14 @@ export function PreferenceSyncStatus() {
 
 function fieldLabel(field: PreferenceField, zh: boolean): string {
   const labels: Record<PreferenceField, [string, string]> = {
+    navigation_sort: ["排序与导航", "Sorting & navigation"],
     theme_mode: ["主题", "Theme"], locale_mode: ["语言", "Language"], reader_width_mode: ["阅读宽度", "Reading width"], reader_density_mode: ["阅读密度", "Reading density"], reader_font_size_px: ["字号", "Font size"], section_toc_mode: ["目录", "Contents"],
     conversation_sort_mode: ["对话排序", "Conversation order"], conversation_sort_direction: ["对话排序方向", "Conversation direction"], project_sort_mode: ["项目排序", "Project order"], project_sort_direction: ["项目排序方向", "Project direction"], reader_default_focus: ["默认专注模式", "Default focus mode"], annotation_default_position: ["批注默认位置", "Default annotation position"],
   };
   return labels[field][zh ? 0 : 1];
 }
 function valueLabel(value: unknown, zh: boolean): string {
+  if (typeof value === "object" && value !== null) return JSON.stringify(value);
   if (typeof value === "boolean") return value ? (zh ? "开启" : "On") : (zh ? "关闭" : "Off");
   if (!zh) return String(value ?? "—");
   const labels: Record<string, string> = { light: "浅色", dark: "深色", system: "跟随系统", auto: "自动", "zh-CN": "中文", "en-US": "英文", compact: "紧凑", standard: "标准", wide: "宽", comfortable: "舒适", large: "宽松", visible: "显示", rail: "收起", floating: "浮窗", docked: "固定左侧", recent_read: "最近阅读", updated: "最近更新", created: "创建时间", imported: "导入时间", title: "标题", message_count: "消息数量", conversation_count: "对话数量", custom: "自定义", asc: "升序", desc: "降序" };

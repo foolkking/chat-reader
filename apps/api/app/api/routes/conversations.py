@@ -164,10 +164,10 @@ def list_conversations(
     tag_id: uuid.UUID | None = None,
     include_archived: bool = False,
     status_scope: str | None = Query(default=None, pattern="^(active|archived|all)$"),
-    scope: str = Query(default="all", pattern="^(all|history)$"),
+    scope: str = Query(default="all", pattern="^(all|history|unclassified)$"),
     sort: str = Query(
         default="recent_read",
-        pattern="^(recent_read|updated|created|imported|title|message_count|custom)$",
+        pattern="^(recent_read|content_updated|updated|created|imported|title|message_count|custom)$",
     ),
     direction: str = Query(default="desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
@@ -209,14 +209,14 @@ def list_conversations(
         )
         if not include_archived:
             query = query.filter(Conversation.status != "archived")
-    if scope == "history":
+    if scope in {"history", "unclassified"}:
         query = (
             query.outerjoin(ProjectConversation, ProjectConversation.conversation_id == Conversation.id)
             .outerjoin(Project, Project.id == ProjectConversation.project_id)
             .filter(
                 (ProjectConversation.id.is_(None))
                 | (Project.is_default.is_(True))
-                | (Project.is_archived.is_(True))
+                | ((Project.is_archived.is_(True)) if scope == "history" else False)
             )
         )
     if source_type:
@@ -224,7 +224,7 @@ def list_conversations(
     if source_profile:
         query = query.filter(Conversation.source_profile == source_profile)
     conversations = (
-        query.order_by(*_conversation_sort_order(sort, direction))
+        query.order_by(*_conversation_sort_order(sort, direction, scope=scope))
         .offset(offset)
         .limit(limit)
         .all()
@@ -360,6 +360,8 @@ def update_conversation_order(
     db: Session = Depends(get_db),
 ) -> None:
     ownership_scope = ownership_scope_from_request(request)
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope.owner_user_id)
     rows = db.query(Conversation).filter(
         ownership_scope.predicate(Conversation), Conversation.id.in_(payload.conversation_ids)
     ).all()
@@ -904,6 +906,8 @@ def set_conversation_pin(
     request: Request,
     db: Session = Depends(get_db),
 ) -> ConversationDetail:
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope_from_request(request).owner_user_id)
     conversation = _managed_conversation_or_404(
         db, conversation_id, ownership_scope_from_request(request)
     )
@@ -1127,6 +1131,8 @@ def _conversation_item(conversation: Conversation) -> ConversationListItem:
         last_read_at=conversation.recent_item.last_opened_at if conversation.recent_item else None,
         reading_progress=_reading_progress(conversation.recent_item.context) if conversation.recent_item else None,
         manual_sort_order=conversation.manual_sort_order,
+        content_updated_at=conversation.sort_time or conversation.imported_at,
+        content_time_fallback=conversation.sort_time is None,
     )
 
 
@@ -1173,24 +1179,22 @@ def _reading_progress(context: dict | None) -> float | None:
     return max(0.0, min(100.0, float(raw)))
 
 
-def _conversation_sort_order(sort: str, direction: str) -> tuple:
+def _conversation_sort_order(sort: str, direction: str, *, scope: str = "all") -> tuple:
     field = {
         "recent_read": RecentItem.last_opened_at,
         "updated": Conversation.updated_at,
+        "content_updated": func.coalesce(Conversation.sort_time, Conversation.imported_at),
         "created": Conversation.created_at,
         "imported": Conversation.imported_at,
         "title": func.lower(Conversation.display_title),
         "message_count": Conversation.message_count,
-        "custom": Conversation.manual_sort_order,
+        "custom": Conversation.unclassified_sort_order if scope == "unclassified" else Conversation.manual_sort_order,
     }[sort]
     ordered_field = field.asc() if direction == "asc" else field.desc()
     return (
         Conversation.is_global_pinned.desc(),
-        Conversation.global_pinned_at.desc(),
         case((field.is_(None), 1), else_=0).asc(),
         ordered_field,
-        Conversation.sort_time.desc(),
-        Conversation.imported_at.desc(),
         Conversation.id.asc(),
     )
 

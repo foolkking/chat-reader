@@ -12,7 +12,7 @@ export type ReaderWidthMode = "compact" | "standard" | "wide";
 export type ReaderDensityMode = "compact" | "comfortable" | "large";
 export type SectionTocMode = "visible" | "rail";
 export type SortDirection = "asc" | "desc";
-export type ConversationSortMode = "recent_read" | "updated" | "created" | "imported" | "title" | "message_count" | "custom";
+export type ConversationSortMode = "content_updated" | "recent_read" | "updated" | "created" | "imported" | "title" | "message_count" | "custom";
 export type ProjectSortMode = "recent_read" | "updated" | "created" | "title" | "conversation_count" | "custom";
 export type DialogueIndexPanelState = "rail" | "preview" | "pinned";
 export type ReaderSidebarState = "collapsed" | "expanded";
@@ -26,7 +26,11 @@ export type NeighborhoodExpansionState = {
   error: string | null;
 };
 
+export type ScopedSort = { mode: ConversationSortMode; direction: SortDirection };
+export type NavigationRules = { all: ScopedSort; project_default: ScopedSort; unclassified: ScopedSort; blocks: "projects_first" | "unclassified_first" };
+export type NavigationSort = NavigationRules & { recommendation_backup?: (NavigationRules & { project_mode: ProjectSortMode; project_direction: SortDirection }) | null };
 export type UserPreferenceRead = {
+  navigation_sort?: NavigationSort;
   theme_mode: ThemeMode;
   locale_mode: LocaleMode;
   reader_width_mode: ReaderWidthMode;
@@ -46,7 +50,7 @@ export type UserPreferenceRead = {
 
 export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead,
   "theme_mode" | "locale_mode" | "reader_width_mode" | "reader_density_mode" | "reader_font_size_px" | "section_toc_mode" | "conversation_sort_mode" |
-  "conversation_sort_direction" | "project_sort_mode" | "project_sort_direction" | "reader_default_focus" | "annotation_default_position"
+  "navigation_sort" | "conversation_sort_direction" | "project_sort_mode" | "project_sort_direction" | "reader_default_focus" | "annotation_default_position"
 >>;
 
 export type UserFeatureCollection = "saved-search" | "export-preset" | "reading-list" | "offline-checklist" | "conversation-tag";
@@ -120,6 +124,7 @@ export type ConversationListItem = {
   last_read_at: string | null;
   reading_progress?: number | null;
   manual_sort_order: number;
+  content_updated_at?: string; content_time_fallback?: boolean;
 };
 
 export type ConversationDetail = ConversationListItem & {
@@ -354,6 +359,7 @@ export type ConversationPlacementResponse = {
 };
 
 export type ProjectPlacementInput = {
+  expected_order_version?: string;
   before_project_id?: string | null;
   after_project_id?: string | null;
 };
@@ -923,6 +929,8 @@ export type TocRefreshInput = {
 };
 
 export type ProjectRead = {
+  order_version?: string | null;
+  conversation_sort?: ScopedSort | null; sort_revision?: number;
   id: string;
   name: string;
   description: string | null;
@@ -947,6 +955,7 @@ export type ProjectCreate = {
 };
 
 export type ProjectUpdate = Partial<ProjectCreate> & {
+  conversation_sort?: ScopedSort | null; expected_sort_revision?: number;
   sort_order?: number;
   is_archived?: boolean;
 };

@@ -57,6 +57,16 @@ def preference_read(preference: UserPreference) -> UserPreferenceRead:
         created_at=preference.created_at, updated_at=preference.updated_at)
 
 
+def preserve_restored_manual_positions(db: Session, subject_key: str, project_ids, *, allow_inactive=False) -> None:
+    """Archive ranks are saved arrangements, not an uninitialized automatic list."""
+    preference = get_or_create_preferences(db, subject_key, allow_inactive=allow_inactive)
+    revisions = dict(preference.field_revisions or {})
+    for key in ["_manual:all:", "_manual:unclassified:", *(f"_manual:project:{value}" for value in project_ids)]:
+        revisions[key] = revisions.get(key, 0) + 1
+    preference.field_revisions = revisions
+    db.flush()
+
+
 def sync_preferences(db: Session, payload: PreferenceSyncRequest, subject_key: str) -> PreferenceSyncResponse:
     preference = get_or_create_preferences(db, subject_key)
     digest = hashlib.sha256(json.dumps(payload.model_dump(mode="json"), sort_keys=True, separators=(",", ":")).encode()).hexdigest()

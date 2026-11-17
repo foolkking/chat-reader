@@ -5,11 +5,12 @@ import { Archive, MoreHorizontal, Settings } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ApiRequestError, getProjects, updateProject } from "../../lib/api";
+import { ApiRequestError, getProjects, updateProject, placeProject } from "../../lib/api";
 import type { ProjectRead } from "../../lib/types";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { usePreferences } from "../../components/preferences-provider";
 import { ProjectSettingsDialog } from "./project-settings-dialog";
+import { authenticationGeneration } from "../../lib/offline-access";
 
 type ProjectArchiveState = {
   project: Pick<ProjectRead, "id" | "name">;
@@ -87,7 +88,7 @@ export function useProjectArchive({ projects, unavailable, onChanged }: {
     try {
       confirmed = await dialog.confirm({
         title: zh ? `归档“${target.name}”？` : `Archive “${target.name}”?`,
-        description: zh ? "对话会暂时显示在未分类区域，恢复项目后会回到项目。" : "Its conversations appear as unclassified until the project is restored.",
+        description: zh ? "项目及其对话可从归档页面查看，不会变成未归类；恢复后重新出现在项目目录。" : "Find this project and its conversations in the archive, not Unclassified. Restoring returns it to the project directory.",
         confirmLabel: zh ? "归档" : "Archive", danger: true,
       });
     } catch {
@@ -187,6 +188,25 @@ export function ProjectArchiveFeedback({ archive }: { archive: ProjectArchiveCon
 }
 
 export function ProjectActionMenu({ project, onChanged, archive }: { project: ProjectRead; onChanged: () => Promise<void>; archive: ProjectArchiveController }) {
+  const orderingClient = useQueryClient();
+  const preferences = usePreferences();
+  const [orderError, setOrderError] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const orderedProjects = orderingClient.getQueryData<ProjectRead[]>(["projects", preferences.projectSortMode, preferences.projectSortDirection])?.filter(row => !row.is_default && !row.is_archived) ?? [];
+  const orderIndex = orderedProjects.findIndex(row => row.id === project.id);
+  const move = async (delta: number) => {
+    const neighbor = orderedProjects[orderIndex + delta];
+    if (!neighbor || !project.order_version || moving) return;
+    const account = authenticationGeneration();
+    setMoving(true); setOrderError(false);
+    try {
+      const before = (delta < 0) === (preferences.projectSortDirection === "asc");
+      await placeProject(project.id, { expected_order_version: project.order_version,
+        ...(before ? { before_project_id: neighbor.id } : { after_project_id: neighbor.id }) });
+      if (account === authenticationGeneration()) await onChanged();
+    } catch { if (account === authenticationGeneration()) setOrderError(true); }
+    finally { if (account === authenticationGeneration()) setMoving(false); }
+  };
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -226,6 +246,8 @@ export function ProjectActionMenu({ project, onChanged, archive }: { project: Pr
       } else if (event.key === "Tab") { close(); }
     }}>
       <button role="menuitem" type="button" disabled={archive.busy} className="flex min-h-10 w-full items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-subtle" onClick={() => { setOpen(false); setSettingsOpen(true); }}><Settings className="h-4 w-4" />{zh ? "项目设置" : "Project settings"}</button>
+      {preferences.projectSortMode === "custom" ? [-1, 1].map(delta => <button key={delta} role="menuitem" type="button" disabled={moving || !project.order_version || !orderedProjects[orderIndex + delta]} className="flex min-h-11 w-full items-center px-3 text-left text-sm hover:bg-subtle disabled:opacity-50" onClick={() => void move(delta)}>{delta < 0 ? (zh ? "项目上移" : "Move project up") : (zh ? "项目下移" : "Move project down")}</button>) : null}
+      {orderError ? <p role="alert" className="px-3 text-xs text-[var(--danger)]">{zh ? "顺序保存未确认，请刷新后核对。" : "Order unconfirmed. Refresh to check."}</p> : null}
       <button role="menuitem" type="button" disabled={archive.blocked} className="flex min-h-10 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50" onClick={() => { close(); void archive.request(project); }}><Archive className="h-4 w-4" />{archive.state?.phase === "archiving" && archive.state.project.id === project.id ? (zh ? "正在归档…" : "Archiving…") : (zh ? "归档项目" : "Archive project")}</button>
     </div>, document.body) : null}
     <ProjectSettingsDialog project={project} open={settingsOpen} onClose={() => setSettingsOpen(false)} onChanged={onChanged} />

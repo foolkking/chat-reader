@@ -89,8 +89,10 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
     "./merge-conversations-dialog": { MergeConversationsDialog: props => { mergeOwners.push(props); return null; } },
     "../../components/sort-menu": { ConversationSortMenu: () => null },
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale, conversationSortMode: sortMode, conversationSortDirection: direction }) },
+    "../../components/use-scoped-sort": { useScopedSort: () => ({ conversationSortMode: sortMode, conversationSortDirection: direction,
+      orderVersion: "synthetic-scope-version", place: async (id, before, after, version) => orderWrites.push({ id, before, after, version }) }) },
     "../../components/quick-start-guide": { QuickStartGuide: () => null },
-    "../../lib/activity-time": { formatActivityTime: () => "Synthetic time", fullActivityTime: () => "Synthetic time" },
+    "../../lib/activity-time": { sortTimeLabel: () => "Synthetic label", formatActivityTime: () => "Synthetic time", fullActivityTime: () => "Synthetic time" },
     "../../components/interaction-dialog-provider": { useInteractionDialog: () => ({}) },
     "./use-batch-export": { useBatchExport: () => ({ feedback: null, overLimit: count => count > 5000 }) },
     "./use-batch-result-check": { useBatchResultCheck: () => ({ record: noop, blockedIds: new Set(), surface: null }) },
@@ -105,15 +107,17 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
     "../../components/hover-preview-link": { HoverPreviewLink: ({ href, children }) => React.createElement("a", { href }, children) },
   };
   const module = { exports: {} };
-  new Function("require", "module", "exports", compiled)(name => {
+  new Function("require", "module", "exports", "window", compiled)(name => {
     if (Object.hasOwn(mocks, name)) return mocks[name];
     if (name.startsWith(".")) throw new Error(`Unexpected component dependency: ${name}`);
     return appRequire(name);
-  }, module, module.exports);
+  }, module, module.exports, { dispatchEvent: noop });
   const render = () => { stateIndex = 0; retryButtons.length = 0; mergeOwners.length = 0; sortableRows.length = 0;
     return renderToStaticMarkup(React.createElement(module.exports.ConversationList, { mode, tagId, onImportClick: () => { imports += 1; } })); };
   return { client, main, existence, render, retryButtons, inputs, mergeOwners, apiReads, orderWrites, sortableRows,
-    async drag(from, to) { assert.ok(dragContext); dragContext.onDragEnd({ active: { id: from }, over: { id: to } }); await setImmediate(); },
+    async drag(from, to) { assert.ok(dragContext);
+      dragContext.onDragStart({ active: { id: from, rect: { current: { initial: { width: 300, height: 50 } } } } });
+      dragContext.onDragEnd({ active: { id: from }, over: { id: to } }); await setImmediate(); },
     reads: () => reads, existenceReads: () => existenceReads, imports: () => imports,
     recover: () => { mainError = null; savedError = null; }, setRows: next => { mainRows = next; },
     holdRead: () => { let release; held = new Promise(resolve => { release = resolve; }); return () => { release(mainRows); held = null; }; },
@@ -265,29 +269,26 @@ test("Chinese archived-only empty state gives an actual archive link", async () 
 });
 
 for (const mode of ["active", "archived"]) for (const count of [499, 500, 501]) {
-  test(`${mode}: custom order permits at most 500 fully loaded conversations (${count})`, async () => {
+  test(`${mode}: anchored order handles partial and complete scopes beyond the old 500 limit (${count})`, async () => {
     const rows = Array.from({ length: count }, (_, index) => ({ ...row(mode), id: `synthetic-order-${index}` }));
     const f = await fixture({ mode, rows, error: null, sortMode: "custom", direction: "asc" });
     try {
       f.render();
-      assert.ok(f.sortableRows.every(item => item.disabled));
+      assert.ok(f.sortableRows.every(item => !item.disabled));
       await f.drag(rows[0].id, rows[1].id);
-      assert.deepEqual(f.orderWrites, []);
+      assert.deepEqual(f.orderWrites, [{ id: rows[0].id, before: rows[2].id, after: rows[1].id, version: "synthetic-scope-version" }]);
       while (f.main.getCurrentResult().hasNextPage) {
         await f.main.fetchNextPage();
         const html = f.render();
-        if (count === 501 && f.sortableRows.length === 500) {
-          assert.match(html, /500-conversation custom-order API limit/);
-          assert.doesNotMatch(html, /Load all conversations before custom drag ordering/);
-        }
+        assert.doesNotMatch(html, /500-conversation custom-order API limit|Load all conversations before custom drag ordering/);
       }
       const html = f.render();
       assert.equal(f.sortableRows.length, count);
-      assert.ok(f.sortableRows.every(item => item.disabled === (count > 500)));
+      assert.ok(f.sortableRows.every(item => !item.disabled));
       await f.drag(rows[0].id, rows[1].id);
-      assert.equal(f.orderWrites.length, count <= 500 ? 1 : 0);
-      if (count <= 500) assert.deepEqual(f.orderWrites[0], [rows[1].id, rows[0].id, ...rows.slice(2).map(item => item.id)]);
-      else assert.match(html, /500-conversation custom-order API limit/);
+      assert.equal(f.orderWrites.length, 2);
+      assert.deepEqual(f.orderWrites[1], f.orderWrites[0], "Only neighboring identities and the captured version are submitted, never a partial full-list replacement.");
+      assert.doesNotMatch(html, /500-conversation custom-order API limit/);
     } finally { f.dispose(); }
   });
 }
@@ -301,25 +302,14 @@ for (const direction of ["asc", "desc"]) {
     const f = await fixture({ rows, error: null, sortMode: "custom", direction });
     try {
       f.render();
-      // Different pin timestamps outrank manual rank, just like pin status.
+      // Pinning only creates groups; pin timestamps no longer override ranks.
       await f.drag("pin-new", "pin-same-a");
       await f.drag("pin-old", "plain-a");
-      assert.deepEqual(f.orderWrites, []);
+      assert.deepEqual(f.orderWrites, [{ id: "pin-new", before: "pin-same-b", after: "pin-same-a", version: "synthetic-scope-version" }]);
       await f.drag("plain-a", "plain-b");
-      const expected = ["pin-new", "pin-same-a", "pin-same-b", "pin-old", "plain-b", "plain-a"];
-      const canonical = direction === "asc" ? expected
-        : ["pin-new", "pin-same-b", "pin-same-a", "pin-old", "plain-a", "plain-b"];
-      assert.deepEqual(f.orderWrites[0], canonical);
-      const ranks = new Map(canonical.map((id, index) => [id, index]));
-      const reloaded = [...rows].sort((a, b) =>
-        Number(b.is_global_pinned) - Number(a.is_global_pinned)
-        || (b.global_pinned_at ?? "").localeCompare(a.global_pinned_at ?? "")
-        || (ranks.get(a.id) - ranks.get(b.id)) * (direction === "asc" ? 1 : -1));
-      assert.deepEqual(reloaded.map(item => item.id), expected);
+      assert.deepEqual(f.orderWrites[1], { id: "plain-a", before: null, after: "plain-b", version: "synthetic-scope-version" });
       await f.drag("pin-same-a", "pin-same-b");
-      assert.deepEqual(f.orderWrites[1], direction === "asc"
-        ? ["pin-new", "pin-same-b", "pin-same-a", "pin-old", "plain-a", "plain-b"]
-        : ["pin-new", "pin-same-a", "pin-same-b", "pin-old", "plain-b", "plain-a"]);
+      assert.deepEqual(f.orderWrites[2], { id: "pin-same-a", before: "pin-old", after: "pin-same-b", version: "synthetic-scope-version" });
     } finally { f.dispose(); }
   });
 }

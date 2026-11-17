@@ -63,6 +63,7 @@ export default async function RootLayout({
 
 function initialPreferences(): UserPreferenceRead {
   const fallback: UserPreferenceRead = {
+    navigation_sort: { all: { mode: "content_updated", direction: "desc" }, project_default: { mode: "imported", direction: "desc" }, unclassified: { mode: "imported", direction: "desc" }, blocks: "projects_first" },
     theme_mode: "light",
     locale_mode: "auto",
     reader_width_mode: "standard",
@@ -71,8 +72,8 @@ function initialPreferences(): UserPreferenceRead {
     section_toc_mode: "visible",
     conversation_sort_mode: "recent_read",
     conversation_sort_direction: "desc",
-    project_sort_mode: "recent_read",
-    project_sort_direction: "desc",
+    project_sort_mode: "custom",
+    project_sort_direction: "asc",
     created_at: new Date(0).toISOString(),
     updated_at: new Date(0).toISOString(),
   };

@@ -6,7 +6,7 @@ import type { PreferenceField, PreferenceSyncRequest, UserPreferenceRead, UserPr
 export const PREFERENCE_STATE_KEY = "account-preferences:v1";
 export const PREFERENCE_SYNC_EVENT = "chat-reader:preference-sync";
 export const LEGACY_PREFERENCE_OWNER = "chat-reader:legacy-preferences-owner-v1";
-export const PREFERENCE_FIELDS: PreferenceField[] = ["theme_mode", "locale_mode", "reader_width_mode", "reader_density_mode", "reader_font_size_px", "section_toc_mode", "conversation_sort_mode", "conversation_sort_direction", "project_sort_mode", "project_sort_direction", "reader_default_focus", "annotation_default_position"];
+export const PREFERENCE_FIELDS: PreferenceField[] = ["navigation_sort", "theme_mode", "locale_mode", "reader_width_mode", "reader_density_mode", "reader_font_size_px", "section_toc_mode", "conversation_sort_mode", "conversation_sort_direction", "project_sort_mode", "project_sort_direction", "reader_default_focus", "annotation_default_position"];
 type Value = NonNullable<UserPreferenceUpdate[PreferenceField]>;
 type Change = { value: Value; baseRevision: number; sequence: number };
 type Flight = { request: PreferenceSyncRequest; sequences: Partial<Record<PreferenceField, number>> };
@@ -18,6 +18,15 @@ export type PreferenceSyncState = {
 const fieldRevision = (snapshot: UserPreferenceRead, key: PreferenceField) => snapshot.field_revisions?.[key] ?? 1;
 const notify = () => window.dispatchEvent(new Event(PREFERENCE_SYNC_EVENT));
 const valuesOf = (changes: PreferenceSyncState["changes"]): UserPreferenceUpdate => Object.fromEntries(Object.entries(changes).map(([key, value]) => [key, value!.value]));
+// Navigation preferences are structured values: IndexedDB/JSON round trips
+// necessarily change reference identity, not their meaning.
+export function preferenceValuesEqual(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (!left || !right || typeof left !== "object" || typeof right !== "object") return false;
+  const a = left as Record<string, unknown>, b = right as Record<string, unknown>;
+  return Object.keys(a).length === Object.keys(b).length
+    && Object.keys(a).every(key => Object.hasOwn(b, key) && preferenceValuesEqual(a[key], b[key]));
+}
 export function effectivePreferences(state: PreferenceSyncState): UserPreferenceRead { return { ...state.server, ...valuesOf(state.changes) }; }
 export function preferencePendingCount(state?: PreferenceSyncState): number { return state ? Object.keys(state.changes).length : 0; }
 
@@ -39,7 +48,7 @@ export async function initializePreferenceState(initial: UserPreferenceRead): Pr
         const cached = JSON.parse(localStorage.getItem("chat-reader:user-preferences") || "{}");
         cached.reader_default_focus = (localStorage.getItem("chat-reader:reader-default-focus") ?? localStorage.getItem("chat-reader:reader-focus-mode")) === "true";
         cached.annotation_default_position = localStorage.getItem("chat-reader:annotation-workspace-mode") === "docked" ? "docked" : "floating";
-        for (const key of PREFERENCE_FIELDS) if (validValue(key, cached[key]) && cached[key] !== result.server[key]) {
+        for (const key of PREFERENCE_FIELDS) if (validValue(key, cached[key]) && !preferenceValuesEqual(cached[key], result.server[key])) {
           result.changes[key] = { value: cached[key], baseRevision: fieldRevision(result.server, key), sequence: ++result.sequence };
         }
       }
@@ -54,12 +63,20 @@ export async function initializePreferenceState(initial: UserPreferenceRead): Pr
 }
 
 function validValue(key: PreferenceField, value: unknown): value is Value {
+  if (key === "navigation_sort") {
+    if (!value || typeof value !== "object") return false;
+    const navigation = value as Record<string, unknown>;
+    return ["projects_first", "unclassified_first"].includes(String(navigation.blocks)) && ["all", "project_default", "unclassified"].every(scope => {
+      const sort = navigation[scope] as { mode?: string; direction?: string } | undefined;
+      return !!sort && ["content_updated", "recent_read", "updated", "created", "imported", "title", "message_count", "custom"].includes(sort.mode ?? "") && ["asc", "desc"].includes(sort.direction ?? "");
+    });
+  }
   if (key === "reader_default_focus") return typeof value === "boolean";
   if (key === "reader_font_size_px") return typeof value === "number" && Number.isInteger(value) && value >= 15 && value <= 22;
   const allowed: Partial<Record<PreferenceField, string[]>> = {
     theme_mode: ["light", "dark", "system"], locale_mode: ["auto", "zh-CN", "en-US"], reader_width_mode: ["compact", "standard", "wide"],
     reader_density_mode: ["compact", "comfortable", "large"], section_toc_mode: ["visible", "rail"], annotation_default_position: ["floating", "docked"],
-    conversation_sort_mode: ["recent_read", "updated", "created", "imported", "title", "message_count", "custom"], project_sort_mode: ["recent_read", "updated", "created", "title", "conversation_count", "custom"],
+    conversation_sort_mode: ["content_updated", "recent_read", "updated", "created", "imported", "title", "message_count", "custom"], project_sort_mode: ["recent_read", "updated", "created", "title", "conversation_count", "custom"],
     conversation_sort_direction: ["asc", "desc"], project_sort_direction: ["asc", "desc"],
   };
   return typeof value === "string" && Boolean(allowed[key]?.includes(value));
@@ -73,7 +90,7 @@ export async function queuePreferenceChanges(input: UserPreferenceUpdate): Promi
     for (const key of PREFERENCE_FIELDS) {
       const value = input[key]; if (value === undefined) continue;
       if (!validValue(key, value)) throw new Error("Invalid preference value.");
-      if (value === state.server[key] && !state.flight?.sequences[key]) { delete state.changes[key]; delete state.conflicts[key]; }
+      if (preferenceValuesEqual(value, state.server[key]) && !state.flight?.sequences[key]) { delete state.changes[key]; delete state.conflicts[key]; }
       else state.changes[key] = { value, baseRevision: state.changes[key]?.baseRevision ?? fieldRevision(state.server, key), sequence: ++state.sequence };
     }
     state.attempts = 0; delete state.error; await write(state, db);
@@ -109,7 +126,7 @@ export function flushPreferenceSync(options: { refresh?: boolean; retry?: boolea
         const fresh = await getPreferences(AbortSignal.timeout(10_000)); assertOfflineAccess(access);
         await db.transaction("rw", db.settings, async () => { const current = (await readPreferenceState(db))!; mergeServer(current, fresh); if (!Object.keys(current.changes).length) { delete current.error; delete current.retryAfter; current.attempts = 0; } await write(current, db); });
       }
-      // A maximum of 12 fields per request; later edits get a separate durable
+      // A maximum of 13 fields per request; later edits get a separate durable
       // operation after this response has been acknowledged.
       const flight = await db.transaction("rw", db.settings, async () => {
         const current = (await readPreferenceState(db))!;

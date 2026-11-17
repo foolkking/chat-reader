@@ -524,6 +524,18 @@ def restore_system_archive(
             restore_context(db, checked, lambda name, source: uuid.UUID(source) if source is not None else None)
             from app.services.exporting.archive_user_features import restore_system_features
             restore_system_features(db, checked, owned)
+            # Restored ranks are intentional, even when sorting is currently
+            # automatic. Switching modes must not initialize over those ranks.
+            from app.services.preferences import preserve_restored_manual_positions
+            # An account can own conversations without a non-default project.
+            # Its saved global/unclassified positions must survive too.
+            restored_projects = {str(owner): [] for (owner,) in db.query(Conversation.owner_user_id).distinct()}
+            for project in db.query(Project).all():
+                restored_projects.setdefault(str(project.owner_user_id), []).append(project.id)
+            from app.services.ownership import LEGACY_SUBJECT_KEY
+            for subject, project_ids in restored_projects.items():
+                preserve_restored_manual_positions(db, LEGACY_SUBJECT_KEY if subject == "None" else subject,
+                                                  project_ids, allow_inactive=True)
             db.flush()
 
             for index, payload in enumerate(records["conversations"], start=1):

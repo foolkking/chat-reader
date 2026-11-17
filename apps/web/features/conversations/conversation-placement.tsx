@@ -28,7 +28,6 @@ type PlacementState = {
   error: string | null;
 };
 
-const projectKey = ["projects", "custom", "asc"];
 const editable = (state: PlacementState) => state.phase === "choosing" || state.phase === "review";
 const busy = (state: PlacementState | null) => state?.phase === "moving" || state?.phase === "checking";
 const accessDenied = (error: unknown) => error instanceof ApiRequestError && [401, 403, 404].includes(error.status);
@@ -92,7 +91,9 @@ export function useConversationPlacement({ scope, unavailable, onChanged }: {
   onChanged?: () => Promise<void> | void;
 }) {
   const client = useQueryClient();
-  const zh = usePreferences().resolvedLocale === "zh-CN";
+  const { resolvedLocale, projectSortMode = "custom", projectSortDirection = "asc" } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
+  const projectKey = ["projects", projectSortMode, projectSortDirection];
   const epoch = authenticationGeneration();
   const [state, setState] = useState<PlacementState | null>(null);
   const stateRef = useRef<PlacementState | null>(null);
@@ -106,7 +107,7 @@ export function useConversationPlacement({ scope, unavailable, onChanged }: {
   const visible = state?.scope === scope && state.epoch === epoch && !unavailable ? state : null;
   const projectsQuery = useQuery({
     queryKey: projectKey,
-    queryFn: ({ signal }) => getProjects({ sort: "custom", direction: "asc" }, AbortSignal.any([signal, AbortSignal.timeout(15_000)])),
+    queryFn: ({ signal }) => getProjects({ sort: projectSortMode, direction: projectSortDirection }, AbortSignal.any([signal, AbortSignal.timeout(15_000)])),
     enabled: Boolean(visible?.open && editable(visible) && visible.target?.id !== null),
     retry: false,
   });

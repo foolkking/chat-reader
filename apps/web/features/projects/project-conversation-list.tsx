@@ -1,5 +1,7 @@
 "use client";
 
+import { useScopedSort } from "../../components/use-scoped-sort";
+
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -15,7 +17,6 @@ import {
   moveConversationToProject,
   removeConversationFromProject,
   recordRecentProject,
-  updateProjectConversationOrder,
 } from "../../lib/api";
 import type { ConversationCreateResponse, ProjectConversationRead, ProjectRead } from "../../lib/types";
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
@@ -28,7 +29,7 @@ import { ProjectSymbol } from "./project-symbol";
 import { ProjectSidebar } from "./project-sidebar";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
-import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
+import { formatActivityTime, fullActivityTime, sortTimeLabel } from "../../lib/activity-time";
 import { useBatchExport } from "../conversations/use-batch-export";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
@@ -49,7 +50,8 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const { openImportDialog } = useImportDialog();
-  const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
+  const { resolvedLocale, projectSortMode = "custom", projectSortDirection = "asc" } = usePreferences();
+  const { conversationSortMode, conversationSortDirection, place: placeInOrder, orderVersion, setSort, ready = true } = useScopedSort(`project:${projectId}`);
   const batchExport = useBatchExport(resolvedLocale === "zh-CN");
   const batchCheck = useBatchResultCheck(resolvedLocale === "zh-CN", "project:" + projectId);
   const deletion = useConversationDeletion();
@@ -93,7 +95,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const [mergeOpenScope, setMergeOpenScope] = useState<string | null>(null);
   const mergeResultRef = useRef<HTMLDivElement>(null);
   const sortBusy = useRef(false);
-  const sortScope = useRef<{ projectId: string; mode: string; direction: string; updatedAt: number; generation: number } | null>(null);
+  const sortScope = useRef<{ projectId: string; mode: string; direction: string; updatedAt: number; generation: number; version?: string } | null>(null);
   const sortView = useRef({ projectId, mode: conversationSortMode, direction: conversationSortDirection, generation: 0 });
   if (sortView.current.projectId !== projectId || sortView.current.mode !== conversationSortMode
     || sortView.current.direction !== conversationSortDirection) {
@@ -112,13 +114,14 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const projectsQuery = useQuery({
-    queryKey: ["projects", "custom", "asc"],
-    queryFn: () => getProjects({ sort: "custom", direction: "asc" }),
+    queryKey: ["projects", projectSortMode, projectSortDirection],
+    queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
     placeholderData: (previous) => previous,
     staleTime: 10_000,
   });
   const pageSize = 100;
   const conversationsQuery = useInfiniteQuery({
+    enabled: ready,
     queryKey: ["project-conversations", projectId, conversationSortMode, conversationSortDirection],
     initialPageParam: 0,
     queryFn: async ({ pageParam, signal }): Promise<ListPage<ProjectConversationRead>> => {
@@ -140,10 +143,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const zh = resolvedLocale === "zh-CN";
   const conversations = projectUnavailable ? [] : flattenPages(conversationsQuery.data?.pages);
   const canAddToProject = Boolean(project && !project.is_archived && !projectsQuery.isError && !projectsQuery.isLoading);
-  const customOrderUnavailable = conversationSortMode === "custom"
-    && (!project || projectsQuery.isLoading || projectsQuery.isError || project.conversation_count > 500
-      || conversationsQuery.hasNextPage
-      || conversations.length !== project.conversation_count);
+  const customOrderUnavailable = !project || projectsQuery.isLoading || projectsQuery.isError;
   const placement = useConversationPlacement({ scope: "project-list:" + projectId, unavailable: projectUnavailable, onChanged: refreshProject });
   const selectedMergeConversations = mergeOrderIds
     .map((id) => conversations.find((conversation) => conversation.id === id))
@@ -231,7 +231,10 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
     sortBusy.current = true; setSortError(false);
     const currentGeneration = sortView.current.generation;
     try {
-      await updateProjectConversationOrder(projectId, arrayMove(conversations, oldIndex, newIndex).map((item) => item.id));
+      if (conversations[oldIndex].project_relation.is_pinned !== conversations[newIndex].project_relation.is_pinned) throw new Error("Pin groups cannot be crossed by reordering.");
+      const group = arrayMove(conversations, oldIndex, newIndex).filter(item => item.project_relation.is_pinned === conversations[oldIndex].project_relation.is_pinned);
+      const position = group.findIndex(item => item.id === event.active.id);
+      await placeInOrder(String(event.active.id), group[position + 1]?.id ?? null, group[position - 1]?.id ?? null, origin.version);
       await queryClient.invalidateQueries({ queryKey: ["project-conversations", projectId] });
     } catch {
       if (sortView.current.generation === currentGeneration && sortView.current.projectId === projectId) setSortError(true);
@@ -249,7 +252,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
     }
     sortScope.current = {
       projectId, mode: conversationSortMode, direction: conversationSortDirection,
-      updatedAt: conversationsQuery.dataUpdatedAt, generation: sortView.current.generation,
+      updatedAt: conversationsQuery.dataUpdatedAt, generation: sortView.current.generation, version: orderVersion,
     };
     const id = String(event.active.id);
     setActiveSortId(id);
@@ -318,7 +321,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
           className="md:px-6"
           actions={
             <div className="flex items-center gap-2 md:hidden">
-              <ConversationSortMenu compact hideCustomDirection />
+              <ConversationSortMenu scope={`project:${projectId}`} compact hideCustomDirection />
               <SelectionModeButton active={selectionMode} locale={resolvedLocale} onClick={selectionMode ? exitSelectionMode : () => setSelectionMode(true)} />
             </div>
           }
@@ -335,7 +338,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 <p className="mt-2 text-sm text-secondary">{zh ? `${project?.conversation_count ?? 0} 个对话，${project?.pinned_count ?? 0} 个置顶` : `${project?.conversation_count ?? 0} conversations · ${project?.pinned_count ?? 0} pinned`}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <ConversationSortMenu hideCustomDirection />
+                <ConversationSortMenu scope={`project:${projectId}`} hideCustomDirection />
                 <SelectionModeButton active={selectionMode} locale={resolvedLocale} onClick={selectionMode ? exitSelectionMode : () => setSelectionMode(true)} />
               </div>
             </header>
@@ -502,12 +505,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
               </div>
             ) : null}
             {conversationSortMode === "custom" && customOrderUnavailable && conversations.length > 0 ? <p role="status" className="text-sm text-secondary">
-              {zh ? ((project?.conversation_count ?? conversations.length) > 500
-                ? "当前项目超过 500 个对话，自定义排序接口不支持该规模；请改用其他排序方式。"
-                : "自定义排序前需加载全部项目对话；加载完成后才能拖动重排。")
-                : ((project?.conversation_count ?? conversations.length) > 500
-                  ? "This project exceeds the 500-item custom-order limit. Choose another sort mode."
-                  : "Load every project conversation before custom drag ordering is enabled.")}
+              {zh ? "项目状态未确认，请刷新后调整顺序。已加载部分也能安全使用相邻位置排序。" : "Project state is unconfirmed. Refresh before ordering; loaded pages support safe anchored moves."}
             </p> : null}
             {conversations.length > 0 ? <p className="text-sm text-secondary">{zh
               ? `已加载 ${conversations.length} 个对话${conversationsQuery.hasNextPage ? "，仍有更多" : ""}`
@@ -515,7 +513,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
 
             {conversations.length > 0 ? (
               <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => { sortScope.current = null; setActiveSortId(null); setActiveSortSize(null); }} onDragEnd={(event) => { setActiveSortId(null); setActiveSortSize(null); void handleSortEnd(event); }}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">
-                {conversations.map((conversation) => (
+                {conversations.map((conversation, index) => (
                   <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom" && !customOrderUnavailable && !selectionMode && !conversationsQuery.isFetching && !conversationsQuery.isError}><article {...linearSelection.itemHandlers(conversation.id)} data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined} aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined} className="reader-interactive-row group border-b border-ui px-5 py-4 last:border-b-0">
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px] md:items-start">
                       <div className="flex min-w-0 gap-3">
@@ -551,10 +549,14 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                       </div>
                       <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
                         <div className="min-w-0">
-                          <p className="text-xs text-secondary" title={fullActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}>{formatActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}</p>
+                          {sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback) ? <p className="text-xs text-secondary" title={fullActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}>{sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback)} · {formatActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}</p> : null}
                           <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                         </div>
-                        {!selectionMode ? <ConversationActionMenu conversation={conversation} placement={placement} projectId={projectId} projectPinned={conversation.project_relation.is_pinned} onChanged={refreshProject} onUndo={setUndo} /> : null}
+                        {!selectionMode ? <ConversationActionMenu conversation={conversation} placement={placement} projectId={projectId} projectPinned={conversation.project_relation.is_pinned} onChanged={refreshProject} onUndo={setUndo} ordering={{
+                          manual: conversationSortMode === "custom", enableManual: () => setSort("custom", "asc"),
+                          up: index > 0 && conversation.project_relation.is_pinned === conversations[index - 1].project_relation.is_pinned && orderVersion ? () => placeInOrder(conversation.id, conversations[index - 1].id, null, orderVersion) : undefined,
+                          down: index + 1 < conversations.length && conversation.project_relation.is_pinned === conversations[index + 1].project_relation.is_pinned && orderVersion ? () => placeInOrder(conversation.id, null, conversations[index + 1].id, orderVersion) : undefined,
+                        }} /> : null}
                       </div>
                     </div>
                   </article></SortableProjectConversationRow>
@@ -582,6 +584,7 @@ function SortableProjectConversationRow({ id, enabled, children }: { id: string;
 }
 
 function projectConversationActivity(conversation: ProjectConversationRead, mode: string): string | null {
+  if (mode === "content_updated") return conversation.content_updated_at ?? conversation.imported_at;
   if (mode === "updated") return conversation.updated_at;
   if (mode === "created") return conversation.created_at;
   if (mode === "imported") return conversation.imported_at;

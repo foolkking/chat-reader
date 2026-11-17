@@ -3,8 +3,6 @@ from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
-from typing import Literal
-
 from app.schemas.message import MessageListItem
 
 
@@ -30,6 +28,8 @@ class ConversationListItem(BaseModel):
     last_read_at: datetime | None = None
     reading_progress: float | None = None
     manual_sort_order: int = 0
+    content_updated_at: datetime | None = None
+    content_time_fallback: bool = False
 
 
 class ConversationDetail(ConversationListItem):

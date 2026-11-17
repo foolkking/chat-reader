@@ -120,6 +120,7 @@ async function fixture({ locale = "en-US", outcome = "success", confirm = true, 
       },
     },
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
+    "../../lib/offline-access": { authenticationGeneration: () => 0 },
     "../../components/interaction-dialog-provider": { useInteractionDialog: () => ({ confirm: async options => {
       confirms.push(options); if (holds.has("confirm")) await holds.get("confirm").promise; return confirmValue;
     } }) },

@@ -55,11 +55,12 @@ const compiled = ts.transpileModule(source, { fileName: "project-sidebar.tsx", c
 // browser effects and transport are explicit doubles, not React lifecycle,
 // live DOM identity/focus, drag placement or network-outage acceptance.
 async function fixture({ scope = "history", cached = true, rows = defaults[scope], error = new ApiRequestError(503),
-  locale = "en-US", expanded = scope === "branch", prepareRead = true } = {}) {
+  locale = "en-US", expanded = scope === "branch", prepareRead = true, projectMode = "custom" } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   const data = { ...defaults, [scope]: rows }, errors = { projects: null, history: null, branch: null, [scope]: error };
   const holds = {}, observers = new Map(), stops = [], inputs = new Map(), retryButtons = [], requests = [], writes = [], navigation = [];
-  for (const name of Object.keys(keys)) if (name !== scope || cached) client.setQueryData(keys[name],
+  for (const name of Object.keys(keys)) if (name !== scope || cached) client.setQueryData(
+    name === "projects" ? ["projects", projectMode, "asc"] : keys[name],
     name === "projects" ? data[name] : { pages: [{ items: data[name], offset: 0, hasMore: false }], pageParams: [0] });
   let stateIndex = 0;
   const RenderedRetry = props => { retryButtons.push(props); return React.createElement("button", props); };
@@ -117,13 +118,18 @@ async function fixture({ scope = "history", cached = true, rows = defaults[scope
     "../import/task-center-dialog": { TaskCenterDialog: () => null },
     "../../components/reader-sidebar-frame": { ReaderSidebarFrame: childrenOnly },
     "../../components/sidebar-preferences": { SidebarPreferences: () => null },
-    "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale, conversationSortMode: "recent_read", conversationSortDirection: "desc" }),
+    "../../components/use-scoped-sort": { useScopedSort: () => ({ conversationSortMode: "recent_read", conversationSortDirection: "desc", ready: true }) },
+    "../../components/navigation-device-state": { useNavigationDeviceState: (_name, fallback) => [fallback, noop] },
+    "../../components/interaction-dialog-provider": { useInteractionDialog: () => ({ confirm: async () => false }) },
+    "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale, conversationSortMode: "recent_read", conversationSortDirection: "desc",
+      projectSortMode: projectMode, projectSortDirection: "asc", navigationSort: { blocks: "projects_first" } }),
       useTranslations: () => key => translations[key] ?? key },
     "../../components/import-dialog-provider": { useImportDialog: () => ({ openImportDialog: noop }) },
     "../search/sidebar-search": { SidebarSearch: () => null },
-    "../../components/sort-menu": { ConversationSortMenu: () => null },
-    "../../lib/activity-time": { formatActivityTime: () => "Synthetic time", fullActivityTime: () => "Synthetic time" },
+    "../../components/sort-menu": { ConversationSortMenu: () => null, ProjectSortMenu: () => null },
+    "../../lib/activity-time": { sortTimeLabel: () => "Synthetic label", formatActivityTime: () => "Synthetic time", fullActivityTime: () => "Synthetic time" },
     "./project-action-menu": { ProjectActionMenu: () => null, ProjectArchiveFeedback: () => null, useProjectArchive: () => ({}) },
+    "../../lib/offline-access": { authenticationGeneration: () => 0 },
     "../../lib/list-pagination": { flattenPages: pages => pages?.flatMap(page => page.items) ?? [] },
   };
   const module = { exports: {} };
@@ -143,6 +149,29 @@ async function fixture({ scope = "history", cached = true, rows = defaults[scope
       return () => { delete holds[scope]; release(); }; },
     dispose: () => { stops.forEach(stop => stop()); observers.forEach(observer => observer.destroy()); client.clear(); },
   };
+}
+
+for (const locale of ["zh-CN", "en-US"]) {
+  for (const projectMode of ["custom", "title", "conversation_count"]) {
+    test(`project ${projectMode} order shows its conversation count, not an unread date (${locale})`, async () => {
+      const f = await fixture({ scope: "projects", error: null, locale, projectMode });
+      try {
+        const link = f.render().match(/<a\b[^>]*href="\/projects\/synthetic-sidebar-project"[\s\S]*?<\/a>/)?.[0];
+        assert.ok(link, "the actual project navigation row must render");
+        assert.match(link, /<span[^>]*>1<\/span>/);
+        assert.doesNotMatch(link, /尚未阅读|Not read yet|Synthetic time|Synthetic label/);
+        assert.match(link, locale === "zh-CN" ? /title="1 个对话"/ : /title="1 conversations"/);
+      } finally { f.dispose(); }
+    });
+  }
+  test(`only recent-read project order labels an unread project (${locale})`, async () => {
+    const f = await fixture({ scope: "projects", error: null, locale, projectMode: "recent_read" });
+    try {
+      const link = f.render().match(/<a\b[^>]*href="\/projects\/synthetic-sidebar-project"[\s\S]*?<\/a>/)?.[0];
+      assert.ok(link);
+      assert.match(link, locale === "zh-CN" ? /尚未阅读/ : /Not read yet/);
+    } finally { f.dispose(); }
+  });
 }
 
 for (const scope of ["projects", "history", "branch"]) {
@@ -193,7 +222,7 @@ for (const scope of ["projects", "history", "branch"]) {
       for (const other of Object.keys(keys).filter(name => name !== scope)) assert.equal(f.reads(other), 0);
       assert.deepEqual(f.requests[0], f.requests[1]);
       const expected = scope === "projects" ? { sort: "custom", direction: "asc" }
-        : scope === "history" ? { scope: "history", sort: "recent_read", direction: "desc", limit: 101, offset: 0 }
+        : scope === "history" ? { scope: "unclassified", sort: "recent_read", direction: "desc", limit: 101, offset: 0 }
           : { id: project.id, sort: "recent_read", direction: "desc", limit: 101, offset: 0 };
       assert.deepEqual(f.requests[1].options, expected);
       assert.deepEqual(f.writes, []); assert.deepEqual(f.navigation, []);

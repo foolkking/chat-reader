@@ -9,6 +9,7 @@ import { SERVER_SESSION_CHANGED } from "../lib/server-session";
 import { resolveLocale, translate, type ResolvedLocale, type TranslationKey } from "../lib/i18n";
 import type {
   ConversationSortMode,
+  NavigationSort,
   LocaleMode,
   ProjectSortMode,
   ReaderDensityMode,
@@ -21,7 +22,11 @@ import type {
   PreferenceField,
 } from "../lib/types";
 
+export const recommendedNavigation: NavigationSort = { all: { mode: "content_updated", direction: "desc" }, project_default: { mode: "imported", direction: "desc" }, unclassified: { mode: "imported", direction: "desc" }, blocks: "projects_first" };
+function navigationOf(value: UserPreferenceRead): NavigationSort { return value.navigation_sort ?? { ...recommendedNavigation, all: { mode: value.conversation_sort_mode, direction: value.conversation_sort_direction }, project_default: { mode: value.conversation_sort_mode, direction: value.conversation_sort_direction }, unclassified: { mode: value.conversation_sort_mode, direction: value.conversation_sort_direction } }; }
 type PreferencesContextValue = {
+  navigationSort: NavigationSort;
+  setNavigationSort: (value: NavigationSort, projects?: { mode: ProjectSortMode; direction: SortDirection }) => Promise<void>;
   themeMode: ThemeMode;
   localeMode: LocaleMode;
   readerWidthMode: ReaderWidthMode;
@@ -67,6 +72,7 @@ export function PreferencesProvider({
   initialPreferences: UserPreferenceRead;
   initialLocale: ResolvedLocale;
 }) {
+  const [navigationSort, setNavigationSortState] = useState(() => navigationOf(initialPreferences));
   const [themeMode, setThemeModeState] = useState<ThemeMode>(initialPreferences.theme_mode);
   const [localeMode, setLocaleModeState] = useState<LocaleMode>(initialPreferences.locale_mode);
   const [readerWidthMode, setReaderWidthModeState] = useState<ReaderWidthMode>(initialPreferences.reader_width_mode ?? "standard");
@@ -115,6 +121,7 @@ export function PreferencesProvider({
       const transitionId = crypto.randomUUID();
       if (changedLayout) window.dispatchEvent(new CustomEvent(READER_LAYOUT_WILL_CHANGE_EVENT, { detail: transitionId }));
       preferencesRef.current = fresh;
+      setNavigationSortState(navigationOf(fresh));
       setThemeModeState(fresh.theme_mode);
       setLocaleModeState(fresh.locale_mode);
       setReaderWidthModeState(fresh.reader_width_mode ?? "standard");
@@ -232,7 +239,12 @@ export function PreferencesProvider({
   const setReaderDefaultFocus = useCallback((value: boolean) => syncPreferenceUpdate({ reader_default_focus: value }), [syncPreferenceUpdate]);
   const setAnnotationDefaultPosition = useCallback((value: "floating" | "docked") => syncPreferenceUpdate({ annotation_default_position: value }), [syncPreferenceUpdate]);
 
+  const setNavigationSort = useCallback((value: NavigationSort, projects?: { mode: ProjectSortMode; direction: SortDirection }) => syncPreferenceUpdate({
+    navigation_sort: value, ...(projects ? { project_sort_mode: projects.mode, project_sort_direction: projects.direction } : {}),
+  }), [syncPreferenceUpdate]);
+
   const value = useMemo<PreferencesContextValue>(() => ({
+    navigationSort, setNavigationSort,
     themeMode,
     localeMode,
     readerWidthMode,
@@ -256,7 +268,7 @@ export function PreferencesProvider({
     setConversationSort,
     setProjectSort,
     t: (key, values) => translate(resolvedLocale, key, values),
-  }), [conversationSortDirection, conversationSortMode, localeMode, projectSortDirection, projectSortMode, readerDensityMode, readerFontSizePx, readerWidthMode, resolvedLocale, resolvedTheme, sectionTocMode, setConversationSort, setLocaleMode, setProjectSort, setReaderDensityMode, setReaderFontSizePx, setReaderWidthMode, setSectionTocMode, setThemeMode, themeMode, readerDefaultFocus, annotationDefaultPosition, preferenceSync, preferenceStorageError, retryPreferenceSync, persistPreferenceDraft, setReaderDefaultFocus, setAnnotationDefaultPosition]);
+  }), [navigationSort, setNavigationSort, conversationSortDirection, conversationSortMode, localeMode, projectSortDirection, projectSortMode, readerDensityMode, readerFontSizePx, readerWidthMode, resolvedLocale, resolvedTheme, sectionTocMode, setConversationSort, setLocaleMode, setProjectSort, setReaderDensityMode, setReaderFontSizePx, setReaderWidthMode, setSectionTocMode, setThemeMode, themeMode, readerDefaultFocus, annotationDefaultPosition, preferenceSync, preferenceStorageError, retryPreferenceSync, persistPreferenceDraft, setReaderDefaultFocus, setAnnotationDefaultPosition]);
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }

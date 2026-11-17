@@ -287,7 +287,8 @@ async function listFixture({ cached = true, rows = [row], error = new Error("Syn
     "../../components/preferences-provider": {
       usePreferences: () => ({ resolvedLocale: locale, conversationSortMode: sort, conversationSortDirection: "desc" }),
     },
-    "../../lib/activity-time": { formatActivityTime: () => "Synthetic time", fullActivityTime: () => "Synthetic time" },
+    "../../components/use-scoped-sort": { useScopedSort: () => ({ conversationSortMode: sort, conversationSortDirection: "desc", ready: true }) },
+    "../../lib/activity-time": { sortTimeLabel: () => "Synthetic label", formatActivityTime: () => "Synthetic time", fullActivityTime: () => "Synthetic time" },
     "../../components/interaction-dialog-provider": { useInteractionDialog: () => ({}) },
     "../conversations/use-batch-export": { useBatchExport: () => ({ feedback: null, overLimit: count => count > 5000 }) },
     "../../components/selection-toolbar": {
@@ -395,23 +396,23 @@ test("Chinese project recovery uses localized status and retry labels", async ()
 });
 
 for (const count of [499, 500, 501]) {
-  test(`project custom order ${count}: only a complete scope at or below 500 admits dragging`, async () => {
+  test(`project anchored order ${count}: size alone does not disable safe placement`, async () => {
     const rows = Array.from({ length: count }, (_, index) => ({ ...row, id: `synthetic-order-${index}` }));
     const f = await listFixture({ rows, error: null, sort: "custom" });
     try {
       assert.equal(f.sortableRows.length, count);
-      assert.equal(f.sortableRows.every(item => item.disabled === (count > 500)), true);
-      if (count > 500) assert.match(f.markup, /exceeds the 500-item custom-order limit/);
+      assert.equal(f.sortableRows.every(item => !item.disabled), true);
+      assert.doesNotMatch(f.markup, /exceeds the 500-item custom-order limit/);
       assert.equal(f.orderingWrites.length, 0);
     } finally { f.client.clear(); }
   });
 }
 
-test("500 loaded project rows with a continuation are not a complete editable order", async () => {
+test("500 loaded project rows permit anchored moves without replacing the unseen continuation", async () => {
   const rows = Array.from({ length: 500 }, (_, index) => ({ ...row, id: `synthetic-partial-${index}` }));
   const f = await listFixture({ rows, count: 501, hasMore: true, error: null, sort: "custom" });
   try {
-    assert.equal(f.sortableRows.every(item => item.disabled), true);
+    assert.equal(f.sortableRows.every(item => !item.disabled), true);
     assert.match(f.markup, /500 conversations loaded, more available/);
     assert.match(f.markup, /Load more conversations/);
   } finally { f.client.clear(); }

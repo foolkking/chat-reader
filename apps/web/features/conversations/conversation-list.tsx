@@ -1,5 +1,7 @@
 "use client";
 
+import { useScopedSort } from "../../components/use-scoped-sort";
+
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -16,7 +18,6 @@ import {
   moveConversationToProject,
   unarchiveConversation,
   updateConversation,
-  updateConversationOrder,
 } from "../../lib/api";
 import type { ConversationListItem, ProjectRead } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
@@ -28,7 +29,7 @@ import { MergeAdmissionNotice, MergeConversationsDialog } from "./merge-conversa
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
 import { QuickStartGuide } from "../../components/quick-start-guide";
-import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
+import { formatActivityTime, fullActivityTime, sortTimeLabel } from "../../lib/activity-time";
 import { useBatchExport } from "./use-batch-export";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
@@ -44,20 +45,9 @@ import { ConversationTagsPanel } from "../reading/conversation-tags-panel";
 type ConversationPage = { items: ConversationListItem[]; offset: number; hasMore: boolean };
 
 function sameSortPriority(left: ConversationListItem, right: ConversationListItem): boolean {
-  return left.is_global_pinned === right.is_global_pinned && left.global_pinned_at === right.global_pinned_at;
+  return left.is_global_pinned === right.is_global_pinned;
 }
 
-function reverseSortGroups(rows: ConversationListItem[]): ConversationListItem[] {
-  if (!rows.length) return rows;
-  const result: ConversationListItem[] = [];
-  let start = 0;
-  for (let index = 1; index <= rows.length; index += 1) {
-    if (index < rows.length && sameSortPriority(rows[index], rows[start])) continue;
-    result.push(...rows.slice(start, index).reverse());
-    start = index;
-  }
-  return result;
-}
 
 export function ConversationList({
   onImportClick,
@@ -69,7 +59,8 @@ export function ConversationList({
   tagId?: string;
 }) {
   const queryClient = useQueryClient();
-  const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
+  const { resolvedLocale, projectSortMode = "custom", projectSortDirection = "asc" } = usePreferences();
+  const { conversationSortMode, conversationSortDirection, place: placeInOrder, orderVersion, setSort } = useScopedSort("all");
   const zh = resolvedLocale === "zh-CN";
   const batchExport = useBatchExport(resolvedLocale === "zh-CN");
   const batchCheck = useBatchResultCheck(zh, "conversation-list:" + mode);
@@ -115,6 +106,8 @@ export function ConversationList({
   const [titleTrimOpen, setTitleTrimOpen] = useState(false);
   const [titleTrimConversations, setTitleTrimConversations] = useState<ConversationListItem[]>([]);
   const sortBusy = useRef(false);
+  const sortOrigin = useRef<{ version?: string; scope: string; updatedAt: number } | null>(null);
+  const sortScopeKey = JSON.stringify([mode, tagId, conversationSortMode, conversationSortDirection, viewGeneration]);
   const [sortError, setSortError] = useState(false);
   const [sortBoundaryNotice, setSortBoundaryNotice] = useState(false);
   const [activeSortId, setActiveSortId] = useState<string | null>(null);
@@ -140,8 +133,8 @@ export function ConversationList({
     staleTime: 10_000,
   });
   const projectsQuery = useQuery({
-    queryKey: ["projects", "bulk-actions"],
-    queryFn: () => getProjects({ sort: "custom", direction: "asc" }),
+    queryKey: ["projects", projectSortMode, projectSortDirection],
+    queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
     enabled: selectionMode && mode === "active",
   });
   const globalExistenceQuery = useQuery({
@@ -159,13 +152,10 @@ export function ConversationList({
     staleTime: 30_000,
   });
   const isArchivedMode = mode === "archived";
-  const customOrderLimit = 500;
   const listUnavailable = conversationsQuery.isError && conversationsQuery.error instanceof ApiRequestError
     && [401, 403, 404].includes(conversationsQuery.error.status);
   const loadedConversations = [...new Map((conversationsQuery.data?.pages.flatMap((page) => page.items) ?? []).map((row) => [row.id, row])).values()];
   const conversations = listUnavailable ? [] : loadedConversations.filter((conversation) => conversation.status === mode);
-  const customOrderTooLarge = conversationSortMode === "custom"
-    && (conversations.length > customOrderLimit || (conversations.length === customOrderLimit && conversationsQuery.hasNextPage));
   const placement = useConversationPlacement({ scope: "conversation-list:" + mode, unavailable: listUnavailable, onChanged: refreshLists });
   const selectedMergeConversations = mergeOrderIds
     .map((id) => conversations.find((conversation) => conversation.id === id))
@@ -229,8 +219,10 @@ export function ConversationList({
   }
 
   async function handleSortEnd(event: DragEndEvent) {
-    if (listUnavailable || conversationsQuery.isFetching || conversationsQuery.isError || conversationsQuery.hasNextPage
-      || customOrderTooLarge || sortBusy.current || conversationSortMode !== "custom" || !event.over
+    const origin = sortOrigin.current;
+    sortOrigin.current = null;
+    if (listUnavailable || conversationsQuery.isFetching || conversationsQuery.isError || sortBusy.current || conversationSortMode !== "custom" || !event.over
+      || !origin || origin.scope !== sortScopeKey || origin.updatedAt !== conversationsQuery.dataUpdatedAt
       || event.active.id === event.over.id) return;
     const rows = conversations;
     const oldIndex = rows.findIndex((item) => item.id === event.active.id);
@@ -243,20 +235,16 @@ export function ConversationList({
     sortBusy.current = true; setSortError(false); setSortBoundaryNotice(false);
     try {
       const reordered = arrayMove(rows, oldIndex, newIndex);
-      // The API stores one canonical ascending rank, while the custom list may
-      // be rendered descending. Reverse each equal-priority group so a reload
-      // returns the same visible order. Pin status AND pinned timestamp take
-      // precedence over manual rank on the server.
-      const canonicalRows = conversationSortDirection === "desc"
-        ? reverseSortGroups(reordered)
-        : reordered;
-      await updateConversationOrder(canonicalRows.map((item) => item.id));
+      const group = reordered.filter(item => item.is_global_pinned === rows[oldIndex].is_global_pinned);
+      const position = group.findIndex(item => item.id === event.active.id);
+      await placeInOrder(String(event.active.id), group[position + 1]?.id ?? null, group[position - 1]?.id ?? null, origin.version);
       await queryClient.invalidateQueries({ queryKey: ["conversations"] });
     } catch { setSortError(true); }
     finally { sortBusy.current = false; }
   }
 
   function handleSortStart(event: DragStartEvent) {
+    sortOrigin.current = { version: orderVersion, scope: sortScopeKey, updatedAt: conversationsQuery.dataUpdatedAt };
     const id = String(event.active.id);
     setActiveSortId(id);
     window.dispatchEvent(new Event("reader:dnd-start"));
@@ -520,8 +508,6 @@ export function ConversationList({
       {readError}
       {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{resolvedLocale === "zh-CN" ? "排序未保存，请检查当前列表范围后重试。" : "Order was not saved. Check the current list scope and retry."}</p> : null}
       {sortBoundaryNotice ? <p role="status" className="text-sm text-secondary">{zh ? "不能跨置顶优先级拖拽；置顶对话优先按置顶时间排序。可先取消置顶，再自定义排序。" : "Cannot drag across pin priorities; pinned conversations sort by pin time first. Unpin them before customizing their order."}</p> : null}
-      {conversationSortMode === "custom" && conversationsQuery.hasNextPage && !customOrderTooLarge ? <p role="status" className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? "自定义排序需要先加载全部对话，避免只对当前页面重排。" : "Load all conversations before custom drag ordering so a page cannot reorder only part of the list."}</p> : null}
-      {customOrderTooLarge ? <p role="status" className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `当前范围超过 ${customOrderLimit} 个对话，已达到自定义排序的 API 上限，已停用拖拽。` : `This scope exceeds the ${customOrderLimit}-conversation custom-order API limit, so dragging is disabled.`}</p> : null}
       {batchExport.feedback}
       {selectionMode ? <SelectionToolbar
         loadedOnly={conversationsQuery.hasNextPage}
@@ -627,8 +613,8 @@ export function ConversationList({
           />
       </SelectionToolbar> : null}
       <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => { setActiveSortId(null); setActiveSortSize(null); }} onDragEnd={(event) => { setActiveSortId(null); setActiveSortSize(null); void handleSortEnd(event); }}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
-        {conversations.map((conversation) => (
-            <SortableConversationRow id={conversation.id} enabled={!selectionMode && conversationSortMode === "custom" && !customOrderTooLarge && !conversationsQuery.hasNextPage && !conversationsQuery.isFetching && !conversationsQuery.isError} key={conversation.id}><article
+        {conversations.map((conversation, index) => (
+            <SortableConversationRow id={conversation.id} enabled={!selectionMode && conversationSortMode === "custom" && !conversationsQuery.isFetching && !conversationsQuery.isError} key={conversation.id}><article
             {...linearSelection.itemHandlers(conversation.id)}
             data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined}
             aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined}
@@ -668,10 +654,14 @@ export function ConversationList({
               </div>
               <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
                 <div className="min-w-0">
-                  <p className="text-xs text-secondary" title={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)} aria-label={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}>{formatActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}</p>
+                  {sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback) ? <p className="text-xs text-secondary" title={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}>{sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback)} · {formatActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}</p> : null}
                   <p className="mt-1 text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                 </div>
-                {!selectionMode ? <ConversationActionMenu conversation={conversation} placement={placement} onChanged={refreshLists} onUndo={setUndo} /> : null}
+                {!selectionMode ? <ConversationActionMenu conversation={conversation} placement={placement} onChanged={refreshLists} onUndo={setUndo} ordering={{
+                  manual: conversationSortMode === "custom", enableManual: () => setSort("custom", "asc"),
+                  up: index > 0 && sameSortPriority(conversation, conversations[index - 1]) && orderVersion ? () => placeInOrder(conversation.id, conversations[index - 1].id, null, orderVersion) : undefined,
+                  down: index + 1 < conversations.length && sameSortPriority(conversation, conversations[index + 1]) && orderVersion ? () => placeInOrder(conversation.id, null, conversations[index + 1].id, orderVersion) : undefined,
+                }} /> : null}
               </div>
             </div>
           </article></SortableConversationRow>
@@ -700,6 +690,7 @@ function previewConversationText(text: string | null | undefined, locale: "zh-CN
 }
 
 function activityTimestamp(conversation: ConversationListItem, mode: string): string | null {
+  if (mode === "content_updated") return conversation.content_updated_at ?? conversation.imported_at;
   if (mode === "updated") return conversation.updated_at;
   if (mode === "created") return conversation.created_at;
   if (mode === "imported") return conversation.imported_at;

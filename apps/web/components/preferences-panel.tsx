@@ -1,4 +1,5 @@
 "use client";
+import { NavigationSortSettings } from "./navigation-sort-settings";
 
 import Link from "next/link";
 import { Activity, CircleHelp, ArrowLeft, ChevronDown, ChevronUp, FileClock, RefreshCw, Library, LockKeyhole, ShieldCheck, SlidersHorizontal, Database, Eraser, Sparkles, Wrench, Link2 } from "lucide-react";
@@ -126,6 +127,7 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
         {libraryMode ? <ArrowLeft className="h-4 w-4" aria-hidden="true" /> : <Library className="h-4 w-4" aria-hidden="true" />}
         {libraryMode ? t("backOnline") : t("offlineLibrary")}
       </Link>
+      {!libraryMode ? <NavigationSortSettings /> : null}
       <SettingsCategoryButton icon={RefreshCw} label={preferences.resolvedLocale === "zh-CN" ? "离线与同步" : "Offline & sync"} onClick={() => onOpenCategory?.("offline")} />
       <SettingsCategoryButton icon={CircleHelp} label={preferences.resolvedLocale === "zh-CN" ? "帮助与诊断" : "Help & diagnostics"} onClick={() => onOpenCategory?.("help")} />
       {!libraryMode && capabilityError ? <div role="alert" className="text-xs text-secondary"><p>{preferences.resolvedLocale === "zh-CN" ? "无法读取账户功能和限制。" : "Account capabilities are unavailable."}</p><button type="button" onClick={() => setCapabilityAttempt((value) => value + 1)} className="btn-secondary mt-2 min-h-11 px-3">{preferences.resolvedLocale === "zh-CN" ? "重试" : "Retry"}</button></div> : null}

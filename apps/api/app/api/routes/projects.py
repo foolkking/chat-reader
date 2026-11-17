@@ -29,6 +29,7 @@ from app.services.projects.project_service import (
     list_project_conversations,
     list_projects,
     place_project,
+    project_order_version,
     project_counts,
     project_counts_many,
     record_project_recent,
@@ -62,7 +63,8 @@ def get_projects(
     )
     db.commit()
     counts = project_counts_many(db, [project.id for project in projects], ownership_scope)
-    return [_project_read(project, db, ownership_scope, counts=counts.get(project.id)) for project in projects]
+    version = project_order_version(db, ownership_scope)
+    return [_project_read(project, db, ownership_scope, counts=counts.get(project.id), order_version=version) for project in projects]
 
 
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
@@ -89,7 +91,13 @@ def update_project_route(
     project_id: uuid.UUID, payload: ProjectUpdate, request: Request, db: Session = Depends(get_db)
 ) -> ProjectRead:
     ownership_scope = ownership_scope_from_request(request)
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope.owner_user_id, nowait=True)
     project = _get_project_or_404(project_id, db, ownership_scope)
+    if "conversation_sort" in payload.model_fields_set:
+        db.refresh(project, with_for_update=True)
+        if payload.expected_sort_revision != project.sort_revision:
+            raise HTTPException(status_code=409, detail="Project sorting changed. Refresh before saving.")
     try:
         update_project(db, project, payload.model_dump(exclude_unset=True))
         db.commit()
@@ -125,6 +133,7 @@ def place_project_route(
             project_id=project_id,
             before_project_id=payload.before_project_id,
             after_project_id=payload.after_project_id,
+            expected_order_version=payload.expected_order_version,
             ownership_scope=ownership_scope,
         )
         db.commit()
@@ -142,7 +151,7 @@ def get_project_conversations(
     offset: int = Query(default=0, ge=0),
     sort: str = Query(
         default="recent_read",
-        pattern="^(recent_read|updated|created|imported|title|message_count|custom)$",
+        pattern="^(recent_read|content_updated|updated|created|imported|title|message_count|custom)$",
     ),
     direction: str = Query(default="desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
@@ -166,6 +175,8 @@ def get_project_conversations(
 @router.put("/order", status_code=status.HTTP_204_NO_CONTENT)
 def update_project_order(payload: ProjectOrderUpdate, request: Request, db: Session = Depends(get_db)) -> None:
     ownership_scope = ownership_scope_from_request(request)
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope.owner_user_id, nowait=True)
     rows = db.query(Project).filter(
         ownership_scope.predicate(Project), Project.id.in_(payload.project_ids)
     ).all()
@@ -197,6 +208,8 @@ def update_project_conversation_order(
     db: Session = Depends(get_db),
 ) -> None:
     ownership_scope = ownership_scope_from_request(request)
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope.owner_user_id, nowait=True)
     _get_project_or_404(project_id, db, ownership_scope)
     rows = db.query(ProjectConversation).join(Conversation, Conversation.id == ProjectConversation.conversation_id).filter(
         ProjectConversation.project_id == project_id,
@@ -286,15 +299,18 @@ def _get_project_or_404(project_id: uuid.UUID, db: Session, ownership_scope: Own
     return project
 
 
-def _project_read(project: Project, db: Session, ownership_scope: OwnershipScope, *, counts=None) -> ProjectRead:
+def _project_read(project: Project, db: Session, ownership_scope: OwnershipScope, *, counts=None, order_version=None) -> ProjectRead:
     counts = counts or project_counts(db, project.id, ownership_scope)
     return ProjectRead(
+        order_version=order_version or project_order_version(db, ownership_scope),
         id=project.id,
         name=project.name,
         description=project.description,
         color=project.color,
         icon=project.icon,
         sort_order=project.sort_order,
+        conversation_sort=project.conversation_sort,
+        sort_revision=project.sort_revision,
         is_default=project.is_default,
         is_archived=project.is_archived,
         archived_at=project.archived_at,

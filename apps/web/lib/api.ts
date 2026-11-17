@@ -270,7 +270,7 @@ export async function getConversations(
     tagId?: string;
     includeArchived?: boolean;
     statusScope?: "active" | "archived" | "all";
-    scope?: "all" | "history";
+    scope?: "all" | "history" | "unclassified";
     sort?: ConversationSortMode;
     direction?: SortDirection;
     limit?: number;
@@ -1041,6 +1041,17 @@ export async function updateProjectOrder(projectIds: string[]): Promise<void> {
 
 export async function updateConversationOrder(conversationIds: string[]): Promise<void> {
   await fetchJson<void>("/api/conversations/order", jsonRequest("PUT", { conversation_ids: conversationIds }));
+}
+
+export type OrderScope = { scope: "all" | "unclassified" | "project"; project_id?: string };
+export function getConversationOrder(input: OrderScope, signal?: AbortSignal): Promise<{ version: string; count: number; initialized: boolean }> {
+  return fetchJson(`/api/conversation-order?${new URLSearchParams(input)}`, { signal });
+}
+export function changeConversationOrder(input: OrderScope & {
+  expected_version: string; conversation_id?: string; before_id?: string | null; after_id?: string | null;
+  initialize_from?: { mode: ConversationSortMode; direction: SortDirection }; rebuild?: boolean;
+}): Promise<{ version: string; count: number; initialized: boolean }> {
+  return fetchJson("/api/conversation-order", jsonRequest("PUT", input));
 }
 
 export async function updateProjectConversationOrder(projectId: string, conversationIds: string[]): Promise<void> {

@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.conversation import ConversationListItem
+from app.schemas.preferences import ScopedSort
 
 
 class ProjectCreate(BaseModel):
@@ -14,6 +15,8 @@ class ProjectCreate(BaseModel):
 
 
 class ProjectUpdate(BaseModel):
+    conversation_sort: ScopedSort | None = None
+    expected_sort_revision: int | None = Field(default=None, ge=1)
     name: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = None
     color: str | None = None
@@ -23,6 +26,9 @@ class ProjectUpdate(BaseModel):
 
 
 class ProjectRead(BaseModel):
+    order_version: str | None = None
+    conversation_sort: ScopedSort | None = None
+    sort_revision: int = 1
     id: UUID
     name: str
     description: str | None
@@ -67,6 +73,7 @@ class ProjectConversationOrderUpdate(BaseModel):
 
 
 class ProjectPlacementRequest(BaseModel):
+    expected_order_version: str | None = Field(default=None, min_length=64, max_length=64)
     before_project_id: UUID | None = None
     after_project_id: UUID | None = None
 

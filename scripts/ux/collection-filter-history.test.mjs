@@ -41,6 +41,7 @@ function fixture(path) {
     "@tanstack/react-query": {},
     "../lib/api": {},
     "../lib/offline-access": {},
+    "./preferences-provider": { usePreferences: () => ({ projectSortMode: "custom", projectSortDirection: "asc" }) },
   };
   const api = {};
   new Function("exports", "require", "window", compiled)(api, name => {

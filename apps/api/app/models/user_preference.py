@@ -20,11 +20,12 @@ class UserPreference(Base):
     section_toc_mode: Mapped[str] = mapped_column(Text, nullable=False, default="visible")
     conversation_sort_mode: Mapped[str] = mapped_column(Text, nullable=False, default="recent_read")
     conversation_sort_direction: Mapped[str] = mapped_column(Text, nullable=False, default="desc")
-    project_sort_mode: Mapped[str] = mapped_column(Text, nullable=False, default="recent_read")
-    project_sort_direction: Mapped[str] = mapped_column(Text, nullable=False, default="desc")
+    project_sort_mode: Mapped[str] = mapped_column(Text, nullable=False, default="custom")
+    project_sort_direction: Mapped[str] = mapped_column(Text, nullable=False, default="asc")
     reader_default_focus: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     annotation_default_position: Mapped[str] = mapped_column(Text, nullable=False, default="floating")
     field_revisions: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    navigation_sort: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

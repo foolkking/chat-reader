@@ -44,6 +44,7 @@ export function ConversationActionMenu({
   onUndo,
   onOpenChange,
   placement,
+  ordering,
 }: {
   conversation: ConversationListItem | ProjectConversationRead;
   projectId?: string;
@@ -54,6 +55,7 @@ export function ConversationActionMenu({
   onUndo?: (undo: UndoAction) => void;
   onOpenChange?: (open: boolean) => void;
   placement?: ConversationPlacementController;
+  ordering?: { manual: boolean; enableManual: () => Promise<void>; up?: () => Promise<void>; down?: () => Promise<void> };
 }) {
   const queryClient = useQueryClient();
   const pathname = usePathname();
@@ -67,6 +69,7 @@ export function ConversationActionMenu({
   const [busy, setBusy] = useState<string | null>(null);
   const [metadataField, setMetadataField] = useState<"title" | "description" | null>(null);
   const [metadataNotice, setMetadataNotice] = useState("");
+  const [orderError, setOrderError] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 288, maxHeight: 620 });
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -255,8 +258,21 @@ export function ConversationActionMenu({
                     await setConversationGlobalPin(conversation.id, !conversation.is_global_pinned);
                   })}
                 >
-                  {conversation.is_global_pinned ? (zh ? "取消置顶" : "Unpin") : (zh ? "置顶" : "Pin")}
+                  {conversation.is_global_pinned ? (zh ? "取消全局置顶" : "Unpin globally") : (zh ? "全局置顶" : "Pin globally")}
                 </MenuButton>
+
+                {ordering ? <div className="my-1 border-y border-ui py-1">
+                  {ordering.manual ? (["up", "down"] as const).map(direction => <MenuButton key={direction} disabled={busy !== null || !ordering[direction]}
+                    onClick={() => { setOrderError(false); void run("order", ordering[direction]!).catch(() => setOrderError(true)); }}>
+                    {direction === "up" ? (zh ? "在当前分组上移" : "Move up in this group") : (zh ? "在当前分组下移" : "Move down in this group")}
+                  </MenuButton>) : <MenuButton disabled={busy !== null} onClick={() => void (async () => {
+                    if (await dialog.confirm({ title: zh ? "切换为手动排序？" : "Switch to manual order?",
+                      description: zh ? "恢复本范围保存的顺序；首次使用按当前完整顺序建立。切换后再移动，不影响其他范围。" : "Restore this scope's saved order, or initialize its complete current order. Move after switching; other scopes stay unchanged." })) {
+                      setOrderError(false); await run("order", ordering.enableManual);
+                    }
+                  })().catch(() => setOrderError(true))}>{zh ? "切换为手动排序…" : "Switch to manual order…"}</MenuButton>}
+                  {orderError ? <p role="alert" className="px-3 text-xs text-[var(--danger)]">{zh ? "顺序未确认，请刷新后核对。未覆盖整个列表。" : "Order unconfirmed. Refresh to check; the full list was not replaced."}</p> : null}
+                </div> : null}
 
                 {projectId ? (
                   <MenuButton

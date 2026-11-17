@@ -1,4 +1,6 @@
 import uuid
+import hashlib
+import json
 from dataclasses import dataclass
 
 from sqlalchemy import case, func
@@ -109,12 +111,11 @@ def list_projects(
             .scalar_subquery()
         )
     assert field is not None
-    ordered_field = field.asc() if sort == "custom" or direction == "asc" else field.desc()
+    ordered_field = field.asc() if direction == "asc" else field.desc()
     return query.order_by(
         Project.is_default.desc(),
         case((field.is_(None), 1), else_=0).asc(),
         ordered_field,
-        Project.updated_at.desc(),
         Project.id.asc(),
     ).all()
 
@@ -128,6 +129,8 @@ def create_project(
     icon: str | None,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> Project:
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope.owner_user_id)
     clean_name = name.strip()
     if owned_query(db, Project, ownership_scope).filter(Project.name == clean_name).first() is not None:
         raise ProjectServiceError("Project name already exists.")
@@ -174,9 +177,11 @@ def update_project(db: Session, project: Project, updates: dict) -> Project:
         if field in updates and updates[field] is not None:
             setattr(project, field, updates[field])
     # Omission keeps metadata; explicit null clears these nullable fields.
-    for field in ("description", "color", "icon"):
+    for field in ("description", "color", "icon", "conversation_sort"):
         if field in updates:
             setattr(project, field, updates[field])
+    if "conversation_sort" in updates:
+        project.sort_revision += 1
     if "is_archived" in updates and updates["is_archived"] is not None:
         project.is_archived = updates["is_archived"]
         project.archived_at = utc_now() if project.is_archived else None
@@ -201,6 +206,8 @@ def delete_archived_project(
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> None:
     """Delete an archived project container without deleting its conversations."""
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope.owner_user_id)
     if project.is_default:
         raise ProjectServiceError("Default project cannot be deleted.")
     if not project.is_archived:
@@ -215,6 +222,8 @@ def delete_archived_project(
         .all()
     )
     next_order = _append_sort_order(db, default_project.id, False)
+    unclassified_order = (db.query(func.max(Conversation.unclassified_sort_order)).filter(
+        ownership_scope.predicate(Conversation)).scalar() or 0) + PLACEMENT_GAP
     now = utc_now()
     for relation in relations:
         relation.project_id = default_project.id
@@ -226,6 +235,8 @@ def delete_archived_project(
         next_order += PLACEMENT_GAP
 
         conversation = relation.conversation
+        conversation.unclassified_sort_order = unclassified_order
+        unclassified_order += PLACEMENT_GAP
         bump_offline_revision(conversation)
         conversation.updated_at = now
         recent = db.query(RecentItem).filter(RecentItem.conversation_id == conversation.id).one_or_none()
@@ -280,6 +291,8 @@ def move_conversation_to_project(
     added_by: str = "user",
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ProjectConversation:
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope.owner_user_id)
     if project_id is None:
         project_id = ensure_default_project(db, ownership_scope).id
     project = get_owned(db, Project, project_id, ownership_scope)
@@ -340,6 +353,8 @@ def place_conversation(
     added_by: str = "user",
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ConversationPlacementResult:
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope.owner_user_id)
     conversation = (
         db.query(Conversation)
         .filter(ownership_scope.predicate(Conversation), Conversation.id == conversation_id)
@@ -414,6 +429,10 @@ def place_conversation(
             relation.pinned_at = None
             relation.added_at = utc_now()
             relation.added_by = added_by
+
+    if cross_project and project.is_default:
+        conversation.unclassified_sort_order = (db.query(func.max(Conversation.unclassified_sort_order)).filter(
+            ownership_scope.predicate(Conversation), Conversation.id != conversation_id).scalar() or 0) + PLACEMENT_GAP
 
     recent = db.query(RecentItem).filter(RecentItem.conversation_id == conversation_id).one_or_none()
     if recent is not None:
@@ -496,27 +515,26 @@ def list_project_conversations(
     field = {
         "recent_read": RecentItem.last_opened_at,
         "updated": Conversation.updated_at,
+        "content_updated": func.coalesce(Conversation.sort_time, Conversation.imported_at),
         "created": Conversation.created_at,
         "imported": Conversation.imported_at,
         "title": func.lower(Conversation.display_title),
         "message_count": Conversation.message_count,
         "custom": ProjectConversation.sort_order,
     }[sort]
-    ordered_field = field.asc() if sort == "custom" or direction == "asc" else field.desc()
+    ordered_field = field.asc() if direction == "asc" else field.desc()
     return (
         query.order_by(*(
             (
                 ProjectConversation.is_pinned.desc(),
-                ProjectConversation.sort_order.asc(),
+                ordered_field,
                 Conversation.id.asc(),
             )
             if sort == "custom"
             else (
                 ProjectConversation.is_pinned.desc(),
-                ProjectConversation.pinned_at.desc(),
                 case((field.is_(None), 1), else_=0).asc(),
                 ordered_field,
-                Conversation.sort_time.desc(),
                 Conversation.id.asc(),
             )
         ))
@@ -546,6 +564,8 @@ def set_project_conversation_pin(
     pinned: bool,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> ProjectConversation:
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope.owner_user_id)
     relation = _get_relation(db, project_id, conversation_id, ownership_scope)
     if relation is None:
         raise ProjectServiceError("Project conversation relation not found.")
@@ -652,14 +672,27 @@ def _append_sort_order(db: Session, project_id: uuid.UUID, is_pinned: bool) -> i
     return int(current or 0) + PLACEMENT_GAP
 
 
+def project_order_version(db, ownership_scope):
+    rows = db.query(Project.id, Project.sort_order).filter(
+        ownership_scope.predicate(Project), Project.is_default.is_(False),
+        Project.is_archived.is_(False)).order_by(Project.id).all()
+    return hashlib.sha256(json.dumps([(str(row.id), row.sort_order) for row in rows]).encode()).hexdigest()
+
+
 def place_project(
     db: Session,
     *,
     project_id: uuid.UUID,
     before_project_id: uuid.UUID | None,
     after_project_id: uuid.UUID | None,
+    expected_order_version: str | None = None,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> Project:
+    from app.services.navigation_order_lock import lock_navigation_order
+    lock_navigation_order(db.connection(), ownership_scope.owner_user_id, nowait=True)
+    if expected_order_version is not None and expected_order_version != project_order_version(db, ownership_scope):
+        from fastapi import HTTPException
+        raise HTTPException(409, "Project ordering changed. Refresh before moving.")
     project = (
         owned_query(db, Project, ownership_scope)
         .filter(Project.id == project_id)

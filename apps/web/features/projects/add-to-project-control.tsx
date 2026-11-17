@@ -3,13 +3,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { addConversationToProject, getProjects } from "../../lib/api";
+import { usePreferences } from "../../components/preferences-provider";
 
 export function AddToProjectControl({ conversationId }: { conversationId: string }) {
+  const { projectSortMode, projectSortDirection } = usePreferences();
   const queryClient = useQueryClient();
   const [projectId, setProjectId] = useState("");
   const projectsQuery = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => getProjects({ sort: "custom", direction: "asc" }),
+    queryKey: ["projects", projectSortMode, projectSortDirection],
+    queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
   });
   const addMutation = useMutation({
     mutationFn: () => addConversationToProject(projectId, conversationId),

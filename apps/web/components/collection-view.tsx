@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getProjects } from "../lib/api";
 import { authenticationGeneration } from "../lib/offline-access";
+import { usePreferences } from "./preferences-provider";
 
 // Scroll-only, bounded to this tab/account epoch. Do not persist search text in
 // sessionStorage keys or carry one account's collection position into another.
@@ -80,9 +81,10 @@ export function CollectionFilters({ q, projectId, zh, update, children, disabled
   children?: React.ReactNode; disabled?: boolean;
 }) {
   const [draft, setDraft] = useState(q);
+  const { projectSortMode = "custom", projectSortDirection = "asc" } = usePreferences();
   useEffect(() => setDraft(q), [q]);
-  const projects = useQuery({ queryKey: ["projects", "search-filter"],
-    queryFn: ({ signal }) => getProjects({ sort: "custom", direction: "asc" }, signal), staleTime: 60_000 });
+  const projects = useQuery({ queryKey: ["projects", projectSortMode, projectSortDirection],
+    queryFn: ({ signal }) => getProjects({ sort: projectSortMode, direction: projectSortDirection }, signal), staleTime: 60_000 });
   return <div className="flex flex-wrap items-end gap-3 border-b border-ui pb-4">
     <form className="flex min-w-0 basis-full items-end gap-2 sm:basis-64 sm:flex-1" onSubmit={event => { event.preventDefault(); update({ q: draft.trim() }); }}>
       <label className="min-w-0 flex-1 text-xs text-secondary">{zh ? "关键词" : "Keywords"}

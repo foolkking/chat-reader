@@ -71,7 +71,7 @@ def restore_personal_archive(db: Session, path: Path, *, owner_user_id: uuid.UUI
             names = {name for name, in db.query(Project.name).filter_by(owner_user_id=owner_user_id)}
             pending_current = []
             pending_conflicts = []
-            first_projects, first_conversations = [], []
+            first_projects, first_conversations, restored_project_ids = [], [], []
             order = ("projects", "conversations", "messages", "message_versions", "attachments",
                      "project_conversations", "attachment_occurrences", "source_refs", "annotations", "notebooks", "reading_positions")
             for step, name in enumerate(order):
@@ -97,6 +97,7 @@ def restore_personal_archive(db: Session, path: Path, *, owner_user_id: uuid.UUI
                             if isinstance(block, dict) and isinstance(block.get("markdown"), str):
                                 block["markdown"] = rewrite_attachment_markdown(block["markdown"], attachment_map)
                     if name == "projects":
+                        restored_project_ids.append(decoded["id"])
                         original, suffix = decoded["name"], 1
                         while decoded["name"] in names:
                             suffix += 1; decoded["name"] = f"{original} (restored {suffix})"
@@ -147,6 +148,8 @@ def restore_personal_archive(db: Session, path: Path, *, owner_user_id: uuid.UUI
             if include_preferences:
                 for row in archive.rows("preferences"):
                     update_preferences(db, UserPreferenceUpdate.model_validate({key: row[key] for key in UserPreferenceUpdate.model_fields if key in row}), str(owner_user_id))
+            from app.services.preferences import preserve_restored_manual_positions
+            preserve_restored_manual_positions(db, str(owner_user_id), restored_project_ids)
             for index, source in enumerate(sorted(archive.ids["conversations"]), start=1):
                 rebuild_conversation_derived_data(db, target("conversations", source))
                 _report(progress_callback, "rebuilding", 75 + round(20 * index / max(1, archive.counts["conversations"])), index, archive.counts["conversations"])
