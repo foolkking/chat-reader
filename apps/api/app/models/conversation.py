@@ -72,7 +72,9 @@ def append_new_manual_position(mapper, connection, target):
     # Mapper callbacks for an entire batch run before its INSERT statements.
     # Reserve positions within the transaction as well as against persisted rows.
     # A rollback/new transaction cannot reuse the previous reservation cache.
-    from app.services.navigation_order_lock import lock_navigation_order
+    from app.services.navigation_order_lock import lock_navigation_order, manual_append_step
+    from app.models.user_preference import UserPreference
+    from app.services.ownership import LEGACY_OWNER_USER_ID
     lock_navigation_order(connection, target.owner_user_id)
     session = object_session(target)
     transaction = session.get_transaction() if session else None
@@ -83,10 +85,18 @@ def append_new_manual_position(mapper, connection, target):
     owner = target.owner_user_id
     if owner not in cache:
         values = connection.execute(select(
-            func.max(Conversation.manual_sort_order), func.max(Conversation.unclassified_sort_order),
+            func.min(Conversation.manual_sort_order), func.max(Conversation.manual_sort_order),
+            func.min(Conversation.unclassified_sort_order), func.max(Conversation.unclassified_sort_order),
         ).where(Conversation.owner_user_id == owner)).one()
-        cache[owner] = dict(zip(("manual_sort_order", "unclassified_sort_order"), (value or 0 for value in values)))
+        navigation = connection.scalar(select(UserPreference.navigation_sort).where(
+            UserPreference.subject_key == str(owner or LEGACY_OWNER_USER_ID)))
+        cache[owner] = {}
+        for index, (name, scope) in enumerate((("manual_sort_order", "all"), ("unclassified_sort_order", "unclassified"))):
+            step = manual_append_step(navigation, scope)
+            cache[owner][name] = {"step": step, "edge": (values[index * 2 + (step > 0)] or 0)}
     for name in ("manual_sort_order", "unclassified_sort_order"):
+        reservation = cache[owner][name]
         if getattr(target, name) is None:
-            setattr(target, name, cache[owner][name] + 1024)
-        cache[owner][name] = max(cache[owner][name], getattr(target, name))
+            setattr(target, name, reservation["edge"] + reservation["step"])
+        edge = max if reservation["step"] > 0 else min
+        reservation["edge"] = edge(reservation["edge"], getattr(target, name))

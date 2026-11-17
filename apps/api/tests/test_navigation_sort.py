@@ -85,6 +85,28 @@ def test_batch_appends_unique_ranks_and_project_manual_direction(client):
     assert [row["id"] for row in client.get(endpoint, params={"sort": "custom", "direction": "desc"}).json()] == ids[::-1]
     assert client.patch(f"/api/projects/{project['id']}", json={"is_archived": True}).status_code == 200
     assert client.get("/api/conversations", params={"scope": "unclassified"}).json() == []
+    # Even legacy/reversed manual views append new and moved items at the visible tail.
+    assert client.patch(f"/api/projects/{project['id']}", json={"is_archived": False}).status_code == 200
+    preferences = client.get("/api/preferences").json()
+    navigation = preferences["navigation_sort"]
+    for scope in ("all", "unclassified", "project_default"):
+        navigation[scope] = {"mode": "custom", "direction": "desc"}
+    assert client.patch("/api/preferences", json={"navigation_sort": navigation}).status_code == 200
+    generator = app.dependency_overrides[get_db]()
+    db = next(generator)
+    newcomers = [Conversation(owner_user_id=LEGACY_OWNER_USER_ID, title=f"Tail {i}", display_title=f"Tail {i}",
+        source_type="test", source_profile="test", parser_version="test") for i in range(2)]
+    db.add_all(newcomers); db.commit()
+    new_ids = [str(row.id) for row in newcomers]
+    db.close(); generator.close()
+    assert [row["id"] for row in client.get("/api/conversations", params={"sort": "custom", "direction": "desc"}).json()][-2:] == new_ids
+    for identifier in new_ids:
+        assert client.post(f"/api/projects/{project['id']}/conversations/{identifier}").status_code == 200
+    assert [row["id"] for row in client.get(endpoint, params={"sort": "custom", "direction": "desc"}).json()][-2:] == new_ids
+    for identifier in new_ids:
+        assert client.delete(f"/api/projects/{project['id']}/conversations/{identifier}").status_code == 204
+    unclassified = client.get("/api/conversations", params={"scope": "unclassified", "sort": "custom", "direction": "desc"}).json()
+    assert [row["id"] for row in unclassified][-2:] == new_ids
 
 
 def test_project_anchor_version_rejects_second_tab_and_keeps_name_sort_stable(client):

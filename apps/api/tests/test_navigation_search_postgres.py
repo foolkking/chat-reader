@@ -88,7 +88,7 @@ def test_concurrent_anchor_writes_have_exactly_one_winner(isolated_schema):
         assert read_order(request, db=db)["count"] == 4
 
 
-def test_order_does_not_wait_behind_locked_canonical_writer(isolated_schema):
+def test_order_does_not_wait_behind_locked_canonical_writer(isolated_schema, monkeypatch):
     engine, migrate = isolated_schema
     migrate("head")
     request = Request({"type": "http"})
@@ -104,6 +104,34 @@ def test_order_does_not_wait_behind_locked_canonical_writer(isolated_schema):
         with pytest.raises(HTTPException) as failure:
             change_order(OrderChange(scope="all", expected_version=version,
                 initialize_from={"mode": "imported", "direction": "desc"}), request, ordering)
+        assert failure.value.status_code == 409
+        assert monotonic() - started < 3
+        writer.rollback()
+    # The preference fence precedes canonical locking and must also be nonblocking.
+    from app.services.preferences import get_or_create_preferences
+    from app.core.config import get_settings
+    with Session(engine) as writer:
+        get_or_create_preferences(writer, str(LEGACY_OWNER_USER_ID))
+        for operation in ("read", "write"):
+            with Session(engine) as ordering:
+                started = monotonic()
+                with pytest.raises(HTTPException) as failure:
+                    if operation == "read":
+                        read_order(request, db=ordering)
+                    else:
+                        change_order(OrderChange(scope="all", expected_version=version,
+                            initialize_from={"mode": "imported", "direction": "desc"}), request, ordering)
+                assert failure.value.status_code == 409
+                assert monotonic() - started < 3
+                ordering.rollback()
+        writer.rollback()
+    # Account disable/delete still fences ordering, but never leaves it waiting.
+    monkeypatch.setattr(get_settings(), "auth_enabled", True)
+    with Session(engine) as writer, Session(engine) as ordering:
+        writer.query(User).filter_by(id=LEGACY_OWNER_USER_ID).with_for_update().one()
+        started = monotonic()
+        with pytest.raises(HTTPException) as failure:
+            read_order(request, db=ordering)
         assert failure.value.status_code == 409
         assert monotonic() - started < 3
         writer.rollback()

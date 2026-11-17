@@ -37,7 +37,9 @@ class OrderChange(BaseModel):
 
 def snapshot(db, request, scope, project_id, *, lock=False):
     owner = ownership_scope_from_request(request)
-    preference = get_or_create_preferences(db, subject_key_from_request(request))
+    # A preference sync may hold the first fence before reaching canonical rows.
+    # Both reads and writes must fail promptly instead of waiting behind it.
+    preference = get_or_create_preferences(db, subject_key_from_request(request), nowait=True)
     if lock:
         # Never wait on a writer while holding its preference fence. An import/
         # restore can already hold canonical rows or the navigation fence.

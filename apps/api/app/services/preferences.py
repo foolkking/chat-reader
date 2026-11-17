@@ -17,15 +17,21 @@ class PreferenceSyncError(ValueError):
     pass
 
 
-def _lock(db: Session, subject_key: str) -> None:
+def _lock(db: Session, subject_key: str, *, nowait: bool = False) -> None:
     if db.get_bind().dialect.name == "postgresql":
         key = int.from_bytes(hashlib.sha256(f"user-preferences:{subject_key}".encode()).digest()[:8], "big", signed=True)
-        db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
+        if nowait:
+            if not db.scalar(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": key}):
+                from fastapi import HTTPException
+                raise HTTPException(409, "Preferences are changing. Refresh before reordering.")
+        else:
+            db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
 
 
-def get_or_create_preferences(db: Session, subject_key: str = DEFAULT_SUBJECT_KEY, *, allow_inactive: bool = False) -> UserPreference:
-    _lock(db, subject_key)
-    lock_subject_account(db, subject_key, allow_inactive=allow_inactive)
+def get_or_create_preferences(db: Session, subject_key: str = DEFAULT_SUBJECT_KEY, *, allow_inactive: bool = False,
+                              nowait: bool = False) -> UserPreference:
+    _lock(db, subject_key, nowait=nowait)
+    lock_subject_account(db, subject_key, allow_inactive=allow_inactive, nowait=nowait)
     preference = db.scalar(select(UserPreference).where(UserPreference.subject_key == subject_key).execution_options(populate_existing=True))
     if preference is None:
         preference = UserPreference(subject_key=subject_key)

@@ -16,12 +16,12 @@
     "tests/test_navigation_search_postgres.py": {
       "count": 4,
       "shard": 2,
-      "source_lf_sha256": "5c533a38d0a66e83a8c2aedc4c569d0a73f4a6db929821a1cfdd7f312dfc120b"
+      "source_lf_sha256": "c39abce63851ea41aff7154a3e56b9f67d2eb2ad02f4f93c84bd92731114c005"
     },
     "tests/test_navigation_sort.py": {
       "count": 5,
       "shard": 1,
-      "source_lf_sha256": "f325818d9a658c0063237b80b4bc0674d41602e580b9f23bad10b9353b93b2e6"
+      "source_lf_sha256": "52ffecfa8d2b18ecc4f15e2728e0658982316f71897036c2fb762ce6668cbb51"
     }
   }
 }

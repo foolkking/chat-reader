@@ -3,12 +3,13 @@
 import uuid
 
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError
 
 from app.core.config import get_settings
 from app.models.user import User
 
 
-def lock_subject_account(db: Session, subject_key: str, *, allow_inactive: bool = False) -> None:
+def lock_subject_account(db: Session, subject_key: str, *, allow_inactive: bool = False, nowait: bool = False) -> None:
     # AUTH_ENABLED=false retains the pre-account development/test namespace.
     if not get_settings().auth_enabled:
         return
@@ -20,6 +21,12 @@ def lock_subject_account(db: Session, subject_key: str, *, allow_inactive: bool 
         raise HTTPException(401, "Account is no longer available.") from None
     # FOR SHARE permits independent writes to different personal resources,
     # but holds off account disable/delete until this transaction finishes.
-    user = db.query(User).filter(User.id == user_id).with_for_update(read=True).populate_existing().one_or_none()
+    try:
+        user = db.query(User).filter(User.id == user_id).with_for_update(read=True, nowait=nowait).populate_existing().one_or_none()
+    except OperationalError as exc:
+        if not nowait or getattr(exc.orig, "sqlstate", None) != "55P03":
+            raise
+        db.rollback()
+        raise HTTPException(409, "Account is changing. Refresh before reordering.") from exc
     if user is None or (not allow_inactive and not user.can_login):
         raise HTTPException(401, "Account is no longer available.")

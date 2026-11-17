@@ -14,7 +14,9 @@ from app.models.import_record import utc_now
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.models.recent_item import RecentItem
-from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned, owned_query
+from app.models.user_preference import UserPreference
+from app.services.navigation_order_lock import manual_append_step
+from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, LEGACY_OWNER_USER_ID, OwnershipScope, get_owned, owned_query
 
 DEFAULT_PROJECT_NAME = "Inbox"
 PLACEMENT_GAP = 1024
@@ -222,8 +224,11 @@ def delete_archived_project(
         .all()
     )
     next_order = _append_sort_order(db, default_project.id, False)
-    unclassified_order = (db.query(func.max(Conversation.unclassified_sort_order)).filter(
-        ownership_scope.predicate(Conversation)).scalar() or 0) + PLACEMENT_GAP
+    unclassified_step = _manual_append_step(db, ownership_scope.owner_user_id, "unclassified")
+    unclassified_edge = func.min if unclassified_step < 0 else func.max
+    unclassified_order = (db.query(unclassified_edge(Conversation.unclassified_sort_order)).filter(
+        ownership_scope.predicate(Conversation)).scalar() or 0) + unclassified_step
+    project_step = _manual_append_step(db, default_project.owner_user_id, "project_default", default_project.conversation_sort)
     now = utc_now()
     for relation in relations:
         relation.project_id = default_project.id
@@ -232,11 +237,11 @@ def delete_archived_project(
         relation.pinned_at = None
         relation.added_at = now
         relation.added_by = "project_delete"
-        next_order += PLACEMENT_GAP
+        next_order += project_step
 
         conversation = relation.conversation
         conversation.unclassified_sort_order = unclassified_order
-        unclassified_order += PLACEMENT_GAP
+        unclassified_order += unclassified_step
         bump_offline_revision(conversation)
         conversation.updated_at = now
         recent = db.query(RecentItem).filter(RecentItem.conversation_id == conversation.id).one_or_none()
@@ -431,8 +436,10 @@ def place_conversation(
             relation.added_by = added_by
 
     if cross_project and project.is_default:
-        conversation.unclassified_sort_order = (db.query(func.max(Conversation.unclassified_sort_order)).filter(
-            ownership_scope.predicate(Conversation), Conversation.id != conversation_id).scalar() or 0) + PLACEMENT_GAP
+        step = _manual_append_step(db, ownership_scope.owner_user_id, "unclassified")
+        edge = func.min if step < 0 else func.max
+        conversation.unclassified_sort_order = (db.query(edge(Conversation.unclassified_sort_order)).filter(
+            ownership_scope.predicate(Conversation), Conversation.id != conversation_id).scalar() or 0) + step
 
     recent = db.query(RecentItem).filter(RecentItem.conversation_id == conversation_id).one_or_none()
     if recent is not None:
@@ -664,12 +671,20 @@ def _get_relation(
     )
 
 
+def _manual_append_step(db, owner_user_id, scope, override=None):
+    preference = db.get(UserPreference, str(owner_user_id or LEGACY_OWNER_USER_ID))
+    return manual_append_step(preference.navigation_sort if preference else None, scope, override)
+
+
 def _append_sort_order(db: Session, project_id: uuid.UUID, is_pinned: bool) -> int:
-    current = db.query(func.max(ProjectConversation.sort_order)).filter(
+    project = db.get(Project, project_id)
+    step = _manual_append_step(db, project.owner_user_id, "project_default", project.conversation_sort)
+    edge = func.min if step < 0 else func.max
+    current = db.query(edge(ProjectConversation.sort_order)).filter(
         ProjectConversation.project_id == project_id,
         ProjectConversation.is_pinned.is_(is_pinned),
     ).scalar()
-    return int(current or 0) + PLACEMENT_GAP
+    return int(current or 0) + step
 
 
 def project_order_version(db, ownership_scope):
@@ -723,6 +738,9 @@ def _resolve_conversation_sort_order(
     after_conversation_id: uuid.UUID | None,
     ownership_scope: OwnershipScope,
 ) -> int:
+    if before_conversation_id is None and after_conversation_id is None:
+        return _append_sort_order(db, project_id, is_pinned)
+
     def rows() -> list[ProjectConversation]:
         return (
             db.query(ProjectConversation)
