@@ -16,7 +16,8 @@ export function ImportSourcePreview({ session, group, showSourceName = true }: {
   const query = useQuery({
     queryKey: ["import-source-preview", generation, session.import_id, group.id, session.updated_at],
     queryFn: async ({ signal }) => {
-      const result = await getImportSourcePreview(session.import_id, group.id, session.updated_at!, signal);
+      if (!session.updated_at) throw new Error("PREVIEW_VERSION_MISSING");
+      const result = await getImportSourcePreview(session.import_id, group.id, session.updated_at, signal);
       if (generation !== authenticationGeneration() || result.import_id !== session.import_id
         || result.group_id !== group.id || result.family_id !== group.family_id
         || result.sources.length !== group.artifact_ids.length
@@ -33,7 +34,8 @@ export function ImportSourcePreview({ session, group, showSourceName = true }: {
     </button>
     {open ? <div id={previewId} className="space-y-3 rounded-md bg-subtle p-3 text-sm" aria-live="polite">
       <p className="break-words text-xs text-secondary [overflow-wrap:anywhere]">{group.files.map(file => file.filename).join(" · ")}</p>
-      {query.isPending ? <p>{zh ? "正在读取预览…" : "Loading preview…"}</p>
+      {!session.updated_at ? <p role="alert" className="text-secondary">{zh ? "批次信息不完整，请重新打开此批次。" : "Batch details are incomplete. Reopen this batch."}</p>
+        : query.isPending ? <p>{zh ? "正在读取预览…" : "Loading preview…"}</p>
         : query.isError ? <><p role="alert" className="text-secondary">{zh ? "预览过期或来源已变。请刷新批次，或手动重建预览。" : "Preview expired or source changed. Refresh the batch or rebuild the preview."}</p><button type="button" onClick={() => void query.refetch()} className="btn-secondary min-h-11 px-3">{zh ? "重新核对" : "Check again"}</button></>
         : query.data?.preview ? <>
           <p className="font-semibold">{query.data.preview.title}</p>

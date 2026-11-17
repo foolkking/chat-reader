@@ -188,6 +188,14 @@ try {
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(page.getByText("A-only secret text", { exact: true })).toHaveCount(0);
     results.push({ width, locale, section: "foreign-preview-rejected", pass: true });
+    // Old batches without a version must not spin forever or issue an unbound read.
+    await page.goto("https://layout.synthetic/preview");
+    await page.evaluate(() => { delete window.session.updated_at; });
+    await page.getByRole("button", { name: /来源与预览|Source & preview/ }).click();
+    await expect(page.getByRole("alert")).toHaveText(/批次信息不完整|Batch details are incomplete/);
+    await expect(page.getByText(/正在读取预览|Loading preview/)).toHaveCount(0);
+    assert.equal(await page.evaluate(() => window.previewReads ?? 0), 0);
+    results.push({ width, locale, section: "missing-preview-version-rejected", pass: true });
     await page.close();
   }
   assert.deepEqual(errors, []);
