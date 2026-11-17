@@ -1082,6 +1082,19 @@ async function preferences(page: Page, zh: boolean) {
   expect((await page.request.patch("/api/preferences", { data: { locale_mode: zh ? "zh-CN" : "en-US", theme_mode: zh ? "light" : "dark" } })).ok()).toBe(true);
 }
 
+async function setBrowserConnectivity(page: Page, online: boolean) {
+  const eventName = online ? "online" : "offline";
+  // navigator.onLine can change before the browser dispatches the matching
+  // event to listeners such as TanStack Query's online manager. Wait for the
+  // event itself so the reconnect refetch is tested rather than raced.
+  const observedEvent = page.evaluate((name) => new Promise<void>((resolve) => {
+    window.addEventListener(name, () => resolve(), { once: true });
+  }), eventName);
+  await page.context().setOffline(!online);
+  await observedEvent;
+  await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(online);
+}
+
 async function createArchivedProject(page: Page, name: string) {
   const response = await page.request.post("/api/projects", { data: { name } });
   expect(response.status()).toBe(201);
@@ -1326,10 +1339,8 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         const original = await link.elementHandle();
         if (!original) throw new Error("Synthetic sidebar reading link was not mounted");
         fail = true; const beforeFailure = reads[scope];
-        await page.context().setOffline(true);
-        await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
-        await page.context().setOffline(false);
-        await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(true);
+        await setBrowserConnectivity(page, false);
+        await setBrowserConnectivity(page, true);
         await expect.poll(() => reads[scope]).toBeGreaterThan(beforeFailure);
         const error = region.getByRole("alert").filter({ hasText: zh ? "仍显示上次内容" : "Previously loaded items are shown" });
         await expect(error).toBeVisible(); await expect(link).toBeVisible(); await expect(link).toBeFocused();
@@ -2127,10 +2138,8 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         // A real browser offline/online transition refetches the now-stale query.
         // The targeted 503 is injected; this does not claim a real network outage.
         failRead = true;
-        await page.context().setOffline(true);
-        await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
-        await page.context().setOffline(false);
-        await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(true);
+        await setBrowserConnectivity(page, false);
+        await setBrowserConnectivity(page, true);
         await expect.poll(() => reads).toBeGreaterThan(previousReads);
         const error = list.getByRole("alert").filter({ hasText: zh ? "对话更新失败，仍显示上次内容" : "Could not update conversations. Previously loaded items are shown." });
         await expect(error).toBeVisible();

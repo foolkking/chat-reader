@@ -195,7 +195,16 @@ test("failures precede completed results and retry keeps keyboard focus on the m
   await page.goto("/");
   await page.getByTestId("sidebar-tasks-button").click();
   const panel = page.getByTestId("task-center-panel");
-  await expect(panel.locator("section").first()).toHaveAttribute("aria-label", "Failed");
+  const failedSection = panel.getByRole("region", { name: "Failed", exact: true });
+  const completedSection = panel.getByRole("region", { name: "Completed", exact: true });
+  await expect(failedSection).toBeVisible();
+  await expect(completedSection).toBeVisible();
+  expect(await panel.evaluate((element) => {
+    const failed = element.querySelector('section[aria-label="Failed"]');
+    const completed = element.querySelector('section[aria-label="Completed"]');
+    return !!failed && !!completed
+      && Boolean(failed.compareDocumentPosition(completed) & Node.DOCUMENT_POSITION_FOLLOWING);
+  })).toBe(true);
   await expect(panel.getByRole("region", { name: "Cancelled", exact: true })).toContainText("Cancelled");
   const row = panel.locator(`[id="task-row-${taskId}"]`);
   await expect(row).toContainText("Synthetic failed source");
@@ -612,6 +621,12 @@ test("project and conversation drag overlays preserve their source row dimension
       reader_density_mode: "comfortable",
       reader_font_size_px: 17,
       section_toc_mode: "visible",
+      navigation_sort: {
+        all: { mode: "custom", direction: "asc" },
+        project_default: { mode: "imported", direction: "desc" },
+        unclassified: { mode: "imported", direction: "desc" },
+        blocks: "projects_first",
+      },
       conversation_sort_mode: "custom",
       conversation_sort_direction: "asc",
       project_sort_mode: "custom",
@@ -628,6 +643,8 @@ test("project and conversation drag overlays preserve their source row dimension
   await assertDragOverlayMatchesSource(page, projectRow, page.getByTestId("sidebar-drag-overlay"));
 
   const conversationRow = page.getByTestId(`conversation-sortable-row-${conversations[0].id}`);
+  const list = page.locator("section").filter({ has: page.getByRole("heading", { name: "Conversation history", exact: true }) });
+  await expect(list.getByRole("button", { name: "Sort conversations", exact: true })).toContainText("Manual order");
   await assertDragOverlayMatchesSource(page, conversationRow, page.getByTestId("conversation-list-drag-overlay"));
   expect(mutationRequests).toEqual([]);
 });
