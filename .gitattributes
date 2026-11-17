@@ -48,3 +48,5 @@ docs/evidence/reliability-2026-11-16/ci-cold-merge-* -text whitespace=cr-at-eol,
 # ZIP release/readiness and isolated scheduling receipts retain their exact bytes.
 docs/evidence/reliability-2026-11-16/ci-zip-markdown-* -text whitespace=cr-at-eol,-blank-at-eof
 docs/evidence/reliability-2026-11-16/ci-scheduling-* -text whitespace=cr-at-eol,-blank-at-eof
+# This product checkpoint contains immutable synthetic evidence and screenshots.
+docs/evidence/navigation-search-import-2026-11-17/** -text whitespace=cr-at-eol,-blank-at-eof

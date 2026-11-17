@@ -1,0 +1,954 @@
+{
+  "schema_version": 1,
+  "checkpoint_date": "2026-11-17",
+  "scope": "Local sorting/search/import implementation; not a CI release or product acceptance.",
+  "work_status": "User requested local commit then pause; unresolved checks are retained, no remote actions.",
+  "source_commit": "483b603e734a06b54479e48d3a33ce3a7257dae2",
+  "implementation_commits": [
+    "a8407f969a1f70d5e3c7376303035f9c4bd3ee05 feat(import): manage batches with source-bound previews and safe discard",
+    "af0699fd740f2884b2c2d4cece502bfadc6f9414 feat(search): rank and paginate conversations before expanding hits",
+    "baa6a63788ff7b8f55eddfedaea54075b9bdf3eb feat(navigation): preserve scoped sorting and versioned manual placement",
+    "62552694c0c51c7654dee4af44ada88857d20c09 test(ux): bind added product coverage and responsive component gates",
+    "3343ea01aa4027a3c26c063701af7b2fe8ae0efa fix(ux): retain search order and distinguish missing activity times",
+    "69c16495036eb68e579526c29b06cf17732b6fa6 fix(import): reject unversioned previews without indefinite loading",
+    "4b795af8097dd93051c04afff8288fae542fdb26 fix(navigation): fail fast on writer fences and append to reversed manual tails",
+    "35912469dc69b4551ec862719f489039cba77a6b test(import): retain selection order with real source-bound preview fixtures",
+    "845a2d603a4c852e54206c69f8dbf108fe7db688 test(migration): seed the pre-navigation schema with reflected tables",
+    "483b603e734a06b54479e48d3a33ce3a7257dae2 test: align recovery fixtures with navigation schema and batch actions"
+  ],
+  "source_inputs": {
+    "file": "source-inputs.json",
+    "count": 93,
+    "sha256": "3745aeedafda8543e03a2053c58b88f03794564757be3966c1030d9e19a5f219",
+    "worktree_raw_and_committed_lf_match": true
+  },
+  "checks": {
+    "ux_complete": {
+      "local_path": "<TASK_TEMP>/verification-23/ux.log",
+      "bytes": 553236,
+      "sha256": "9421c8455d378f8c02a398e9c6e6802a0c0469982bdfe01743e1be7504a791e5",
+      "tests": 2574,
+      "pass": 2574,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "ci_node": {
+      "local_path": "<TASK_TEMP>/verification-35/ci-node.log",
+      "bytes": 32972,
+      "sha256": "4f58a655e363b1b227cb8e11ec5373edb536e65b90583a45619024cf74e839cc",
+      "tests": 161,
+      "pass": 161,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "ci_python": {
+      "local_path": "<TASK_TEMP>/verification-35/ci-python.xml",
+      "bytes": 24823,
+      "sha256": "573ba54e4330dc78ba4d61f17def2bdd9cdb83eab9ec86f15e12a7decf7f6c57",
+      "collected": 142,
+      "passed": 142,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0,
+      "duration_seconds": 7.013,
+      "exceptions": []
+    },
+    "related_api_before_final_preview_test_strengthening": {
+      "local_path": "<TASK_TEMP>/pytest-broad-13.xml",
+      "bytes": 85649,
+      "sha256": "ed44bbb5aae31b6b52bd0cc932568a962cd2d4b6b0f2bf3c4ea8562ec6af4620",
+      "collected": 548,
+      "passed": 541,
+      "failed": 0,
+      "error": 0,
+      "skipped": 7,
+      "duration_seconds": 1118.857,
+      "exceptions": [
+        {
+          "test": "tests.test_bounded_zip_streaming::test_record_spool_rejects_data_and_index_symlinks[False]",
+          "outcome": "skipped",
+          "reason": "Symlinks are unavailable on this test platform."
+        },
+        {
+          "test": "tests.test_bounded_zip_streaming::test_record_spool_rejects_data_and_index_symlinks[True]",
+          "outcome": "skipped",
+          "reason": "Symlinks are unavailable on this test platform."
+        },
+        {
+          "test": "tests.test_import_preview_exporter_combo::test_real_exporter_pair_preview_commit_and_retry",
+          "outcome": "skipped",
+          "reason": "CHAT_READER_E2E_FIXTURE_DIR is not configured"
+        },
+        {
+          "test": "tests.test_import_preview_exporter_combo::test_response_only_real_pair_preview",
+          "outcome": "skipped",
+          "reason": "CHAT_READER_IMPORT_PAIR_JSON and CHAT_READER_IMPORT_PAIR_MARKDOWN are not configured"
+        },
+        {
+          "test": "tests.test_import_source_cleanup::test_changed_directory_is_protected_not_reported_as_removed[symlink]",
+          "outcome": "skipped",
+          "reason": "Windows user cannot create a test symlink"
+        },
+        {
+          "test": "tests.test_import_source_repair::test_exclusion_never_follows_source_symlink_to_a_sibling[legacy]",
+          "outcome": "skipped",
+          "reason": "Creating a file symlink requires platform permission."
+        },
+        {
+          "test": "tests.test_import_source_repair::test_exclusion_never_follows_source_symlink_to_a_sibling[worker]",
+          "outcome": "skipped",
+          "reason": "Creating a file symlink requires platform permission."
+        }
+      ]
+    },
+    "prior_product_postgres_and_restores": {
+      "local_path": "<TASK_TEMP>/verification-18/product.xml",
+      "bytes": 4781,
+      "sha256": "261a8165754b15f831579a3fe8130790306df45aa00d99d48202e62ff22f634b",
+      "collected": 33,
+      "passed": 33,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0,
+      "duration_seconds": 111.82,
+      "exceptions": []
+    },
+    "final_product_postgres_and_restores": {
+      "local_path": "<TASK_TEMP>/verification-25/product.xml",
+      "bytes": 6203,
+      "sha256": "31307b9cf8cd9542f830b34407a56bc39e9a26c58df41594ac4d6ac08a06e20b",
+      "collected": 45,
+      "passed": 45,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0,
+      "duration_seconds": 229.372,
+      "exceptions": []
+    },
+    "preference_account_fences_and_worker_imports": {
+      "local_path": "<TASK_TEMP>/verification-24/ordering.xml",
+      "bytes": 6827,
+      "sha256": "2b978a3e2f3a5735450384abed2dfde31ac04a4dcf6c4aa8420e7c7039225a00",
+      "collected": 40,
+      "passed": 40,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0,
+      "duration_seconds": 75.334,
+      "exceptions": []
+    },
+    "targeted_failed_cases_after_fixture_and_pg_bin_repair": {
+      "local_path": "<TASK_TEMP>/verification-27/failures.xml",
+      "bytes": 1474,
+      "sha256": "f2245c6492d6743ea7db391ac1e6de54fde6e4fdf4c31913856564441c21a4af",
+      "collected": 9,
+      "passed": 9,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0,
+      "duration_seconds": 27.733,
+      "exceptions": []
+    },
+    "reflected_0058_migration_and_private_search_worker": {
+      "local_path": "<TASK_TEMP>/verification-30/migration.xml",
+      "bytes": 401,
+      "sha256": "668308640e64f66436b606fdbd5e43ac405b2b9a6267ac91f82c781deae8dbe5",
+      "collected": 1,
+      "passed": 1,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0,
+      "duration_seconds": 8.088,
+      "exceptions": []
+    },
+    "reflected_0039_reading_migration_and_recovery_contract": {
+      "local_path": "<TASK_TEMP>/verification-34/recovery.xml",
+      "bytes": 1376,
+      "sha256": "b0fb9a95b1e3f2498b43099dee1d0bb06b844e7b8f48f12a12bfbc5594fa5971",
+      "collected": 8,
+      "passed": 8,
+      "failed": 0,
+      "error": 0,
+      "skipped": 0,
+      "duration_seconds": 29.745,
+      "exceptions": []
+    },
+    "full_windows_api": {
+      "local_path": "<TASK_TEMP>/full-api-20/api-full.xml",
+      "bytes": 1449471,
+      "sha256": "5805130a03e598f450d54f41077a4b63cee0d4ad20aa7871594fa8e1798afd93",
+      "collected": 7034,
+      "passed": 6968,
+      "failed": 45,
+      "error": 4,
+      "skipped": 17,
+      "duration_seconds": 6653.347,
+      "exceptions": [
+        {
+          "test": "tests.test_attachment_storage_integrity::test_symlinked_reference_components_are_never_followed",
+          "outcome": "skipped",
+          "reason": "symlink creation is not available on this host"
+        },
+        {
+          "test": "tests.test_backup_housekeeping::test_two_logical_snapshots_restore_after_dedup_and_old_removal",
+          "outcome": "error",
+          "reason": "failed on setup with \"AssertionError: PostgreSQL 17 requires matching clients at \\usr\\lib\\postgresql\\17\\bin or the job-owned pinned CI container\""
+        },
+        {
+          "test": "tests.test_backup_housekeeping::test_corrupt_new_snapshot_does_not_displace_old_recovery_points",
+          "outcome": "error",
+          "reason": "failed on setup with \"AssertionError: PostgreSQL 17 requires matching clients at \\usr\\lib\\postgresql\\17\\bin or the job-owned pinned CI container\""
+        },
+        {
+          "test": "tests.test_backup_housekeeping::test_unknown_members_and_active_backup_lock_block_removal",
+          "outcome": "error",
+          "reason": "failed on setup with \"AssertionError: PostgreSQL 17 requires matching clients at \\usr\\lib\\postgresql\\17\\bin or the job-owned pinned CI container\""
+        },
+        {
+          "test": "tests.test_backup_housekeeping::test_one_valid_backup_never_allows_apply",
+          "outcome": "error",
+          "reason": "failed on setup with \"AssertionError: PostgreSQL 17 requires matching clients at \\usr\\lib\\postgresql\\17\\bin or the job-owned pinned CI container\""
+        },
+        {
+          "test": "tests.test_backup_restore_drill_postgres::test_stopped_writer_database_and_asset_backup_really_restores",
+          "outcome": "failed",
+          "reason": "AssertionError: PostgreSQL 17 requires matching clients at \\usr\\lib\\postgresql\\17\\bin or the job-owned pinned CI container"
+        },
+        {
+          "test": "tests.test_bounded_zip_streaming::test_record_spool_rejects_data_and_index_symlinks[False]",
+          "outcome": "skipped",
+          "reason": "Symlinks are unavailable on this test platform."
+        },
+        {
+          "test": "tests.test_bounded_zip_streaming::test_record_spool_rejects_data_and_index_symlinks[True]",
+          "outcome": "skipped",
+          "reason": "Symlinks are unavailable on this test platform."
+        },
+        {
+          "test": "tests.test_cleanup_execution::test_outside_symlink_is_never_eligible",
+          "outcome": "skipped",
+          "reason": "symlink creation is unavailable in this environment"
+        },
+        {
+          "test": "tests.test_exporter_markdown_parser::test_real_paired_fixture_uses_bounded_fast_path",
+          "outcome": "skipped",
+          "reason": "CHAT_READER_E2E_FIXTURE_DIR is not configured"
+        },
+        {
+          "test": "tests.test_import_preview_exporter_combo::test_real_exporter_pair_preview_commit_and_retry",
+          "outcome": "skipped",
+          "reason": "CHAT_READER_E2E_FIXTURE_DIR is not configured"
+        },
+        {
+          "test": "tests.test_import_preview_exporter_combo::test_response_only_real_pair_preview",
+          "outcome": "skipped",
+          "reason": "CHAT_READER_IMPORT_PAIR_JSON and CHAT_READER_IMPORT_PAIR_MARKDOWN are not configured"
+        },
+        {
+          "test": "tests.test_import_selection_order::test_draft_generation_does_not_reorder_groups_by_family",
+          "outcome": "failed",
+          "reason": "AttributeError: 'types.SimpleNamespace' object has no attribute 'import_id'"
+        },
+        {
+          "test": "tests.test_import_source_cleanup::test_changed_directory_is_protected_not_reported_as_removed[symlink]",
+          "outcome": "skipped",
+          "reason": "Windows user cannot create a test symlink"
+        },
+        {
+          "test": "tests.test_import_source_repair::test_exclusion_never_follows_source_symlink_to_a_sibling[legacy]",
+          "outcome": "skipped",
+          "reason": "Creating a file symlink requires platform permission."
+        },
+        {
+          "test": "tests.test_import_source_repair::test_exclusion_never_follows_source_symlink_to_a_sibling[worker]",
+          "outcome": "skipped",
+          "reason": "Creating a file symlink requires platform permission."
+        },
+        {
+          "test": "tests.test_optimization_migration_postgres::test_migration_repairs_only_index_dates_and_worker_backfills_private_text",
+          "outcome": "failed",
+          "reason": "sqlalchemy.exc.ProgrammingError: (psycopg.errors.UndefinedColumn) column conversations.unclassified_sort_order does not exist\nLINE 1: ...ax(conversations.manual_sort_order) AS max_1, max(conversati...\n                                                             ^\n[SQL: SELECT max(conversations.manua"
+        },
+        {
+          "test": "tests.test_prepared_worker_processes::test_real_parent_death_kills_its_unassigned_interpreter",
+          "outcome": "skipped",
+          "reason": "real Linux parent-death signal requires prctl"
+        },
+        {
+          "test": "tests.test_prepared_worker_processes::test_real_idle_maintenance_and_shutdown_never_overlap_two_execution_children",
+          "outcome": "skipped",
+          "reason": "observes real /proc children and graceful POSIX shutdown"
+        },
+        {
+          "test": "tests.test_reading_position_postgres::test_reading_migration_preserves_old_anchor_and_cascades_receipts",
+          "outcome": "failed",
+          "reason": "sqlalchemy.exc.ProgrammingError: (psycopg.errors.UndefinedColumn) column conversations.unclassified_sort_order does not exist\nLINE 1: ...ax(conversations.manual_sort_order) AS max_1, max(conversati...\n                                                             ^\n[SQL: SELECT max(conversations.manua"
+        },
+        {
+          "test": "tests.test_recovery_consistency::test_expired_import_preview_keeps_sources_and_rebuilds_saved_mapping",
+          "outcome": "failed",
+          "reason": "AssertionError: assert ['resume', 'v...s', 'discard'] == ['resume']\n  \n  Left contains 2 more items, first extra item: 'view_sources'\n  Use -v to get more diff"
+        },
+        {
+          "test": "tests.test_runtime_health_scripts::test_different_release_copies_share_one_lock",
+          "outcome": "skipped",
+          "reason": "host-wide flock is a Linux production requirement"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[conversation_export-processing]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[conversation_export-cancelling]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[offline_package-processing]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[offline_package-cancelling]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_preserves_terminal_receipts[committed]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_preserves_terminal_receipts[failed]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_preserves_terminal_receipts[cancelled]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_refuses_wrong_scope_and_real_execution[owner]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_refuses_wrong_scope_and_real_execution[conversation]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_refuses_wrong_scope_and_real_execution[kind]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_refuses_wrong_scope_and_real_execution[token]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_refuses_wrong_scope_and_real_execution[control]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_refuses_wrong_scope_and_real_execution[created_at]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_refuses_wrong_scope_and_real_execution[started_at]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_refuses_wrong_scope_and_real_execution[attempt]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_refuses_wrong_scope_and_real_execution[operation]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_cleanup_leaves_unrelated_claimed_fixture_alone",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_teardown_refuses_missing_test_opt_in[environment]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_teardown_refuses_missing_test_opt_in[mailbox]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_teardown_refuses_missing_test_opt_in[database]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_action_fixture_teardown_refuses_missing_test_opt_in[port]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_retry_fixture_cleanup_never_takes_over_real_retry[queued]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_retry_fixture_cleanup_never_takes_over_real_retry[processing]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_action_task_fixture::test_retry_fixture_cleanup_never_takes_over_real_retry[committed]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 6, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_unblocks_the_next_task_without_stale_recovery[adaptive_import_analysis-processing]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_unblocks_the_next_task_without_stale_recovery[adaptive_import_analysis-cancelling]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_unblocks_the_next_task_without_stale_recovery[adaptive_import_analysis-queued]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_unblocks_the_next_task_without_stale_recovery[content_noise_scan-processing]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_unblocks_the_next_task_without_stale_recovery[content_noise_scan-cancelling]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_unblocks_the_next_task_without_stale_recovery[content_noise_scan-queued]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_preserves_terminal_results_and_is_idempotent[complete]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_preserves_terminal_results_and_is_idempotent[fail]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_preserves_terminal_results_and_is_idempotent[finish]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_refuses_mismatched_or_supervised_tasks[owner]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_refuses_mismatched_or_supervised_tasks[scan]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_refuses_mismatched_or_supervised_tasks[execution]",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_disposal_targets_only_its_original_scan",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_settings_scan_lifecycle_fixture::test_import_follow_up_disposal_keeps_the_committed_parent",
+          "outcome": "failed",
+          "reason": "AssertionError: Traceback (most recent call last):\n    File \"<string>\", line 5, in <module>\n  AssertionError\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['<PYTHON>', '-B', '-c', \"\\nimport os,sys,uuid,json\\nfrom datetime import dateti...de=1, stdout='', stderr='Traceback (most recent call la"
+        },
+        {
+          "test": "tests.test_split_receipts_postgres::test_receipt_migration_preserves_canonical_rows_and_has_cascade_lifetime",
+          "outcome": "failed",
+          "reason": "sqlalchemy.exc.ProgrammingError: (psycopg.errors.UndefinedColumn) column conversations.unclassified_sort_order does not exist\nLINE 1: ...ax(conversations.manual_sort_order) AS max_1, max(conversati...\n                                                             ^\n[SQL: SELECT max(conversations.manua"
+        },
+        {
+          "test": "tests.test_supervised_execution_postgres::test_control_migration_roundtrip_keeps_one_head",
+          "outcome": "failed",
+          "reason": "AssertionError: assert ['20261117_0062'] == ['20261112_0061']\n  \n  At index 0 diff: '20261117_0062' != '20261112_0061'\n  Use -v to get more diff"
+        },
+        {
+          "test": "tests.test_worker_shutdown::test_posix_process_observes_external_stop_and_exits_successfully[False-15]",
+          "outcome": "skipped",
+          "reason": "Windows send_signal(SIGTERM) forcibly terminates, unlike POSIX"
+        },
+        {
+          "test": "tests.test_worker_shutdown::test_posix_process_observes_external_stop_and_exits_successfully[False-2]",
+          "outcome": "skipped",
+          "reason": "Windows send_signal(SIGTERM) forcibly terminates, unlike POSIX"
+        },
+        {
+          "test": "tests.test_worker_shutdown::test_posix_process_observes_external_stop_and_exits_successfully[True-15]",
+          "outcome": "skipped",
+          "reason": "Windows send_signal(SIGTERM) forcibly terminates, unlike POSIX"
+        },
+        {
+          "test": "tests.test_worker_shutdown::test_posix_process_observes_external_stop_and_exits_successfully[True-2]",
+          "outcome": "skipped",
+          "reason": "Windows send_signal(SIGTERM) forcibly terminates, unlike POSIX"
+        }
+      ],
+      "exit_code": 1,
+      "not_linux_release_acceptance": true,
+      "not_final_exact_source_acceptance": true,
+      "source_boundary": "Started before final preview/order and fixture hardening; evolving-worktree diagnostic only. Later exact targeted checks are separate, not a rewritten green full run."
+    },
+    "lint_and_typecheck": {
+      "local_path": "<TASK_TEMP>/verification-22/checks-exit.json",
+      "bytes": 54,
+      "sha256": "c151db8c49bb951b4d87b9eb0133de50f8a77a6da8b1804a7e9ffc76498a3ce1",
+      "exit_codes": {
+        "typecheck": 0,
+        "lint": 0,
+        "layout": 0
+      },
+      "typecheck_incremental_file": "owned task temp, user file untouched"
+    },
+    "actionlint": {
+      "local_path": "<TASK_TEMP>/verification-19/actionlint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "version": "1.7.12",
+      "exit_code": 0
+    },
+    "release_source_controls": {
+      "local_path": "<TASK_TEMP>/verification-29/release-source.log",
+      "bytes": 12972,
+      "sha256": "c09fdfd1a3be9833852107d888a73bd83325b0544b8237542cfb1c9b6eb5087a",
+      "passed": 88,
+      "browser_execution": false
+    },
+    "two_independent_api_collections": {
+      "first": {
+        "local_path": "<TASK_TEMP>/verification-35/collection-08.log",
+        "bytes": 970041,
+        "sha256": "6092e4fb8e57277fab5f8a10fe3c84a97712a7e0add7d99ea4c4e51202803eb7"
+      },
+      "second": {
+        "local_path": "<TASK_TEMP>/verification-35/collection-09.log",
+        "bytes": 970041,
+        "sha256": "7c0bf5bb974abe6768e9be961ca6dc37e47532e2125ebe9f25ef7503e2535a23"
+      },
+      "count_each": 7034,
+      "exact_nodeids_equal": true,
+      "nodeids_lf_sha256": "9e4a63f7740220bb0ef70d32ae09c686fc2c6391a383a616b4e9e7d15258793c"
+    },
+    "migration": {
+      "local_path": "<TASK_TEMP>/verification-18/migration.log",
+      "bytes": 30,
+      "sha256": "90c20183ddacdf9434a8bd098b0754da59dd1151bac3f2ee4af78d5ca080091f",
+      "head_and_current": "20261117_0062",
+      "database": "owned disposable loopback PostgreSQL, never production"
+    },
+    "browser_components": {
+      "layout": {
+        "local_path": "<TASK_TEMP>/verification-22/navigation-import-layout-browser/result.json",
+        "bytes": 3739,
+        "sha256": "3d5778598c06088fde2f67f7d8b4fff7a39080f8c60b15ba5f3d76459f0bd347",
+        "cases": 32,
+        "synthetic_transport": true,
+        "real_components": true,
+        "full_site_e2e": false
+      },
+      "disposition": {
+        "local_path": "<TASK_TEMP>/verification-19/import-batch-browser/result.json",
+        "bytes": 1862,
+        "sha256": "01c3e03396cbd6dcfb81e1aeb656bce94acfad06cd0c0fc78c8e9c099e4f53c7",
+        "cases": 12,
+        "synthetic_transport": true,
+        "real_components": true,
+        "full_site_e2e": false
+      },
+      "source_repair": {
+        "local_path": "<TASK_TEMP>/verification-19/import-source-repair-browser/result.json",
+        "bytes": 41559,
+        "sha256": "9cd47be1478e1c11d9ecccd5b4ef4fbfb59a7b1121e73020cfcd39a8b0516a1c",
+        "cases": 12,
+        "synthetic_transport": true,
+        "real_components": true,
+        "full_site_e2e": false
+      }
+    },
+    "build": {
+      "local_path": "<TASK_TEMP>/verification-22/build-09.log",
+      "bytes": 2605,
+      "sha256": "5edf6479692a285d38cd148f5294d33753dc1bc811e7ac9a8e879b7920254640",
+      "exit_code": 1,
+      "compiled_types_generated_pages": true,
+      "failure": "SecurityFatalError: installed Next16.4.1 advisory",
+      "inputs": "build-inputs.json",
+      "input_count": 556,
+      "all_inputs_match_worktree": true,
+      "earlier_build06_and_08_exit0_are_not_final_build_pass": true,
+      "dependency_upgraded": false,
+      "security_check_bypassed": false
+    }
+  },
+  "coverage": {
+    "original_contract_sha256": "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c",
+    "original_schedule_sha256": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
+    "coverage_extension_sha256": "c181a955a6f075995d97d4dc5f06009cef8d7403e7d6c19b66f4f0e2b68ec6e8",
+    "combined_schedule_sha256": "c44e5a2ed815618935c2a81f261d64aeff3e34f99511ee4c5094eece6a576f27",
+    "original_api_assignments_unchanged": true,
+    "added_api_cases": 24,
+    "reviewed_fixture_revision": {
+      "tests/test_import_selection_order.py": {
+        "previous_source_lf_sha256": "de59e98ac66d536e7c06e109d4dce498b177cbdf8b722c2de864bfcf1cee6abd",
+        "source_lf_sha256": "619080f040aa6a77f57d8d0585894e800aa028a38f6a445916e443994fe53712",
+        "nodeids": [
+          "tests/test_import_selection_order.py::test_selected_order_survives_reload_analysis_and_draft",
+          "tests/test_import_selection_order.py::test_paired_files_use_first_selected_member_not_alphabetical_stem",
+          "tests/test_import_selection_order.py::test_full_validation_keeps_selection_order_across_interleaved_families",
+          "tests/test_import_selection_order.py::test_draft_generation_does_not_reorder_groups_by_family"
+        ],
+        "reason": "Complete synthetic identity for newly persisted source previews; retain original draft-order assertion and add real sidecar order readback."
+      },
+      "tests/test_optimization_migration_postgres.py": {
+        "previous_source_lf_sha256": "205c46339854a36de12dde801ab6527016db66cea3ed58146d5cd4369097d7b0",
+        "source_lf_sha256": "801086b0e2f3a581f01cdb0e0260ad80b45d05886f1941ed51e5839e766c2b3b",
+        "nodeids": [
+          "tests/test_optimization_migration_postgres.py::test_migration_repairs_only_index_dates_and_worker_backfills_private_text"
+        ],
+        "reason": "Seed the reflected 0058 schema, not current 0062 ORM columns/listeners; preserve every migration/backfill assertion and additionally prove pre-upgrade column absence."
+      },
+      "tests/test_reading_position_postgres.py": {
+        "previous_source_lf_sha256": "0aaa4f7840ff6c97690a6c62e96227c30273e5111e0af11ba4c969786565db6f",
+        "source_lf_sha256": "b5489f077d851a8565741284866bbb35aa9605b712923edad2aa8a9287d7dae6",
+        "nodeids": [
+          "tests/test_reading_position_postgres.py::test_reading_migration_preserves_old_anchor_and_cascades_receipts",
+          "tests/test_reading_position_postgres.py::test_concurrent_position_updates_and_replay_are_serialized"
+        ],
+        "reason": "Seed the reflected 0039 schema, not current 0062 ORM columns/listeners; retain reading anchor, revision, cascade and migration roundtrip assertions, plus prove the new column is absent before migration."
+      },
+      "tests/test_recovery_consistency.py": {
+        "previous_source_lf_sha256": "0970b7780d0b543b8e4ca70335bb20af434c1cb6f98bcd79ed179767f392c4cc",
+        "source_lf_sha256": "21c7a70f5b2981de7b391629674562d0e89938f19c1ce323fd57805a3412d7a9",
+        "nodeids": [
+          "tests/test_recovery_consistency.py::test_expired_import_preview_keeps_sources_and_rebuilds_saved_mapping",
+          "tests/test_recovery_consistency.py::test_attachment_download_key_is_bound_to_normalized_selection",
+          "tests/test_recovery_consistency.py::test_archive_capacity_is_actionable_and_precedes_asset_work",
+          "tests/test_recovery_consistency.py::test_restored_archive_receipt_does_not_require_collection_capacity_again",
+          "tests/test_recovery_consistency.py::test_private_search_backfill_yields_with_durable_cursor",
+          "tests/test_recovery_consistency.py::test_private_search_backfill_failure_resumes_after_last_committed_item"
+        ],
+        "reason": "Accept the approved source-missing batch actions without enabling rebuild or commit; additionally execute versioned discard, prove the saved format is reusable, and confirm no conversation was imported."
+      }
+    },
+    "original_fixture_order_and_migration_assertions_retained": true,
+    "additional_real_preview_readback_and_versioned_discard_assertions": true,
+    "allowed_skips_unchanged": [
+      "tests/test_exporter_markdown_parser.py::test_real_paired_fixture_uses_bounded_fast_path",
+      "tests/test_import_preview_exporter_combo.py::test_real_exporter_pair_preview_commit_and_retry",
+      "tests/test_import_preview_exporter_combo.py::test_response_only_real_pair_preview"
+    ],
+    "expected_linux_passes": 7031,
+    "original_settings_470_restore1_web14_reader_memory_gates_retained": true
+  },
+  "source_isolation": {
+    "actual_json_A_B_C_commit_and_canonical_message_readback": "passed",
+    "actual_same_named_zip_A_B_C_commit_and_canonical_message_readback": "passed",
+    "prior_format_name_remains_auxiliary_only": true,
+    "not_a_full_site_or_production_assertion": true
+  },
+  "screenshots": {
+    "overview-375-zh-CN.png": {
+      "bytes": 37781,
+      "sha256": "02d237e904b658cf7f967ed55a99eae7f9c27152cca686a70d900a4e4c8a4d54",
+      "data": "synthetic fixtures only; actual React components, not production"
+    },
+    "imports-375-zh-CN.png": {
+      "bytes": 25178,
+      "sha256": "679813b36ffb6eaac38e1eb2e5c5798b950ac8330aa922657635ff5ebc3f0510",
+      "data": "synthetic fixtures only; actual React components, not production"
+    },
+    "sorting-375-zh-CN.png": {
+      "bytes": 24152,
+      "sha256": "7fe347c80c56b157f0c681fe912b162ca7b506e500234d8c22b6456c0fc9611e",
+      "data": "synthetic fixtures only; actual React components, not production"
+    },
+    "search-375-zh-CN.png": {
+      "bytes": 25136,
+      "sha256": "03159b85d636f1419bbb51463bbdd4ca3c43c18bfcadf078c1de80df946506aa",
+      "data": "synthetic fixtures only; actual React components, not production"
+    },
+    "sorting-1440-en-US.png": {
+      "bytes": 30912,
+      "sha256": "e8489557dabc6a0c588b35e3f64ea253d54463dd0d3ed40c4c6d85d06a84d69c",
+      "data": "synthetic fixtures only; actual React components, not production"
+    },
+    "overview-1440-zh-CN.png": {
+      "bytes": 43922,
+      "sha256": "09e9b2f3a4ca1487b6a7842eeb8509e60df8c2ac4c1415962a926ecb5264e907",
+      "data": "synthetic fixtures only; actual React components, not production"
+    }
+  },
+  "security_advisory": {
+    "package": "next",
+    "version": "16.4.1",
+    "source": "npm registry advisory API",
+    "advisories": [
+      {
+        "id": 1247486,
+        "title": "Next.js: Information disclosure across root params when a 'use cache' function is called through unstable_cache()",
+        "severity": "moderate",
+        "url": "https://github.com/advisories/GHSA-mfr8-8qww-v76h",
+        "vulnerable_versions": ">=16.3.0 <=16.4.4"
+      }
+    ]
+  },
+  "preservation": {
+    "old_reliability_json_count": 137,
+    "old_reliability_sha_manifest": "9ce3b516f756d0de446ff135860b31a52eba769dbc0ffe259d50e14ea14a1d01",
+    "all_old_reliability_json_lf_matches_original_git_bytes": true,
+    "existing_checkout_eol_only_differences": [
+      "docs/evidence/reliability-2026-11-12/admin-recovery-build-inputs.json",
+      "docs/evidence/reliability-2026-11-12/admin-recovery-verification.json",
+      "docs/evidence/reliability-2026-11-12/build-inputs.json",
+      "docs/evidence/reliability-2026-11-12/source-manifest.json",
+      "docs/evidence/reliability-2026-11-12/verification.json",
+      "docs/evidence/reliability-2026-11-13/ci-api-port-inputs.json",
+      "docs/evidence/reliability-2026-11-13/ci-api-port-verification.json",
+      "docs/evidence/reliability-2026-11-13/ci-fixture-dispatch.json",
+      "docs/evidence/reliability-2026-11-13/ci-fixture-inputs.json",
+      "docs/evidence/reliability-2026-11-13/ci-fixture-verification.json",
+      "docs/evidence/reliability-2026-11-13/ci-focused-build-inputs.json",
+      "docs/evidence/reliability-2026-11-13/ci-focused-inputs.json",
+      "docs/evidence/reliability-2026-11-13/ci-focused-verification.json",
+      "docs/evidence/reliability-2026-11-13/ci-repair-build-inputs.json",
+      "docs/evidence/reliability-2026-11-13/ci-repair-dispatch.json",
+      "docs/evidence/reliability-2026-11-13/ci-repair-inputs.json",
+      "docs/evidence/reliability-2026-11-13/ci-repair-verification.json",
+      "docs/evidence/reliability-2026-11-13/owner-recovery-build-dependencies.json",
+      "docs/evidence/reliability-2026-11-13/owner-recovery-build-inputs.json",
+      "docs/evidence/reliability-2026-11-13/owner-recovery-inputs.json",
+      "docs/evidence/reliability-2026-11-13/owner-recovery-verification.json",
+      "docs/evidence/reliability-2026-11-13/release-preparation.json",
+      "docs/evidence/reliability-2026-11-14/ci-full-quality-final-failure.json",
+      "docs/evidence/reliability-2026-11-14/ci-offline-optional-failure.json",
+      "docs/evidence/reliability-2026-11-14/ci-offline-optional-import-diagnosis.json",
+      "docs/evidence/reliability-2026-11-14/ci-offline-optional-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-offline-optional-verification.json",
+      "docs/evidence/reliability-2026-11-14/ci-port-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-port-failure.json",
+      "docs/evidence/reliability-2026-11-14/ci-probe-pagination-build-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-probe-pagination-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-probe-pagination-failure.json",
+      "docs/evidence/reliability-2026-11-14/ci-probe-pagination-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-probe-pagination-verification.json",
+      "docs/evidence/reliability-2026-11-14/ci-recovery-build-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-recovery-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-recovery-failure.json",
+      "docs/evidence/reliability-2026-11-14/ci-recovery-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-recovery-settings-failure.json",
+      "docs/evidence/reliability-2026-11-14/ci-recovery-verification.json",
+      "docs/evidence/reliability-2026-11-14/ci-release-contract-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-release-contract-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-release-contract-verification.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-build-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-diagnostic-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-diagnostic-result.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-failure.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-runtime-frame-verification.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-completion-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-completion-failure.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-completion-import-diagnosis.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-completion-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-completion-verification.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-scheduling-consumer-final-preparation.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-scheduling-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-scheduling-failure.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-scheduling-first-read.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-scheduling-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-scheduling-verification.json",
+      "docs/evidence/reliability-2026-11-14/ci-settings-scheduling-waiting-preparation.json",
+      "docs/evidence/reliability-2026-11-14/ci-worker-startup-dispatch.json",
+      "docs/evidence/reliability-2026-11-14/ci-worker-startup-import-diagnosis.json",
+      "docs/evidence/reliability-2026-11-14/ci-worker-startup-inputs.json",
+      "docs/evidence/reliability-2026-11-14/ci-worker-startup-verification.json",
+      "docs/evidence/reliability-2026-11-14/production-stall-recovery.json",
+      "docs/evidence/reliability-2026-11-15/ci-reading-capacity-failure.json",
+      "docs/evidence/reliability-2026-11-15/ci-reading-diagnostics-inputs.json",
+      "docs/evidence/reliability-2026-11-15/ci-reading-diagnostics-verification.json"
+    ],
+    "old_reliability_raw_bytes_unchanged_during_closeout": true,
+    "user_tsbuildinfo_sha256": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135",
+    "user_untracked_paths_not_staged": true
+  },
+  "historical_failures_retained": [
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/pytest-broad-09.log",
+        "bytes": 65085,
+        "sha256": "747161229b6e6dc25ef0c7c479ad068a2820d7524e48edb71705eacfebdb4ce7"
+      },
+      "outcome": "448pass/8fail/7skip",
+      "resolution": "six direct-call Query default errors fixed; two fixture DB/secret errors rerun on explicit synthetic environment"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/pytest-restores-11.log",
+        "bytes": 5,
+        "sha256": "b501bc80642d1177a64b294ce6e157314f05df925064a50578f2d61b4335915a"
+      },
+      "outcome": "owned local PostgreSQL had stopped; run interrupted",
+      "resolution": "explicit restart; later product/PostgreSQL suites pass"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/ux-11.log",
+        "bytes": 552192,
+        "sha256": "914374eded3b5e9c148059e048543e3a15b0d64f66619385c6dd1a92cbf5365c"
+      },
+      "outcome": "paused source-retention label regressed",
+      "resolution": "necessary safety copy restored"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/ux-12.log",
+        "bytes": 596237,
+        "sha256": "5c50c3a8c8cf620d98b66601b334517d12c58cd9db9cc1d65885675e7938ab9f"
+      },
+      "outcome": "43 fixture dependency failures",
+      "resolution": "explicit account mock added; original assertions retained"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/layout-browser-01.log",
+        "bytes": 415,
+        "sha256": "9116a0b6a209ab1e962f9010ede6d625ffc8f7d0a0961a758489f5cf8fdf8134"
+      },
+      "outcome": "fixture browser Navigation name collision",
+      "resolution": "fixture renamed, no product bypass"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/verification-18/ci-python.log",
+        "bytes": 65503,
+        "sha256": "ef40d227417cc2801082be3a1176185a341facb783d963b2f8b94cba08ebceb2"
+      },
+      "outcome": "7fail/115pass/20errors after strengthening A/B/C source test",
+      "resolution": "reviewed coverage hash updated in both consumers; Node161/Python142 pass with original negative controls"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/verification-18/ci-node.log",
+        "bytes": 24581,
+        "sha256": "87f14badb970563070e46a36e5c4faa2765fd6e4118bd57d4e930cae0f4c8cef"
+      },
+      "outcome": "98pass/2fail due to the same stale source-binding hash"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/verification-18/layout-browser.log",
+        "bytes": 1130,
+        "sha256": "02341d0bd2506294789804436677ad6959758e544003c9c59de1c9c78830661b"
+      },
+      "outcome": "bundled Chromium1234 not installed locally",
+      "resolution": "existing explicit Chrome channel157 used; CI bundled Chromium unchanged"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/build-04.log",
+        "bytes": 2605,
+        "sha256": "58d50b3fa890a0977023b73f8460e9f4c1c55e77a4f322a367a52559425516fe"
+      },
+      "outcome": "security advisory stop"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/build-05.log",
+        "bytes": 2604,
+        "sha256": "139f4178843f4f773d9cd779359e925d51f2d3b6cf883b4b02c66c8e2064d0a5"
+      },
+      "outcome": "security advisory stop"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/build-06.log",
+        "bytes": 1453,
+        "sha256": "5abe207bb0382eba9e9c4027775942d7092d90e8fccf2b63a9b144f2f714ad9a"
+      },
+      "outcome": "earlier build exited0, not substituted for final failed build07"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/verification-18/build-07.log",
+        "bytes": 2604,
+        "sha256": "c36a474c0adf3a0277d414af594f50611012ebb04bc8dbb2f4e5581f31db366f"
+      },
+      "outcome": "security advisory stop after compilation"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/verification-21/build-08.log",
+        "bytes": 1453,
+        "sha256": "af8db70c92b241f8a7b2c0e7ce7586765bb2b2cc92df5be23ef7bad6d60ac28c"
+      },
+      "outcome": "earlier source build exited0; known advisory remains"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/verification-22/ux.log",
+        "bytes": 64,
+        "sha256": "a8af92978b6f133b7355677844febd635849de318bb3ec73e48f361746c8c63a"
+      },
+      "outcome": "PowerShell did not expand wildcard; no tests ran",
+      "resolution": "Enumerated the complete 152-file suite explicitly; UX2574/0fail/0skip"
+    },
+    {
+      "receipt": {
+        "local_path": "<TASK_TEMP>/prepare-evidence-01.log",
+        "bytes": 304,
+        "sha256": "4964cabf45024713e2a5910000ebe932124bd64dbba380254eae21af3debd8d7"
+      },
+      "outcome": "Evidence finalization stopped on an existing CRLF checkout versus LF git blob comparison",
+      "resolution": "No old evidence rewritten; separately verify normalized baseline equality and raw-byte preservation. Existing partial outputs are reused only on exact-byte identity."
+    }
+  ],
+  "remaining": [
+    "Forty diagnostic failures still unresolved at user-requested pause: 38 Settings fixture subprocess guards plus split-receipt old-schema seeding and supervised-execution expected migration head. No retry/timeout/skip relaxation.",
+    "Resolve Next16.4.1 security advisory; no dependency change in this feature patch.",
+    "Successful exact-source Linux full CI with original Settings/Web/Reader/offline/Share/native/resource gates.",
+    "Full-site API + worker + Next import/sort/search acceptance: local server command was policy-blocked; no bypass.",
+    "Cold-cache Linux verification; component browser runs are not a substitute.",
+    "User product acceptance; any deployment needs separate fresh backup/migration and runtime verification."
+  ],
+  "actions_not_taken": [
+    "push",
+    "CI dispatch/query/cancel",
+    "production login/change",
+    "user import deletion",
+    "web search"
+  ]
+}

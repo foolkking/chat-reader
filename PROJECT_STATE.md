@@ -1,5 +1,23 @@
 # Project State
 
+## Current worktree: navigation, search and import UX — 2026-11-17
+
+Candidate implementation adds source-bound import previews/disposition management,
+scoped sorting with migration0062, server-paginated conversation search, and compact
+desktop/mobile layouts. **Not deployed or product-accepted; production remains7134/0061.**
+The [current contract and remaining checks](docs/system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md)
+separate actual API/PostgreSQL and mounted-component checks from pending full-site,
+Linux/resource acceptance. Existing CI success below belongs to3d46555, not this candidate.
+API coverage grows additively7010→7034 without changing frozen partitions/skips or
+other gates; four legacy test files are explicitly rebound with original node IDs
+retained, real preview readback, old-schema seeding and versioned discard checks. Local commits cover all three features
+and follow-up fixes. UX2574/product PG45/CI161+142/component32+12+12 pass; the earlier
+full Windows diagnostic ended6968pass/45fail/4error/17skip and is not final exact-source
+acceptance. Targeted repairs pass, but40 failures remain unresolved at the
+user-requested **commit-then-pause** checkpoint. Latest build09 fails
+at the verified Next16.4.1 moderate security advisory after compilation; no dependency
+upgrade or bypass was performed. Local commit only; no push, new CI or production action.
+
 ## Latest: two optimized full CI runs independently verified — 2026-11-17
 
 Exact source **3d465553bf1cf1ae4cd380bc35dfbaa090b341ec** passes two new,

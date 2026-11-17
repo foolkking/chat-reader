@@ -1,5 +1,15 @@
 # Markdown 文档台账
 
+## 排序、搜索与导入体验候选 — 2026-11-17
+
+新增`system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md`承载范围／状态／接口／0062及验证边界；
+定点更新Project State、导航、Backend/API、Frontend、Deployment和Testing入口。
+保留历史CI／生产证据，不重写旧JSON。新增24项API接入附加覆盖清单，
+四份旧测试适配单独绑定源摘要和原13个node ID，不改原调度与门槛。
+区分合成组件截图、真实PG、未完成整站和Next安全提示；
+全量诊断失败及40项未修复检查保留；按用户要求本地提交后暂停。
+没有推送、生产迁移、清理或部署，用户验收未标通过。
+
 ## 第二轮CI两次完整成功与耗时收尾同步 — 2026-11-17
 
 定点同步Project State、导航、唯一Small Host台账、Testing、Release Safety和证据索引；

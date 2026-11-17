@@ -1,0 +1,200 @@
+{
+  "realComponents": true,
+  "adapters": "synthetic",
+  "fullSite": false,
+  "results": [
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "section": "imports",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "section": "removed-batch-focus-recovery",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "section": "overview",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "section": "preview",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "section": "sorting",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "section": "search",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "section": "foreign-preview-rejected",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "section": "missing-preview-version-rejected",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "section": "imports",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "section": "removed-batch-focus-recovery",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "section": "overview",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "section": "preview",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "section": "sorting",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "section": "search",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "section": "foreign-preview-rejected",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "section": "missing-preview-version-rejected",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "section": "imports",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "section": "removed-batch-focus-recovery",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "section": "overview",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "section": "preview",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "section": "sorting",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "section": "search",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "section": "foreign-preview-rejected",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "section": "missing-preview-version-rejected",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "section": "imports",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "section": "removed-batch-focus-recovery",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "section": "overview",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "section": "preview",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "section": "sorting",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "section": "search",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "section": "foreign-preview-rejected",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "section": "missing-preview-version-rejected",
+      "pass": true
+    }
+  ],
+  "errors": []
+}

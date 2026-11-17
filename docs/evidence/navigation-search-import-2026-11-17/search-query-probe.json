@@ -1,0 +1,170 @@
+{
+  "synthetic": true,
+  "production": false,
+  "concurrent_local_regressions": true,
+  "conversation_count": 30,
+  "search_document_count": 600,
+  "body_characters_per_document": 20499,
+  "requested_pages": [
+    0,
+    10
+  ],
+  "page_size": 10,
+  "loaded_search_bodies": 20,
+  "query_elapsed_ms": [
+    362.322,
+    235.553
+  ],
+  "explain_planning_ms": 1.396,
+  "explain_execution_ms": 83.033,
+  "plan": {
+    "Node Type": "Limit",
+    "Actual Rows": 10,
+    "Actual Loops": 1,
+    "Shared Hit Blocks": 228,
+    "Shared Read Blocks": 0,
+    "Plans": [
+      {
+        "Node Type": "Sort",
+        "Actual Rows": 10,
+        "Actual Loops": 1,
+        "Shared Hit Blocks": 228,
+        "Shared Read Blocks": 0,
+        "Plans": [
+          {
+            "Node Type": "Nested Loop",
+            "Actual Rows": 30,
+            "Actual Loops": 1,
+            "Shared Hit Blocks": 228,
+            "Shared Read Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Subquery Scan",
+                "Actual Rows": 30,
+                "Actual Loops": 1,
+                "Shared Hit Blocks": 114,
+                "Shared Read Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "WindowAgg",
+                    "Actual Rows": 30,
+                    "Actual Loops": 1,
+                    "Shared Hit Blocks": 114,
+                    "Shared Read Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Sort",
+                        "Actual Rows": 600,
+                        "Actual Loops": 1,
+                        "Shared Hit Blocks": 114,
+                        "Shared Read Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Nested Loop",
+                            "Actual Rows": 600,
+                            "Actual Loops": 1,
+                            "Shared Hit Blocks": 114,
+                            "Shared Read Blocks": 0,
+                            "Plans": [
+                              {
+                                "Node Type": "Index Scan",
+                                "Actual Rows": 30,
+                                "Actual Loops": 1,
+                                "Shared Hit Blocks": 2,
+                                "Shared Read Blocks": 0,
+                                "Plans": []
+                              },
+                              {
+                                "Node Type": "Bitmap Heap Scan",
+                                "Actual Rows": 20,
+                                "Actual Loops": 30,
+                                "Shared Hit Blocks": 112,
+                                "Shared Read Blocks": 0,
+                                "Plans": [
+                                  {
+                                    "Node Type": "Bitmap Index Scan",
+                                    "Actual Rows": 20,
+                                    "Actual Loops": 30,
+                                    "Shared Hit Blocks": 30,
+                                    "Shared Read Blocks": 0,
+                                    "Plans": []
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "Node Type": "Aggregate",
+                "Actual Rows": 16,
+                "Actual Loops": 30,
+                "Shared Hit Blocks": 114,
+                "Shared Read Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Sort",
+                    "Actual Rows": 311,
+                    "Actual Loops": 30,
+                    "Shared Hit Blocks": 114,
+                    "Shared Read Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Subquery Scan",
+                        "Actual Rows": 600,
+                        "Actual Loops": 1,
+                        "Shared Hit Blocks": 114,
+                        "Shared Read Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Nested Loop",
+                            "Actual Rows": 600,
+                            "Actual Loops": 1,
+                            "Shared Hit Blocks": 114,
+                            "Shared Read Blocks": 0,
+                            "Plans": [
+                              {
+                                "Node Type": "Index Scan",
+                                "Actual Rows": 30,
+                                "Actual Loops": 1,
+                                "Shared Hit Blocks": 2,
+                                "Shared Read Blocks": 0,
+                                "Plans": []
+                              },
+                              {
+                                "Node Type": "Bitmap Heap Scan",
+                                "Actual Rows": 20,
+                                "Actual Loops": 30,
+                                "Shared Hit Blocks": 112,
+                                "Shared Read Blocks": 0,
+                                "Plans": [
+                                  {
+                                    "Node Type": "Bitmap Index Scan",
+                                    "Actual Rows": 20,
+                                    "Actual Loops": 30,
+                                    "Shared Hit Blocks": 30,
+                                    "Shared Read Blocks": 0,
+                                    "Plans": []
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "claim": "Bounded page hydration verified. No before/after speed or production memory claim."
+}

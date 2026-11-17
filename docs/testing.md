@@ -1,5 +1,45 @@
 # Testing
 
+## Worktree navigation/search/import coverage — 2026-11-17
+
+The product candidate adds24 API cases across four source-bound files. The immutable
+7010-case schedule stays unchanged; `quality-coverage-extension.json` binds the
+additions and four reviewed legacy test revisions. The selection-order fixture keeps its
+original order assertion, supplies complete synthetic source identities, and checks
+real preview readback; old-schema migration fixtures seed reflected0058/0039 tables,
+not current0062 ORM fields/listeners. Recovery checks now cover approved missing-source
+actions and actual versioned discard while preserving saved formats. All13 original node IDs, old/new source digests, assignment
+and skip policy are fenced independently; no production bypass. Python/Node producers
+and independent consumers bind the combined digest,
+7034 collection/7031 expected passes/three original skips, including per-file counts.
+Settings/Web/Reader/native/memory gates are unchanged. No CI dispatch has occurred.
+
+Component-browser commands (also required on Web shard1): `node scripts/ux/import-batch-browser.mjs`,
+`node scripts/ux/navigation-import-layout-browser.mjs`, and the existing
+`node scripts/ux/import-source-repair-browser.mjs`, with explicit task TEMP/TMP.
+They mount real components with synthetic transport; they do not prove full-site
+API/worker operation. Complete UX2574, CI Node161/Python142 pass; final product/
+PostgreSQL/preferences/project/restore45 and the larger earlier API matrix541 pass/
+7 explicit platform-or-fixture skips. Preference/account writer-fence and worker
+import checks40 pass. Layout32, disposition12 and source-repair12 mounted checks pass;
+Actionlint and88 native release-source controls pass. Selection-order and real
+PostgreSQL dump/restore repair checks9 pass with explicit matching `PG_BIN`;
+the reflected0058→0062 migration and real private-search worker backfill check1 passes.
+The final0039 reading migration and recovery suite passes8 checks.
+The full7034 Windows diagnostic started before final hardening and ended6968pass/
+45fail/4error/17skip; failures are retained, never rewritten as exact-source acceptance.
+Forty diagnostic failures remain at the user's commit-then-pause checkpoint:
+38 Settings fixture subprocess assertions, one split-receipt old-schema seed, and
+one supervised-execution stale expected head. These still need diagnosis/repair.
+Final isolated build09 exits1 at the Next16.4.1 security nudge after compilation/
+types/page generation; all556 source inputs match. Earlier build06/08 success does
+not supersede the failure or resolve the independently verified advisory.
+On PowerShell, enumerate `scripts/ux/*.test.mjs` with `Get-ChildItem` before passing
+the files to Node; the literal wildcard does not expand on this local runtime.
+[Local evidence](evidence/navigation-search-import-2026-11-17/local-verification.json) /
+[current verification boundaries](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md).
+Local commits only; no push, new CI, production change or dependency-check bypass.
+
 ## Current: versioned19-job scheduling, two full runs verified — 2026-11-17
 
 The full dispatch uses four isolated PostgreSQL API runners, four single-worker

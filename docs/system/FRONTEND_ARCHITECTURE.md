@@ -1,5 +1,12 @@
 # 前端架构
 
+## 目录／搜索／导入体验候选 — 2026-11-17
+
+复用偏好同步、任务中心、排序菜单与paper/graphite/sea-green样式。
+范围规则集中设置；预览按需、批次与阶段合并；搜索保持服务端对话顺序。
+减少重复说明但保留未知停止／清理失败提示。实际组件375/1440、中英文截图及交互
+已检查，不代表整站端到端通过。[实现与剩余验证](NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md)。
+
 ## Reader edge physical motion fence — 2026-11-15
 
 Canonical online/offline complete-turn previous/next loads capture

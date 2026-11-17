@@ -1,0 +1,79 @@
+{
+  "transport": "synthetic",
+  "production": false,
+  "results": [
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "case": "confirmation / accepted / reload / cleanup-failed / cleanup-confirmed",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "case": "lost-retain-response / reopen-read-only / paused",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "case": "late-write-after-account-switch-rejected",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "case": "confirmation / accepted / reload / cleanup-failed / cleanup-confirmed",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "case": "lost-retain-response / reopen-read-only / paused",
+      "pass": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "case": "late-write-after-account-switch-rejected",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "case": "confirmation / accepted / reload / cleanup-failed / cleanup-confirmed",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "case": "lost-retain-response / reopen-read-only / paused",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "case": "late-write-after-account-switch-rejected",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "case": "confirmation / accepted / reload / cleanup-failed / cleanup-confirmed",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "case": "lost-retain-response / reopen-read-only / paused",
+      "pass": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "case": "late-write-after-account-switch-rejected",
+      "pass": true
+    }
+  ],
+  "errors": []
+}
