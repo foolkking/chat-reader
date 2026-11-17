@@ -242,14 +242,17 @@ def test_control_migration_roundtrip_keeps_one_head(isolated_schema):
     from sqlalchemy import inspect
     engine, migrate = isolated_schema
     migrate("head")
-    assert ScriptDirectory.from_config(Config("alembic.ini")).get_heads() == ["20261112_0061"]
+    assert ScriptDirectory.from_config(Config("alembic.ini")).get_heads() == ["20261117_0062"]
+    assert "unclassified_sort_order" in {column["name"] for column in inspect(engine).get_columns("conversations")}
     assert "storage_deleted_at" in {column["name"] for column in inspect(engine).get_columns("asset_objects")}
     assert "task_execution_controls" in inspect(engine).get_table_names()
     migrate("20261108_0060", "downgrade")
+    assert "unclassified_sort_order" not in {column["name"] for column in inspect(engine).get_columns("conversations")}
     assert "task_execution_controls" not in inspect(engine).get_table_names()
     assert "storage_deleted_at" not in {column["name"] for column in inspect(engine).get_columns("asset_objects")}
     migrate("head")
     assert "task_execution_controls" in inspect(engine).get_table_names()
+    assert "unclassified_sort_order" in {column["name"] for column in inspect(engine).get_columns("conversations")}
 
 
 def test_session_delete_requests_stop_without_waiting_for_analysis_rows(runtime):

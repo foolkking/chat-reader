@@ -321,7 +321,11 @@ class QualitySchedulingTests(unittest.TestCase):
         for filename, expected in sources.items():
             with self.subTest(source=filename):
                 raw = (REPO / "apps/web/e2e" / filename).read_bytes().replace(b"\r\n", b"\n")
-                self.assertEqual(hashlib.sha256(raw).hexdigest(), expected)
+                active = load_schedule()
+                revision = active["settings_fixture_revisions"].get(filename)
+                if revision:
+                    self.assertEqual(revision["previous_source_lf_sha256"], expected)
+                self.assertEqual(hashlib.sha256(raw).hexdigest(), active["settings_source_lf_sha256"][filename])
         overrides = self.contract["settings_runtime_timeout_overrides"]
         self.assertEqual(len(overrides), 54)
         locations = [(item["file"], item["line"], item["column"]) for item in overrides]

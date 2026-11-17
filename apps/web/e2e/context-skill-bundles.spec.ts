@@ -194,8 +194,9 @@ test("format conversion respects the selected Bundle and exposes loading failure
     // A fresh Import entry offers retained work, without implicitly reopening it.
     // Resume the exact failed source and verify that no second upload occurred.
     await expect(page.getByRole("button", { name: "Use format conversion Skill", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Manage imports", exact: true }).click();
     await page.locator(`[data-import-session-id="${importId}"]`)
-      .getByRole("button", { name: "Resume", exact: true }).click();
+      .getByRole("button", { name: "View details", exact: true }).click();
     await expect(page.getByRole("button", { name: "Use format conversion Skill", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Use format conversion Skill", exact: true }).click();
     const updatedDialog = page.getByRole("dialog", { name: "Use format conversion Skill", exact: true });

@@ -149,7 +149,10 @@ test("complete-turn Reader, guest Share and downloaded Offline Reader retain mes
     const sessionResponse = await sessionResponsePromise;
     expect(sessionResponse.status()).toBe(201);
     adaptiveImportId = (await sessionResponse.json() as { import_id: string }).import_id;
-    await expect(page.getByText(/Found 1 conversations in 1 formats/)).toBeVisible({ timeout: 60_000 });
+    const overview = page.getByRole("region", { name: "Import overview", exact: true });
+    await expect(overview.getByText("1 conversations", { exact: true })).toBeVisible({ timeout: 60_000 });
+    await expect(overview.locator("article")).toHaveCount(1);
+    await expect(overview.locator("article")).toContainText("synthetic-mapping-sample.json");
     await page.getByRole("button", { name: "Map format", exact: true }).click();
     await page.getByLabel("Format name", { exact: true }).fill("Synthetic mapping display");
     const previewRequestCount = { value: 0 };

@@ -81,6 +81,12 @@ class ApiShardTests(unittest.TestCase):
             lambda e: next(iter(e["api_fixture_revisions"].values())).update(nodeids=[]),
             lambda e: next(iter(e["api_fixture_revisions"].values())).update(nodeids=["tests/test_foreign.py::test_other"]),
             lambda e: next(iter(e["api_fixture_revisions"].values())).update(shard=2),
+            lambda e: next(iter(e["settings_fixture_revisions"].values())).update(previous_source_lf_sha256="0" * 64),
+            lambda e: next(iter(e["settings_fixture_revisions"].values())).update(source_lf_sha256="unverified"),
+            lambda e: next(iter(e["settings_fixture_revisions"].values())).update(cases=[]),
+            lambda e: next(iter(e["settings_fixture_revisions"].values()))["cases"][0].update(timeout=90_001),
+            lambda e: next(iter(e["settings_fixture_revisions"].values()))["cases"][0].update(file="foreign.spec.ts"),
+            lambda e: next(iter(e["settings_fixture_revisions"].values())).update(shard=2),
         ]
         for mutate in changes:
             value = copy.deepcopy(extension)

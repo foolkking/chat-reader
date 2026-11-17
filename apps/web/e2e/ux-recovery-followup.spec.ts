@@ -1291,8 +1291,8 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       let release: () => void = () => {};
       const held = new Promise<void>(resolve => { release = resolve; });
       const readScope = (url: URL): keyof typeof reads | null => {
-        if (url.pathname === "/api/projects" && url.searchParams.get("sort") === "custom" && url.searchParams.get("direction") === "asc" && !url.searchParams.has("include_archived")) return "projects";
-        if (url.pathname === "/api/conversations" && url.searchParams.get("scope") === "history") return "history";
+        if (url.pathname === "/api/projects" && !url.searchParams.has("include_archived")) return "projects";
+        if (url.pathname === "/api/conversations" && url.searchParams.get("scope") === "unclassified") return "history";
         if (url.pathname === `/api/projects/${fixture.project.id}/conversations`) return "branch";
         return null;
       };
@@ -1309,7 +1309,6 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
           }
           await route.continue();
         });
-        await page.clock.install();
         await page.goto("/");
         if (width === 375) await page.getByTestId("mobile-sidebar-button").filter({ visible: true }).click();
         const sidebar = page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true });
@@ -1319,7 +1318,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
             : sidebar.getByRole("group", { name: zh ? `项目对话：${fixture.project.name}` : `Conversations in ${fixture.project.name}`, exact: true });
         const link = scope === "projects" ? region.locator(`a[href="/projects/${fixture.project.id}"]`)
           : region.locator(`a[href^="/conversations/${scope === "history" ? fixture.unclassified.conversation.id : fixture.conversation.conversation.id}"]`);
-        await expect(link).toBeVisible(); await link.focus();
+        await expect(link).toBeVisible(); await page.clock.install(); await link.focus();
         const original = await link.elementHandle();
         if (!original) throw new Error("Synthetic sidebar reading link was not mounted");
         // QueryProvider's current staleTime is 15 seconds; exceed it explicitly.
@@ -1957,7 +1956,7 @@ test(`mixed-type search pagination retains the selected document and actual Ente
       message_id: item.messages[0].id, role: "user", order_key: null, block_index: 0,
       snippet: "Synthetic grouped pagination", rank: 1, source_profile: null, occurrence_count: 1,
     }));
-    await page.route("**/api/search?*", async (route) => {
+    await page.route("**/api/search/conversations?*", async (route) => {
       const url = new URL(route.request().url());
       if (url.searchParams.get("q") !== "SyntheticGrouped") return route.continue();
       const offset = Number(url.searchParams.get("offset") ?? 0);
@@ -1990,15 +1989,21 @@ test(`mixed-type search pagination retains the selected document and actual Ente
     await expect(page.locator("a[data-search-index]")).toHaveCount(2);
     expect(offsets).toEqual([0, 1]);
     await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
-    const inserted = page.locator('a[data-search-index="0"]');
-    expect(await inserted.evaluate((link, point) => link.contains(document.elementFromPoint(point.x, point.y)), stationaryPoint)).toBe(true);
+    const first = page.locator('a[data-search-index="0"]');
+    expect(await first.evaluate((link, point) => link.contains(document.elementFromPoint(point.x, point.y)), stationaryPoint)).toBe(true);
     await expect(selected).toHaveAttribute("href", destination!);
-    await expect(selected).toHaveAttribute("data-search-index", "1");
+    await expect(selected).toHaveAttribute("data-search-index", "0");
+    // Server relevance order is authoritative: a later annotation cannot jump
+    // ahead of a better message merely because its content type differs.
+    const appended = page.locator('a[data-search-index="1"]');
+    await expect(appended).toHaveAttribute("href", new RegExp(created[1].conversation.id));
     await page.screenshot({ path: info.outputPath("search-stable-selection.png") });
-    await page.mouse.move(stationaryPoint.x + 1, stationaryPoint.y);
-    await expect(selected).toHaveAttribute("href", (await inserted.getAttribute("href"))!);
+    const appendedBox = await appended.boundingBox();
+    expect(appendedBox).not.toBeNull();
+    await page.mouse.move(appendedBox!.x + appendedBox!.width / 2, appendedBox!.y + appendedBox!.height / 2);
+    await expect(selected).toHaveAttribute("href", (await appended.getAttribute("href"))!);
     await input.focus();
-    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowUp");
     await expect(selected).toHaveAttribute("href", destination!);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL((url) => url.pathname + url.search === destination);
@@ -2030,10 +2035,12 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         if (fail) await route.fulfill({ status: 503, json: { detail: "Synthetic technical exception must not render" } });
         else await route.fulfill({ json: [recent] });
       });
-      await page.clock.install();
       await page.goto("/recent");
       const initial = page.getByRole("alert").filter({ hasText: zh ? "最近阅读加载失败" : "Could not load recent items" });
       await expect(initial).toBeVisible();
+      // Do not freeze preference/IndexedDB hydration before the locale loads.
+      // The clock controls cache age, not initial application initialization.
+      await page.clock.install();
       await expect(page.getByText("Synthetic technical exception must not render", { exact: true })).toHaveCount(0);
       fail = false;
       await initial.getByRole("button", { name: zh ? "重试" : "Retry", exact: true }).click();
@@ -2390,7 +2397,12 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       const view = page.getByTestId("mobile-page-header").locator("..");
       const sort = view.getByTestId("sort-menu-trigger").filter({ visible: true });
       await sort.click();
-      await view.getByRole("menuitem", { name: zh ? "自定义" : "Custom", exact: true }).click();
+      await view.getByRole("menuitem", { name: zh ? "手动顺序" : "Manual order", exact: true }).click();
+      await expect(sort).toHaveAttribute("aria-expanded", "false");
+      const savedProject = await page.request.get("/api/projects");
+      expect(savedProject.ok()).toBe(true);
+      const savedSort = ((await savedProject.json()) as ProjectRead[]).find(item => item.id === project.id);
+      expect(savedSort?.conversation_sort).toEqual({ mode: "custom", direction: "asc" });
       await sort.click();
       await expect(view.getByRole("menuitem", { name: zh ? "升序" : "Ascending", exact: true })).toHaveCount(0);
       await expect(view.getByRole("menuitem", { name: zh ? "降序" : "Descending", exact: true })).toHaveCount(0);

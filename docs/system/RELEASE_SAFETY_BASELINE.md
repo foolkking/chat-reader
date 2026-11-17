@@ -11,11 +11,16 @@ its original fixed run, lineage and narrow file whitelist.
 
 The frozen v1 execution contract is not rewritten. A separate SHA-bound v2
 schedule assigns complete files/gates by deterministic LPT from recorded timings.
-API retains7010 collected/7007pass/3 exact skips with full collection equality and
+The frozen API base retains7010 collected/7007pass/3 exact skips with full collection equality and
 actual per-case native JUnit/lifecycle proof. Settings retains470+restore1 and
 source-bound native timeouts; four original blobs must independently merge to
 the same attempts without missing, duplicated, skipped, failed or retried cases.
 Reader baseline→candidate ordering and all five real memory gates are unchanged.
+The navigation/search/import candidate adds24 source-bound API cases (7034/7031/3).
+Its reviewed extension rebinds six legacy API fixtures without changing their28
+node IDs, and one Settings navigation fixture without changing its six native
+case identities or timeouts. Producers and independent consumers verify the new
+combined digest; frozen source contracts,470+restore1 and native budgets remain.
 
 `image-preparation` has no quality dependency but can upload only
 `non-deployable-image-candidate-<sha>-<attempt>`; it cannot emit a release manifest.

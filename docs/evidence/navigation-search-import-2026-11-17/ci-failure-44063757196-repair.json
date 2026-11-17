@@ -1,0 +1,546 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-17T13:52:32.739200+00:00",
+  "purpose": "CI failure diagnosis and scoped repair; not full CI or product acceptance",
+  "failure": {
+    "run": {
+      "conclusion": "failure",
+      "created_at": "2026-11-17T10:19:29Z",
+      "event": "workflow_dispatch",
+      "head_branch": "master",
+      "head_sha": "7f9ef44daf6a6014ee4dc24df6984d4aabc498e3",
+      "html_url": "https://github.com/foolkking/chat-reader/actions/runs/44063757196",
+      "id": 44063757196,
+      "run_attempt": 1,
+      "status": "completed",
+      "updated_at": "2026-11-17T10:44:56Z",
+      "workflow_id": 328268956
+    },
+    "jobs": [
+      {
+        "id": 133972022187,
+        "name": "api-quality-shard-4 / suite",
+        "conclusion": "success",
+        "started_at": "2026-11-17T10:19:34Z",
+        "completed_at": "2026-11-17T10:29:22Z"
+      },
+      {
+        "id": 133972022192,
+        "name": "api-quality-shard-2 / suite",
+        "conclusion": "failure",
+        "started_at": "2026-11-17T10:19:34Z",
+        "completed_at": "2026-11-17T10:27:35Z"
+      },
+      {
+        "id": 133972022211,
+        "name": "api-quality-shard-1 / suite",
+        "conclusion": "success",
+        "started_at": "2026-11-17T10:19:35Z",
+        "completed_at": "2026-11-17T10:35:01Z"
+      },
+      {
+        "id": 133972022227,
+        "name": "web-quality-shard-3 / gates",
+        "conclusion": "failure",
+        "started_at": "2026-11-17T10:19:34Z",
+        "completed_at": "2026-11-17T10:27:49Z"
+      },
+      {
+        "id": 133972022280,
+        "name": "web-quality-shard-2 / gates",
+        "conclusion": "failure",
+        "started_at": "2026-11-17T10:19:33Z",
+        "completed_at": "2026-11-17T10:44:55Z"
+      },
+      {
+        "id": 133972022357,
+        "name": "web-quality-shard-1 / gates",
+        "conclusion": "failure",
+        "started_at": "2026-11-17T10:19:34Z",
+        "completed_at": "2026-11-17T10:33:22Z"
+      },
+      {
+        "id": 133972022359,
+        "name": "api-quality-shard-3 / suite",
+        "conclusion": "failure",
+        "started_at": "2026-11-17T10:19:33Z",
+        "completed_at": "2026-11-17T10:28:50Z"
+      },
+      {
+        "id": 133972022381,
+        "name": "image-preparation",
+        "conclusion": "success",
+        "started_at": "2026-11-17T10:19:34Z",
+        "completed_at": "2026-11-17T10:25:34Z"
+      },
+      {
+        "id": 133972022411,
+        "name": "settings-quality-shard-2 / matrix",
+        "conclusion": "success",
+        "started_at": "2026-11-17T10:19:34Z",
+        "completed_at": "2026-11-17T10:33:18Z"
+      },
+      {
+        "id": 133972022467,
+        "name": "settings-quality-shard-4 / matrix",
+        "conclusion": "success",
+        "started_at": "2026-11-17T10:19:34Z",
+        "completed_at": "2026-11-17T10:35:07Z"
+      },
+      {
+        "id": 133972022522,
+        "name": "settings-quality-shard-1 / matrix",
+        "conclusion": "failure",
+        "started_at": "2026-11-17T10:19:34Z",
+        "completed_at": "2026-11-17T10:36:14Z"
+      },
+      {
+        "id": 133972022630,
+        "name": "settings-quality-shard-3 / matrix",
+        "conclusion": "success",
+        "started_at": "2026-11-17T10:19:34Z",
+        "completed_at": "2026-11-17T10:32:35Z"
+      },
+      {
+        "id": 133972022702,
+        "name": "reading-performance-comparison / compare",
+        "conclusion": "success",
+        "started_at": "2026-11-17T10:19:34Z",
+        "completed_at": "2026-11-17T10:28:17Z"
+      },
+      {
+        "id": 133972022781,
+        "name": "settings-restore",
+        "conclusion": "success",
+        "started_at": "2026-11-17T10:19:33Z",
+        "completed_at": "2026-11-17T10:22:31Z"
+      },
+      {
+        "id": 133980268905,
+        "name": "api-quality",
+        "conclusion": "skipped",
+        "started_at": "2026-11-17T10:35:01Z",
+        "completed_at": "2026-11-17T10:35:01Z"
+      },
+      {
+        "id": 133980912742,
+        "name": "settings-quality",
+        "conclusion": "skipped",
+        "started_at": "2026-11-17T10:36:14Z",
+        "completed_at": "2026-11-17T10:36:14Z"
+      },
+      {
+        "id": 133985475254,
+        "name": "build-images",
+        "conclusion": "skipped",
+        "started_at": "2026-11-17T10:44:56Z",
+        "completed_at": "2026-11-17T10:44:55Z"
+      },
+      {
+        "id": 133985475438,
+        "name": "web-quality",
+        "conclusion": "skipped",
+        "started_at": "2026-11-17T10:44:56Z",
+        "completed_at": "2026-11-17T10:44:55Z"
+      },
+      {
+        "id": 133985475445,
+        "name": "inspect-release-artifact",
+        "conclusion": "skipped",
+        "started_at": "2026-11-17T10:44:56Z",
+        "completed_at": "2026-11-17T10:44:55Z"
+      }
+    ],
+    "counts": {
+      "failure": 6,
+      "success": 8,
+      "skipped": 5
+    },
+    "official_log_receipts": [
+      {
+        "job_id": 133972022192,
+        "name": "api-quality-shard-2 / suite",
+        "bytes": 913130,
+        "sha256": "69e21f43500573128cab97396828738c9f188bbf71832386bb9d64f63766a006"
+      },
+      {
+        "job_id": 133972022227,
+        "name": "web-quality-shard-3 / gates",
+        "bytes": 127958,
+        "sha256": "7e34754b5c5fc7325b36f8823c5b2a91ab2f02e040c9122241915c9bd0489145"
+      },
+      {
+        "job_id": 133972022280,
+        "name": "web-quality-shard-2 / gates",
+        "bytes": 191592,
+        "sha256": "b9afe701121f52e04365200f5b66f2115ffdaea6aa84f70900b95ae5cde72c33"
+      },
+      {
+        "job_id": 133972022357,
+        "name": "web-quality-shard-1 / gates",
+        "bytes": 1165722,
+        "sha256": "453ebc56c2e64319d888e126e1509a0e72805c4290f57b4ff32c8c71c3335ddd"
+      },
+      {
+        "job_id": 133972022359,
+        "name": "api-quality-shard-3 / suite",
+        "bytes": 282425,
+        "sha256": "cab12400e8c2977ef0511c673c77d2767ca9f11f2bd5fc9f208b8f0e2f84d0cf"
+      },
+      {
+        "job_id": 133972022522,
+        "name": "settings-quality-shard-1 / matrix",
+        "bytes": 204011,
+        "sha256": "9bae5d93a7b8e85b6c64c9f35e6c5e4513802383753b461fafa4bc610549201d"
+      }
+    ],
+    "verified_native_artifacts": [
+      {
+        "id": 14320972533,
+        "name": "web-quality-shard-2-7f9ef44daf6a6014ee4dc24df6984d4aabc498e3-1",
+        "bytes": 13718656,
+        "contexts": 14,
+        "verified_official_digest": true,
+        "sha256": "aacf4ba3d7595faafc4cb626b9d397b97ab91f5cbb8d2c807f0b5f54f797369c",
+        "official_digest": "sha256:aacf4ba3d7595faafc4cb626b9d397b97ab91f5cbb8d2c807f0b5f54f797369c"
+      },
+      {
+        "id": 14319679139,
+        "name": "web-quality-shard-1-7f9ef44daf6a6014ee4dc24df6984d4aabc498e3-1",
+        "bytes": 19408748,
+        "contexts": 2,
+        "verified_official_digest": true,
+        "sha256": "ec01afe09373eba8bcce7a06d147099e55a7c4962e9881ff578b46547b791dcc",
+        "official_digest": "sha256:ec01afe09373eba8bcce7a06d147099e55a7c4962e9881ff578b46547b791dcc"
+      },
+      {
+        "id": 14319424768,
+        "name": "settings-quality-shard-1-7f9ef44daf6a6014ee4dc24df6984d4aabc498e3-1",
+        "bytes": 3063052,
+        "contexts": 6,
+        "verified_official_digest": true,
+        "sha256": "d19d565fb49f4f44e82fb011667961103ec04146393bcd7692b4404e8e879737",
+        "official_digest": "sha256:d19d565fb49f4f44e82fb011667961103ec04146393bcd7692b4404e8e879737"
+      },
+      {
+        "id": 14318939606,
+        "name": "web-quality-shard-3-7f9ef44daf6a6014ee4dc24df6984d4aabc498e3-1",
+        "bytes": 11024593,
+        "contexts": 1,
+        "verified_official_digest": true,
+        "sha256": "4d8b891b1d92afef73912319d48a5ba867e8d7be32484ef9d8e2fb6d3988e677",
+        "official_digest": "sha256:4d8b891b1d92afef73912319d48a5ba867e8d7be32484ef9d8e2fb6d3988e677"
+      }
+    ],
+    "formal_release_artifact_created": false,
+    "non_deployable_candidate_is_not_release": true
+  },
+  "repairs": [
+    "Read project conversations after metadata outage while fencing all sort initialization/placement/override writes.",
+    "Show a single source filename once on invalid import cards; show format attribution only for a matched format.",
+    "Resume the exact retained batch through Manage imports and Task Center details; preserve no-second-upload and real saved health/mapping assertions.",
+    "Adapt search interception to pre-pagination conversation grouping; preserve server relevance order, explicit/legacy continuation, pointer/keyboard destination and 50-to-51-to-1 refresh evidence.",
+    "Use 60 real conversations for pagination; keep 30 matching user-role conversations and verify expanded message targets.",
+    "Observe the actual unclassified and saved-project-sort requests; start fake time after initial locale/cache readiness, retaining original staleness/focus/DOM/zero-write checks.",
+    "Keep manual-order UI labels and prove per-project sort persistence; adapt remaining downstream import overview assertions.",
+    "Seed reflected 0053 schema and compare canonical IDs/version text through migration roundtrip; verify single0062 head and original0060 control downgrade/upgrade."
+  ],
+  "coverage": {
+    "api": {
+      "collected": 7034,
+      "two_independent_processes_identical": true,
+      "fixture_files": 6,
+      "original_fixture_nodeids": 28,
+      "original_skips": 3,
+      "source_bindings_verified": true,
+      "execution_acceptance": false
+    },
+    "settings_collection": {
+      "count": 470,
+      "source_and_runtime_timeouts_verified": true,
+      "name": "settings-collection-02.json",
+      "bytes": 303234,
+      "sha256": "347e22a63327699cd051dd783d16bdd5ef8b33813243921cd5fa5742e205e274"
+    },
+    "settings_binding": {
+      "name": "settings-binding-02.log",
+      "bytes": 95,
+      "sha256": "20dbb75508acea98f3e984abcaee35834052153613e5d2fb192415e0dd16754f"
+    },
+    "settings_revised_native_cases": [
+      {
+        "id": "c6a2bb9952c1a881bdf5-514ea83ba69bc4515659",
+        "file": "settings-format-health.spec.ts",
+        "title": "375px zh-CN: full-batch health, retained results and real mapping repair",
+        "line": 34,
+        "column": 7,
+        "timeout": 90000,
+        "project_id": ""
+      },
+      {
+        "id": "c6a2bb9952c1a881bdf5-c1554ae3d975288c3ce0",
+        "file": "settings-format-health.spec.ts",
+        "title": "375px en-US: full-batch health, retained results and real mapping repair",
+        "line": 34,
+        "column": 7,
+        "timeout": 90000,
+        "project_id": ""
+      },
+      {
+        "id": "c6a2bb9952c1a881bdf5-a75db6fd3ee6a7f69a18",
+        "file": "settings-format-health.spec.ts",
+        "title": "768px zh-CN: full-batch health, retained results and real mapping repair",
+        "line": 34,
+        "column": 7,
+        "timeout": 90000,
+        "project_id": ""
+      },
+      {
+        "id": "c6a2bb9952c1a881bdf5-2172a1c147309907ca77",
+        "file": "settings-format-health.spec.ts",
+        "title": "768px en-US: full-batch health, retained results and real mapping repair",
+        "line": 34,
+        "column": 7,
+        "timeout": 90000,
+        "project_id": ""
+      },
+      {
+        "id": "c6a2bb9952c1a881bdf5-a58898d0dc52765d6771",
+        "file": "settings-format-health.spec.ts",
+        "title": "1440px zh-CN: full-batch health, retained results and real mapping repair",
+        "line": 34,
+        "column": 7,
+        "timeout": 90000,
+        "project_id": ""
+      },
+      {
+        "id": "c6a2bb9952c1a881bdf5-3475cdc0402136ed5d72",
+        "file": "settings-format-health.spec.ts",
+        "title": "1440px en-US: full-batch health, retained results and real mapping repair",
+        "line": 34,
+        "column": 7,
+        "timeout": 90000,
+        "project_id": ""
+      }
+    ],
+    "settings_original_body_timeout_declarations": 54,
+    "settings_restore": "unchanged",
+    "frozen_files": {
+      "scripts/ci/quality-schedule-v2.json": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
+      "scripts/ci/quality-scheduling-contract.json": "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c"
+    },
+    "coverage_extension_lf_sha256": "40c6a18cfad215aeba2cbc14028082ecc9be61ce45ef07ef6ec3bd6529fa2997",
+    "no_new_skip_retry_timeout_or_resource_relaxation": true
+  },
+  "verification": {
+    "ux": {
+      "passed": 2577,
+      "name": "ux-full-02.log",
+      "bytes": 553886,
+      "sha256": "87bee188b983c89edfc8c8963eabe8b64632bea6959a35ac366ba48942173080"
+    },
+    "ci_node": {
+      "passed": 162,
+      "name": "ci-node.log",
+      "bytes": 33231,
+      "sha256": "14f97bf5236f6e9fa384d755b1345b2a32504f9befa8ef11a7a52174b2fd3621"
+    },
+    "ci_python": {
+      "passed": 142,
+      "name": "ci-python.xml",
+      "bytes": 24823,
+      "sha256": "3585cab4789e9e9faaea17a2e30cc21f4e0519201563d3cf74dc245f135a0c8a"
+    },
+    "real_postgres": {
+      "passed": 3,
+      "skipped": 0,
+      "name": "migration-02.xml",
+      "bytes": 681,
+      "sha256": "014a4da910bc94e707b704b720b62e46994aeab8d43b6cddc675e79d7ece5637"
+    },
+    "components": [
+      {
+        "passed": 40,
+        "real_components": true,
+        "synthetic_transport": true,
+        "full_site": false,
+        "name": "result.json",
+        "bytes": 4647,
+        "sha256": "414b7cf78f4a0a6750886b376db5adc2578d847e894cd83d4a340a9263afd469"
+      },
+      {
+        "passed": 12,
+        "real_components": true,
+        "synthetic_transport": true,
+        "full_site": false,
+        "name": "result.json",
+        "bytes": 41559,
+        "sha256": "9cd47be1478e1c11d9ecccd5b4ef4fbfb59a7b1121e73020cfcd39a8b0516a1c"
+      },
+      {
+        "passed": 12,
+        "real_components": true,
+        "synthetic_transport": true,
+        "full_site": false,
+        "name": "result.json",
+        "bytes": 1862,
+        "sha256": "01c3e03396cbd6dcfb81e1aeb656bce94acfad06cd0c0fc78c8e9c099e4f53c7"
+      }
+    ],
+    "lint": {
+      "name": "lint-02.log",
+      "bytes": 173,
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+    },
+    "typecheck": {
+      "name": "typecheck-03.log",
+      "bytes": 175,
+      "sha256": "231f3ed2a8636999437e24fd3abfb381918c1c7547d66db9b40fc5e154ab9209"
+    },
+    "build": {
+      "exit_code": 0,
+      "isolated_source_inputs_verified": 556,
+      "name": "build-02.log",
+      "bytes": 1451,
+      "sha256": "356e00bae324649d704652a62d14d1cfbb2e080475dee9479076b07e31c29076"
+    },
+    "actionlint": {
+      "exit_code": 0,
+      "name": "actionlint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native_release_source_controls": {
+      "passed": 88,
+      "name": "release-source-controls.log",
+      "bytes": 12967,
+      "sha256": "a7850a7d034905252ea69324872dd4e9ebca2884bdfede22cfe0a2d27ff8c8ec"
+    },
+    "owned_postgres_idle": {
+      "active_owned_postgres_processes": 0,
+      "data_deleted": false,
+      "owned_port_listeners": 0,
+      "reason": "No owned PostgreSQL remains after verification; no stop replay"
+    }
+  },
+  "preservation": {
+    "prior_product_evidence_files_unchanged": 13,
+    "user_tsbuildinfo_sha256": "81927caca8f9176bfedf08c3b3d6e4e63048dbce741d8ab7d47cd83a80fba135",
+    "typecheck_generated_cache_saved_then_original_exactly_restored": true,
+    "dependencies_workflow_budgets_and_production_unchanged": true
+  },
+  "source_inputs": [
+    {
+      "path": "apps/api/tests/test_split_receipts_postgres.py",
+      "raw_sha256": "26182cabfd94b48eae9a1c4c5d0764713302b276628bec08b0106b1680400e61",
+      "lf_sha256": "26182cabfd94b48eae9a1c4c5d0764713302b276628bec08b0106b1680400e61"
+    },
+    {
+      "path": "apps/api/tests/test_supervised_execution_postgres.py",
+      "raw_sha256": "d2cd74ba7f907d706428cf39883782c35406869220a23fa78911cf513b7ac8e9",
+      "lf_sha256": "d2cd74ba7f907d706428cf39883782c35406869220a23fa78911cf513b7ac8e9"
+    },
+    {
+      "path": "apps/web/components/use-scoped-sort.ts",
+      "raw_sha256": "6642aa2e54485984af55502eb312b03d0dae86776ddbc97d53e1b48c7414d31c",
+      "lf_sha256": "6642aa2e54485984af55502eb312b03d0dae86776ddbc97d53e1b48c7414d31c"
+    },
+    {
+      "path": "apps/web/e2e/chatgpt-reading-acceptance.spec.ts",
+      "raw_sha256": "b26fc9070aba35754a5e6788bda7bc850afc856cb26d216a7e7ebdda7b4bcfad",
+      "lf_sha256": "b26fc9070aba35754a5e6788bda7bc850afc856cb26d216a7e7ebdda7b4bcfad"
+    },
+    {
+      "path": "apps/web/e2e/context-skill-bundles.spec.ts",
+      "raw_sha256": "87b3f9c2c74f3d52e34320ce51aa80f3c65fcd9e547234ac96b41ca418beab90",
+      "lf_sha256": "770181c8baefee1625a9700397717de95815813eec5d1527b1faad71929bfc85"
+    },
+    {
+      "path": "apps/web/e2e/import-markdown.spec.ts",
+      "raw_sha256": "c6c66526529c8d5eee5edd7e8109ca3405ec91d5aee7d44f9faa20c468c443e3",
+      "lf_sha256": "ad95d593affa16e2acb28b3410deabd92cd88bc0d84393e5148709d7b7c27c34"
+    },
+    {
+      "path": "apps/web/e2e/recovery-consistency.spec.ts",
+      "raw_sha256": "d86970fbb242a5d565cdfd43910957bda35edec5692dd16624d71e209589af4b",
+      "lf_sha256": "d86970fbb242a5d565cdfd43910957bda35edec5692dd16624d71e209589af4b"
+    },
+    {
+      "path": "apps/web/e2e/settings-format-health.spec.ts",
+      "raw_sha256": "509001b51a86d610e144edd0d5cc46bb9ef2529c61890204057d604b30a5ce53",
+      "lf_sha256": "97252355b10d7eed8074cee56b6a91620f41b891f58e6c541f732bcc9ebe3a6f"
+    },
+    {
+      "path": "apps/web/e2e/ux-recovery-followup.spec.ts",
+      "raw_sha256": "f8b64ba41207ffb2a931fc9ff34c1ac2634b3db778eabe2725f3ffa04f904c0f",
+      "lf_sha256": "196b2dc0c623880d4e664d43606a64e73b0a1f2f1153615148cde9848153e049"
+    },
+    {
+      "path": "apps/web/e2e/ux-whole-site.spec.ts",
+      "raw_sha256": "8430d75bba3cde8c1d34e2e47c738950bc47bd290b0b9ac37068379f66644abd",
+      "lf_sha256": "fda64947c259fba8e474b79873c6a19bf349548b95450230be478531ef0b3b2d"
+    },
+    {
+      "path": "apps/web/e2e/web-opportunity-features.spec.ts",
+      "raw_sha256": "ba60bdf225ebe9d830fadefe8a51c359a8d98522edf0a9e8699f05cdcc43961d",
+      "lf_sha256": "d0686c884371be5a1507eff2356a113ad8bad5119bc494cc6ad21c180750b37b"
+    },
+    {
+      "path": "apps/web/features/import/adaptive-import-workspace.tsx",
+      "raw_sha256": "26da4fe13a3215c73f3ad8e26e3f05efc42e9fb25f429fb4eed14f2813c58df6",
+      "lf_sha256": "ac46d2a68ea471f6619a18f345c1e362c165aed8cfd23de3d1fa3de5a88ccf0b"
+    },
+    {
+      "path": "scripts/ci/quality-coverage-extension.json",
+      "raw_sha256": "40c6a18cfad215aeba2cbc14028082ecc9be61ce45ef07ef6ec3bd6529fa2997",
+      "lf_sha256": "40c6a18cfad215aeba2cbc14028082ecc9be61ce45ef07ef6ec3bd6529fa2997"
+    },
+    {
+      "path": "scripts/ci/quality-coverage-extension.test.mjs",
+      "raw_sha256": "7a938f28edfd954cc72b6240945d1e45d964c1e61ec39b067b9dd72de3520ee3",
+      "lf_sha256": "7a938f28edfd954cc72b6240945d1e45d964c1e61ec39b067b9dd72de3520ee3"
+    },
+    {
+      "path": "scripts/ci/quality-schedule.mjs",
+      "raw_sha256": "f75a7fd4c5a85425101a5837710cfe876777056f2ed99f2d723bdd28566f426e",
+      "lf_sha256": "f75a7fd4c5a85425101a5837710cfe876777056f2ed99f2d723bdd28566f426e"
+    },
+    {
+      "path": "scripts/ci/quality-shard-evidence.mjs",
+      "raw_sha256": "82b3222901305fdf23d974cd1b8f718c083bd7ca863f95e760c87ff44453b3ac",
+      "lf_sha256": "82b3222901305fdf23d974cd1b8f718c083bd7ca863f95e760c87ff44453b3ac"
+    },
+    {
+      "path": "scripts/ci/quality_schedule.py",
+      "raw_sha256": "7a73cffee79fbd5c8cf4a67c0fecdb9da9339817befd631c9459764cd64d7ef7",
+      "lf_sha256": "7a73cffee79fbd5c8cf4a67c0fecdb9da9339817befd631c9459764cd64d7ef7"
+    },
+    {
+      "path": "scripts/ci/test_api_shard_evidence.py",
+      "raw_sha256": "87561cb098111bff6e92f3094cecaf6f88ded6cf5fb579daec707e53e2270ae9",
+      "lf_sha256": "87561cb098111bff6e92f3094cecaf6f88ded6cf5fb579daec707e53e2270ae9"
+    },
+    {
+      "path": "scripts/ci/test_quality_scheduling.py",
+      "raw_sha256": "0657f2c8127fb4f463cf2aef3d65470861cba19ee007dd5e299e9e3338819ad5",
+      "lf_sha256": "0657f2c8127fb4f463cf2aef3d65470861cba19ee007dd5e299e9e3338819ad5"
+    },
+    {
+      "path": "scripts/ux/navigation-import-layout-browser.mjs",
+      "raw_sha256": "7b5428b013fd770383bed2b9520e5f5a4fc678925d801b15238760a780cc8480",
+      "lf_sha256": "7b5428b013fd770383bed2b9520e5f5a4fc678925d801b15238760a780cc8480"
+    },
+    {
+      "path": "scripts/ux/scoped-sort-read-recovery.test.mjs",
+      "raw_sha256": "ac17d0906ed87e7d9e1e5263dfb7a81c0b458b0c399faeb1cf42116d9f0d4ab0",
+      "lf_sha256": "ac17d0906ed87e7d9e1e5263dfb7a81c0b458b0c399faeb1cf42116d9f0d4ab0"
+    }
+  ],
+  "remaining": [
+    "New exact-source full19-job Linux CI and failed full-site matrix rerun; no local full-site restart after prior tool refusal.",
+    "Historical Windows diagnostic failures and build09 retained, never rewritten as success.",
+    "The new successful build does not resolve the previously reported Next advisory; no dependency change/bypass.",
+    "User product acceptance and separate production backup/migration/deployment remain outside this repair."
+  ],
+  "next_action": "Commit and dispatch one ordinary full CI with empty quality source, then pause; no deployment."
+}

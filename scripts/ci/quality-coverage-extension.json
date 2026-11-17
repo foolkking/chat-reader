@@ -65,6 +65,98 @@
         "tests/test_recovery_consistency.py::test_private_search_backfill_failure_resumes_after_last_committed_item"
       ],
       "reason": "Accept the approved source-missing batch actions without enabling rebuild or commit; additionally execute versioned discard, prove the saved format is reusable, and confirm no conversation was imported."
+    },
+    "tests/test_split_receipts_postgres.py": {
+      "previous_source_lf_sha256": "d2def136c251d3f0978053ee16096825662b9c4a81bd618f5bbe48b5ebe1c23f",
+      "source_lf_sha256": "26182cabfd94b48eae9a1c4c5d0764713302b276628bec08b0106b1680400e61",
+      "nodeids": [
+        "tests/test_split_receipts_postgres.py::test_concurrent_split_commits_once_replays_exact_receipt_and_isolates_owner",
+        "tests/test_split_receipts_postgres.py::test_receipt_migration_preserves_canonical_rows_and_has_cascade_lifetime"
+      ],
+      "reason": "Seed actual reflected 0053 canonical tables and verify identifiers and version text across upgrade/split/downgrade, without invoking newer ORM listeners."
+    },
+    "tests/test_supervised_execution_postgres.py": {
+      "previous_source_lf_sha256": "596204ef9aab0ac2b7e06b14348dbef59df242e6638c59e33a0ecdf3d38d3a9d",
+      "source_lf_sha256": "d2cd74ba7f907d706428cf39883782c35406869220a23fa78911cf513b7ac8e9",
+      "nodeids": [
+        "tests/test_supervised_execution_postgres.py::test_repeated_progress_and_heartbeat_are_not_business_progress",
+        "tests/test_supervised_execution_postgres.py::test_cancellation_is_independent_of_locked_canonical_row",
+        "tests/test_supervised_execution_postgres.py::test_all_job_progress_skips_own_row_lock",
+        "tests/test_supervised_execution_postgres.py::test_real_stuck_process_releases_before_next_task",
+        "tests/test_supervised_execution_postgres.py::test_real_commit_ack_loss_protects_assets_until_outcome_verified[committed]",
+        "tests/test_supervised_execution_postgres.py::test_real_commit_ack_loss_protects_assets_until_outcome_verified[aborted]",
+        "tests/test_supervised_execution_postgres.py::test_real_commit_ack_loss_protects_assets_until_outcome_verified[unconfirmed]",
+        "tests/test_supervised_execution_postgres.py::test_terminal_canonical_result_wins_and_old_execution_is_fenced",
+        "tests/test_supervised_execution_postgres.py::test_legacy_active_execution_without_control_cannot_be_bypassed",
+        "tests/test_supervised_execution_postgres.py::test_control_migration_roundtrip_keeps_one_head",
+        "tests/test_supervised_execution_postgres.py::test_session_delete_requests_stop_without_waiting_for_analysis_rows",
+        "tests/test_supervised_execution_postgres.py::test_actual_supervisor_process_drains_two_jobs_without_overlapping[1]",
+        "tests/test_supervised_execution_postgres.py::test_actual_supervisor_process_drains_two_jobs_without_overlapping[20]"
+      ],
+      "reason": "Bind the single Alembic head to 0062 and explicitly prove navigation and execution-control columns survive the original downgrade/upgrade roundtrip."
+    }
+  },
+  "settings_fixture_revisions": {
+    "settings-format-health.spec.ts": {
+      "previous_source_lf_sha256": "9d8e57e0445a3291fdacc91aecc01a24f9b4048015ad6f1f93b7f8377c647dc6",
+      "source_lf_sha256": "97252355b10d7eed8074cee56b6a91620f41b891f58e6c541f732bcc9ebe3a6f",
+      "cases": [
+        {
+          "id": "c6a2bb9952c1a881bdf5-514ea83ba69bc4515659",
+          "file": "settings-format-health.spec.ts",
+          "title": "375px zh-CN: full-batch health, retained results and real mapping repair",
+          "line": 34,
+          "column": 7,
+          "timeout": 90000,
+          "project_id": ""
+        },
+        {
+          "id": "c6a2bb9952c1a881bdf5-c1554ae3d975288c3ce0",
+          "file": "settings-format-health.spec.ts",
+          "title": "375px en-US: full-batch health, retained results and real mapping repair",
+          "line": 34,
+          "column": 7,
+          "timeout": 90000,
+          "project_id": ""
+        },
+        {
+          "id": "c6a2bb9952c1a881bdf5-a75db6fd3ee6a7f69a18",
+          "file": "settings-format-health.spec.ts",
+          "title": "768px zh-CN: full-batch health, retained results and real mapping repair",
+          "line": 34,
+          "column": 7,
+          "timeout": 90000,
+          "project_id": ""
+        },
+        {
+          "id": "c6a2bb9952c1a881bdf5-2172a1c147309907ca77",
+          "file": "settings-format-health.spec.ts",
+          "title": "768px en-US: full-batch health, retained results and real mapping repair",
+          "line": 34,
+          "column": 7,
+          "timeout": 90000,
+          "project_id": ""
+        },
+        {
+          "id": "c6a2bb9952c1a881bdf5-a58898d0dc52765d6771",
+          "file": "settings-format-health.spec.ts",
+          "title": "1440px zh-CN: full-batch health, retained results and real mapping repair",
+          "line": 34,
+          "column": 7,
+          "timeout": 90000,
+          "project_id": ""
+        },
+        {
+          "id": "c6a2bb9952c1a881bdf5-3475cdc0402136ed5d72",
+          "file": "settings-format-health.spec.ts",
+          "title": "1440px en-US: full-batch health, retained results and real mapping repair",
+          "line": 34,
+          "column": 7,
+          "timeout": 90000,
+          "project_id": ""
+        }
+      ],
+      "reason": "Follow the approved compact import entry through Manage imports and this exact batch in Task Center; preserve all six original native case identities, timeouts, real mapping/health/repair assertions and source data."
     }
   }
 }

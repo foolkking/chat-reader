@@ -22,6 +22,9 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
     enabled: !!projectId || scope === "project_default",
   });
   const project = projects.data?.find(item => item.id === projectId);
+  const assertProjectWritable = () => {
+    if (projectId && (!project || projects.isError)) throw new Error("Refresh projects before changing sorting.");
+  };
   const sort = projectId ? project?.conversation_sort ?? preferences.navigationSort.project_default
     : preferences.navigationSort[scope as "all" | "unclassified" | "project_default"];
   const orderScope = projectId ? { scope: "project" as const, project_id: projectId }
@@ -34,6 +37,7 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
   });
   const initialize = async (rebuild = false) => {
     assertAccount();
+    assertProjectWritable();
     if (scope === "project_default") return;
     const snapshot = await order.refetch();
     assertAccount();
@@ -45,6 +49,7 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
   };
   const setSort = async (mode: ConversationSortMode, direction: SortDirection) => {
     assertAccount();
+    assertProjectWritable();
     if (mode === "custom" && sort.mode !== "custom") await initialize();
     if (mode === "custom" && scope === "project_default") {
       const fresh = await projects.refetch();
@@ -68,6 +73,7 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
   };
   const inherit = async () => {
     assertAccount();
+    assertProjectWritable();
     if (!projectId || !project) return;
     if (preferences.navigationSort.project_default.mode === "custom") await initialize();
     assertAccount();
@@ -76,6 +82,7 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
   };
   const place = async (id: string, before: string | null, after: string | null, expectedVersion: string | undefined) => {
     assertAccount();
+    assertProjectWritable();
     if (!expectedVersion || order.isError) throw new Error("Order unavailable. Refresh before moving.");
     await changeConversationOrder({ ...orderScope, expected_version: expectedVersion, conversation_id: id,
       before_id: sort.direction === "asc" ? before : after, after_id: sort.direction === "asc" ? after : before });
@@ -87,6 +94,8 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
   };
   return { conversationSortMode: sort.mode, conversationSortDirection: sort.direction, setSort, inherit, place,
     orderVersion: order.isError || order.isFetching ? undefined : order.data?.version,
-    ready: !projectId || !!project,
+    // A metadata outage must not hide independently readable conversations.
+    // The list API enforces access; every ordering write still requires metadata.
+    ready: !projectId || !!project || projects.isError,
     rebuild: () => initialize(true), inherited: !!projectId && !project?.conversation_sort };
 }

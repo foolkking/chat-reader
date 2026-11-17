@@ -491,7 +491,7 @@ for (const projectView of [false, true]) {
       await sort.click();
       const sortMenu = page.getByTestId("sort-menu-panel");
       await expect(sortMenu).toBeVisible();
-      await expect(sortMenu.getByRole("menuitem", { name: "Custom", exact: true })).toBeInViewport();
+      await expect(sortMenu.getByRole("menuitem", { name: "Manual order", exact: true })).toBeInViewport();
       await page.keyboard.press("Escape");
       await expect(sortMenu).toHaveCount(0);
       await expect(sort).toBeFocused();

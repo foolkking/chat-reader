@@ -146,6 +146,15 @@ function nativeCases(report, {
   return cases;
 }
 
+export function validateReviewedSettingsCases(cases, schedule = loadSchedule()) {
+  for (const [file, revision] of Object.entries(schedule.settings_fixture_revisions)) {
+    const actual = [...cases.values()].filter(({ identity }) => identity.file === file)
+      .map(({ identity }) => identity).sort((a, b) => a.id.localeCompare(b.id));
+    const expected = revision.cases.toSorted((a, b) => a.id.localeCompare(b.id));
+    requireEvidence(isDeepStrictEqual(actual, expected), "reviewed Settings case identity or timeout changed");
+  }
+}
+
 export function frozenSettingsRuntimeTimeouts(collection) {
   const raw = fs.readFileSync(path.join(REPO, "scripts/ci/quality-scheduling-contract.json"), "utf8")
     .replaceAll("\r\n", "\n");
@@ -153,7 +162,8 @@ export function frozenSettingsRuntimeTimeouts(collection) {
   const contract = JSON.parse(raw);
   const cases = nativeCases(collection, { collection: true });
   const files = [...new Set([...cases.values()].map(({ identity }) => identity.file))];
-  const sources = contract.settings_test_source_lf_sha256;
+  const schedule = validateSettingsSources();
+  const sources = schedule.settings_source_lf_sha256;
   sameIds(files, Object.keys(sources), "original Settings source selection changed");
   for (const file of files) {
     requireEvidence(/^(?:settings-[a-z0-9-]+|context-admin-bundles)\.spec\.ts$/.test(file),
@@ -161,6 +171,7 @@ export function frozenSettingsRuntimeTimeouts(collection) {
     const source = fs.readFileSync(path.join(REPO, "apps/web/e2e", file), "utf8").replaceAll("\r\n", "\n");
     requireEvidence(sha256(source) === sources[file], "original Settings test source changed");
   }
+  validateReviewedSettingsCases(cases, schedule);
   // --list never enters test bodies. Bind each original body-level setTimeout
   // to its unchanged source location instead of comparing it with the default.
   const key = ({ file, line, column }) => JSON.stringify([file, line, column]);

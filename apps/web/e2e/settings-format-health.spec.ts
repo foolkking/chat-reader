@@ -102,8 +102,9 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       // A fresh Import entry must not reopen an old batch implicitly. Resume
       // this exact retained session before checking its persisted health result.
       await expect(health).toHaveCount(0);
+      await page.getByRole("button", { name: /^(查看管理|Manage imports)$/ }).click();
       await page.locator(`[data-import-session-id="${importId}"]`)
-        .getByRole("button", { name: /^(继续处理|Resume)$/ }).click();
+        .getByRole("button", { name: /^(查看详情|View details)$/ }).click();
       await expect(health.getByRole("status")).toContainText(/1 组需要处理|1 group needs attention/);
       await health.getByRole("button", { name: /打开映射修复|Open mapping repair/ }).click();
       // Health tests the saved version; editing the draft uses the same validator

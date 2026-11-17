@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 
 export const BASE_SCHEDULE_SHA256 = "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee";
-export const COVERAGE_SHA256 = "c181a955a6f075995d97d4dc5f06009cef8d7403e7d6c19b66f4f0e2b68ec6e8";
+export const COVERAGE_SHA256 = "40c6a18cfad215aeba2cbc14028082ecc9be61ce45ef07ef6ec3bd6529fa2997";
 export const ORIGINAL_SHA256 = "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c";
 export const digest = (data) => crypto.createHash("sha256").update(data).digest("hex");
 export const SCHEDULE_SHA256 = digest(`${BASE_SCHEDULE_SHA256}:${COVERAGE_SHA256}`);
@@ -37,7 +37,7 @@ export function loadSchedule() {
 export function extendCoverage(plan, extension) {
   assert.equal(extension.schema_version, 1);
   assert.equal(extension.base_schedule_sha256, BASE_SCHEDULE_SHA256);
-  assert.deepEqual(Object.keys(extension).sort(), ["api", "api_fixture_revisions", "base_schedule_sha256", "reason", "schema_version"]);
+  assert.deepEqual(Object.keys(extension).sort(), ["api", "api_fixture_revisions", "base_schedule_sha256", "reason", "schema_version", "settings_fixture_revisions"]);
   assert.ok(Object.keys(extension.api).length);
   const api = plan.api;
   api.added_file_counts = {};
@@ -67,15 +67,38 @@ export function extendCoverage(plan, extension) {
     api.source_lf_sha256[file] = entry.source_lf_sha256;
     api.fixture_revised_nodeids[file] = entry.nodeids;
   }
+  const originalRaw = read("./quality-scheduling-contract.json");
+  assert.equal(digest(originalRaw), ORIGINAL_SHA256);
+  const original = JSON.parse(originalRaw);
+  plan.settings_source_lf_sha256 = { ...original.settings_test_source_lf_sha256 };
+  plan.settings_fixture_revisions = extension.settings_fixture_revisions;
+  for (const [file, entry] of Object.entries(extension.settings_fixture_revisions)) {
+    assert.ok(file in plan.settings.assignment);
+    assert.deepEqual(Object.keys(entry).sort(), ["cases", "previous_source_lf_sha256", "reason", "source_lf_sha256"]);
+    assert.equal(entry.previous_source_lf_sha256, original.settings_test_source_lf_sha256[file]);
+    assert.match(entry.source_lf_sha256, /^[0-9a-f]{64}$/);
+    assert.ok(typeof entry.reason === "string" && entry.reason.trim());
+    assert.ok(entry.cases.length && new Set(entry.cases.map(item => item.id)).size === entry.cases.length);
+    for (const item of entry.cases) {
+      assert.deepEqual(Object.keys(item).sort(), ["column", "file", "id", "line", "project_id", "timeout", "title"]);
+      assert.equal(item.file, file);
+      assert.ok(typeof item.id === "string" && item.id && typeof item.title === "string" && item.title);
+      assert.equal(item.project_id, "");
+      assert.ok(Number.isInteger(item.line) && item.line > 0 && Number.isInteger(item.column) && item.column > 0);
+      assert.equal(item.timeout, original.settings_runtime_timeout_overrides.find(value =>
+        value.file === file && value.line === item.line && value.column === item.column)?.timeout ?? 90_000);
+    }
+    plan.settings_source_lf_sha256[file] = entry.source_lf_sha256;
+  }
   return plan;
 }
 export function validateSettingsSources() {
   const original = JSON.parse(read("./quality-scheduling-contract.json"));
   const plan = loadSchedule();
   assert.deepEqual(Object.keys(plan.settings.assignment).sort(), Object.keys(original.settings_test_source_lf_sha256).sort());
-  for (const [file, sha] of Object.entries(original.settings_test_source_lf_sha256)) {
+  for (const [file, sha] of Object.entries(plan.settings_source_lf_sha256)) {
     assert.match(file, /^(?:settings-[a-z0-9-]+|context-admin-bundles)\.spec\.ts$/);
-    assert.equal(digest(read(`../../apps/web/e2e/${file}`)), sha, `Original Settings source changed: ${file}`);
+    assert.equal(digest(read(`../../apps/web/e2e/${file}`)), sha, `Unreviewed Settings source changed: ${file}`);
   }
   return plan;
 }

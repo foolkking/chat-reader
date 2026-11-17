@@ -65,7 +65,7 @@ window.refreshBatches=()=>client.invalidateQueries({queryKey:["unfinished-import
 function Fixture(){const zh=window.fixtureLocale==="zh-CN";const section=location.pathname.slice(1);
 return <main className="mx-auto max-w-3xl space-y-5 bg-page p-4 text-primary sm:p-6">
 <header className="border-b border-ui pb-4"><h1 className="text-lg font-semibold">{zh?"对话资料库":"Conversation library"}</h1></header>
-{section==="sorting"?<NavigationSortSettings/>:section==="imports"?<ImportBatchManager/>:section==="overview"?
+{section==="sorting"?<NavigationSortSettings/>:section==="imports"?<ImportBatchManager/>:section==="overview"||section.startsWith("invalid")?
 <AdaptiveImportWorkspace session={window.session} onSession={()=>{}} onBack={()=>{}} onImport={()=>{window.importClicked=true}} importing={false} error={null}/>:
 section==="preview"?
 <section><h2 className="break-words text-sm font-semibold">{window.group.files[0].filename}</h2><ImportSourcePreview session={window.session} group={window.group} showSourceName={false}/></section>:
@@ -126,13 +126,25 @@ try {
         conversation_title: "相同正文也应可发现", project_name: null, hit_count: 1 }];
       window.hits = [first, { ...first, document_id: "hit-2", snippet: "第二条排序命中", message_id: "message-2" },
         { ...first, document_id: "hit-3", snippet: "第三条排序命中", message_id: "message-3" }];
+      if (location.pathname.startsWith("/invalid")) {
+        window.session.state = "BLOCKED"; window.session.can_import = false;
+        window.session.allowed_actions = [];
+        window.group.files = [{ artifact_id: "source-B", filename: "synthetic-invalid.json", extension: ".json", byte_size: 120 }];
+        window.group.diagnostics = [];
+        const family = window.session.families[0];
+        Object.assign(family, { display_name: "Unknown JSON", handling_class: "NOT_MAPPABLE", source_mode: "JSON",
+          matched_revision_id: null, resolution_status: "INVALID", handling_reason: { title: "Cannot parse JSON",
+            detail: "Field mapping cannot fix syntax or encoding errors." } });
+        if (location.pathname === "/invalid-multiple") window.group.files.push({
+          artifact_id: "source-C", filename: "synthetic-second.json", extension: ".json", byte_size: 150 });
+      }
     }, locale);
     await page.route("https://layout.synthetic/**", route => {
       const path = new URL(route.request().url()).pathname;
       return route.fulfill({ contentType: path === "/bundle.js" ? "text/javascript" : path === "/style.css" ? "text/css" : "text/html",
         body: path === "/bundle.js" ? bundle : path === "/style.css" ? css.css : html });
     });
-    for (const section of ["imports", "overview", "preview", "sorting", "search"]) {
+    for (const section of ["imports", "overview", "preview", "sorting", "search", "invalid-single", "invalid-multiple"]) {
       await page.goto(`https://layout.synthetic/${section}`);
       if (section === "imports") {
         await expect(page.getByRole("heading", { name: "本次课程资料.zip" })).toBeVisible();
@@ -162,6 +174,16 @@ try {
         await page.getByRole("menuitem", { name: /标题|Title/, exact: true }).click();
         assert.deepEqual(await page.evaluate(() => [window.fixtureNavigation.all.mode, window.fixtureNavigation.project_default.mode]),
           ["title", "imported"]);
+      } else if (section.startsWith("invalid")) {
+        const article = page.locator("article");
+        await expect(article).toHaveCount(1);
+        await expect(article.getByText("synthetic-invalid.json", { exact: true })).toHaveCount(1);
+        await expect(article.getByRole("button", { name: /^(替换|Replace) synthetic-invalid.json$/ })).toBeEnabled();
+        await expect(article.getByText(/使用的导入格式|Using import format/)).toHaveCount(0);
+        if (section === "invalid-multiple") {
+          await expect(article.getByText("synthetic-second.json", { exact: true })).toBeVisible();
+          await expect(article.getByRole("button", { name: /^(替换|Replace) synthetic-second.json$/ })).toBeEnabled();
+        }
       } else {
         await expect(page.getByRole("link", { name: "相同正文也应可发现", exact: true })).toBeVisible();
         await page.getByRole("button", { name: /另有 2 条命中|2 more hits/ }).click();

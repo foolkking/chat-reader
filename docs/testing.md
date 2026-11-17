@@ -2,18 +2,35 @@
 
 ## Worktree navigation/search/import coverage — 2026-11-17
 
+**Current:** pushed7f9ef44 / ordinary full CI44063757196 attempt1 failed in six
+jobs (eight successful/five skipped), with no formal release artifact. The repair
+keeps the approved Task Center/grouped-search/manual-sort UI, fixes project
+metadata-outage reads and duplicate import filenames, and updates two real
+old-schema migration fixtures. Local UX2577, CI162+142, PostgreSQL3, mounted40+12+12,
+lint/typecheck/build, Actionlint and88 native release-source controls pass.
+Two independent7034 API collections match. Settings470 collection/source/timeouts
+verify, including the six original format-health cases. These are not a rerun
+of the entire failed full-site matrix. New ordinary full CI is required; pause
+after submitting, without deployment.
+[Failure/repair proof](evidence/navigation-search-import-2026-11-17/ci-failure-44063757196-repair.json).
+
 The product candidate adds24 API cases across four source-bound files. The immutable
 7010-case schedule stays unchanged; `quality-coverage-extension.json` binds the
-additions and four reviewed legacy test revisions. The selection-order fixture keeps its
+additions and six reviewed legacy test revisions. The selection-order fixture keeps its
 original order assertion, supplies complete synthetic source identities, and checks
 real preview readback; old-schema migration fixtures seed reflected0058/0039 tables,
-not current0062 ORM fields/listeners. Recovery checks now cover approved missing-source
-actions and actual versioned discard while preserving saved formats. All13 original node IDs, old/new source digests, assignment
+not current0062 ORM fields/listeners; the split fixture also uses reflected0053 tables
+and the supervisor roundtrip verifies0062. Recovery checks cover approved missing-source
+actions and actual versioned discard while preserving saved formats. All28 original node IDs, old/new source digests, assignment
 and skip policy are fenced independently; no production bypass. Python/Node producers
 and independent consumers bind the combined digest,
 7034 collection/7031 expected passes/three original skips, including per-file counts.
-Settings/Web/Reader/native/memory gates are unchanged. No CI dispatch has occurred.
+Settings/Web/Reader/native/memory gates are unchanged. One reviewed Settings file
+follows Manage imports→exact batch details; its six native case IDs, titles, locations
+and deadlines are bound to the original official collection. Both source digests
+remain recorded; missing/substituted cases or increased deadlines fail verification.
 
+### Previous local-only checkpoint (retained, not current full-CI status)
 Component-browser commands (also required on Web shard1): `node scripts/ux/import-batch-browser.mjs`,
 `node scripts/ux/navigation-import-layout-browser.mjs`, and the existing
 `node scripts/ux/import-source-repair-browser.mjs`, with explicit task TEMP/TMP.
@@ -38,7 +55,9 @@ On PowerShell, enumerate `scripts/ux/*.test.mjs` with `Get-ChildItem` before pas
 the files to Node; the literal wildcard does not expand on this local runtime.
 [Local evidence](evidence/navigation-search-import-2026-11-17/local-verification.json) /
 [current verification boundaries](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md).
-Local commits only; no push, new CI, production change or dependency-check bypass.
+That earlier checkpoint preceded the authorized push/CI. The new build succeeds
+without dependency changes or security bypass; it does not withdraw the historical
+advisory. No production changes or full-site acceptance are claimed.
 
 ## Current: versioned19-job scheduling, two full runs verified — 2026-11-17
 

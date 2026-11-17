@@ -618,7 +618,7 @@ function FamilyRow({ session, family, sessionAction, sessionActionBusy, onConfig
             {handling !== "SUPPORTED" ? <HandlingBadge handling={handling} /> : null}
           </div>
           <p className="mt-1 text-sm text-secondary">{family.group_count} {tr("个对话 ·")}{modeLabel(family.source_mode, tr)}</p>
-          <p className="mt-1 text-xs text-secondary">{tr("使用的导入格式：")}{familyDisplayName(family, tr)}</p>
+          {handling === "SUPPORTED" || family.matched_revision_id ? <p className="mt-1 text-xs text-secondary">{tr("使用的导入格式：")}{familyDisplayName(family, tr)}</p> : null}
           {family.resolution_status === "DRIFTED" ? <p className="mt-1 text-xs text-[var(--warning)]">{tr("检测到来源结构变化，需要保存一个新版本。")}</p> : null}
           {handling !== "NOT_MAPPABLE" && family.diagnostics[0] ? <DiagnosticLine diagnostic={family.diagnostics[0]} locatable={false} /> : null}
           {family.resolution_status === "AMBIGUOUS" && candidates.length ? (
@@ -655,6 +655,7 @@ function NotMappableRecovery({ session, family, sessionAction, sessionActionBusy
   const [confirmGroupId, setConfirmGroupId] = useState<string | null>(null);
   const [rescueArtifact, setRescueArtifact] = useState<{ id: string; filename: string } | null>(null);
   const groups = session.groups.filter((group) => family.group_ids.includes(group.id));
+  const singleSource = groups.reduce((count, group) => count + group.files.length, 0) === 1;
   const replaceMutation = useAdaptiveSessionAction(
     ({ artifactId, file }: { artifactId: string; file: File }) => replaceAdaptiveImportArtifact(session.import_id, artifactId, file, session.updated_at),
     sessionAction,
@@ -681,7 +682,7 @@ function NotMappableRecovery({ session, family, sessionAction, sessionActionBusy
               {group.files.map((file) => (
                 <div key={file.artifact_id} className="flex flex-wrap items-center justify-between gap-2 border-l-2 border-[var(--warning)] pl-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-primary" title={file.filename}>{file.filename}</p>
+                    {!singleSource ? <p className="truncate text-sm font-medium text-primary" title={file.filename}>{file.filename}</p> : null}
                     <p className="text-xs text-secondary">{file.extension} · {formatBytes(file.byte_size)}</p>
                   </div>
                   <ReplaceFileButton

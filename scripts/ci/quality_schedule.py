@@ -9,7 +9,7 @@ import re
 ROOT = Path(__file__).resolve().parents[2]
 ORIGINAL_SHA256 = "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c"
 BASE_SCHEDULE_SHA256 = "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee"
-COVERAGE_SHA256 = "c181a955a6f075995d97d4dc5f06009cef8d7403e7d6c19b66f4f0e2b68ec6e8"
+COVERAGE_SHA256 = "40c6a18cfad215aeba2cbc14028082ecc9be61ce45ef07ef6ec3bd6529fa2997"
 SCHEDULE_SHA256 = hashlib.sha256(f"{BASE_SCHEDULE_SHA256}:{COVERAGE_SHA256}".encode()).hexdigest()
 
 
@@ -55,7 +55,7 @@ def extend_coverage(value, extension):
     """Append coverage and bind reviewed fixture adaptations without moving gates."""
     assert extension["schema_version"] == 1
     assert extension["base_schedule_sha256"] == BASE_SCHEDULE_SHA256
-    assert set(extension) == {"schema_version", "base_schedule_sha256", "reason", "api", "api_fixture_revisions"}
+    assert set(extension) == {"schema_version", "base_schedule_sha256", "reason", "api", "api_fixture_revisions", "settings_fixture_revisions"}
     api = value["api"]
     assert extension["api"] and not (set(extension["api"]) & set(api["assignment"]))
     api["added_file_counts"] = {}
@@ -83,6 +83,28 @@ def extend_coverage(value, extension):
         assert not any(node.split("::")[0] == file for node in api["allowed_skips"])
         api["source_lf_sha256"][file] = entry["source_lf_sha256"]
         api["fixture_revised_nodeids"][file] = nodes
+    original_path = ROOT / "scripts/ci/quality-scheduling-contract.json"
+    assert lf_sha(original_path) == ORIGINAL_SHA256
+    original = json.loads(original_path.read_text("utf8"))
+    sources = value["settings_source_lf_sha256"] = dict(original["settings_test_source_lf_sha256"])
+    value["settings_fixture_revisions"] = extension["settings_fixture_revisions"]
+    for file, entry in extension["settings_fixture_revisions"].items():
+        assert file in value["settings"]["assignment"]
+        assert set(entry) == {"previous_source_lf_sha256", "source_lf_sha256", "cases", "reason"}
+        assert entry["previous_source_lf_sha256"] == sources[file]
+        assert re.fullmatch(r"[0-9a-f]{64}", entry["source_lf_sha256"])
+        assert isinstance(entry["reason"], str) and entry["reason"].strip()
+        cases = entry["cases"]
+        assert cases and len({item["id"] for item in cases}) == len(cases)
+        for item in cases:
+            assert set(item) == {"id", "file", "title", "line", "column", "timeout", "project_id"}
+            assert item["file"] == file and item["project_id"] == ""
+            assert isinstance(item["id"], str) and item["id"] and isinstance(item["title"], str) and item["title"]
+            assert type(item["line"]) is int and item["line"] > 0 and type(item["column"]) is int and item["column"] > 0
+            override = next((row for row in original["settings_runtime_timeout_overrides"]
+                if all(row[key] == item[key] for key in ("file", "line", "column"))), None)
+            assert item["timeout"] == (override["timeout"] if override else 90_000)
+        sources[file] = entry["source_lf_sha256"]
     return value
 
 

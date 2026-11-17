@@ -160,22 +160,32 @@ test("search scope, submit, history, stale results, keyboard ordering and failur
     // Keyboard ordering belongs to the restored results, not merely its input.
     await expect(page).toHaveURL(url => url.searchParams.get("q") === key && url.searchParams.get("status_scope") === "all");
     const restoredResults = page.locator('a[data-search-index]');
-    await expect(restoredResults).toHaveCount(3); // This fixture has a title and two messages.
+    await expect(restoredResults).toHaveCount(1); // One conversation, not three competing document rows.
     await expect(restoredResults.first()).toHaveAttribute("href", `/conversations/${id}`);
-    await expect(restoredResults.nth(1)).toContainText(key);
+    await expect(restoredResults.first()).toContainText(key);
+    await page.getByRole("button", { name: "2 more hits", exact: true }).click();
+    const messageHits = page.locator(`a[href^="/conversations/${id}?"]`);
+    await expect(messageHits).toHaveCount(2);
+    for (const hit of await messageHits.all()) await expect(hit).toContainText(key);
     await expect(page.getByRole("status").filter({ hasText: /^Searching…$/ })).toHaveCount(0);
     await input.focus(); await expect(input).toBeFocused();
     await page.keyboard.press("ArrowDown");
     await expect(page.locator('a[data-search-index="0"]')).toHaveAttribute("aria-current", "true");
     await page.keyboard.press("ArrowDown");
-    await expect(page.locator('a[data-search-index="1"]')).toHaveAttribute("aria-current", "true");
-    const expected = await page.locator('a[data-search-index="1"]').getAttribute("href");
-    await page.keyboard.press("Enter"); await expect(page).toHaveURL((url) => url.pathname + url.search === expected);
-    await page.route("**/api/search?*", (route) => route.fulfill({ status: 503, json: { detail: "Synthetic search failure" } }));
+    await expect(page.locator('a[data-search-index="0"]')).toHaveAttribute("aria-current", "true");
+    await page.keyboard.press("Enter"); await expect(page).toHaveURL(url => url.pathname === `/conversations/${id}`);
+    await page.goBack();
+    const moreHits = page.getByRole("button", { name: "2 more hits", exact: true });
+    await expect(moreHits).toBeVisible();
+    if (await moreHits.getAttribute("aria-expanded") !== "true") await moreHits.click();
+    const expected = await messageHits.first().getAttribute("href");
+    await messageHits.first().click();
+    await expect(page).toHaveURL((url) => url.pathname + url.search === expected);
+    await page.route("**/api/search/conversations?*", (route) => route.fulfill({ status: 503, json: { detail: "Synthetic search failure" } }));
     await page.goto(`/search?q=${key}&status_scope=all`);
     await expect(page.getByRole("alert").filter({ hasText: "Search failed" })).toBeVisible();
     await expect(page.getByText("No results. Clear filters or try another query.")).toHaveCount(0);
-    await page.unroute("**/api/search?*");
+    await page.unroute("**/api/search/conversations?*");
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await expect(page.locator('a[data-search-index]').first()).toBeVisible();
     await page.getByRole("button", { name: "Clear filters", exact: true }).click();
@@ -189,9 +199,9 @@ test("search pagination resets with filters while date controls retain focus", a
   const key = `UXPAGING${crypto.randomUUID().slice(0, 8)}`;
   const ids: string[] = [];
   try {
-    for (let index = 0; index < 30; index++) {
+    for (let index = 0; index < 60; index++) {
       const created = await page.request.post("/api/conversations", { data: { title: `Synthetic paginated results ${index}`, messages: [
-        { role: "user", content_markdown: `${key} question ${index}` },
+        { role: index < 30 ? "user" : "assistant", content_markdown: `${key} question ${index}` },
         { role: "assistant", content_markdown: `${key} answer ${index}` },
       ] } });
       expect(created.status()).toBe(201); ids.push((await created.json()).conversation.id);

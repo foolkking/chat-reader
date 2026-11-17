@@ -76,26 +76,33 @@ for (const width of [375, 1440]) {
 test("same-query search restarts the first page rather than keeping stale earlier pages", async ({ page, syntheticConversation }) => {
   const offsets: number[] = [];
   let generation = 0;
-  await page.route("**/api/search?**", async route => {
+  await page.route("**/api/search/conversations?**", async route => {
     const url = new URL(route.request().url());
     const offset = Number(url.searchParams.get("offset") ?? 0);
     offsets.push(offset);
     const name = generation ? "Synthetic fresh first page" : offset ? "Synthetic old second page" : "Synthetic old first page";
     await route.fulfill({ json: {
       query: "synthetic", offset, limit: 50, total: generation ? 1 : 51, has_more: !generation && offset === 0,
-      items: [{ document_id: crypto.randomUUID(), document_type: "conversation", conversation_id: syntheticConversation,
-        conversation_title: name, title: name, snippet: name, plain_text: name, score: 1, metadata: {}, message_id: null }],
+      items: Array.from({ length: generation || offset ? 1 : 50 }, (_, index) => ({
+        document_id: crypto.randomUUID(), document_type: "conversation",
+        conversation_id: generation || offset || index ? crypto.randomUUID() : syntheticConversation,
+        conversation_title: `${name} ${index}`, title: name, snippet: name, plain_text: name,
+        score: 1, metadata: {}, message_id: null, hit_count: 1,
+      })),
     } });
   });
   await page.goto("/search?q=synthetic");
   await expect(page.getByRole("link", { name: /Synthetic old first page/ }).first()).toBeVisible();
+  await expect(page.locator("a[data-search-index]")).toHaveCount(50);
   await page.getByRole("button", { name: "Load more", exact: true }).click();
   await expect(page.getByRole("link", { name: /Synthetic old second page/ }).first()).toBeVisible();
+  await expect(page.locator("a[data-search-index]")).toHaveCount(51);
   expect(offsets).toEqual([0, 50]);
   await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
   generation++;
   await page.getByRole("textbox", { name: "Search", exact: true }).press("Enter");
   await expect(page.getByRole("link", { name: /Synthetic fresh first page/ }).first()).toBeVisible();
+  await expect(page.locator("a[data-search-index]")).toHaveCount(1);
   expect(offsets).toEqual([0, 50, 0]);
   await expect(page.getByRole("link", { name: /Synthetic old (first|second) page/ })).toHaveCount(0);
 });

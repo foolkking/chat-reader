@@ -258,7 +258,10 @@ test("maps one unknown structure family once and reuses the learned profile", as
       { name: `second-${suffix}.json`, mimeType: "application/json", buffer: Buffer.from(source(`Second adaptive ${suffix}`, "two")) },
     ]);
     await page.getByTestId("preview-import-button").click();
-    await expect(page.getByText(/发现 2 个对话，识别出 1 种格式|Found 2 conversations in 1 formats/)).toBeVisible();
+    const overview = page.getByRole("region", { name: /导入概览|Import overview/ });
+    await expect(overview.getByText(/^(2 个对话|2 conversations)$/)).toBeVisible();
+    await expect(overview.locator("article")).toHaveCount(1);
+    await expect(overview.locator("article")).toContainText(`first-${suffix}.json (+1)`);
     await page.getByRole("button", { name: /设置格式|Map format/ }).click();
     await expect(page.getByRole("heading", { name: /设置新的导入格式|Learn a new import format/ })).toBeVisible();
     await page.getByLabel(/保存为导入格式|Format name/).fill(profileName);

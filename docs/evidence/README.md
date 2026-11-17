@@ -1,5 +1,13 @@
 # 事实证据索引
 
+## 排序、搜索与导入CI失败修复 — 2026-11-17
+
+[CI44063757196与定点修复](navigation-search-import-2026-11-17/ci-failure-44063757196-repair.json)
+绑定官方6份失败日志／4份完整摘要验证制品及修复源。6个job失败，正式发布跳过。
+本地UX2577、CI162+142、真实PG3、组件40+12+12、lint/typecheck/build及原生源码88通过；
+两份7034 collection与Settings470源／身份／超时通过。不代替新全量CI或产品验收。
+旧本地失败与build09不覆盖；无生产变更，后续单次普通完整CI提交后暂停。
+
 ## 排序、搜索与导入体验本地候选 — 2026-11-17
 
 [本地验证](navigation-search-import-2026-11-17/local-verification.json)区分早期API541/7、
