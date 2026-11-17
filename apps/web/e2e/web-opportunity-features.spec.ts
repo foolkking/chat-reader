@@ -332,7 +332,8 @@ test("an out-of-range annotation inbox page clamps only after a successful curre
 test("lost saved-search response is confirmed read-only without creating a second identity", async ({ page }) => {
   const entries: unknown[] = [], identities: string[] = [];
   await page.route("**/api/**", async route => {
-    const path = new URL(route.request().url()).pathname;
+    const requestUrl = new URL(route.request().url());
+    const path = requestUrl.pathname;
     if (path.startsWith("/api/user-feature-entries/saved-search/") && route.request().method() === "PUT") {
       const input = route.request().postDataJSON();
       const id = path.split("/").at(-1)!;
@@ -342,7 +343,9 @@ test("lost saved-search response is confirmed read-only without creating a secon
       return route.abort("failed");
     }
     const payload = path === "/api/user-feature-entries/saved-search" ? entries
-      : path === "/api/search" ? { items: [], total: 0, limit: 50, offset: 0 } : [];
+      : path === "/api/search/conversations" ? {
+        query: requestUrl.searchParams.get("q") ?? "", items: [], total: 0, limit: 50, offset: 0, has_more: false,
+      } : [];
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
   });
   await page.goto("/search?q=synthetic");

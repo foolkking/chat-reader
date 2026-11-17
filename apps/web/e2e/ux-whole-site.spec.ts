@@ -200,9 +200,10 @@ test("search pagination resets with filters while date controls retain focus", a
   const ids: string[] = [];
   try {
     for (let index = 0; index < 60; index++) {
+      const userSearchable = index < 30;
       const created = await page.request.post("/api/conversations", { data: { title: `Synthetic paginated results ${index}`, messages: [
-        { role: index < 30 ? "user" : "assistant", content_markdown: `${key} question ${index}` },
-        { role: "assistant", content_markdown: `${key} answer ${index}` },
+        { role: "user", content_markdown: userSearchable ? `${key} question ${index}` : `Synthetic nonmatching question ${index}` },
+        { role: "assistant", content_markdown: userSearchable ? `Synthetic nonmatching answer ${index}` : `${key} answer ${index}` },
       ] } });
       expect(created.status()).toBe(201); ids.push((await created.json()).conversation.id);
     }

@@ -911,6 +911,9 @@ async function mockOwnerApi(
     updated_at: "2026-08-31T00:00:00Z",
   });
   if (path === "/api/tasks/active") return json(route, tasks);
+  if (path === "/api/adaptive-import/sessions" && request.method() === "GET") {
+    return json(route, { items: [], total: 0, has_more: false });
+  }
   if (path === "/api/content-cleanup/scans/pending") return json(route, []);
   if (path === "/api/projects") return json(route, []);
   if (path === "/api/recent") return json(route, []);

@@ -1318,15 +1318,18 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
             : sidebar.getByRole("group", { name: zh ? `项目对话：${fixture.project.name}` : `Conversations in ${fixture.project.name}`, exact: true });
         const link = scope === "projects" ? region.locator(`a[href="/projects/${fixture.project.id}"]`)
           : region.locator(`a[href^="/conversations/${scope === "history" ? fixture.unclassified.conversation.id : fixture.conversation.conversation.id}"]`);
-        await expect(link).toBeVisible(); await page.clock.install(); await link.focus();
+        await expect(link).toBeVisible(); await page.clock.install();
+        // Let the cache become stale before capturing the node whose identity
+        // must survive the actual failed refetch.
+        await page.clock.fastForward(20_000);
+        await link.focus();
         const original = await link.elementHandle();
         if (!original) throw new Error("Synthetic sidebar reading link was not mounted");
-        // QueryProvider's current staleTime is 15 seconds; exceed it explicitly.
-        await page.clock.fastForward(20_000);
         fail = true; const beforeFailure = reads[scope];
         await page.context().setOffline(true);
         await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
         await page.context().setOffline(false);
+        await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(true);
         await expect.poll(() => reads[scope]).toBeGreaterThan(beforeFailure);
         const error = region.getByRole("alert").filter({ hasText: zh ? "仍显示上次内容" : "Previously loaded items are shown" });
         await expect(error).toBeVisible(); await expect(link).toBeVisible(); await expect(link).toBeFocused();
@@ -1414,14 +1417,16 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       const section = page.locator('section[aria-labelledby="archived-projects-heading"]');
       await section.getByRole("button", { name: zh ? "批量操作" : "Manage projects", exact: true }).click();
       const checkbox = section.getByRole("checkbox", { name: `${zh ? "选择" : "Select"} ${fixture.project.name}`, exact: true });
-      await checkbox.check(); await checkbox.focus();
+      await checkbox.check();
+      await page.clock.fastForward(20_000);
+      await checkbox.focus();
       const original = await checkbox.elementHandle();
       if (!original) throw new Error("Synthetic project checkbox was not mounted");
-      await page.clock.fastForward(20_000);
       const before = reads; fail = true;
       await page.context().setOffline(true);
       await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
       await page.context().setOffline(false);
+      await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(true);
       await expect.poll(() => reads).toBeGreaterThan(before);
       const error = section.getByRole("alert").filter({ hasText: zh ? "项目更新失败，仍显示上次内容" : "Previously loaded projects are shown" });
       await expect(error).toBeVisible(); await expect(checkbox).toBeChecked(); await expect(checkbox).toBeFocused();
@@ -1998,9 +2003,15 @@ test(`mixed-type search pagination retains the selected document and actual Ente
     const appended = page.locator('a[data-search-index="1"]');
     await expect(appended).toHaveAttribute("href", new RegExp(created[1].conversation.id));
     await page.screenshot({ path: info.outputPath("search-stable-selection.png") });
+    await appended.scrollIntoViewIfNeeded();
+    // Scrolling does not count as pointer intent: only a real mouse movement
+    // over the now-visible result may change the keyboard-selected document.
+    await expect(selected).toHaveAttribute("href", destination!);
     const appendedBox = await appended.boundingBox();
     expect(appendedBox).not.toBeNull();
-    await page.mouse.move(appendedBox!.x + appendedBox!.width / 2, appendedBox!.y + appendedBox!.height / 2);
+    expect(appendedBox!.y).toBeGreaterThanOrEqual(0);
+    expect(appendedBox!.y + appendedBox!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    await page.mouse.move(appendedBox!.x + appendedBox!.width / 2, appendedBox!.y + appendedBox!.height / 2, { steps: 4 });
     await expect(selected).toHaveAttribute("href", (await appended.getAttribute("href"))!);
     await input.focus();
     await page.keyboard.press("ArrowUp");
@@ -2107,17 +2118,19 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         const link = list.locator(`a[href="/conversations/${id}"]`);
         await expect(link).toBeVisible();
         await expect.poll(() => reads).toBeGreaterThan(0);
+        await page.clock.fastForward(11_000);
+        await link.focus();
         const original = await link.elementHandle();
         if (!original) throw new Error("Synthetic reading link was not mounted");
-        await link.focus();
+        expect(await link.evaluate((current, previous) => current === previous, original)).toBe(true);
         const previousReads = reads;
         // A real browser offline/online transition refetches the now-stale query.
         // The targeted 503 is injected; this does not claim a real network outage.
-        await page.clock.fastForward(11_000);
         failRead = true;
         await page.context().setOffline(true);
         await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
         await page.context().setOffline(false);
+        await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(true);
         await expect.poll(() => reads).toBeGreaterThan(previousReads);
         const error = list.getByRole("alert").filter({ hasText: zh ? "对话更新失败，仍显示上次内容" : "Could not update conversations. Previously loaded items are shown." });
         await expect(error).toBeVisible();
