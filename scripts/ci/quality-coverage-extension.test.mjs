@@ -19,7 +19,7 @@ test("product coverage is additive; frozen scheduling and original skips remain 
   }
 });
 
-test("coverage extensions reject changing old files, shard bounds, counts, hashes and skip policy", () => {
+test("coverage extensions reject unreviewed old files, shard bounds, counts, hashes and skip policy", () => {
   const base = read("./quality-schedule-v2.json"), original = read("./quality-coverage-extension.json");
   const file = Object.keys(original.api)[0];
   for (const mutate of [
@@ -32,6 +32,12 @@ test("coverage extensions reject changing old files, shard bounds, counts, hashe
     value => { value.api[file].source_lf_sha256 = "unverified"; },
     value => { value.api[file].allowed_skips = ["new skip"]; },
     value => { value.api["tests/../escape.py"] = value.api[file]; },
+    value => { Object.values(value.api_fixture_revisions)[0].previous_source_lf_sha256 = "0".repeat(64); },
+    value => { Object.values(value.api_fixture_revisions)[0].source_lf_sha256 = "unverified"; },
+    value => { Object.values(value.api_fixture_revisions)[0].nodeids = []; },
+    value => { const nodes = Object.values(value.api_fixture_revisions)[0].nodeids; nodes.push(nodes[0]); },
+    value => { Object.values(value.api_fixture_revisions)[0].nodeids = ["tests/test_foreign.py::test_other"]; },
+    value => { Object.values(value.api_fixture_revisions)[0].shard = 2; },
   ]) {
     const value = structuredClone(original);
     mutate(value);

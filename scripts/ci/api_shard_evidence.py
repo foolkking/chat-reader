@@ -32,6 +32,8 @@ def validate(shards, source, run, attempt, plan=None):
         assert {nodeid.split("::")[0] for nodeid in collection} == set(api["assignment"])
         file_counts = Counter(nodeid.split("::")[0] for nodeid in collection)
         assert all(file_counts[file] == count for file, count in api.get("added_file_counts", {}).items()), "Additional coverage changed"
+        for file, nodes in api.get("fixture_revised_nodeids", {}).items():
+            assert [node for node in collection if node.split("::")[0] == file] == nodes, "Adapted fixture collection changed"
         if expected is None:
             expected = collection
         assert collection == expected, "Full cross-process collection changed, including order"

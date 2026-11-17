@@ -83,9 +83,16 @@ def test_full_validation_keeps_selection_order_across_interleaved_families(clien
     assert sum(family["validation_result"]["message_count"] for family in result["families"]) == 3
 
 
-def test_draft_generation_does_not_reorder_groups_by_family(monkeypatch):
+def test_draft_generation_does_not_reorder_groups_by_family(monkeypatch, tmp_path):
+    # Draft planning now persists source-bound previews alongside the draft.
+    # Keep real preview generation; supply complete synthetic identities.
+    import uuid
+    from app.core.config import get_settings
+    from app.services.adaptive_import.source_preview import read_preview
+    monkeypatch.setattr(get_settings(), "import_storage_dir", str(tmp_path / "imports"))
+    import_id = uuid.uuid4()
     groups = [SimpleNamespace(id=str(i), artifact_ids=[str(i)], display_name=f"{i}.md",
-                              family_id="A" if i != 2 else "B") for i in range(1, 4)]
+                              family_id="A" if i != 2 else "B", profile_resolution={}) for i in range(1, 4)]
     families = [
         SimpleNamespace(id="A", display_name="A", matched_profile_key="A", matched_revision_id=None,
                         mapping_draft={}, groups=[groups[0], groups[2]]),
@@ -93,8 +100,9 @@ def test_draft_generation_does_not_reorder_groups_by_family(monkeypatch):
                         mapping_draft={}, groups=[groups[1]]),
     ]
     artifacts = [SimpleNamespace(id=str(i), filename=f"{i}.md", parsed_summary={},
-                                 source_type="adaptive_source") for i in range(1, 4)]
-    record = SimpleNamespace(input_groups=groups, structure_families=families, artifacts=artifacts,
+                                 source_type="adaptive_source", import_id=import_id, sha256=str(i) * 64) for i in range(1, 4)]
+    record = SimpleNamespace(id=import_id, source_fingerprint="synthetic-selected-sources",
+                             input_groups=groups, structure_families=families, artifacts=artifacts,
                              analysis_summary={"source_order": ["1", "2", "3"]})
     emitted = []
     monkeypatch.setattr(service, "_group_documents", lambda record, group: group.display_name)
@@ -106,3 +114,5 @@ def test_draft_generation_does_not_reorder_groups_by_family(monkeypatch):
                         lambda record, drafts: emitted.extend(draft.title for draft in drafts))
     service._prepare_plan(SimpleNamespace(), record)
     assert emitted == ["1.md", "2.md", "3.md"]
+    by_id = {family.id: family for family in families}
+    assert [read_preview(record, group, by_id[group.family_id])["preview"]["title"] for group in groups] == emitted

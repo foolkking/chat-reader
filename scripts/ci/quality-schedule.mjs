@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 
 export const BASE_SCHEDULE_SHA256 = "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee";
-export const COVERAGE_SHA256 = "c32a293ecf329de54f3ca2cc991f70e94b84811980427590eb72575a7dcc6c71";
+export const COVERAGE_SHA256 = "f33b03439af275c5feff2f9dab7bc77e490c6012575d25b7dc648a54e7f24736";
 export const ORIGINAL_SHA256 = "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c";
 export const digest = (data) => crypto.createHash("sha256").update(data).digest("hex");
 export const SCHEDULE_SHA256 = digest(`${BASE_SCHEDULE_SHA256}:${COVERAGE_SHA256}`);
@@ -37,7 +37,7 @@ export function loadSchedule() {
 export function extendCoverage(plan, extension) {
   assert.equal(extension.schema_version, 1);
   assert.equal(extension.base_schedule_sha256, BASE_SCHEDULE_SHA256);
-  assert.deepEqual(Object.keys(extension).sort(), ["api", "base_schedule_sha256", "reason", "schema_version"]);
+  assert.deepEqual(Object.keys(extension).sort(), ["api", "api_fixture_revisions", "base_schedule_sha256", "reason", "schema_version"]);
   assert.ok(Object.keys(extension.api).length);
   const api = plan.api;
   api.added_file_counts = {};
@@ -53,6 +53,19 @@ export function extendCoverage(plan, extension) {
     api.added_file_counts[file] = entry.count;
     api.collected_count += entry.count;
     api.expected_passed += entry.count;
+  }
+  api.fixture_revised_nodeids = {};
+  for (const [file, entry] of Object.entries(extension.api_fixture_revisions)) {
+    assert.ok(file in api.weights_ms && !(file in extension.api));
+    assert.deepEqual(Object.keys(entry).sort(), ["nodeids", "previous_source_lf_sha256", "reason", "source_lf_sha256"]);
+    assert.equal(entry.previous_source_lf_sha256, api.source_lf_sha256[file]);
+    assert.match(entry.source_lf_sha256, /^[0-9a-f]{64}$/);
+    assert.ok(typeof entry.reason === "string" && entry.reason.trim());
+    assert.ok(entry.nodeids.length && new Set(entry.nodeids).size === entry.nodeids.length);
+    assert.ok(entry.nodeids.every(node => node.startsWith(`${file}::test_`)));
+    assert.ok(!api.allowed_skips.some(node => node.split("::")[0] === file));
+    api.source_lf_sha256[file] = entry.source_lf_sha256;
+    api.fixture_revised_nodeids[file] = entry.nodeids;
   }
   return plan;
 }

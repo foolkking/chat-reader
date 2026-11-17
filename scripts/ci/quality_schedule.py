@@ -9,7 +9,7 @@ import re
 ROOT = Path(__file__).resolve().parents[2]
 ORIGINAL_SHA256 = "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c"
 BASE_SCHEDULE_SHA256 = "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee"
-COVERAGE_SHA256 = "c32a293ecf329de54f3ca2cc991f70e94b84811980427590eb72575a7dcc6c71"
+COVERAGE_SHA256 = "f33b03439af275c5feff2f9dab7bc77e490c6012575d25b7dc648a54e7f24736"
 SCHEDULE_SHA256 = hashlib.sha256(f"{BASE_SCHEDULE_SHA256}:{COVERAGE_SHA256}".encode()).hexdigest()
 
 
@@ -52,10 +52,10 @@ def load_schedule():
 
 
 def extend_coverage(value, extension):
-    """Append new product tests; never rebalance or rewrite the frozen baseline."""
+    """Append coverage and bind reviewed fixture adaptations without moving gates."""
     assert extension["schema_version"] == 1
     assert extension["base_schedule_sha256"] == BASE_SCHEDULE_SHA256
-    assert set(extension) == {"schema_version", "base_schedule_sha256", "reason", "api"}
+    assert set(extension) == {"schema_version", "base_schedule_sha256", "reason", "api", "api_fixture_revisions"}
     api = value["api"]
     assert extension["api"] and not (set(extension["api"]) & set(api["assignment"]))
     api["added_file_counts"] = {}
@@ -70,6 +70,19 @@ def extend_coverage(value, extension):
         api["added_file_counts"][file] = entry["count"]
         api["collected_count"] += entry["count"]
         api["expected_passed"] += entry["count"]
+    api["fixture_revised_nodeids"] = {}
+    for file, entry in extension["api_fixture_revisions"].items():
+        assert file in value["api"]["weights_ms"] and file not in extension["api"]
+        assert set(entry) == {"previous_source_lf_sha256", "source_lf_sha256", "nodeids", "reason"}
+        assert entry["previous_source_lf_sha256"] == api["source_lf_sha256"][file]
+        assert re.fullmatch(r"[0-9a-f]{64}", entry["source_lf_sha256"])
+        assert isinstance(entry["reason"], str) and entry["reason"].strip()
+        nodes = entry["nodeids"]
+        assert nodes and len(nodes) == len(set(nodes))
+        assert all(node.startswith(file + "::test_") for node in nodes)
+        assert not any(node.split("::")[0] == file for node in api["allowed_skips"])
+        api["source_lf_sha256"][file] = entry["source_lf_sha256"]
+        api["fixture_revised_nodeids"][file] = nodes
     return value
 
 

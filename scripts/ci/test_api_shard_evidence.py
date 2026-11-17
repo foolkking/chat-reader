@@ -76,6 +76,11 @@ class ApiShardTests(unittest.TestCase):
             lambda e: e["api"][file].update(source_lf_sha256="unknown"),
             lambda e: e["api"][file].update(allowed_skips=["new skip"]),
             lambda e: e["api"].update({"tests/../escape.py": e["api"][file]}),
+            lambda e: next(iter(e["api_fixture_revisions"].values())).update(previous_source_lf_sha256="0" * 64),
+            lambda e: next(iter(e["api_fixture_revisions"].values())).update(source_lf_sha256="unverified"),
+            lambda e: next(iter(e["api_fixture_revisions"].values())).update(nodeids=[]),
+            lambda e: next(iter(e["api_fixture_revisions"].values())).update(nodeids=["tests/test_foreign.py::test_other"]),
+            lambda e: next(iter(e["api_fixture_revisions"].values())).update(shard=2),
         ]
         for mutate in changes:
             value = copy.deepcopy(extension)
@@ -86,6 +91,10 @@ class ApiShardTests(unittest.TestCase):
     def test_additional_per_file_counts_are_not_only_a_total(self):
         plan, shards = fixture()
         plan["api"]["added_file_counts"] = {"tests/test_1.py": 2}
+        with self.assertRaises(AssertionError):
+            validate(shards, SOURCE, "1", "1", plan)
+        plan, shards = fixture()
+        plan["api"]["fixture_revised_nodeids"] = {"tests/test_1.py": ["tests/test_1.py::test_removed"]}
         with self.assertRaises(AssertionError):
             validate(shards, SOURCE, "1", "1", plan)
 

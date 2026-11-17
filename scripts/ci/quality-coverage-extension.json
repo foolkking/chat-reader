@@ -23,5 +23,18 @@
       "shard": 1,
       "source_lf_sha256": "52ffecfa8d2b18ecc4f15e2728e0658982316f71897036c2fb762ce6668cbb51"
     }
+  },
+  "api_fixture_revisions": {
+    "tests/test_import_selection_order.py": {
+      "previous_source_lf_sha256": "de59e98ac66d536e7c06e109d4dce498b177cbdf8b722c2de864bfcf1cee6abd",
+      "source_lf_sha256": "619080f040aa6a77f57d8d0585894e800aa028a38f6a445916e443994fe53712",
+      "nodeids": [
+        "tests/test_import_selection_order.py::test_selected_order_survives_reload_analysis_and_draft",
+        "tests/test_import_selection_order.py::test_paired_files_use_first_selected_member_not_alphabetical_stem",
+        "tests/test_import_selection_order.py::test_full_validation_keeps_selection_order_across_interleaved_families",
+        "tests/test_import_selection_order.py::test_draft_generation_does_not_reorder_groups_by_family"
+      ],
+      "reason": "Complete synthetic identity for newly persisted source previews; retain original draft-order assertion and add real sidecar order readback."
+    }
   }
 }
