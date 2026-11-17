@@ -127,6 +127,42 @@ class QualitySchedulingTests(unittest.TestCase):
                 self.assertEqual({key: value for key, value in current.items() if not (assigned and key == "if")},
                                  original)
 
+    def test_product_component_gate_is_required_and_retains_its_evidence(self):
+        def check(web):
+            validate_dag(self.main)
+            steps = web["jobs"]["gates"]["steps"]
+            gate = named(steps, "Import batch disposition and scoped navigation layouts")
+            self.assertEqual(gate, {
+                "name": "Import batch disposition and scoped navigation layouts",
+                "if": "${{ inputs.shard == 1 }}",
+                "env": {"PLAYWRIGHT_USE_BUNDLED_CHROMIUM": "1"},
+                "run": "node scripts/ux/import-batch-browser.mjs\nnode scripts/ux/navigation-import-layout-browser.mjs\n",
+            })
+            upload = named(steps, "Preserve navigation and import component evidence")
+            self.assertEqual(upload["if"], "${{ always() && inputs.shard == 1 }}")
+            self.assertNotIn("continue-on-error", upload)
+            self.assertEqual(upload["with"]["if-no-files-found"], "error")
+            for name in ("import-batch-browser", "navigation-import-layout-browser"):
+                for suffix in ("result.json", "failure.json", "*.png"):
+                    self.assertIn("${{ runner.temp }}/" + name + "/" + suffix, upload["with"]["path"].splitlines())
+        check(self.web)
+        for kind in ("missing", "shard", "swallow", "continue", "evidence"):
+            copy_web = copy.deepcopy(self.web)
+            steps = copy_web["jobs"]["gates"]["steps"]
+            gate = named(steps, "Import batch disposition and scoped navigation layouts")
+            if kind == "missing":
+                steps.remove(gate)
+            elif kind == "shard":
+                gate["if"] = "${{ inputs.shard == 2 }}"
+            elif kind == "swallow":
+                gate["run"] += " || true"
+            elif kind == "continue":
+                gate["continue-on-error"] = True
+            else:
+                named(steps, "Preserve navigation and import component evidence")["with"]["path"] = "missing"
+            with self.subTest(kind=kind), self.assertRaises(AssertionError):
+                check(copy_web)
+
     def test_web_gate_partition_and_all_node_browser_evidence_paths_are_retained(self):
         original_ids = [gate for group in self.contract["web_gate_groups"] for gate in group]
         self.assertEqual(len(original_ids), 14)

@@ -215,6 +215,14 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/import-source-repair-browser.mjs
 
+      - name: Import batch disposition and scoped navigation layouts
+        if: ${{ inputs.shard == 1 }}
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: |
+          node scripts/ux/import-batch-browser.mjs
+          node scripts/ux/navigation-import-layout-browser.mjs
+
       - name: Reader table export and recovery controls
         if: ${{ inputs.shard == 3 }}
         env:
@@ -524,6 +532,21 @@ jobs:
             apps/web/playwright-report
             apps/web/test-results
           if-no-files-found: warn
+          retention-days: 14
+
+      - name: Preserve navigation and import component evidence
+        if: ${{ always() && inputs.shard == 1 }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: navigation-import-components-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/import-batch-browser/result.json
+            ${{ runner.temp }}/import-batch-browser/failure.json
+            ${{ runner.temp }}/import-batch-browser/*.png
+            ${{ runner.temp }}/navigation-import-layout-browser/result.json
+            ${{ runner.temp }}/navigation-import-layout-browser/failure.json
+            ${{ runner.temp }}/navigation-import-layout-browser/*.png
+          if-no-files-found: error
           retention-days: 14
 
       - name: Stop owned disposable PostgreSQL

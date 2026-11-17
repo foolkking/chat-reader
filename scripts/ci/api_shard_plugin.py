@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -38,6 +39,8 @@ def pytest_collection_modifyitems(config, items):
     full = [item.nodeid for item in items]
     assert len(full) == len(set(full)) == plan["collected_count"], "Incomplete original collection"
     assert {nodeid.split("::")[0] for nodeid in full} == set(plan["assignment"])
+    counts = Counter(nodeid.split("::")[0] for nodeid in full)
+    assert all(counts[file] == count for file, count in plan.get("added_file_counts", {}).items()), "Additional coverage changed"
     state["collection"] = full
     selected, deselected = [], []
     for item in items:

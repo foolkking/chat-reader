@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "base_schedule_sha256": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
+  "reason": "2026-11-17 product regression coverage; original assignments and skips unchanged",
+  "api": {
+    "tests/test_grouped_search.py": {
+      "count": 8,
+      "shard": 3,
+      "source_lf_sha256": "28295dcb23b7387120375a15546bb1d13bbf8158cd259172cda73fa59f733cee"
+    },
+    "tests/test_import_batch_experience.py": {
+      "count": 7,
+      "shard": 4,
+      "source_lf_sha256": "ee8c2304fc0dcb0769ace3bba5dcc0de1044c19bd9347240773bf229425fac92"
+    },
+    "tests/test_navigation_search_postgres.py": {
+      "count": 4,
+      "shard": 2,
+      "source_lf_sha256": "5c533a38d0a66e83a8c2aedc4c569d0a73f4a6db929821a1cfdd7f312dfc120b"
+    },
+    "tests/test_navigation_sort.py": {
+      "count": 5,
+      "shard": 1,
+      "source_lf_sha256": "f325818d9a658c0063237b80b4bc0674d41602e580b9f23bad10b9353b93b2e6"
+    }
+  }
+}

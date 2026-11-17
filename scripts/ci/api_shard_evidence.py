@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import hashlib
 import json
 import math
@@ -29,6 +30,8 @@ def validate(shards, source, run, attempt, plan=None):
         collection = report["collection"]
         assert len(collection) == len(set(collection)) == api["collected_count"]
         assert {nodeid.split("::")[0] for nodeid in collection} == set(api["assignment"])
+        file_counts = Counter(nodeid.split("::")[0] for nodeid in collection)
+        assert all(file_counts[file] == count for file, count in api.get("added_file_counts", {}).items()), "Additional coverage changed"
         if expected is None:
             expected = collection
         assert collection == expected, "Full cross-process collection changed, including order"

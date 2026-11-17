@@ -9,7 +9,7 @@ import unittest
 import xml.etree.ElementTree as ET
 
 from api_shard_evidence import validate
-from quality_schedule import SCHEDULE_SHA256, balanced, load_schedule, validate_api_sources
+from quality_schedule import ROOT, SCHEDULE_SHA256, balanced, extend_coverage, load_schedule, validate_api_sources
 
 SOURCE = "a" * 40
 
@@ -47,12 +47,47 @@ class ApiShardTests(unittest.TestCase):
     def test_reviewed_sources_and_deterministic_complete_partitions(self):
         plan = load_schedule()
         validate_api_sources(plan)
-        self.assertEqual(plan["api"]["collected_count"], 7010)
-        self.assertEqual(plan["api"]["expected_passed"], 7007)
+        original = json.loads((ROOT / "scripts/ci/quality-schedule-v2.json").read_text("utf8"))
+        self.assertEqual(original["api"]["collected_count"], 7010)
+        self.assertEqual(original["api"]["expected_passed"], 7007)
+        self.assertEqual(plan["api"]["collected_count"], 7034)
+        self.assertEqual(plan["api"]["expected_passed"], 7031)
+        self.assertEqual(sum(plan["api"]["added_file_counts"].values()), 24)
+        for family in ("settings", "web"):
+            self.assertEqual(plan[family], original[family])
+        for file, index in original["api"]["assignment"].items():
+            self.assertEqual(plan["api"]["assignment"][file], index)
+        self.assertEqual(plan["api"]["allowed_skips"], original["api"]["allowed_skips"])
         self.assertEqual(len(plan["api"]["allowed_skips"]), 3)
         a, loads = balanced({"b": 10, "a": 10, "c": 1}, 2)
         self.assertEqual(a, {"a": 1, "b": 2, "c": 1})
         self.assertEqual(loads, [11, 10])
+
+    def test_additive_coverage_cannot_replace_original_or_change_skips(self):
+        original = json.loads((ROOT / "scripts/ci/quality-schedule-v2.json").read_text("utf8"))
+        extension = json.loads((ROOT / "scripts/ci/quality-coverage-extension.json").read_text("utf8"))
+        file = next(iter(extension["api"]))
+        changes = [
+            lambda e: e.update(base_schedule_sha256="0" * 64),
+            lambda e: e.update(allowed_skips=["new skip"]),
+            lambda e: e["api"].update({next(iter(original["api"]["assignment"])): e["api"][file]}),
+            lambda e: e["api"][file].update(shard=5),
+            lambda e: e["api"][file].update(count=0),
+            lambda e: e["api"][file].update(source_lf_sha256="unknown"),
+            lambda e: e["api"][file].update(allowed_skips=["new skip"]),
+            lambda e: e["api"].update({"tests/../escape.py": e["api"][file]}),
+        ]
+        for mutate in changes:
+            value = copy.deepcopy(extension)
+            mutate(value)
+            with self.assertRaises(AssertionError):
+                extend_coverage(copy.deepcopy(original), value)
+
+    def test_additional_per_file_counts_are_not_only_a_total(self):
+        plan, shards = fixture()
+        plan["api"]["added_file_counts"] = {"tests/test_1.py": 2}
+        with self.assertRaises(AssertionError):
+            validate(shards, SOURCE, "1", "1", plan)
 
     def test_lifecycle_and_native_junit_must_agree(self):
         plan, shards = fixture()
