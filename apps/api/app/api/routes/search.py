@@ -25,6 +25,7 @@ ROLES = {"user", "assistant", "system", "tool", "note"}
 
 
 @router.get("", response_model=SearchResponse)
+@router.get("/conversations", response_model=SearchResponse)
 def search_documents(
     request: Request,
     q: str = Query(...),
@@ -39,6 +40,8 @@ def search_documents(
     date_to: datetime | None = None,
     tag_id: uuid.UUID | None = None,
     duplicate_of: uuid.UUID | None = None,
+    terms_mode: bool = False,
+    sort: str = Query(default="relevance", pattern="^(relevance|content_updated|imported)$"),
     db: Session = Depends(get_db),
 ) -> SearchResponse:
     if document_type is not None and document_type not in DOCUMENT_TYPES:
@@ -60,6 +63,9 @@ def search_documents(
             date_to=date_to,
             tag_id=tag_id,
             duplicate_of=duplicate_of,
+            grouped=request.url.path.endswith("/conversations") and conversation_id is None,
+            terms_mode=terms_mode or request.url.path.endswith("/conversations"),
+            sort=sort,
             ownership_scope=ownership_scope_from_request(request),
         )
     except SearchServiceError as exc:
@@ -70,6 +76,9 @@ def search_documents(
         items=[
             SearchResultItem(
                 document_id=item.document_id,
+                hit_count=item.hit_count,
+                project_name=item.project_name,
+                conversation_status=item.conversation_status,
                 document_type=item.document_type,
                 conversation_id=item.conversation_id,
                 conversation_title=item.conversation_title,

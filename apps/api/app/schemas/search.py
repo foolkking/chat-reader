@@ -18,6 +18,9 @@ class SearchMatch(BaseModel):
 
 
 class SearchResultItem(BaseModel):
+    hit_count: int = 1
+    project_name: str | None = None
+    conversation_status: str = "active"
     document_id: UUID
     document_type: str
     conversation_id: UUID

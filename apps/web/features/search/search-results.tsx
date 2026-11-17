@@ -10,10 +10,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { searchConversations } from "../../lib/api";
 
-const groupOrder = ["annotation", "notebook", "description", "conversation", "message", "heading", "code", "attachment"];
-export function orderSearchResults(items: SearchResultItem[]) {
-  return [...items].sort((a, b) => groupOrder.indexOf(a.document_type) - groupOrder.indexOf(b.document_type));
-}
+export function orderSearchResults(items: SearchResultItem[]) { return [...items]; }
 
 export function SearchResults({
   items,
@@ -31,15 +28,14 @@ export function SearchResults({
   onConversationSelectionChange?: (conversationId: string, selected: boolean) => void;
 }) {
   const { resolvedLocale } = usePreferences();
-  const groups = groupOrder.map((type) => ({ type, items: items.map((item, index) => ({ item, index })).filter(({ item }) => item.document_type === type) })).filter((group) => group.items.length > 0);
-  return <div className="space-y-4">{groups.map((group) => <section key={group.type} aria-labelledby={`search-group-${group.type}`}><h2 id={`search-group-${group.type}`} className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-secondary">{groupLabel(group.type, resolvedLocale)}</h2><div className="overflow-hidden rounded-xl border border-ui bg-surface">{group.items.map(({ item, index }) => {
+  return <div className="divide-y divide-ui overflow-hidden rounded-xl border border-ui bg-surface">{items.map((item, index) => {
     const canSelectConversation = Boolean(item.conversation_id && onConversationSelectionChange);
     const selected = Boolean(item.conversation_id && selectedConversationIds?.has(item.conversation_id));
     return <div key={item.document_id} onMouseMove={(event) => {
       // Pagination can insert/reorder a row beneath a stationary pointer.
       // Boundary events are not a new selection intent; actual movement is.
       if (event.movementX !== 0 || event.movementY !== 0) onActiveIndexChange?.(index);
-    }} className={`flex flex-wrap gap-3 border-b border-ui px-5 py-4 last:border-0 hover:bg-subtle ${activeIndex === index ? "bg-subtle" : ""}`}>
+    }} className={`flex flex-wrap gap-2 px-3 py-4 hover:bg-subtle sm:gap-3 sm:px-5 ${activeIndex === index ? "bg-subtle" : ""}`}>
       {canSelectConversation ? (
         <button
           type="button"
@@ -47,15 +43,43 @@ export function SearchResults({
           aria-label={resolvedLocale === "zh-CN" ? (selected ? "取消选择对话" : "选择对话") : (selected ? "Deselect conversation" : "Select conversation")}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => onConversationSelectionChange?.(item.conversation_id, !selected)}
-          className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border text-accent focus:outline-none focus:ring-2 focus:ring-[var(--focus)] ${selected ? "border-accent bg-[var(--accent-soft)]" : "border-ui"}`}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-accent hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"
         >
-          {selected ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
+          <span className={`flex h-5 w-5 items-center justify-center rounded border ${selected ? "border-accent bg-[var(--accent-soft)]" : "border-ui"}`}>{selected ? <Check className="h-4 w-4" aria-hidden="true" /> : null}</span>
         </button>
       ) : null}
-      <Link href={searchResultHref(item)} data-search-index={index} aria-current={activeIndex === index ? "true" : undefined} className="min-w-0 flex-1 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--focus)]"><div className="flex gap-4"><div className="min-w-0 flex-1"><h2 className="truncate text-base font-semibold text-primary">{item.document_type === "attachment" ? (item.attachment_display_name ?? item.conversation_title) : item.conversation_title}</h2><p className="mt-1 text-sm leading-6 text-secondary"><Highlight text={clean(item.snippet)} query={item.matches?.[0]?.quote || query} /></p>{item.document_type === "attachment" ? <p className="mt-1 text-xs text-accent">{item.attachment_display_name ?? (resolvedLocale === "zh-CN" ? "附件" : "Attachment")}</p> : null}{item.document_type === "annotation" ? <p className="mt-1 text-xs text-accent">{item.annotation_type ?? "annotation"}{item.annotation_color ? ` · ${item.annotation_color}` : ""}</p> : null}{item.occurrence_count > 1 ? <p className="mt-1 text-xs text-secondary">{resolvedLocale === "zh-CN" ? `同时存在于 ${item.occurrence_count} 个对话` : `Also found in ${item.occurrence_count} conversations`}</p> : null}</div><div className="shrink-0 text-xs text-secondary">{documentLabel(item.document_type, resolvedLocale)}{item.role ? ` · ${roleLabel(item.role, resolvedLocale)}` : ""}</div></div></Link>
+      <div className="min-w-0 flex-1">
+        <Link href={`/conversations/${item.conversation_id}`} className="block min-h-11 content-center break-words text-base font-semibold text-primary [overflow-wrap:anywhere] focus:ring-2 focus:ring-[var(--focus)]">{item.conversation_title}</Link>
+        <p className="text-xs text-secondary">{item.project_name ?? (resolvedLocale === "zh-CN" ? "未归类" : "Unclassified")}{item.conversation_status === "archived" ? (resolvedLocale === "zh-CN" ? " · 已归档" : " · Archived") : ""}</p>
+        <Link href={searchResultHref(item)} data-search-index={index} aria-current={activeIndex === index ? "true" : undefined} className="mt-2 block min-h-11 break-words text-sm leading-6 text-secondary underline-offset-2 [overflow-wrap:anywhere] hover:underline"><span className="mr-2 text-xs text-accent">{documentLabel(item.document_type, resolvedLocale)}{item.role ? ` · ${roleLabel(item.role, resolvedLocale)}` : ""}{item.attachment_display_name ? ` · ${item.attachment_display_name}` : ""}</span><Highlight text={clean(item.snippet)} query={item.matches?.[0]?.quote || query} /></Link>
+        {(item.hit_count ?? 1) > 1 ? <ConversationHits item={item} query={query} /> : null}
+      </div>
       {item.document_type === "message" && item.occurrence_count > 1 ? <DuplicateLocations item={item} query={query} /> : null}
     </div>;
-  })}</div></section>)}</div>;
+  })}</div>;
+}
+
+function ConversationHits({ item, query }: { item: SearchResultItem; query: string }) {
+  const zh = usePreferences().resolvedLocale === "zh-CN";
+  const [open, setOpen] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const params = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
+  const result = useQuery({
+    queryKey: ["conversation-search-hits", item.conversation_id, query, params.toString(), offset],
+    queryFn: ({ signal }) => searchConversations({ q: query, termsMode: true, conversationId: item.conversation_id, limit: 10, offset, signal,
+      documentType: params.get("document_type") === "all" ? undefined : params.get("document_type") ?? undefined,
+      role: params.get("role") === "all" ? undefined : params.get("role") ?? undefined,
+      projectId: params.get("project_id") === "all" ? undefined : params.get("project_id") ?? undefined,
+      tagId: params.get("tag_id") ?? undefined,
+      statusScope: (params.get("status_scope") ?? "active") as "active" | "archived" | "all",
+      dateFrom: params.get("date_from") ? new Date(`${params.get("date_from")}T00:00:00`).toISOString() : undefined,
+      dateTo: params.get("date_to") ? new Date(`${params.get("date_to")}T23:59:59.999`).toISOString() : undefined,
+    }), enabled: open,
+  });
+  return <div><button type="button" className="min-h-11 text-sm text-accent" aria-expanded={open} onClick={() => setOpen(value => !value)}>{zh ? `另有 ${(item.hit_count ?? 1) - 1} 条命中` : `${(item.hit_count ?? 1) - 1} more hits`}</button>
+    {open ? <div className="border-l border-ui pl-3">{result.isPending ? <p role="status">{zh ? "正在读取…" : "Loading…"}</p> : result.isError ? <button className="min-h-11 text-accent" onClick={() => void result.refetch()}>{zh ? "重新读取命中" : "Retry hits"}</button> : result.data?.items.filter(row => row.document_id !== item.document_id).map(row => <Link className="block min-h-11 py-2 text-sm text-secondary hover:underline" href={searchResultHref(row)} key={row.document_id}><span className="mr-2 text-accent">{documentLabel(row.document_type, zh ? "zh-CN" : "en-US")}</span><Highlight text={clean(row.snippet)} query={row.matches?.[0]?.quote || query} /></Link>)}
+      <div className="flex gap-3">{offset ? <button className="min-h-11 text-sm text-accent" onClick={() => setOffset(value => value - 10)}>{zh ? "上一页" : "Previous"}</button> : null}{result.data?.has_more ? <button className="min-h-11 text-sm text-accent" onClick={() => setOffset(value => value + 10)}>{zh ? "下一页" : "Next"}</button> : null}</div>
+    </div> : null}</div>;
 }
 
 function DuplicateLocations({ item, query }: { item: SearchResultItem; query: string }) {
@@ -92,5 +116,5 @@ function Highlight({ text, query }: { text: string; query: string }) {
 }
 function clean(value: string): string { return value.replace(/^\s*(?:user|assistant|prompt|response)\s+/i, "").replace(/(^|\s)>\s*/g, "$1").replace(/\s+/g, " ").trim(); }
 function documentLabel(value: string, locale: "zh-CN" | "en-US"): string { const labels: Record<string, [string, string]> = { conversation: ["标题", "Title"], message: ["正文", "Message"], heading: ["章节", "Section"], code: ["代码", "Code"], annotation: ["批注", "Annotation"], notebook: ["笔记", "Notebook"], description: ["简介", "Description"], attachment: ["附件", "Attachment"] }; const label = labels[value]; return label ? label[locale === "zh-CN" ? 0 : 1] : value; }
-function groupLabel(value: string, locale: "zh-CN" | "en-US"): string { const labels: Record<string, [string, string]> = { annotation: ["批注结果", "Annotation results"], notebook: ["笔记结果", "Notebook results"], description: ["简介结果", "Description results"], conversation: ["对话结果", "Conversation results"], attachment: ["附件结果", "Attachment results"] }; return (labels[value] ?? ["正文结果", "Content results"])[locale === "zh-CN" ? 0 : 1]; }
+
 function roleLabel(value: string, locale: "zh-CN" | "en-US"): string { return value === "user" ? (locale === "zh-CN" ? "用户" : "User") : value === "assistant" ? "ChatGPT" : value; }

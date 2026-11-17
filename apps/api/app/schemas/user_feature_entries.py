@@ -33,6 +33,7 @@ class SavedSearchValue(BaseModel):
     date_from: date | None = None
     date_to: date | None = None
     tag_id: uuid.UUID | None = None
+    sort: Literal["relevance", "content_updated", "imported"] = "relevance"
 
     @field_validator("name", "q", mode="before")
     @classmethod

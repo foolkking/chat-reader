@@ -53,6 +53,7 @@ export type UserFeatureCollection = "saved-search" | "export-preset" | "reading-
 export type SavedSearchValue = {
   name: string;
   q: string;
+  sort?: "relevance" | "content_updated" | "imported";
   document_type: "all" | "conversation" | "message" | "heading" | "code" | "annotation" | "attachment" | "notebook" | "description";
   role: "all" | "user" | "assistant";
   project_id: string | null;
@@ -1031,6 +1032,7 @@ export type RecentItemInput = {
 };
 
 export type SearchResultItem = {
+  hit_count?: number; project_name?: string | null; conversation_status?: string;
   document_id: string;
   document_type: string;
   conversation_id: string;

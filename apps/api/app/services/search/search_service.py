@@ -1,6 +1,6 @@
 import re
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 
 from sqlalchemy import String, and_, case, cast, func, literal, or_
@@ -45,6 +45,9 @@ class SearchResult:
     annotation_id: uuid.UUID | None = None
     annotation_type: str | None = None
     annotation_color: str | None = None
+    hit_count: int = 1
+    project_name: str | None = None
+    conversation_status: str = "active"
 
 
 @dataclass(frozen=True)
@@ -72,6 +75,9 @@ def search(
     date_to: datetime | None = None,
     tag_id: uuid.UUID | None = None,
     duplicate_of: uuid.UUID | None = None,
+    grouped: bool = False,
+    terms_mode: bool = False,
+    sort: str = "relevance",
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> SearchResultPage:
     normalized_query = query.strip()
@@ -200,6 +206,36 @@ def search(
             base_query = base_query.filter(SearchDocument.created_at <= date_to)
         ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc(), SearchDocument.id.asc())
 
+    terms = query_terms(normalized_query) if grouped or terms_mode else [normalized_query]
+    if grouped or terms_mode:
+        # Title eligibility is restricted to the title document. Messages must
+        # contain all terms in their own text, not in their copied title field.
+        text_match = and_(*(SearchDocument.search_text.ilike(f"%{_escape_like_pattern(term.lower())}%", escape="\\") for term in terms))
+        title_match = and_(SearchDocument.document_type == "conversation", *(
+            SearchDocument.title.ilike(f"%{_escape_like_pattern(term.lower())}%", escape="\\") for term in terms))
+        exact_title = and_(SearchDocument.document_type == "conversation", func.lower(SearchDocument.title) == " ".join(terms).lower())
+        rank_expr = case((exact_title, 100.0), (title_match, 80.0),
+                         (SearchDocument.document_type == "conversation", 10.0), else_=20.0)
+        if db.get_bind().dialect.name == "postgresql":
+            # Normalize to [0, 1): content relevance breaks ties without
+            # overruling a title match or rewarding the number of documents.
+            rank_expr = rank_expr + func.coalesce(func.ts_rank_cd(
+                SearchDocument.search_tsv, func.plainto_tsquery("simple", " ".join(terms)), 32), 0.0)
+        ordered_query = db.query(SearchDocument).join(Conversation, Conversation.id == SearchDocument.conversation_id).filter(
+            ownership_scope.predicate(Conversation), Conversation.deleted_at.is_(None),
+            _status_filter(status_scope), or_(text_match, title_match))
+        if conversation_id is not None:
+            ordered_query = ordered_query.filter(Conversation.id == conversation_id)
+        if project_id is not None:
+            ordered_query = ordered_query.join(ProjectConversation, ProjectConversation.conversation_id == Conversation.id).filter(ProjectConversation.project_id == project_id)
+        if document_type is not None:
+            ordered_query = ordered_query.filter(SearchDocument.document_type == document_type)
+        if role is not None:
+            ordered_query = ordered_query.filter(SearchDocument.role == role)
+        if date_from is not None:
+            ordered_query = ordered_query.filter(SearchDocument.created_at >= date_from)
+        if date_to is not None:
+            ordered_query = ordered_query.filter(SearchDocument.created_at <= date_to)
     if tag_id is not None:
         subject = str(ownership_scope.owner_user_id) if ownership_scope.owner_user_id else "local:default"
         tag = db.query(UserFeatureEntry).filter(
@@ -227,11 +263,12 @@ def search(
     # Group metadata in SQL; only page bodies enter Python. The representative
     # uses exactly the existing rank/date/order/id tie-breaks.
     folded = and_(
-        literal(conversation_id is None and duplicate_of is None),
+        literal(not grouped and not terms_mode and conversation_id is None and duplicate_of is None),
         SearchDocument.document_type == "message",
         Message.content_hash.is_not(None), Message.content_hash != "",
     )
-    group_key = case((folded, Message.content_hash), else_=cast(SearchDocument.id, String))
+    group_key = cast(SearchDocument.conversation_id, String) if grouped else case((folded, Message.content_hash), else_=cast(SearchDocument.id, String))
+    group_type = literal("conversation") if grouped else SearchDocument.document_type
     ordering = [rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc(), SearchDocument.id.asc()]
     ranked = ordered_query.order_by(None).with_entities(
         SearchDocument.id.label("document_id"),
@@ -241,20 +278,24 @@ def search(
         Conversation.display_title.label("conversation_title"),
         rank_expr.label("rank"),
         SearchDocument.created_at, SearchDocument.order_key, group_key.label("group_key"),
-        func.row_number().over(partition_by=[SearchDocument.document_type, group_key], order_by=ordering).label("position"),
+        group_type.label("group_type"),
+        Conversation.imported_at.label("imported_at"),
+        func.coalesce(Conversation.sort_time, Conversation.imported_at).label("content_updated"),
+        func.row_number().over(partition_by=[group_type, group_key], order_by=ordering).label("position"),
     ).subquery()
     counts = db.query(
-        ranked.c.document_type, ranked.c.group_key,
-        func.count(func.distinct(ranked.c.conversation_id)).label("occurrences"),
-    ).group_by(ranked.c.document_type, ranked.c.group_key).subquery()
+        ranked.c.group_type, ranked.c.group_key,
+        (func.count() if grouped else func.count(func.distinct(ranked.c.conversation_id))).label("occurrences"),
+    ).group_by(ranked.c.group_type, ranked.c.group_key).subquery()
     representatives = db.query(ranked).filter(ranked.c.position == 1)
     total = representatives.count()
     page_rows = representatives.join(counts, and_(
-        counts.c.document_type == ranked.c.document_type, counts.c.group_key == ranked.c.group_key,
+        counts.c.group_type == ranked.c.group_type, counts.c.group_key == ranked.c.group_key,
     )).with_entities(
         ranked.c.document_id, ranked.c.document_type, ranked.c.conversation_id, ranked.c.message_id,
         ranked.c.conversation_title, ranked.c.rank, counts.c.occurrences,
     ).order_by(
+        *([ranked.c.imported_at.desc()] if sort == "imported" else [ranked.c.content_updated.desc()] if sort == "content_updated" else []),
         ranked.c.rank.desc(), ranked.c.created_at.desc(), ranked.c.order_key.asc(), ranked.c.document_id.asc(),
     ).offset(offset).limit(limit).all()
     documents = {
@@ -282,7 +323,7 @@ def search(
         _build_search_result(
             document,
             conversation_title=conversation_title,
-            normalized_query=normalized_query,
+            normalized_query=terms[0] if grouped or terms_mode else normalized_query,
             rank=rank,
             occurrence_count=occurrence_count,
             block_texts_by_version=block_texts_by_version,
@@ -291,8 +332,24 @@ def search(
         for document_id, _, _, _, conversation_title, rank, occurrence_count in page_rows
         if (document := documents.get(document_id)) is not None
     ]
+    if grouped:
+        metadata = {row.id: (row.status, row.name) for row in db.query(Conversation.id, Conversation.status, Project.name)
+                    .outerjoin(ProjectConversation, ProjectConversation.conversation_id == Conversation.id)
+                    .outerjoin(Project, and_(Project.id == ProjectConversation.project_id, Project.is_default.is_(False)))
+                    .filter(Conversation.id.in_([item.conversation_id for item in items])).all()}
+        items = [replace(item, hit_count=item.occurrence_count, occurrence_count=1,
+                         conversation_status=metadata[item.conversation_id][0], project_name=metadata[item.conversation_id][1]) for item in items]
     return SearchResultPage(query=normalized_query, items=items, limit=limit, offset=offset, total=total, has_more=offset + len(items) < total)
 
+
+def query_terms(query: str) -> list[str]:
+    """Whitespace AND, quoted phrases, literal punctuation (no wildcard syntax)."""
+    terms = [match.group(1) if match.group(1) is not None else match.group(2)
+             for match in re.finditer(r'"([^"]+)"|(\S+)', query)]
+    terms = list(dict.fromkeys(term for term in terms if term))
+    if not terms or len(terms) > 20 or len(query) > 500:
+        raise SearchServiceError("Use 1–20 search terms within 500 characters.")
+    return terms
 
 def _status_filter(status_scope: str):
     if status_scope == "archived":

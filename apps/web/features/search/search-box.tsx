@@ -9,6 +9,7 @@ export function SearchBox({ initialQuery = "", onSearch, hasResults = false, onM
   const [query, setQuery] = useState(initialQuery);
   const [keyboardSelection, setKeyboardSelection] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const composing = useRef(false);
   useEffect(() => { setQuery(initialQuery); setKeyboardSelection(false); }, [initialQuery]);
   useEffect(() => {
     const focus = () => inputRef.current?.focus();
@@ -26,9 +27,9 @@ export function SearchBox({ initialQuery = "", onSearch, hasResults = false, onM
     };
   }, []);
   const zh = resolvedLocale === "zh-CN";
-  return <form className="flex gap-2 rounded-xl border border-ui bg-surface p-2" onSubmit={(event) => { event.preventDefault(); setKeyboardSelection(false); onSearch(query.trim()); }}>
+  return <form className="flex gap-2 rounded-xl border border-ui bg-surface p-2" onSubmit={(event) => { event.preventDefault(); if (composing.current) return; setKeyboardSelection(false); onSearch(query.trim()); }}>
     <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-secondary" />
-      <input ref={inputRef} value={query} onChange={(event) => { setQuery(event.target.value); setKeyboardSelection(false); }} onKeyDown={(event) => {
+      <input ref={inputRef} value={query} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }} onChange={(event) => { setQuery(event.target.value); setKeyboardSelection(false); }} onKeyDown={(event) => {
         if (event.nativeEvent.isComposing || event.keyCode === 229) return;
         if (hasResults && query.trim() === initialQuery.trim()) {
           if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setKeyboardSelection(true); onMoveSelection?.(event.key === "ArrowDown" ? 1 : -1); }

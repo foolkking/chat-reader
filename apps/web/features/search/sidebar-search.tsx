@@ -8,30 +8,35 @@ import { searchConversations } from "../../lib/api";
 import { usePreferences } from "../../components/preferences-provider";
 import { searchResultHref } from "./search-result-target";
 
-export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarSearch({ onNavigate, currentProjectId }: { onNavigate?: () => void; currentProjectId?: string | null }) {
   const router = useRouter();
   const { resolvedLocale } = usePreferences();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [composing, setComposing] = useState(false);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
+  const [projectOnly, setProjectOnly] = useState(false);
+  const projectId = projectOnly ? currentProjectId ?? undefined : undefined;
+  const resultsHref = `/search?${new URLSearchParams({ q: query.trim(), ...(projectId ? { project_id: projectId } : {}) })}`;
   const labels = resolvedLocale === "zh-CN"
     ? { placeholder: "搜索标题和消息内容", all: "查看全部结果", empty: "没有匹配结果" }
     : { placeholder: "Search titles and messages", all: "View all results", empty: "No matching results" };
 
   useEffect(() => {
+    if (composing) return;
     const timer = window.setTimeout(() => setDebounced(query.trim()), 250);
     return () => window.clearTimeout(timer);
-  }, [query]);
+  }, [query, composing]);
   useEffect(() => {
     const focus = () => inputRef.current?.focus();
     window.addEventListener("chat-reader:focus-global-search", focus);
     return () => window.removeEventListener("chat-reader:focus-global-search", focus);
   }, []);
   const result = useQuery({
-    queryKey: ["sidebar-search", debounced],
-    queryFn: () => searchConversations({ q: debounced, limit: 8 }),
-    enabled: debounced.length > 0,
+    queryKey: ["sidebar-search", debounced, projectId],
+    queryFn: ({ signal }) => searchConversations({ q: debounced, projectId, limit: 8, grouped: true, signal }),
+    enabled: !composing && debounced.length > 0,
     staleTime: 15_000,
   });
   const currentResults = query.trim() === debounced;
@@ -39,7 +44,7 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
   // Keep an explicit selection attached to its document across same-query
   // refreshes. A removed result must not silently select its replacement.
   const activeIndex = activeDocumentId === null
-    ? (items.length ? 0 : -1)
+    ? -1
     : items.findIndex((item) => item.document_id === activeDocumentId);
   const selectIndex = (index: number) => {
     const item = items[index];
@@ -58,6 +63,8 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
       <input
         ref={inputRef}
         value={query}
+        onCompositionStart={() => setComposing(true)}
+        onCompositionEnd={() => setComposing(false)}
         onChange={(event) => { setQuery(event.target.value); setActiveDocumentId(null); }}
         onKeyDown={(event) => {
           if (event.nativeEvent.isComposing || event.keyCode === 229) return;
@@ -66,7 +73,7 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
           if (event.key === "Enter") {
             event.preventDefault();
             if (activeIndex >= 0) openResult(activeIndex);
-            else { onNavigate?.(); router.push(`/search?q=${encodeURIComponent(query.trim())}`); }
+            else { onNavigate?.(); router.push(resultsHref); }
           }
           if (event.key === "Escape") { setQuery(""); inputRef.current?.blur(); }
         }}
@@ -76,10 +83,16 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
         data-testid="sidebar-global-search"
       />
       {query ? <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus(); }} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={resolvedLocale === "zh-CN" ? "清除搜索" : "Clear search"}><X className="h-3.5 w-3.5" /></button> : null}
-      {query.trim() ? (
-         <div className="absolute inset-x-0 top-11 z-40 overflow-hidden rounded-lg border border-ui bg-raised shadow-xl">
+      <label className="mt-1 flex items-center gap-1 text-xs text-secondary">{resolvedLocale === "zh-CN" ? "范围：" : "Scope: "}
+        <select aria-label={resolvedLocale === "zh-CN" ? "搜索范围" : "Search scope"} value={projectId ? "project" : "all"} className="min-h-11 min-w-0 rounded border border-ui bg-surface px-2" onChange={event => { setProjectOnly(event.target.value === "project"); setActiveDocumentId(null); }}>
+          <option value="all">{resolvedLocale === "zh-CN" ? "全部对话" : "All conversations"}</option>
+          {currentProjectId ? <option value="project">{resolvedLocale === "zh-CN" ? "当前项目" : "Current project"}</option> : null}
+        </select>
+      </label>
+      {query.trim() && !composing ? (
+         <div className="absolute inset-x-0 top-full z-40 overflow-hidden rounded-lg border border-ui bg-raised shadow-xl">
            {items.map((item, index) => (
-             <button key={item.document_id} type="button" onMouseEnter={() => selectIndex(index)} onClick={() => openResult(index)} className={`block w-full px-3 py-2 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
+             <button key={item.document_id} type="button" onClick={() => openResult(index)} className={`block w-full px-3 py-2 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
                <span className="block truncate text-sm font-medium text-primary">{item.document_type === "attachment" ? (item.attachment_display_name ?? item.conversation_title) : item.conversation_title}</span>
                <span className="mt-0.5 block truncate text-xs text-secondary">{item.snippet}</span>
             </button>
@@ -87,7 +100,7 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
           {currentResults && !result.isError && !result.isFetching && items.length === 0 ? <p className="px-3 py-3 text-sm text-secondary">{labels.empty}</p> : null}
           {(!currentResults || result.isFetching) ? <p role="status" className="p-3 text-sm text-secondary">{resolvedLocale === "zh-CN" ? "正在搜索…" : "Searching…"}</p> : null}
           {currentResults && result.isError ? <div role="alert" className="px-3 py-2 text-sm text-[var(--danger)]"><p>{resolvedLocale === "zh-CN" ? "搜索暂不可用" : "Search unavailable"}</p><button type="button" disabled={result.isFetching} className="min-h-10 underline" onClick={() => void result.refetch()}>{resolvedLocale === "zh-CN" ? "重试" : "Retry"}</button></div> : null}
-          <button type="button" onClick={() => { onNavigate?.(); router.push(`/search?q=${encodeURIComponent(query.trim())}`); }} className="flex min-h-10 w-full items-center justify-center border-t border-ui px-3 text-sm font-medium text-accent hover:bg-subtle">{labels.all}</button>
+          <button type="button" onClick={() => { onNavigate?.(); router.push(resultsHref); }} className="flex min-h-10 w-full items-center justify-center border-t border-ui px-3 text-sm font-medium text-accent hover:bg-subtle">{labels.all}</button>
         </div>
       ) : null}
     </div>

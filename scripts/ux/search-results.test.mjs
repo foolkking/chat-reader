@@ -31,7 +31,7 @@ new Function("require", "exports", compile("features/search/search-results.tsx")
   return stubs[name];
 }, exports);
 
-test("global result ordering and rendered groups include the attachment in the keyboard candidate list", () => {
+test("global result ordering retains server relevance including attachments in keyboard candidates", () => {
   const base = { conversation_id: "synthetic-conversation", conversation_title: "Synthetic conversation",
     message_id: null, role: null, order_key: null, block_index: null, character_offset: null,
     rank: 1, source_profile: null, occurrence_count: 1, matches: [] };
@@ -39,12 +39,12 @@ test("global result ordering and rendered groups include the attachment in the k
     attachment_id: "synthetic-attachment", attachment_display_name: "Synthetic report.txt", snippet: "😀 prefix needle" };
   const body = { ...base, document_id: "synthetic-body-document", document_type: "message", snippet: "Synthetic body" };
   const ordered = exports.orderSearchResults([attachment, body]);
-  assert.deepEqual(ordered.map(item => item.document_id), [body.document_id, attachment.document_id]);
-  const html = renderToStaticMarkup(jsx.jsx(exports.SearchResults, { items: ordered, query: "needle", activeIndex: 1 }));
-  assert.match(html, /Attachment results/);
+  assert.deepEqual(ordered.map(item => item.document_id), [attachment.document_id, body.document_id]);
+  const html = renderToStaticMarkup(jsx.jsx(exports.SearchResults, { items: ordered, query: "needle", activeIndex: 0 }));
+  assert.match(html, /Attachment/);
   assert.match(html, /Synthetic report\.txt/);
   assert.match(html, /attachmentId=synthetic-attachment/);
-  assert.match(html, /data-search-index="1" aria-current="true"/);
+  assert.match(html, /data-search-index="0" aria-current="true"/);
   assert.match(html, /<mark[^>]*>needle<\/mark>/);
 });
 
@@ -69,22 +69,22 @@ test("a newly grouped row under a stationary pointer cannot replace the selected
   render([message]);
   const items = exports.orderSearchResults([message, annotation]);
   let tree = render(items);
-  const row = walk(tree).find(node => node.type === "div" && node.props.onMouseMove);
+  const row = walk(tree).filter(node => node.type === "div" && node.props.onMouseMove)[1];
   assert.ok(row);
   assert.equal(row.props.onMouseEnter, undefined, "layout-driven boundary entry must not claim pointer intent");
   row.props.onMouseMove({ movementX: 0, movementY: 0 });
   assert.deepEqual(changes, []);
   assert.equal(selectedId, message.document_id);
   const selectedLink = walk(tree).find(node => node.props["aria-current"] === "true");
-  assert.equal(selectedLink.props["data-search-index"], 1);
+  assert.equal(selectedLink.props["data-search-index"], 0);
   assert.equal(selectedLink.props.href, target.searchResultHref(message));
 
   row.props.onMouseMove({ movementX: 1, movementY: 0 });
   assert.equal(selectedId, annotation.document_id, "real horizontal movement still selects the hovered result");
-  assert.deepEqual(changes, [0]);
+  assert.deepEqual(changes, [1]);
   tree = render(items);
   const rows = walk(tree).filter(node => node.type === "div" && node.props.onMouseMove);
-  rows[1].props.onMouseMove({ movementX: 0, movementY: -1 });
+  rows[0].props.onMouseMove({ movementX: 0, movementY: -1 });
   assert.equal(selectedId, message.document_id, "real vertical movement still selects the hovered result");
-  assert.deepEqual(changes, [0, 1]);
+  assert.deepEqual(changes, [1, 0]);
 });

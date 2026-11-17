@@ -103,7 +103,7 @@ function fixture({ locale = "en-US" } = {}) {
     hover: documentId => {
       const row = walk(tree).find(node => node.type === "button" && node.key === documentId);
       assert.ok(row, "Hovered result must exist");
-      row.props.onMouseEnter(); render();
+      row.props.onMouseEnter?.(); render();
     },
     selected: () => walk(tree).filter(node => node.type === "button"
       && /(?:^|\s)bg-subtle(?:\s|$)/.test(node.props.className ?? "")).map(node => node.key),
@@ -112,29 +112,27 @@ function fixture({ locale = "en-US" } = {}) {
 }
 
 for (const locale of ["en-US", "zh-CN"]) {
-  test(`${locale}: unselected quick search keeps its first-result Enter behavior and target parameters`, () => {
+  test(`${locale}: unselected quick search Enter opens the complete results`, () => {
     const f = fixture({ locale });
     try {
       f.type("synthetic"); f.key("Enter");
       const target = new URL(f.navigation[0], "https://example.invalid");
-      assert.equal(target.pathname, "/conversations/" + A.conversation_id);
-      assert.equal(target.searchParams.get("messageId"), A.message_id);
-      assert.equal(target.searchParams.get("blockIndex"), "3");
-      assert.equal(target.searchParams.get("characterOffset"), "17");
+      assert.equal(target.pathname, "/search");
+      assert.equal(target.searchParams.get("q"), "synthetic");
       assert.equal(f.navigateCount, 1);
     } finally { f.dispose(); }
   });
   for (const method of ["keyboard", "pointer"]) {
-    test(`${locale}: ${method} selection follows document identity through same-query reorder`, () => {
+    test(`${locale}: ${method} only deliberate keyboard selection controls Enter through reorder`, () => {
       const f = fixture({ locale });
       try {
         f.type("synthetic");
-        if (method === "keyboard") f.key("ArrowDown");
+        if (method === "keyboard") { f.key("ArrowDown"); f.key("ArrowDown"); }
         else f.hover(B.document_id);
         f.setItems([B, A]);
-        assert.deepEqual(f.selected(), [B.document_id]);
+        assert.deepEqual(f.selected(), method === "keyboard" ? [B.document_id] : []);
         f.key("Enter");
-        assert.ok(f.navigation[0].startsWith("/conversations/" + B.conversation_id + "?"));
+        assert.ok(method === "keyboard" ? f.navigation[0].startsWith("/conversations/" + B.conversation_id + "?") : f.navigation[0] === "/search?q=synthetic");
       } finally { f.dispose(); }
     });
   }
@@ -143,7 +141,7 @@ for (const locale of ["en-US", "zh-CN"]) {
 test("a removed deliberate selection opens all results, never the replacement document", () => {
   const f = fixture();
   try {
-    f.type("synthetic"); f.key("ArrowDown");
+    f.type("synthetic"); f.key("ArrowDown"); f.key("ArrowDown");
     f.setItems([A]);
     assert.deepEqual(f.selected(), []);
     f.key("Enter");
@@ -154,7 +152,7 @@ for (const arrow of ["ArrowDown", "ArrowUp"]) {
   test(`${arrow} restarts from a visible row after an eight-to-two result shrink`, () => {
     const f = fixture(), rows = Array.from({ length: 8 }, (_, index) => item(String(index)));
     try {
-      f.setItems(rows); f.type("synthetic"); f.hover(rows[7].document_id);
+      f.setItems(rows); f.type("synthetic"); for (let index = 0; index < 8; index++) f.key("ArrowDown");
       f.setItems(rows.slice(0, 2)); f.key(arrow);
       assert.deepEqual(f.selected(), [rows[0].document_id]);
       f.key("Enter");
@@ -168,7 +166,7 @@ test("typing a new query clears selection and cannot open the previous debounced
     f.type("synthetic"); f.key("ArrowDown");
     f.type("different", { settle: false }); f.key("Enter");
     assert.deepEqual(f.navigation, ["/search?q=different"]);
-    f.type("different"); assert.deepEqual(f.selected(), [A.document_id]);
+    f.type("different"); assert.deepEqual(f.selected(), []);
   } finally { f.dispose(); }
 });
 test("IME confirmation and composition key codes cannot navigate or change selection", () => {
@@ -177,7 +175,7 @@ test("IME confirmation and composition key codes cannot navigate or change selec
     f.type("synthetic");
     f.key("ArrowDown", { nativeEvent: { isComposing: true } });
     f.key("Enter", { keyCode: 229 });
-    assert.deepEqual(f.selected(), [A.document_id]);
+    assert.deepEqual(f.selected(), []);
     assert.deepEqual(f.navigation, []);
   } finally { f.dispose(); }
 });
@@ -185,7 +183,7 @@ test("annotation quick results retain their existing destination parameters", ()
   const f = fixture();
   try {
     f.setItems([{ ...A, document_type: "annotation", annotation_id: "synthetic-annotation" }]);
-    f.type("synthetic"); f.key("Enter");
+    f.type("synthetic"); f.key("ArrowDown"); f.key("Enter");
     const target = new URL(f.navigation[0], "https://example.invalid");
     assert.equal(target.searchParams.get("annotations"), "open");
     assert.equal(target.searchParams.get("annotationId"), "synthetic-annotation");

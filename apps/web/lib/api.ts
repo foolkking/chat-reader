@@ -1155,6 +1155,7 @@ export async function getRecentItems(): Promise<RecentItemRead[]> {
 
 export async function searchConversations(input: {
   q: string;
+  grouped?: boolean; termsMode?: boolean; sort?: "relevance" | "content_updated" | "imported";
   limit?: number;
   offset?: number;
   conversationId?: string;
@@ -1190,7 +1191,9 @@ export async function searchConversations(input: {
   if (input.dateTo) params.set("date_to", input.dateTo);
   if (input.tagId) params.set("tag_id", input.tagId);
   if (input.duplicateOf) params.set("duplicate_of", input.duplicateOf);
-  return fetchJson<SearchResponse>(`/api/search?${params.toString()}`, { signal: input.signal });
+  if (input.termsMode) params.set("terms_mode", "true");
+  if (input.sort) params.set("sort", input.sort);
+  return fetchJson<SearchResponse>(`/api/search${input.grouped ? "/conversations" : ""}?${params.toString()}`, { signal: input.signal });
 }
 
 export async function reindexSearch(input: { conversationId?: string } = {}): Promise<SearchReindexResponse> {
