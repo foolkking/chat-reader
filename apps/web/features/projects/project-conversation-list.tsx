@@ -549,7 +549,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                       </div>
                       <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
                         <div className="min-w-0">
-                          {sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback) ? <p className="text-xs text-secondary" title={fullActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}>{sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback)} · {formatActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}</p> : null}
+                          {sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback) ? <p className="text-xs text-secondary" title={fullActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale, conversationSortMode)}>{sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback)} · {formatActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale, undefined, conversationSortMode)}</p> : null}
                           <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                         </div>
                         {!selectionMode ? <ConversationActionMenu conversation={conversation} placement={placement} projectId={projectId} projectPinned={conversation.project_relation.is_pinned} onChanged={refreshProject} onUndo={setUndo} ordering={{

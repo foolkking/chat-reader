@@ -654,7 +654,7 @@ export function ConversationList({
               </div>
               <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
                 <div className="min-w-0">
-                  {sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback) ? <p className="text-xs text-secondary" title={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}>{sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback)} · {formatActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}</p> : null}
+                  {sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback) ? <p className="text-xs text-secondary" title={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale, conversationSortMode)}>{sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback)} · {formatActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale, undefined, conversationSortMode)}</p> : null}
                   <p className="mt-1 text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                 </div>
                 {!selectionMode ? <ConversationActionMenu conversation={conversation} placement={placement} onChanged={refreshLists} onUndo={setUndo} ordering={{

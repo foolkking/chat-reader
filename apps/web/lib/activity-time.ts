@@ -8,8 +8,8 @@ export function sortTimeLabel(mode: string, locale: ResolvedLocale, importedFall
   return labels[mode]?.[locale === "zh-CN" ? 0 : 1] ?? "";
 }
 
-export function formatActivityTime(value: string | null | undefined, locale: ResolvedLocale, now = new Date()): string {
-  if (!value) return locale === "zh-CN" ? "尚未阅读" : "Not read yet";
+export function formatActivityTime(value: string | null | undefined, locale: ResolvedLocale, now = new Date(), mode = "recent_read"): string {
+  if (!value) return missingActivityTime(locale, mode);
   const date = new Date(value);
   const diff = Math.max(0, now.getTime() - date.getTime());
   const minutes = Math.floor(diff / 60_000);
@@ -28,9 +28,14 @@ export function formatActivityTime(value: string | null | undefined, locale: Res
   return new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" }).format(date);
 }
 
-export function fullActivityTime(value: string | null | undefined, locale: ResolvedLocale): string {
-  if (!value) return locale === "zh-CN" ? "尚未阅读" : "Not read yet";
+export function fullActivityTime(value: string | null | undefined, locale: ResolvedLocale, mode = "recent_read"): string {
+  if (!value) return missingActivityTime(locale, mode);
   return new Intl.DateTimeFormat(locale, { dateStyle: "full", timeStyle: "medium" }).format(new Date(value));
+}
+
+function missingActivityTime(locale: ResolvedLocale, mode: string): string {
+  if (mode === "recent_read") return locale === "zh-CN" ? "尚未阅读" : "Not read yet";
+  return locale === "zh-CN" ? "未记录" : "Not recorded";
 }
 
 function isSameDay(left: Date, right: Date): boolean {

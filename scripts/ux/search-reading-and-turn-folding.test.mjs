@@ -62,9 +62,31 @@ test("queue storage is account-isolated and returning accepts only bounded searc
   assert.equal(queueModule.sanitizeSearchReturnHref(returnHref), returnHref);
   const base = { version: 1, createdAt: 100, hrefs: ["/conversations/c?messageId=a", "/conversations/c?messageId=b"] };
   assert.equal(queueModule.parseSearchReadingQueue({ ...base, returnHref }, 100).returnHref, returnHref);
-  for (const invalid of ["//evil.example/search", "/searching?q=x", "/search?q=a&q=b", "/search?token=x", "/search#x"]) {
+  for (const sort of ["relevance", "content_updated", "imported"]) {
+    const sortedHref = `${returnHref}&sort=${sort}`;
+    assert.equal(queueModule.parseSearchReadingQueue({ ...base, returnHref: sortedHref }, 100).returnHref, sortedHref);
+  }
+  for (const invalid of ["//evil.example/search", "/searching?q=x", "/search?q=a&q=b", "/search?token=x", "/search#x",
+    "/search?sort=unknown", "/search?sort=imported&sort=relevance"]) {
     assert.equal(queueModule.sanitizeSearchReturnHref(invalid), null, invalid);
     assert.equal(queueModule.parseSearchReadingQueue({ ...base, returnHref: invalid }, 100), null, invalid);
+  }
+});
+
+test("missing sort timestamps never imply unread outside the reading view", async () => {
+  const time = (await loadTableFixtureModule("../../apps/web/lib/activity-time.ts")).module;
+  for (const locale of ["zh-CN", "en-US"]) {
+    const missing = locale === "zh-CN" ? "未记录" : "Not recorded";
+    const unread = locale === "zh-CN" ? "尚未阅读" : "Not read yet";
+    for (const mode of ["created", "updated", "content_updated", "imported"]) {
+      assert.equal(time.formatActivityTime(null, locale, undefined, mode), missing);
+      assert.equal(time.fullActivityTime(null, locale, mode), missing);
+      assert.notEqual(time.sortTimeLabel(mode, locale), "");
+    }
+    assert.equal(time.formatActivityTime(null, locale), unread);
+    assert.equal(time.fullActivityTime(null, locale, "recent_read"), unread);
+    const value = "2026-11-17T01:00:00Z", now = new Date("2026-11-17T01:30:00Z");
+    assert.equal(time.formatActivityTime(value, locale, now, "imported"), time.formatActivityTime(value, locale, now));
   }
 });
 
