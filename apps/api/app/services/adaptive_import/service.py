@@ -920,7 +920,7 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
                 "id": str(group.id), "mode": group.mode, "display_name": group.display_name,
                 "artifact_ids": group.artifact_ids, "grouping_status": group.grouping_status,
                 "family_id": str(group.family_id) if group.family_id else None,
-                "profile_resolution": group.profile_resolution, "diagnostics": group.diagnostics,
+                "profile_resolution": {key: value for key, value in (group.profile_resolution or {}).items() if key != "_source_preview"}, "diagnostics": group.diagnostics,
                 "files": [
                     {"artifact_id": str(artifact.id), "filename": artifact.filename, "extension": artifact.file_extension, "byte_size": artifact.byte_size}
                     for artifact in artifacts if str(artifact.id) in group.artifact_ids
@@ -1340,6 +1340,8 @@ def _prepare_plan(db: Session, record: ImportRecord, *, progress_callback=None) 
                     result = validate_drafts(drafts)
                     if not result["valid"]:
                         raise AdaptiveImportError("IMPORT_PLAN_INVALID", "The canonical import plan failed validation.", layer="validation")
+                    from app.services.adaptive_import.source_preview import save_preview
+                    save_preview(record, group, family, drafts)
                     for draft in drafts:
                         counters["conversation_count"] += 1
                         counters["message_count"] += len(draft.messages)
@@ -1706,14 +1708,18 @@ def session_recovery_status(record: ImportRecord, artifacts=None) -> dict[str, A
             except (OSError, ValueError):
                 pass
     unfinished = record.session_state in {"READY", "RESOLVING", "NEEDS_GROUPING", "FAILED", "COLLECTING", "ANALYZING", "PAUSED"}
-    can_rebuild = sources and draft_status != "ready" and record.session_state in {"READY", "FAILED"} and bool(record.structure_families) and all(
+    # An explicit repair must also be available for a corrupt/missing sidecar.
+    # Listing a batch never reads or rebuilds the sidecar/ZIP.
+    can_rebuild = sources and record.session_state in {"READY", "FAILED"} and bool(record.structure_families) and all(
         family.resolution_status in {"EXACT_MATCH", "COMPATIBLE"} for family in record.structure_families
     )
     return {
         "source_available": sources, "source_status": "available" if sources else "missing",
         "draft_status": draft_status,
         "can_import": sources and record.session_state == "READY" and draft_status == "ready",
-        "allowed_actions": (["resume"] if unfinished else []) + (["rebuild_preview"] if can_rebuild else []),
+        "allowed_actions": (["resume", "view_sources"] if unfinished else []) + (["rebuild_preview"] if can_rebuild else [])
+        + (["stop_retain"] if record.session_state in {"COLLECTING", "ANALYZING"} else [])
+        + (["discard"] if unfinished and record.status not in {"queued", "processing", "committed"} and record.committed_at is None and record.conversation_id is None else []),
     }
 
 

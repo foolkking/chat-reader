@@ -1,12 +1,12 @@
 "use client";
 
-import { importErrorMessage, importFailureMessage, importWarningMessage, importStateLabel, useImportCopy, type ImportCopy } from "./import-workspace-copy";
+import { importErrorMessage, importFailureMessage, importWarningMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, LoaderCircle, ScanSearch, UploadCloud, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent } from "react";
-import { ApiRequestError, cancelAdaptiveImportSession, cancelTask, commitImport, excludeAdaptiveImportSource, getAdaptiveImportSession, getImportStatus, getProjects, previewImport, replaceAdaptiveImportArtifact, resumeAdaptiveImportSession, retryTask, updateAdaptiveImportDestination } from "../../lib/api";
+import { ApiRequestError, cancelTask, commitImport, excludeAdaptiveImportSource, getAdaptiveImportSession, getImportStatus, getProjects, previewImport, replaceAdaptiveImportArtifact, resumeAdaptiveImportSession, retryTask, updateAdaptiveImportDestination } from "../../lib/api";
 import type { AdaptiveImportSession, CommitImportResponse, ImportDuplicatePolicy, ImportPreviewResponse } from "../../lib/types";
 import { readAccountCapabilities } from "../../lib/auth-client";
 import { authenticationGeneration } from "../../lib/offline-access";
@@ -22,6 +22,7 @@ import { getActiveOfflineStorageContext } from "../../lib/offline-db";
 import { measureImportImageLane } from "./image-import-lane";
 import { useImportUpload } from "./use-import-upload";
 import { ImportUploadFeedback } from "./import-upload-feedback";
+import { ImportDisposition } from "./import-batch-manager";
 
 type ImportMode = "adaptive" | "archive";
 type ImportSessionRestoreState = {
@@ -61,7 +62,7 @@ export function ImportPanel({
   onMappingStateChange?: (state: { dirty: boolean; busy: boolean; background?: boolean }) => void;
 } = {}) {
   const tr = useImportCopy();
-  const { resolvedLocale, readerWidthMode, sectionTocMode } = usePreferences();
+  const { resolvedLocale, readerWidthMode, sectionTocMode, projectSortMode = "custom", projectSortDirection = "asc" } = usePreferences();
   const [imageLaneWidth, setImageLaneWidth] = useState<number | null>(null);
   const importLaneSnapshots = useRef(new Map<string, number>());
   useEffect(() => {
@@ -86,8 +87,8 @@ export function ImportPanel({
   }, []);
   const capabilities = useQuery({ queryKey: ["account-capabilities"], queryFn: ({ signal }) => readAccountCapabilities(signal), staleTime: 0, refetchOnWindowFocus: true });
   const projects = useQuery({
-    queryKey: ["projects", "custom", "asc"],
-    queryFn: ({ signal }) => getProjects({ sort: "custom", direction: "asc" }, signal),
+    queryKey: ["projects", projectSortMode, projectSortDirection],
+    queryFn: ({ signal }) => getProjects({ sort: projectSortMode, direction: projectSortDirection }, signal),
     staleTime: 60_000,
   });
   const router = useRouter();
@@ -103,7 +104,7 @@ export function ImportPanel({
   const [targetProjectId, setTargetProjectId] = useState<string | null>(initialProjectId);
   const [sessionRestore, setSessionRestore] = useState<ImportSessionRestoreState>({ phase: "idle", error: null });
   const [sessionRestoreRetry, setSessionRestoreRetry] = useState(0);
-  const [unfinishedOffset, setUnfinishedOffset] = useState(0);
+  const unfinishedOffset = 0;
   const unfinished = useQuery({
     queryKey: ["unfinished-imports", generation.current, unfinishedOffset],
     queryFn: ({ signal }) => getUnfinishedImports(unfinishedOffset, signal),
@@ -163,7 +164,6 @@ export function ImportPanel({
   const targetSessionRef = useRef<string | null>(null);
   const activeSessionKey = sessionStorageKey(repairProfileId);
   const [savedImportId, setSavedImportId] = useState<string | null>(null);
-  const [discardConfirm, setDiscardConfirm] = useState(false);
   const [stopUnconfirmed, setStopUnconfirmed] = useState(false);
   useEffect(() => {
     if (!current()) return;
@@ -222,7 +222,7 @@ export function ImportPanel({
           if (result.status !== "committed") throw new Error("IMPORT_RESULT_UNCONFIRMED");
           setCommitResult(result);
         }
-        if (["COMPLETED", "CANCELED"].includes(restored.state)) {
+        if (restored.state === "COMPLETED" || restored.state === "CANCELED" && restored.source_cleanup?.state === "completed") {
           resumeSessionRef.current = null;
           rememberImport(null);
           setSessionRestore({ phase: "idle", error: null });
@@ -343,16 +343,6 @@ export function ImportPanel({
     setTargetProjectId(intent.targetProjectId ?? null);
     setInputMethod(intent.pastedText === undefined ? "files" : "paste");
   }, [mode, session, upload.receipt?.intent, upload.receipt?.phase]);
-  const cancelMutation = useMutation({
-    mutationFn: cancelAdaptiveImportSession,
-    onMutate: mutationOwner,
-    onSuccess: (_result, _id, owner) => {
-      if (!ownsMutation(owner)) return;
-      rememberImport(null);
-      reset("adaptive");
-      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
-    },
-  });
   const archiveMutation = useMutation({
     mutationFn: previewImport,
     onMutate: mutationOwner,
@@ -547,10 +537,9 @@ export function ImportPanel({
     const state = result.value.state;
     if (stopMutation.isError && ["PAUSED", "CANCELED", "COMPLETED"].includes(state)) stopMutation.reset();
     if (resumeMutation.isError && state !== "PAUSED") resumeMutation.reset();
-    if (cancelMutation.isError && state === "CANCELED") cancelMutation.reset();
     if (retryAnalysisMutation.isError && ["ANALYZING", "READY", "RESOLVING"].includes(state)) retryAnalysisMutation.reset();
   }, [analysisSessionQuery.data, analysisTaskId, current, session?.import_id, stopMutation.isError, stopMutation.reset,
-    resumeMutation.isError, resumeMutation.reset, cancelMutation.isError, cancelMutation.reset, retryAnalysisMutation.isError, retryAnalysisMutation.reset]);
+    resumeMutation.isError, resumeMutation.reset, retryAnalysisMutation.isError, retryAnalysisMutation.reset]);
   const busy = sessionRestore.phase === "loading" || (mode === "adaptive" && upload.locked) || archiveMutation.isPending || commitMutation.isPending || retryImportMutation.isPending || Boolean(pendingImportId);
 
   const validationError = useMemo(() => {
@@ -592,7 +581,6 @@ export function ImportPanel({
     setCheckingCommit(false);
     setCommitCheckError(false);
     setConversionOpen(false);
-    setDiscardConfirm(false);
     setExcludeSourceId(null);
     setWorkspaceEditState({ dirty: false, busy: false });
     setDuplicatePolicy("clone");
@@ -601,7 +589,6 @@ export function ImportPanel({
     commitMutation.reset();
     retryImportMutation.reset();
     retryAnalysisMutation.reset();
-    cancelMutation.reset();
     stopMutation.reset();
     resumeMutation.reset();
     sourceRepairMutation.reset();
@@ -613,6 +600,17 @@ export function ImportPanel({
     reset("adaptive");
     setSessionRestoreRetry(attempt => attempt + 1);
     void queryClient.invalidateQueries({ queryKey: ["unfinished-imports"] });
+  }
+
+  function reconcileDisposition(value: AdaptiveImportSession) {
+    if (!current() || value.import_id !== session?.import_id) return;
+    if (value.state === "CANCELED" && value.source_cleanup?.state === "completed") {
+      rememberImport(null);
+      reset("adaptive");
+    } else if (value.state === "COMPLETED") {
+      // A stop losing the race to canonical commit is not a discarded batch.
+      setPendingImportId(value.import_id);
+    } else setSession(value);
   }
 
   function chooseFiles(nextFiles: File[], nextMode = mode) {
@@ -746,7 +744,7 @@ export function ImportPanel({
           {sourceActions}
           {sourceFeedback}
           {analysisSessionQuery.error ? <ErrorLine message={analysisSessionQuery.error} onRetry={() => { void analysisSessionQuery.refetch(); }} retrying={analysisSessionQuery.isFetching} /> : null}
-          {stopUnconfirmed || stopMutation.error || resumeMutation.error || cancelMutation.error || retryAnalysisMutation.error ? <div role="status" className="space-y-2 border-l-2 border-[var(--warning)] pl-3 text-sm text-secondary">
+          {stopUnconfirmed || stopMutation.error || resumeMutation.error || retryAnalysisMutation.error ? <div role="status" className="space-y-2 border-l-2 border-[var(--warning)] pl-3 text-sm text-secondary">
             <p>{tr(stopUnconfirmed ? "停止尚未确认，不代表已经结束。可以核对状态，或先离开处理其他文件；原任务不会被重复提交。" : "操作结果需要核对。请先读取原任务状态，不要重复提交；来源不会因关闭窗口而删除。")}</p>
             <button type="button" className="btn-secondary min-h-11 px-3" disabled={analysisSessionQuery.isFetching} onClick={() => { void analysisSessionQuery.refetch(); }}>{tr("核对状态")}</button>
           </div> : null}
@@ -756,13 +754,8 @@ export function ImportPanel({
             {session.state === "PAUSED" ? <button type="button" disabled={repairBusy || resumeMutation.isPending || resumeMutation.isError || session.source_status === "missing" || !session.updated_at} className="btn-secondary min-h-11 px-4 text-sm" onClick={() => { if (session.updated_at && !queryClient.getQueryData(sourceRepairKey)) resumeMutation.mutate({ importId: session.import_id, updatedAt: session.updated_at }); }}>{tr(resumeMutation.isPending ? "正在提交…" : "继续分析")}</button> : null}
             {analysisPending && session.state !== "CANCELING" && session.analysis_task_id ? <button type="button" disabled={stopMutation.isPending || stopMutation.isError} className="btn-secondary min-h-11 px-4 text-sm" onClick={() => stopMutation.mutate(session.analysis_task_id!)}>{tr(stopMutation.isPending ? "正在请求停止…" : "停止并保留")}</button> : null}
             <button type="button" className="btn-secondary min-h-11 px-4 text-sm" onClick={leaveRetainedSession}>{tr("返回文件选择")}</button>
-            {!analysisPending && session.state !== "CANCELED" ? <button type="button" disabled={repairBusy} className="min-h-11 px-3 text-sm text-secondary" onClick={() => setDiscardConfirm(true)}>{tr("放弃本次导入…")}</button> : null}
+            <ImportDisposition importId={session.import_id} updatedAt={session.updated_at} taskId={session.analysis_task_id} cleanup={session.source_cleanup} title={session.sources?.map(source => source.filename).join(" · ") ?? ""} canDiscard={session.allowed_actions?.includes("discard")} onChanged={reconcileDisposition} />
           </div>
-          {discardConfirm ? <div className="space-y-2 border-l-2 border-[var(--danger)] pl-3 text-sm">
-            <p>{tr("放弃将删除本次暂存来源和导入草稿。已导入的其他对话不会改变。")}</p>
-            <div className="flex gap-2"><button type="button" className="btn-secondary min-h-11 px-3 text-[var(--danger)]" disabled={cancelMutation.isPending || cancelMutation.isError} onClick={() => cancelMutation.mutate(session.import_id)}>{tr("确认放弃")}</button>
-              <button type="button" className="btn-secondary min-h-11 px-3" onClick={() => setDiscardConfirm(false)}>{tr("保留")}</button></div>
-          </div> : null}
         </section>
       );
     }
@@ -787,6 +780,8 @@ export function ImportPanel({
         {sourceFeedback}
         {commitRecovery}
         {sourceRepairUnknown && analysisSessionQuery.error ? <ErrorLine message={analysisSessionQuery.error} /> : null}
+        <div className="flex flex-wrap items-center gap-2"><ImportDisposition importId={session.import_id} updatedAt={session.updated_at} taskId={session.analysis_task_id} cleanup={session.source_cleanup} title={session.sources?.map(source => source.filename).join(" · ") ?? ""} canDiscard={!pendingImportId && !commitControl && session.allowed_actions?.includes("discard")} onChanged={reconcileDisposition} />
+          <p className="text-xs text-secondary">{zh ? "关闭窗口或重新选择文件会保留本批来源，不等于取消。" : "Closing or selecting another file retains this batch; it does not cancel it."}</p></div>
         <AdaptiveImportWorkspace
           onMappingStateChange={handleMappingStateChange}
           session={session}
@@ -794,7 +789,7 @@ export function ImportPanel({
           onBack={leaveRetainedSession}
           onImport={() => commitMutation.mutate({ importId: session.import_id, policy: duplicatePolicy })}
           importing={repairBusy || commitMutation.isPending || Boolean(pendingImportId)}
-          error={retryImportMutation.error ?? cancelMutation.error ?? (commitControl ? null : commitMutation.error) ?? terminalImportError ?? importStatusQuery.data?.error_message ?? null}
+          error={retryImportMutation.error ?? (commitControl ? null : commitMutation.error) ?? terminalImportError ?? importStatusQuery.data?.error_message ?? null}
           onRetryImport={terminalImportId ? () => retryImportMutation.mutate(terminalImportId) : undefined}
           retryingImport={retryImportMutation.isPending}
           statusError={importStatusQuery.error}
@@ -834,14 +829,10 @@ export function ImportPanel({
             onClick={() => upload.reopen(item.requestId)}>{zh ? "继续核对" : "Resume checking"}</button>
         </li>)}</ul>
       </details> : null}
-      {mode === "adaptive" && (!unfinished.isSuccess || Boolean(unfinished.data?.items?.length) || unfinishedOffset > 0) ? <section className="space-y-2 border-b border-ui pb-3" aria-label={zh ? "待完成导入" : "Unfinished imports"}>
-        <h3 className="text-sm font-semibold text-primary">{zh ? "待完成导入" : "Unfinished imports"}</h3>
-        {unfinished.isPending ? <p role="status" className="text-sm text-secondary">{zh ? "正在读取…" : "Loading…"}</p> : unfinished.error ? <ErrorLine message={unfinished.error} onRetry={() => void unfinished.refetch()} /> : unfinished.data?.items?.length ? <ul className="divide-y divide-[var(--border)]">{unfinished.data.items.map(item => <li key={item.import_id} data-import-session-id={item.import_id} className="flex items-center gap-3 py-2">
-          <div className="min-w-0 flex-1"><p className="truncate text-sm text-primary">{item.title}</p><p className="text-xs text-secondary">{importStateLabel(item.state, zh)} · <time dateTime={item.updated_at} title={new Date(item.updated_at).toLocaleString(zh ? "zh-CN" : "en-US")}>{new Date(item.updated_at).toLocaleString(zh ? "zh-CN" : "en-US", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}</time>{!item.source_available ? (zh ? " · 源文件不可用；仍可查看已保存配置" : " · Source unavailable; saved configuration is readable") : item.draft_status === "expired" ? (zh ? " · 原文件仍保留，预览已过期" : " · Source retained; preview expired") : ""}</p></div>
-          <button type="button" disabled={sessionRestore.phase === "loading"} className="btn-secondary min-h-11 px-3 text-sm disabled:opacity-50" onClick={() => { resumeSessionRef.current = item.import_id; setSessionRestoreRetry(value => value + 1); }}>{zh ? "继续处理" : "Resume"}</button>
-        </li>)}</ul> : <p className="text-sm text-secondary">{zh ? "没有待完成的导入。" : "No unfinished imports."}</p>}
-        <div className="flex gap-3">{unfinishedOffset > 0 ? <button type="button" className="min-h-11 min-w-11 text-sm text-accent" onClick={() => setUnfinishedOffset(value => Math.max(0, value - 20))}>{zh ? "上一页" : "Previous"}</button> : null}{unfinished.data?.has_more ? <button type="button" className="min-h-11 min-w-11 text-sm text-accent" onClick={() => setUnfinishedOffset(value => value + 20)}>{zh ? "下一页" : "Next"}</button> : null}</div>
-      </section> : null}
+      {mode === "adaptive" && (unfinished.data?.total ?? unfinished.data?.items?.length ?? 0) > 0 ? <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ui pb-3">
+        <p className="text-sm text-secondary">{zh ? `有 ${unfinished.data?.total ?? unfinished.data?.items.length} 批导入待处理` : `${unfinished.data?.total ?? unfinished.data?.items.length} pending import batches`}</p>
+        <button type="button" className="btn-secondary min-h-11 px-3 text-sm" onClick={() => { onImportCommitted?.(); window.dispatchEvent(new Event("chat-reader:open-task-center")); }}>{zh ? "查看管理" : "Manage imports"}</button>
+      </div> : unfinished.error ? <ErrorLine message={unfinished.error} onRetry={() => void unfinished.refetch()} /> : null}
       {savedImportId && !unfinished.data?.items?.some(item => item.import_id === savedImportId) ? <button type="button" disabled={sessionRestore.phase === "loading"} className="min-h-11 text-sm text-accent underline" onClick={() => {
         resumeSessionRef.current = savedImportId; setSessionRestoreRetry(attempt => attempt + 1);
       }}>{tr("查看上次保留的导入")}</button> : null}

@@ -120,6 +120,9 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
     "../../components/support-limit-action": { SupportLimitAction: "SupportLimitAction" },
     "./import-preview-card": { ImportPreviewCard: "ImportPreviewCard" },
     "./adaptive-import-workspace": { AdaptiveImportWorkspace: "AdaptiveImportWorkspace" },
+    // Batch disposition owns its separate operation/receipt tests; this fixture
+    // continues exercising the actual upload/analysis/source repair lifecycle.
+    "./import-batch-manager": { ImportDisposition: "ImportDisposition" },
     "./format-conversion-guide": { FormatConversionGuide: "FormatConversionGuide" },
     "./import-noise-review": { ImportNoiseReview: "ImportNoiseReview" },
     // Geometry is an explicit adapter, not evidence of real DOM measurement.
@@ -258,7 +261,7 @@ test("an uncertain commit locks only its original import, survives reopen and ch
 test("a previewed archive read is not proof that an unknown restoration can be safely replayed", async () => {
   const f = fixture({ initialMode: "archive" });
   try {
-    await f.mutations[1].run([]); await f.settle();
+    await f.mutations[0].run([]); await f.settle();
     f.setCommit(async () => { throw Error("CONNECTION_FAILED"); });
     find(f.tree(), node => node.props?.["data-testid"] === "commit-import-button").props.onClick();
     await f.settle();
@@ -467,7 +470,7 @@ test("retry of the same failed task re-enables an immediate GET inside the provi
     const oldOptions = f.queries.get("adaptive-import-analysis").options;
     client.setQueryData(oldOptions.queryKey, { value: failed, generation: 1, analysisTaskId: failed.analysis_task_id });
     observer = new QueryObserver(client, oldOptions); unsubscribe = observer.subscribe(noop);
-    await f.mutations[4].run(failed.analysis_task_id); await f.settle();
+    await f.mutations[3].run(failed.analysis_task_id); await f.settle();
     const options = f.queries.get("adaptive-import-analysis").options;
     assert.deepEqual(options.queryKey, oldOptions.queryKey);
     f.setRead(async () => session());
@@ -524,7 +527,7 @@ test("explicit commit retry preserves its first lane snapshot after an unknown r
     f.publish(session("READY", "ready"));
     f.setCommit(async () => { throw new Error("Synthetic unknown commit response"); });
     const request = { importId: "synthetic-import", policy: "clone" };
-    await assert.rejects(f.mutations[2].run(request), /Synthetic unknown commit response/);
+    await assert.rejects(f.mutations[1].run(request), /Synthetic unknown commit response/);
     f.resize(960); await f.settle();
     assert.match(text(f.tree()), /720px reading column/);
     assert.equal(f.calls.filter(row => row[0] === "commit").length, 1, "resize/polling never replays the write");
@@ -549,7 +552,7 @@ test("a resumed commit uses its server-owned lane rather than the current viewpo
   try {
     await f.settle();
     assert.match(text(f.tree()), /512px reading column/);
-    await f.mutations[2].run({ importId: "synthetic-import", policy: "clone" }); await f.settle();
+    await f.mutations[1].run({ importId: "synthetic-import", policy: "clone" }); await f.settle();
     assert.deepEqual(f.calls.filter(row => row[0] === "commit"), [
       ["commit", "synthetic-import", { duplicatePolicy: "clone", projectId: null, imageLaneWidth: 512 }],
     ]);
@@ -999,7 +1002,7 @@ test("task resume outranks a local pointer; failure keeps the saved source reach
     await f.settle();
     assert.equal(f.calls.find(row => row[0] === "read")[1], "synthetic-import");
     assert.match(text(f.tree()), /Source files are retained/);
-    await f.mutations[4].run("synthetic-analysis"); await f.settle();
+    await f.mutations[3].run("synthetic-analysis"); await f.settle();
     assert.equal(f.calls.filter(row => row[0] === "upload").length, 0);
     assert.deepEqual(f.calls.find(row => row[0] === "retry"), ["retry", "synthetic-analysis"]);
     assert.equal(f.queries.get("adaptive-import-analysis").options.enabled, true);
@@ -1063,7 +1066,7 @@ for (const terminal of ["failed", "cancelled"]) test(`${terminal}: a confirmed c
 for (const locale of ["zh-CN", "en-US"]) test(`${locale}: an acknowledged archive restore is disabled and is not called format recognition`, async () => {
   const f = fixture({ initialMode: "archive", locale });
   try {
-    await f.mutations[1].run([]); await f.settle();
+    await f.mutations[0].run([]); await f.settle();
     find(f.tree(), node => node.props?.["data-testid"] === "commit-import-button").props.onClick();
     await f.settle();
     const restore = find(f.tree(), node => node.props?.["data-testid"] === "commit-import-button");
@@ -1155,7 +1158,7 @@ for (const failure of ["getter", "removeItem"]) for (const acknowledgement of ["
       assert.ok(find(f.tree(), node => node.type?.name === "ImportCompletionSummary"));
       assert.equal(find(f.tree(), node => node.type === "AdaptiveImportWorkspace"), undefined);
       assert.equal(f.queries.get("import-status").options.enabled, false);
-      assert.equal(f.mutations[2].isError, false, "Confirmed success is not a failed write because a navigation hint could not be deleted.");
+      assert.equal(f.mutations[1].isError, false, "Confirmed success is not a failed write because a navigation hint could not be deleted.");
       assert.equal(f.calls.filter(call => call[0] === "commit").length, 1);
       assert.equal(f.calls.filter(call => ["retry", "upload"].includes(call[0])).length, 0);
       assert.ok(f.calls.some(call => call[0] === "invalidate" && call[1][0] === "conversations"));
@@ -1167,12 +1170,12 @@ for (const failure of ["getter", "removeItem"]) test(`${failure}: acknowledged d
   const f = fixture();
   try {
     await f.submitUpload([]); await f.settle(); f.setStorageFailure(failure);
-    await f.mutations[0].run("synthetic-import"); await f.settle();
-    assert.equal(f.mutations[0].isError, false);
+    find(f.tree(), node => node.type === "ImportDisposition").props.onChanged({ ...session("CANCELED"), source_cleanup: { state: "completed" } }); await f.settle();
+    assert.equal(f.mutations.some(mutation => mutation.isError), false);
     assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "import-analysis-status"), undefined);
     assert.equal(find(f.tree(), node => node.type === "button" && text(node) === "View the last retained import"), undefined);
     assert.equal(f.storage.get("chat-reader:adaptive-import-session"), "synthetic-import");
-    assert.deepEqual(f.calls.filter(call => call[0] === "cancel"), [["cancel", "synthetic-import"]]);
+    assert.deepEqual(f.calls.filter(call => call[0] === "cancel"), [], "Parent reconciles the shared controller outcome without resubmitting deletion.");
   } finally { f.dispose(); }
 });
 
@@ -1221,8 +1224,8 @@ test("explicit confirmed disposal resets this pane; closing/unmounting alone doe
   const f = fixture();
   try {
     await f.submitUpload([]); await f.settle();
-    await f.mutations[0].run("synthetic-import"); await f.settle();
-    assert.deepEqual(f.calls.find(row => row[0] === "cancel"), ["cancel", "synthetic-import"]);
+    find(f.tree(), node => node.type === "ImportDisposition").props.onChanged({ ...session("CANCELED"), source_cleanup: { state: "completed" } }); await f.settle();
+    assert.deepEqual(f.calls.filter(row => row[0] === "cancel"), [], "Confirmed disposition does not replay deletion.");
     assert.equal(f.storage.size, 0);
     assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "import-analysis-status"), undefined);
   } finally { f.dispose(); }
@@ -1317,7 +1320,7 @@ for (const locale of ["zh-CN", "en-US"]) test(`${locale}: exhausted resource wai
     assert.match(text(f.tree()), /30/);
     assert.match(text(f.tree()), locale === "zh-CN" ? /暂停/ : /paused/);
     assert.equal(f.calls.filter(row => row[0] === "retry").length, 0);
-    await f.mutations[4].run("synthetic-analysis"); await f.settle();
+    await f.mutations[3].run("synthetic-analysis"); await f.settle();
     assert.deepEqual(f.calls.filter(row => row[0] === "retry"), [["retry", "synthetic-analysis"]]);
     assert.equal(f.calls.filter(row => row[0] === "upload").length, 0);
   } finally { f.dispose(); }

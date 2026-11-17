@@ -315,6 +315,9 @@ def conversation_ids_for_import(db: Session, record: ImportRecord) -> list[uuid.
 
 
 def primary_filename(record: ImportRecord) -> str | None:
+    if record.source_profile == "adaptive_json_markdown":
+        from app.services.adaptive_import.source_preview import source_title
+        return source_title(record)
     return record.md_filename or record.json_filename or record.csv_filename
 
 

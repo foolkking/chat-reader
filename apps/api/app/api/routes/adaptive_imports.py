@@ -9,6 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
@@ -144,24 +145,75 @@ def list_unfinished_sessions(
     """Pending decisions are not terminal notifications and must remain discoverable."""
     query = db.query(ImportRecord).filter(
         ownership_scope.predicate(ImportRecord),
-        ImportRecord.session_state.in_(("READY", "RESOLVING", "NEEDS_GROUPING", "FAILED", "COLLECTING", "ANALYZING", "PAUSED")),
-        ImportRecord.status.notin_(("committed", "cancelled")),
+        or_(
+            ImportRecord.session_state.in_(("READY", "RESOLVING", "NEEDS_GROUPING", "FAILED", "COLLECTING", "ANALYZING", "PAUSED", "CANCELING", "IMPORTING")),
+            and_(ImportRecord.session_state == "CANCELED",
+                 ImportRecord.analysis_summary["_source_cleanup"]["state"].as_string().in_(("pending", "failed", "blocked"))),
+        ),
+        ImportRecord.status != "committed",
     )
-    rows = query.options(selectinload(ImportRecord.artifacts), selectinload(ImportRecord.structure_families)).order_by(
+    rows = query.options(selectinload(ImportRecord.artifacts), selectinload(ImportRecord.structure_families),
+                         selectinload(ImportRecord.input_groups)).order_by(
         ImportRecord.updated_at.desc(), ImportRecord.id).offset(offset).limit(limit + 1).all()
     items = []
+    total = query.count()
+    from app.services.adaptive_import.source_preview import source_title
+    from app.services.task_errors import public_task_error
+    from app.services.adaptive_import.source_cleanup import public_receipt
+    def destination(row):
+        summary = row.analysis_summary or {}
+        value = (summary.get("commit_options") or {}).get("project_id", summary.get("target_project_id"))
+        try:
+            return uuid.UUID(str(value)) if value else None
+        except ValueError:
+            return None
+    targets = {destination(row) for row in rows[:limit]} - {None}
+    project_names = {project.id: project.name for project in db.query(Project).filter(
+        ownership_scope.predicate(Project), Project.id.in_(targets), Project.is_default.is_(False)).all()} if targets else {}
     for row in rows[:limit]:
         expiry = row.draft_expires_at
         if expiry and expiry.tzinfo is None:
             expiry = expiry.replace(tzinfo=timezone.utc)
         items.append({
             "import_id": str(row.id), "state": row.session_state,
-            "title": row.detected_title or row.json_filename or row.md_filename or "Import",
+            "title": source_title(row),
+            "created_at": row.created_at.isoformat(),
+            "target_project_id": str(destination(row)) if destination(row) else None,
+            "target_project_name": project_names.get(destination(row)),
+            "analysis_task_id": (row.analysis_summary or {}).get("analysis_task_id"),
+            "phase": row.phase,
+            "source_cleanup": public_receipt(row),
+            "error_message": public_task_error(row.error_message, fallback="IMPORT_FAILED") if row.error_message else None,
             "updated_at": row.updated_at.isoformat(),
             "expires_at": expiry.isoformat() if expiry else None,
             **session_recovery_status(row),
         })
-    return {"items": items, "has_more": len(rows) > limit, "offset": offset, "limit": limit}
+    return {"items": items, "total": total, "has_more": len(rows) > limit, "offset": offset, "limit": limit}
+
+
+@router.get("/api/adaptive-import/sessions/{import_id}/groups/{group_id}/source-preview")
+def get_source_preview(
+    import_id: uuid.UUID, group_id: uuid.UUID, response: Response,
+    expected_updated_at: datetime = Query(...), db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+):
+    from app.services.adaptive_import.source_preview import read_preview
+    response.headers["Cache-Control"] = "no-store"
+    record = _record(import_id, db, ownership_scope, lock=False)
+    actual = record.updated_at.replace(tzinfo=timezone.utc) if record.updated_at.tzinfo is None else record.updated_at
+    expected = expected_updated_at.replace(tzinfo=timezone.utc) if expected_updated_at.tzinfo is None else expected_updated_at
+    if actual != expected:
+        raise HTTPException(status_code=409, detail={"code": "PREVIEW_STATE_CHANGED", "message": "Refresh this import before reading the preview."})
+    group = next((item for item in record.input_groups if item.id == group_id), None)
+    if group is None:
+        raise HTTPException(status_code=404, detail="Source group not found.")
+    family = next((item for item in record.structure_families if item.id == group.family_id), None)
+    if family is None or session_recovery_status(record)["draft_status"] != "ready":
+        raise HTTPException(status_code=409, detail={"code": "PREVIEW_UNAVAILABLE", "message": "Rebuild the preview explicitly before viewing it."})
+    try:
+        return read_preview(record, group, family)
+    except AdaptiveImportError as exc:
+        raise HTTPException(409, detail={"code": exc.code, "message": str(exc)}) from exc
 
 
 @router.get("/api/adaptive-import/requests/{request_id}")
@@ -376,6 +428,7 @@ def cancel_adaptive_import_session(
     import_id: uuid.UUID,
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+    expected_updated_at: datetime | None = None,
 ) -> None:
     from app.services.worker_maintenance import bound_worker_transaction
     from app.services.execution_control import SLOT, request_stop
@@ -384,6 +437,14 @@ def cancel_adaptive_import_session(
     # Keep analysis cancellation job-first; the worker owns the record lock
     # while parsing and must still be able to observe this cancellation.
     record = _record(import_id, db, ownership_scope, lock=False)
+    def require_version():
+        if expected_updated_at is None:
+            return  # Compatibility for existing clients; new UI always binds a version.
+        actual = record.updated_at.replace(tzinfo=timezone.utc) if record.updated_at.tzinfo is None else record.updated_at
+        expected = expected_updated_at.replace(tzinfo=timezone.utc) if expected_updated_at.tzinfo is None else expected_updated_at
+        if actual != expected:
+            raise HTTPException(status_code=409, detail={"code": "SESSION_STATE_CHANGED", "message": "Refresh this import before discarding it."})
+    require_version()
     try:
         task_id = (record.analysis_summary or {}).get("analysis_task_id")
         # A stop request must not queue behind the executor's canonical row
@@ -426,6 +487,7 @@ def cancel_adaptive_import_session(
             # and refresh it before deleting files: canonical commit may have
             # started after the initial read above.
             db.refresh(record, with_for_update=True)
+            require_version()
             if job is not None and job.status == "queued":
                 now = datetime.now(timezone.utc)
                 job.status = "cancelled"

@@ -10,8 +10,8 @@ import { ExportArtifactDelivery } from "../exporting/export-artifact-delivery";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, RefreshCw, X, Eraser } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { cancelTask, getActiveTasks, getPendingCleanupScans, getTask, retryTask } from "../../lib/api";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { cancelTask, getActiveTasks, getPendingCleanupScans, getTask, retryTask, type UnfinishedImport } from "../../lib/api";
 import { contextReturnFailureMessage, contextReturnRecovery } from "../../lib/context-return-recovery";
 import type { BackgroundTaskRead, CleanupScanRead } from "../../lib/types";
 import { ContentCleanupDialog } from "../conversations/content-cleanup-panel";
@@ -22,6 +22,8 @@ import { SettingsFocusedDialog } from "../../components/settings-focused-dialog"
 import { useImportDialog } from "../../components/import-dialog-provider";
 import { fullActivityTime } from "../../lib/activity-time";
 import { authenticationGeneration } from "../../lib/offline-access";
+
+import { ImportBatchManager } from "./import-batch-manager";
 
 const taskReadRetryDelay = (attemptIndex: number) => Math.min(5000, 750 * 2 ** attemptIndex);
 type TaskControl = {
@@ -291,12 +293,18 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
     publishTracking();
   }, [queryClient, tasksQuery.data, tasksQuery.isError, tracking, trackingAttempt]);
 
+  const [visibleBatches, setVisibleBatches] = useState<{ generation: number; items: UnfinishedImport[]; total: number }>({ generation, items: [], total: 0 });
+  const updateBatches = useCallback((items: UnfinishedImport[], total: number) => {
+    if (generation === authenticationGeneration()) setVisibleBatches({ generation, items, total });
+  }, [generation]);
+  const batchItems = visibleBatches.generation === generation ? visibleBatches.items : [];
+  const batchTasks = new Set(batchItems.flatMap(item => [item.analysis_task_id, item.import_id]));
   const listedTasks = tasksQuery.data ?? [];
   const retainedControls = Object.values(controls).map(control => control.before)
     .filter(task => !listedTasks.some(current => current.job_id === task.job_id));
   const allTasks = [...listedTasks, ...retainedControls].filter((task) => !dismissedTaskIds.has(task.job_id) || (placement === "center" && (needsFileCleanup(task) || controls[task.job_id])));
   const noiseTasks = allTasks.filter((task) => task.job_type === "content_noise_scan" && !["committed", "cancelled"].includes(task.status));
-  const tasks = allTasks.filter((task) => task.job_type !== "content_noise_scan" || task.result.cleanup_apply?.status === "COMPLETED");
+  const tasks = allTasks.filter(task => placement !== "center" || !batchTasks.has(task.job_id)).filter((task) => task.job_type !== "content_noise_scan" || task.result.cleanup_apply?.status === "COMPLETED");
   const taskRows = completedTask && !dismissedTaskIds.has(completedTask.job_id) && !tasks.some((task) => task.job_id === completedTask.job_id)
     ? [...tasks, completedTask]
     : tasks;
@@ -326,7 +334,7 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   const loadUnavailable = loadFailed || loadRecovering;
   const loading = tasksQuery.isLoading || scansQuery.isLoading || checkingTerminal;
   const retryLoading = () => { setTrackingAttempt(value => value + 1); void tasksQuery.refetch(); void scansQuery.refetch(); };
-  const count = taskRows.length + scans.length + scanningScans.length + failedScans.length + unboundNoiseCount + (placement === "center" ? emptyScans.length + cancelledScans.length : 0);
+  const count = taskRows.length + scans.length + scanningScans.length + failedScans.length + unboundNoiseCount + (placement === "center" ? (visibleBatches.generation === generation ? visibleBatches.total : 0) + emptyScans.length + cancelledScans.length : 0);
   if (!visibleTask && !noiseTasks.length && !scans.length && !scanningScans.length && !failedScans.length && !loadUnavailable && !checkingTerminal && !forceVisible) return null;
 
   if (placement !== "center") {
@@ -365,7 +373,11 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
           <span className="text-sm text-secondary">{zh ? "任务进度与结果" : "Progress and results"}</span>
           <span className="text-xs tabular-nums text-secondary">{count} {zh ? "项" : "items"}</span>
         </div>
-        {loading ? <p role="status" className="text-sm text-secondary">{checkingTerminal ? (zh ? "正在确认任务结果…" : "Checking task results…") : (zh ? "正在加载任务…" : "Loading tasks…")}</p> : null}
+        <ImportBatchManager onSessions={updateBatches} renderStages={item => {
+          const stages = allTasks.filter(task => task.job_id === item.import_id || task.job_id === item.analysis_task_id);
+          return stages.length ? stages.map(taskRow) : null;
+        }} />
+      {loading ? <p role="status" className="text-sm text-secondary">{checkingTerminal ? (zh ? "正在确认任务结果…" : "Checking task results…") : (zh ? "正在加载任务…" : "Loading tasks…")}</p> : null}
         {loadUnavailable ? <div role={loadFailed ? "alert" : "status"} className={loadFailed ? "border-l-2 border-[var(--danger)] pl-3 text-sm text-[var(--danger)]" : "text-sm text-secondary"}>
           <p>{trackingError ? (zh ? "有任务的最终结果尚未确认，请重新检查；不会重新提交任务。" : "A task's final result is unconfirmed. Retry checks its status without resubmitting it.") : loadFailed ? (zh ? "任务状态加载失败，已有任务可能仍在运行。" : "Could not load task status. Existing tasks may still be running.") : (zh ? "暂时无法刷新任务状态，当前显示上次结果；最新进度尚未确认。" : "Could not refresh task status. Previous results are shown; current progress is unconfirmed.")}</p>
           <button type="button" disabled={tasksQuery.isFetching || scansQuery.isFetching || checkingTerminal} onClick={retryLoading} className="min-h-11 underline">{zh ? "重试" : "Retry"}</button>

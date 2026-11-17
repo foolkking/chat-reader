@@ -74,6 +74,7 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center", stor
   const mocks = {
     react,
     "./import-workspace-copy": copyModule.exports,
+    "./import-batch-manager": { ImportBatchManager: "ImportBatchManager" },
     "@tanstack/react-query": { useQueryClient: () => client, useMutation: () => ({ isPending: false, mutate: noop }),
       useQuery: options => {
         const key = options.queryKey[0] === "task-controls" ? options.queryKey.join(":") : options.queryKey[0];

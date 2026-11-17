@@ -1729,8 +1729,9 @@ export async function updateAdaptiveImportDestination(
   });
 }
 
-export async function cancelAdaptiveImportSession(importId: string): Promise<void> {
-  await withRequestDeadline(signal => fetchJson<void>(`/api/adaptive-import/sessions/${importId}`, { method: "DELETE", signal }));
+export async function cancelAdaptiveImportSession(importId: string, updatedAt?: string): Promise<void> {
+  const query = updatedAt ? `?${new URLSearchParams({ expected_updated_at: updatedAt })}` : "";
+  await withRequestDeadline(signal => fetchJson<void>(`/api/adaptive-import/sessions/${importId}${query}`, { method: "DELETE", signal }));
 }
 
 export async function resolveAdaptiveImportGroups(
@@ -1782,17 +1783,32 @@ export async function findShareCreation(conversationId: string, key: string): Pr
 
 export type UnfinishedImport = {
   import_id: string; state: string; title: string; updated_at: string;
+  created_at?: string; target_project_id?: string | null; target_project_name?: string | null; analysis_task_id?: string | null;
+  phase?: string; error_message?: string | null;
+  source_cleanup?: AdaptiveImportSession["source_cleanup"];
   expires_at: string | null; source_available: boolean;
   source_status?: "available" | "missing";
   draft_status?: "ready" | "expired" | "missing";
-  allowed_actions?: Array<"resume" | "rebuild_preview">;
+  allowed_actions?: AdaptiveImportSession["allowed_actions"];
 };
+export type ImportSourcePreview = {
+  import_id: string; group_id: string; family_id: string;
+  conversation_count: number;
+  sources: Array<{ artifact_id: string; filename: string; sha256: string; source_revision: number }>;
+  preview: { title: string; message_count: number; messages: Array<{ role: string; content: string; content_truncated: boolean }> } | null;
+};
+export function getImportSourcePreview(importId: string, groupId: string, updatedAt: string, signal?: AbortSignal): Promise<ImportSourcePreview> {
+  return withRequestDeadline(deadline => fetchJson(
+    `/api/adaptive-import/sessions/${encodeURIComponent(importId)}/groups/${encodeURIComponent(groupId)}/source-preview?${new URLSearchParams({ expected_updated_at: updatedAt })}`,
+    { signal: deadline },
+  ), signal);
+}
 export function rebuildAdaptiveImportPreview(importId: string, updatedAt: string): Promise<AdaptiveImportSession> {
   return fetchJson(`/api/adaptive-import/sessions/${encodeURIComponent(importId)}/rebuild-preview`, {
     method: "POST", body: JSON.stringify({ expected_updated_at: updatedAt }),
   });
 }
-export function getUnfinishedImports(offset = 0, signal?: AbortSignal): Promise<{ items: UnfinishedImport[]; has_more: boolean }> {
+export function getUnfinishedImports(offset = 0, signal?: AbortSignal): Promise<{ items: UnfinishedImport[]; has_more: boolean; total?: number }> {
   return withRequestDeadline(deadline => fetchJson(`/api/adaptive-import/sessions?limit=20&offset=${offset}`, {
     signal: deadline, headers: { "X-Chat-Reader-Background": "1" },
   }), signal);

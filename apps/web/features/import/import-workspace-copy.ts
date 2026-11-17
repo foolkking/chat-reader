@@ -8,12 +8,15 @@ export function importStateLabel(state: string, zh: boolean): string {
     NEEDS_GROUPING: ["需要配对", "Pairing needed"], RESOLVING: ["需要设置", "Configuration needed"],
     READY: ["等待确认导入", "Ready for review"], IMPORTING: ["正在导入", "Importing"],
     COMPLETED: ["已导入", "Imported"], BLOCKED: ["需要处理", "Needs attention"],
-    FAILED: ["处理失败 · 可查看原因", "Failed · review the cause"], CANCELED: ["已取消", "Cancelled"],
+    FAILED: ["处理失败", "Failed"], CANCELED: ["已取消", "Cancelled"],
   };
   return labels[state]?.[zh ? 0 : 1] ?? (zh ? "状态待核对" : "Check status");
 }
 
 const english: Record<string, string> = {
+  "预览工具": "Preview tools",
+  "{0} 个对话": "{0} conversations",
+  "使用的导入格式：": "Import format: ",
   "导入来源": "Import source",
   "选择文件": "Choose files",
   "粘贴文本": "Paste text",

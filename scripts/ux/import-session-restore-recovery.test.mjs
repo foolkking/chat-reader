@@ -5,7 +5,7 @@ import test from "node:test";
 const source = await readFile(
   new URL("../../apps/web/features/import/import-panel.tsx", import.meta.url),
   "utf8",
-);
+).then(value => value.replace(/\r\n/g, "\n"));
 
 function between(start, end) {
   const startIndex = source.indexOf(start);
@@ -38,7 +38,7 @@ test("transient restore failure retains the local pointer and publishes a retrya
 
 test("only completed/cancelled state or explicit new-file selection clears the pointer; failed analysis stays recoverable", () => {
   const restoreEffect = between("useEffect(() => {\n    let active = true;", "  const finishCommittedImport");
-  assert.match(restoreEffect, /if \(\["COMPLETED", "CANCELED"\]\.includes\(restored\.state\)\)/);
+  assert.match(restoreEffect, /restored\.state === "COMPLETED" \|\| restored\.state === "CANCELED" && restored\.source_cleanup\?\.state === "completed"/);
   assert.doesNotMatch(restoreEffect, /"FAILED"/);
   assert.match(restoreEffect, /rememberImport\(null\)/);
   const chooseFiles = between("  function chooseFiles", "  function handleDrop");

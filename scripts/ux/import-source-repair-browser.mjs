@@ -20,8 +20,11 @@ import React from "react";
 import {sendUpload} from ${modulePath("lib/upload-transport.ts")};
 export const usePreferences=()=>({resolvedLocale:window.gateLocale,readerWidthMode:"standard",sectionTocMode:"visible"});
 export const authenticationGeneration=()=>window.authGeneration??1;
+export const useInteractionDialog=()=>({confirm:async()=>false});
+export const useImportDialog=()=>({openImportDialog:()=>{throw Error("Unexpected batch navigation")}});
 export const AUTH_GENERATION_CHANGED_EVENT="synthetic-auth-change";
 export const getActiveOfflineStorageContext=()=>({userId:"synthetic-owner"});
+export const getCurrentOfflineRuntimeUserId=()=>"synthetic-owner";
 export const useRouter=()=>({push:path=>window.navigationAttempt=path});
 export const readAccountCapabilities=async()=>({allow_user_import:true,maximum_import_size_mb:500,maximum_import_total_mb:512});
 export const getProjects=async()=>[];
@@ -89,7 +92,7 @@ await new Promise((yes, no) => webpack({
   },
   plugins: [
     new webpack.ProvidePlugin({ process: require.resolve("next/dist/build/polyfills/process") }),
-    new webpack.NormalModuleReplacementPlugin(/(?:preferences-provider|auth-client|offline-access|offline-db|support-limit-action|import-preview-card|adaptive-import-workspace|format-conversion-guide|import-noise-review|\/lib\/api)$/, resource => { resource.request = adapter; }),
+    new webpack.NormalModuleReplacementPlugin(/(?:preferences-provider|interaction-dialog-provider|import-dialog-provider|auth-client|offline-access|offline-db|support-limit-action|import-preview-card|adaptive-import-workspace|format-conversion-guide|import-noise-review|\/lib\/api)$/, resource => { resource.request = adapter; }),
   ],
   module: { rules: [{ test: /\.tsx?$/, exclude: /node_modules/, use: join(out, "loader.cjs") }] },
 }, (error, stats) => error || stats.hasErrors() ? no(error ?? Error(stats.toString({ all: false, errors: true }))) : yes()));

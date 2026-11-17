@@ -484,6 +484,13 @@ def commit_import(
             status_code=status.HTTP_409_CONFLICT,
             detail="Import preview contains unresolved JSON/Markdown alignment conflicts.",
         )
+    if import_record.source_profile == "adaptive_json_markdown" and import_record.status not in {"queued", "processing"}:
+        from app.services.adaptive_import.source_preview import verify_preview_bindings
+        from app.services.adaptive_import.contracts import AdaptiveImportError
+        try:
+            verify_preview_bindings(import_record)
+        except AdaptiveImportError as exc:
+            raise HTTPException(status_code=409, detail={"code": exc.code, "message": str(exc)}) from exc
 
     effective_project_id = options.project_id
     if import_record.source_profile == "adaptive_json_markdown" and "project_id" not in options.model_fields_set:

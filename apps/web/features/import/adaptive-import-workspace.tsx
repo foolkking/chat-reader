@@ -44,6 +44,7 @@ import type {
 import { FormatConversionDialog } from "./format-conversion-guide";
 import { MappingWorkspace } from "./mapping-workspace";
 import { FormatHealthCheck } from "./format-health-check";
+import { ImportSourcePreview } from "./import-source-preview";
 
 type SessionActionControls = {
   begin: () => number | null;
@@ -192,7 +193,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
           <button type="button" disabled={overviewActionBusy} onClick={onBack} className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
             <ArrowLeft className="h-3.5 w-3.5" />{tr("重新选择文件")}</button>
           <h3 id="adaptive-import-title" className="text-lg font-semibold text-primary">{tr("导入概览")}</h3>
-          <p className="mt-1 text-sm text-secondary">{tr("发现 {0} 个对话，识别出 {1} 种格式", session.group_count, session.family_count)}</p>
+          <p className="mt-1 text-sm text-secondary">{tr("{0} 个对话", session.group_count)}</p>
         </div>
         <StateBadge state={session.state} pendingCount={pendingCount} />
       </div>
@@ -211,20 +212,25 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 border-y border-ui py-3 text-xs" aria-label={tr("导入格式处理状态")}>
-        <StatusSummary icon={<CheckCircle2 className="h-3.5 w-3.5" />} label={tr("已支持")} count={supportedCount} tone="success" />
-        <StatusSummary icon={<Settings2 className="h-3.5 w-3.5" />} label={tr("可设置格式")} count={mappableCount} tone="warning" />
-        <StatusSummary icon={<ShieldAlert className="h-3.5 w-3.5" />} label={tr("暂不可映射")} count={notMappableCount} tone="danger" />
-      </div>
+      {pendingCount > 0 ? <div className="flex flex-wrap gap-2 border-b border-ui pb-3 text-xs" aria-label={tr("导入格式处理状态")}>
+        {supportedCount > 0 ? <StatusSummary icon={<CheckCircle2 className="h-3.5 w-3.5" />} label={tr("已支持")} count={supportedCount} tone="success" /> : null}
+        {mappableCount > 0 ? <StatusSummary icon={<Settings2 className="h-3.5 w-3.5" />} label={tr("可设置格式")} count={mappableCount} tone="warning" /> : null}
+        {notMappableCount > 0 ? <StatusSummary icon={<ShieldAlert className="h-3.5 w-3.5" />} label={tr("暂不可映射")} count={notMappableCount} tone="danger" /> : null}
+      </div> : null}
       {archiveDirty ? <p role="status" className="text-sm text-[var(--warning)]">{tr("请先保存或放弃 ZIP 分类选择，再进行其他操作。")}</p> : null}
       {session.archives?.length ? <ArchiveLedger session={session} archives={session.archives} sessionAction={sessionActions} sessionActionBusy={sessionActionBusy || importing} onStateChange={onArchiveStateChange} /> : null}
-      <FamilySection title={tr("已支持 · 可直接导入")} families={supportedFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={overviewActionBusy} onConfigure={(id) => setActiveFamilyId(id)} />
+      <FamilySection hideTitle={!pendingCount} title={tr("已支持 · 可直接导入")} families={supportedFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={overviewActionBusy} onConfigure={(id) => setActiveFamilyId(id)} />
       <FamilySection title={tr("可设置格式 · 需要确认一次")} families={mappableFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={overviewActionBusy} onConfigure={(id) => setActiveFamilyId(id)} />
       <FamilySection title={tr("暂不可映射 · 需要先转换")} families={notMappableFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={overviewActionBusy} onConfigure={() => undefined} />
 
       {session.state === "BLOCKED" ? <LegacyBlockedRecovery session={session} sessionAction={sessionActions} sessionActionBusy={overviewActionBusy} onRegroup={() => setGroupingOpen(true)} /> : null}
       {error ? <ErrorLine message={error} action="commit" onRetry={onRetryImport} retrying={retryingImport} /> : null}
       {statusError ? <ErrorLine message={statusError} onRetry={onRetryStatus} retrying={statusRetrying} /> : null}
+      {session.draft_status === "ready" && session.allowed_actions?.includes("rebuild_preview") && session.updated_at ? <details className="text-xs text-secondary">
+        <summary className="min-h-11 cursor-pointer content-center">{tr("预览工具")}</summary>
+        <button type="button" disabled={overviewActionBusy} className="min-h-11 text-accent underline" onClick={() => rebuildPreview.run(undefined)}>{tr("重新生成预览")}</button>
+        {rebuildPreview.error ? <ErrorLine message={rebuildPreview.error} action="mutation" /> : null}
+      </details> : null}
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4">
         <div>
           <p className="text-sm text-secondary">
@@ -271,7 +277,6 @@ function ArchiveLedger({
       <div className="flex items-center gap-2">
         <Archive className="h-4 w-4 text-accent" aria-hidden="true" />
         <h4 id="adaptive-archive-ledger-title" className="text-sm font-semibold text-primary">{tr("ZIP 内容")}</h4>
-        <span className="text-xs text-secondary">{tr("可在导入前确认文档、附件和排除项")}</span>
       </div>
       <div className="divide-y divide-ui border-y border-ui">
         {archives.map((archive) => (
@@ -579,9 +584,9 @@ function sameStringArray(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
-function FamilySection({ title, families, session, sessionAction, sessionActionBusy, onConfigure }: { title: string; families: AdaptiveImportFamily[]; session: AdaptiveImportSession; sessionAction: SessionActionControls; sessionActionBusy: boolean; onConfigure: (id: string) => void }) {
+function FamilySection({ title, hideTitle = false, families, session, sessionAction, sessionActionBusy, onConfigure }: { title: string; hideTitle?: boolean; families: AdaptiveImportFamily[]; session: AdaptiveImportSession; sessionAction: SessionActionControls; sessionActionBusy: boolean; onConfigure: (id: string) => void }) {
   if (!families.length) return null;
-  return <section aria-labelledby={`family-section-${title}`}><h4 id={`family-section-${title}`} className="mb-1 text-sm font-semibold text-primary">{title}</h4><div className="divide-y divide-ui border-y border-ui">{families.map((family) => <FamilyRow key={family.id} session={session} family={family} sessionAction={sessionAction} sessionActionBusy={sessionActionBusy} onConfigure={() => onConfigure(family.id)} />)}</div></section>;
+  return <section aria-labelledby={`family-section-${title}`}><h4 id={`family-section-${title}`} className={hideTitle ? "sr-only" : "mb-1 text-sm font-semibold text-primary"}>{title}</h4><div className={`divide-y divide-ui ${hideTitle ? "" : "border-y border-ui"}`}>{families.map((family) => <FamilyRow key={family.id} session={session} family={family} sessionAction={sessionAction} sessionActionBusy={sessionActionBusy} onConfigure={() => onConfigure(family.id)} />)}</div></section>;
 }
 
 function FamilyRow({ session, family, sessionAction, sessionActionBusy, onConfigure }: {
@@ -599,17 +604,21 @@ function FamilyRow({ session, family, sessionAction, sessionActionBusy, onConfig
   const handling = family.handling_class;
   const actionable = handling === "MAPPABLE";
   const candidates = asArray(family.match_evidence.candidates).map(asObject);
-  const displayName = handling === "NOT_MAPPABLE" ? invalidFamilyTitle(family, tr) : familyDisplayName(family, tr);
+  const sourceGroups = session.groups.filter(group => family.group_ids.includes(group.id));
+  const sourceNames = sourceGroups.flatMap(group => group.files.map(file => file.filename));
+  const displayName = sourceNames.length ? `${sourceNames[0]}${sourceNames.length > 1 ? ` (+${sourceNames.length - 1})` : ""}`
+    : handling === "NOT_MAPPABLE" ? invalidFamilyTitle(family, tr) : familyDisplayName(family, tr);
   return (
     <article className="py-4">
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <FormatIcon mode={family.source_mode} />
-            <h4 className="truncate text-sm font-semibold text-primary">{displayName}</h4>
-            <HandlingBadge handling={handling} />
+            <h4 className="min-w-0 break-words text-sm font-semibold text-primary [overflow-wrap:anywhere]">{displayName}</h4>
+            {handling !== "SUPPORTED" ? <HandlingBadge handling={handling} /> : null}
           </div>
           <p className="mt-1 text-sm text-secondary">{family.group_count} {tr("个对话 ·")}{modeLabel(family.source_mode, tr)}</p>
+          <p className="mt-1 text-xs text-secondary">{tr("使用的导入格式：")}{familyDisplayName(family, tr)}</p>
           {family.resolution_status === "DRIFTED" ? <p className="mt-1 text-xs text-[var(--warning)]">{tr("检测到来源结构变化，需要保存一个新版本。")}</p> : null}
           {handling !== "NOT_MAPPABLE" && family.diagnostics[0] ? <DiagnosticLine diagnostic={family.diagnostics[0]} locatable={false} /> : null}
           {family.resolution_status === "AMBIGUOUS" && candidates.length ? (
@@ -628,6 +637,7 @@ function FamilyRow({ session, family, sessionAction, sessionActionBusy, onConfig
           </button>
         ) : null}
       </div>
+      {handling === "SUPPORTED" ? sourceGroups.map(group => <ImportSourcePreview key={`${session.import_id}:${group.id}:${session.updated_at}`} session={session} group={group} showSourceName={sourceGroups.length > 1} />) : null}
       {handling === "NOT_MAPPABLE" ? <NotMappableRecovery session={session} family={family} sessionAction={sessionAction} sessionActionBusy={sessionActionBusy} /> : null}
       {handling !== "NOT_MAPPABLE" ? <FormatHealthCheck session={session} family={family} disabled={sessionActionBusy} sessionAction={sessionAction} onRepair={actionable ? onConfigure : undefined} /> : null}
       {selectMutation.isError ? <div className="mt-3"><ErrorLine message={selectMutation.error} action="mutation" /></div> : null}
@@ -861,7 +871,7 @@ function StateBadge({ state, pendingCount }: { state: AdaptiveImportSession["sta
   return (
     <span className={`inline-flex min-h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold ${ready ? "bg-[var(--accent-soft)] text-accent" : blocked ? "bg-[var(--danger-soft)] text-[var(--danger)]" : "bg-[var(--warning-soft)] text-[var(--warning)]"}`}>
       {ready ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Settings2 className="h-3.5 w-3.5" />}
-      {ready ? tr("准备导入") : blocked ? tr("需要恢复") : tr("{0} 项待处理", pendingCount || 1)}
+      {ready ? tr("准备导入") : blocked ? tr("需要恢复") : pendingCount > 0 ? tr("{0} 项待处理", pendingCount) : tr("正在整理导入计划。")}
     </span>
   );
 }

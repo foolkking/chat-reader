@@ -774,7 +774,8 @@ export type AdaptiveImportSession = {
   updated_at?: string;
   source_status?: "available" | "missing";
   draft_status?: "ready" | "expired" | "missing";
-  allowed_actions?: Array<"resume" | "rebuild_preview">;
+  allowed_actions?: Array<"resume" | "rebuild_preview" | "view_sources" | "stop_retain" | "discard">;
+  source_cleanup?: { state: "pending" | "failed" | "blocked" | "completed"; revision: string; retryable: boolean } | null;
   sources?: Array<{ artifact_id: string; filename: string; extension: string | null; byte_size: number; source_revision?: number }>;
   groups: AdaptiveImportGroup[];
   families: AdaptiveImportFamily[];
