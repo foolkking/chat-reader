@@ -1,7 +1,9 @@
 import os
+import uuid
 from datetime import datetime, timezone
 
 import pytest
+import sqlalchemy as sa
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.background_job import BackgroundJob
@@ -19,15 +21,18 @@ def test_migration_repairs_only_index_dates_and_worker_backfills_private_text(is
     engine, migrate = isolated_schema
     migrate("20261030_0058")
     imported = datetime(2026, 1, 2, tzinfo=timezone.utc)
-    with Session(engine) as db:
-        conversation = Conversation(owner_user_id=LEGACY_OWNER_USER_ID, title="Synthetic",
+    # Seed the actual old schema, not current ORM columns/listeners added by 0062.
+    metadata = sa.MetaData()
+    conversations = sa.Table("conversations", metadata, autoload_with=engine)
+    documents = sa.Table("search_documents", metadata, autoload_with=engine)
+    assert "unclassified_sort_order" not in conversations.c
+    conversation_id = uuid.uuid4()
+    with engine.begin() as db:
+        db.execute(conversations.insert().values(id=conversation_id, owner_user_id=LEGACY_OWNER_USER_ID, title="Synthetic",
             display_title="Synthetic", source_type="test", source_profile="test", parser_version="test",
-            created_at=None, imported_at=imported, description_markdown="Synthetic private description")
-        db.add(conversation); db.flush()
-        db.add(SearchDocument(conversation_id=conversation.id, document_type="conversation",
-            plain_text="Synthetic", search_text="Synthetic", created_at=None, metadata_={}))
-        db.commit()
-        conversation_id = conversation.id
+            created_at=None, imported_at=imported, description_markdown="Synthetic private description"))
+        db.execute(documents.insert().values(id=uuid.uuid4(), conversation_id=conversation_id, document_type="conversation",
+            plain_text="Synthetic", search_text="Synthetic", created_at=None, metadata={}))
     migrate("head")
     with Session(engine) as db:
         assert db.get(Conversation, conversation_id).created_at is None

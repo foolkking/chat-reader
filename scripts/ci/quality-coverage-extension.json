@@ -35,6 +35,14 @@
         "tests/test_import_selection_order.py::test_draft_generation_does_not_reorder_groups_by_family"
       ],
       "reason": "Complete synthetic identity for newly persisted source previews; retain original draft-order assertion and add real sidecar order readback."
+    },
+    "tests/test_optimization_migration_postgres.py": {
+      "previous_source_lf_sha256": "205c46339854a36de12dde801ab6527016db66cea3ed58146d5cd4369097d7b0",
+      "source_lf_sha256": "801086b0e2f3a581f01cdb0e0260ad80b45d05886f1941ed51e5839e766c2b3b",
+      "nodeids": [
+        "tests/test_optimization_migration_postgres.py::test_migration_repairs_only_index_dates_and_worker_backfills_private_text"
+      ],
+      "reason": "Seed the reflected 0058 schema, not current 0062 ORM columns/listeners; preserve every migration/backfill assertion and additionally prove pre-upgrade column absence."
     }
   }
 }
