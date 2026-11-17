@@ -33,8 +33,18 @@ def request(offset, base=0):
 def test_reading_migration_preserves_old_anchor_and_cascades_receipts(isolated_schema):
     engine, migrate = isolated_schema
     migrate("20261001_0039")
-    subject, conversation_id = seed(engine)
+    # Exercise the real pre-migration schema rather than current ORM listeners.
+    metadata = sa.MetaData()
+    users = sa.Table("users", metadata, autoload_with=engine)
+    conversations = sa.Table("conversations", metadata, autoload_with=engine)
+    assert "unclassified_sort_order" not in conversations.c
+    user_id, conversation_id = uuid.uuid4(), uuid.uuid4()
+    subject = str(user_id)
     with engine.begin() as db:
+        db.execute(users.insert().values(id=user_id, normalized_email="reading-test@example.test",
+            created_at=sa.func.now(), updated_at=sa.func.now()))
+        db.execute(conversations.insert().values(id=conversation_id, owner_user_id=user_id,
+            title="Synthetic", display_title="Synthetic", source_type="test", source_profile="test", parser_version="test"))
         db.execute(sa.text("INSERT INTO reading_positions(id,subject_key,conversation_id,scroll_offset,anchor_data,created_at,updated_at) VALUES (:id,:subject,:conversation,37,'{}',now(),now())"), {"id": uuid.uuid4(), "subject": subject, "conversation": conversation_id})
     migrate("head")
     with Session(engine) as db:

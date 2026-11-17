@@ -70,8 +70,16 @@ def test_expired_import_preview_keeps_sources_and_rebuilds_saved_mapping(client,
         db.close(); generator.close()
     missing = client.get(base).json()
     assert missing["source_status"] == "missing"
-    assert missing["allowed_actions"] == ["resume"]
+    assert missing["allowed_actions"] == ["resume", "view_sources", "discard"]
     assert not missing["can_import"]
+    # Missing source still permits discarding this unfinished batch, never a
+    # rebuild/commit. The saved format must survive that explicit discard.
+    assert client.delete(base, params={"expected_updated_at": missing["updated_at"]}).status_code == 204
+    discarded = client.get(base).json()
+    assert discarded["state"] == "CANCELED"
+    reused = _create(client, [("replacement.json", _json_bytes(), "application/json")])
+    assert reused["state"] == "READY" and reused["can_import"]
+    assert client.get("/api/conversations").json() == []
 
 
 def test_attachment_download_key_is_bound_to_normalized_selection(archive_db):

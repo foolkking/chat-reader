@@ -43,6 +43,28 @@
         "tests/test_optimization_migration_postgres.py::test_migration_repairs_only_index_dates_and_worker_backfills_private_text"
       ],
       "reason": "Seed the reflected 0058 schema, not current 0062 ORM columns/listeners; preserve every migration/backfill assertion and additionally prove pre-upgrade column absence."
+    },
+    "tests/test_reading_position_postgres.py": {
+      "previous_source_lf_sha256": "0aaa4f7840ff6c97690a6c62e96227c30273e5111e0af11ba4c969786565db6f",
+      "source_lf_sha256": "b5489f077d851a8565741284866bbb35aa9605b712923edad2aa8a9287d7dae6",
+      "nodeids": [
+        "tests/test_reading_position_postgres.py::test_reading_migration_preserves_old_anchor_and_cascades_receipts",
+        "tests/test_reading_position_postgres.py::test_concurrent_position_updates_and_replay_are_serialized"
+      ],
+      "reason": "Seed the reflected 0039 schema, not current 0062 ORM columns/listeners; retain reading anchor, revision, cascade and migration roundtrip assertions, plus prove the new column is absent before migration."
+    },
+    "tests/test_recovery_consistency.py": {
+      "previous_source_lf_sha256": "0970b7780d0b543b8e4ca70335bb20af434c1cb6f98bcd79ed179767f392c4cc",
+      "source_lf_sha256": "21c7a70f5b2981de7b391629674562d0e89938f19c1ce323fd57805a3412d7a9",
+      "nodeids": [
+        "tests/test_recovery_consistency.py::test_expired_import_preview_keeps_sources_and_rebuilds_saved_mapping",
+        "tests/test_recovery_consistency.py::test_attachment_download_key_is_bound_to_normalized_selection",
+        "tests/test_recovery_consistency.py::test_archive_capacity_is_actionable_and_precedes_asset_work",
+        "tests/test_recovery_consistency.py::test_restored_archive_receipt_does_not_require_collection_capacity_again",
+        "tests/test_recovery_consistency.py::test_private_search_backfill_yields_with_durable_cursor",
+        "tests/test_recovery_consistency.py::test_private_search_backfill_failure_resumes_after_last_committed_item"
+      ],
+      "reason": "Accept the approved source-missing batch actions without enabling rebuild or commit; additionally execute versioned discard, prove the saved format is reusable, and confirm no conversation was imported."
     }
   }
 }
