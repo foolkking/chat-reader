@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, RefreshCw } from "lucide-react";
+import { Activity, ChevronDown, RefreshCw } from "lucide-react";
 import { adminApi, AdminRequestError, type AdminRuntimeStatus } from "../lib/admin-client";
 import { usePreferences } from "./preferences-provider";
 import { authenticationGeneration, AUTH_GENERATION_CHANGED_EVENT } from "../lib/offline-access";
 import { withRequestDeadline } from "../lib/request-deadline";
 import { AdminExecutionRecovery } from "./admin-execution-recovery";
+import { VersionUpdatePanel } from "./version-update-panel";
 
 function subscribeAuthentication(listener: () => void) {
   window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, listener);
@@ -114,8 +115,23 @@ export function AdminRuntimePanel() {
           <StatusRow label={zh ? "邮件配置" : "Email configuration"}>{data.mail.configured ? (zh ? "已配置（未测试投递）" : "Configured (delivery not tested)") : (zh ? "未配置" : "Not configured")}</StatusRow>
         </dl>
       </details>
+      <RuntimeVersions key={generation} zh={zh} />
     </> : null}
   </section>;
+}
+
+// Mount only after the runtime endpoint has verified the root identity, and
+// only read host/version information after the operator opens this disclosure.
+function RuntimeVersions({ zh }: { zh: boolean }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return <div className="border-t border-ui">
+    <h3><button type="button" aria-controls={id} aria-expanded={open} onClick={() => setOpen(!open)}
+      className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-sm font-medium text-primary">
+      {zh ? "版本更新" : "Version updates"}<ChevronDown aria-hidden="true" className={`size-4 shrink-0 text-secondary ${open ? "rotate-180" : ""}`} />
+    </button></h3>
+    <div id={id} hidden={!open}>{open && <VersionUpdatePanel />}</div>
+  </div>;
 }
 
 function StatusRow({ label, children }: { label: string; children: ReactNode }) {

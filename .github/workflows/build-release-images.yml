@@ -1,4 +1,5 @@
 name: Build release images
+run-name: ${{ inputs.release_request != '' && format('Release qualification {0}', inputs.release_request) || 'Build release images' }}
 
 on:
   workflow_dispatch:
@@ -7,6 +8,14 @@ on:
         description: 'One-off image-only repair: 43578495558; empty runs every quality job'
         required: false
         default: ''
+        type: string
+      release_request:
+        description: 'Non-secret correlation ID from the protected release tag workflow (never skips checks)'
+        required: false
+        type: string
+      distribution:
+        description: 'Full qualification only: exact OWNER/REPO:numeric-id for an opted-in fork'
+        required: false
         type: string
 
 permissions:

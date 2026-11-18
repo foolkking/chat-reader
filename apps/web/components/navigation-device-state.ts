@@ -19,8 +19,10 @@ export function useNavigationDeviceState<T>(name: string, fallback: T, validate:
       } catch { /* Device layout storage is optional. */ }
     };
     read();
+    const event = `chat-reader:navigation-change:${name}`;
+    window.addEventListener(event, read);
     window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, read);
-    return () => window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, read);
+    return () => { window.removeEventListener(event, read); window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, read); };
   }, [name]);
   const generation = authenticationGeneration();
   const update = (value: T) => {
@@ -28,7 +30,10 @@ export function useNavigationDeviceState<T>(name: string, fallback: T, validate:
     setState(value);
     try {
       const user = getCurrentOfflineRuntimeUserId();
-      if (user) localStorage.setItem(`chat-reader:navigation:${user}:${name}`, JSON.stringify(value));
+      if (user) {
+        localStorage.setItem(`chat-reader:navigation:${user}:${name}`, JSON.stringify(value));
+        window.dispatchEvent(new Event(`chat-reader:navigation-change:${name}`));
+      }
     } catch { /* In-memory layout still works when storage is unavailable. */ }
   };
   return [state, update] as const;

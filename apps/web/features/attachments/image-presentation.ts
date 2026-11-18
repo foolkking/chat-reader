@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAttachment, getImageDisplay, type ImageDisplayRead } from "../../lib/api";
 import type { AttachmentRead } from "../../lib/types";
@@ -100,8 +100,17 @@ export function useImageDisplay(attachment: Pick<AttachmentRead, "id" | "metadat
   return useImageSource({ id: attachment.id, sha256: attachment.asset_object?.sha256, metadata: attachment.metadata });
 }
 
+// A virtual row's ref is measured before its image's second layout commit.
+// Starting every remount at 320px poisoned a previously correct row height.
+// Share only the live list's measured width, never another pane's geometry.
+export const VirtualImageLaneWidth = createContext<number | null>(null);
+
 export function useImageLane(element: RefObject<HTMLElement | null>) {
-  const [lane, setLane] = useState({ width: 320, height: 900 });
+  const listWidth = useContext(VirtualImageLaneWidth);
+  const [lane, setLane] = useState(() => ({
+    width: listWidth ? Math.round(listWidth) : 320,
+    height: typeof window !== "undefined" && listWidth ? smallViewport?.height ?? window.innerHeight : 900,
+  }));
   useLayoutEffect(() => {
     const node = element.current;
     if (!node) return;

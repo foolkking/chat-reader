@@ -6,7 +6,7 @@ import { usePreferences } from "./preferences-provider";
 import { offlineLeaseExpiresAt } from "../lib/auth-client";
 import { assertOfflineAccess, captureOfflineAccess } from "../lib/offline-access";
 import { getInitialOfflineShellStatus, inspectOfflineShell, subscribeOfflineShellStatus, type OfflineShellStatus } from "../lib/offline-shell";
-import { buildRevision, diagnosticReport, type HelpInfo } from "../lib/help-diagnostics";
+import { diagnosticReport, type HelpInfo } from "../lib/help-diagnostics";
 import { readCachedHelpInfo, refreshHelpInfo } from "../lib/help-status";
 import { QuickStartGuide } from "./quick-start-guide";
 import { SupportRequestsPanel } from "./support-requests-panel";
@@ -50,7 +50,7 @@ export function HelpPanel({ onImport, onDirtyChange, onOpenSettings }: { onImpor
   }, [refresh]);
   const buildDiagnostics = () => { captureOfflineAccess(); return diagnosticReport({ connection, info, shell, preferences, leaseExpiresAt: lease, webRevision: process.env.NEXT_PUBLIC_BUILD_REVISION, cached }); };
   const unknown = zh ? "未知" : "Unknown";
-  const revision = buildRevision(process.env.NEXT_PUBLIC_BUILD_REVISION), caps = info?.capabilities;
+  const caps = info?.capabilities;
   const connectionText = { checking: zh ? "检查中…" : "Checking…", online: zh ? "已连接服务器" : "Connected to server", offline: zh ? "当前离线" : "Currently offline", unavailable: zh ? "无法连接或验证服务器" : "Server unavailable or unverified" };
   const shellText = { ready: zh ? "启动资源完整" : "Startup resources complete", unknown: zh ? "尚未确认完整性" : "Completeness not verified", unavailable: zh ? "启动资源不完整" : "Startup resources incomplete", unsupported: zh ? "当前浏览器不支持" : "Unsupported in this browser" };
   if (requests) return <SupportRequestsPanel initialKind={requests === "list" ? undefined : requests} onBack={() => { setRequests(null); void refresh(); }} onDirtyChange={onDirtyChange} buildDiagnostics={buildDiagnostics} />;
@@ -64,9 +64,8 @@ export function HelpPanel({ onImport, onDirtyChange, onOpenSettings }: { onImpor
       [zh ? "修改未同步或发生冲突？" : "Edits pending or conflicting?", zh ? "在“离线与同步”查看失败原因，重新登录后重试，或比较双方内容再决定保留、合并。清理本机资料前先处理待同步修改。" : "Check Offline & sync for the failure reason. Sign in and retry, or compare both versions before choosing or merging. Resolve pending edits before clearing local data."],
       [zh ? "分享和备份有什么区别？" : "How do sharing and backup differ?", zh ? "分享提供可撤销的访问链接；个人备份保存自己的资料供新增恢复，不包含登录凭据或有效分享令牌。归档用于整理对话，可在数据备份中包含归档内容。" : "Sharing provides revocable access links. Personal backup preserves your data for additive restore without credentials or active share tokens. Archived conversations can be included in a backup."],
     ].map(([question, answer]) => <details key={question}><summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-primary">{question}</summary><p className="pb-4 text-sm leading-6 text-secondary">{answer}</p></details>)}</div></div>
-    <footer className="space-y-2 border-t border-ui pt-4 text-xs text-secondary" aria-label={zh ? "版本与离线可用范围" : "Version & offline availability"}>
+    <footer className="space-y-2 border-t border-ui pt-4 text-xs text-secondary" aria-label={zh ? "连接与离线可用范围" : "Connection & offline availability"}>
       <div className="flex flex-wrap items-center justify-between gap-2"><span>{connectionText[connection]}</span><button type="button" className="btn-ghost inline-flex min-h-11 items-center gap-2 px-3 text-xs" disabled={busy} onClick={() => void refresh()}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />{zh ? "重新检查" : "Check again"}</button></div>
-      <p className="break-words">{zh ? "网页构建" : "Web build"} {revision?.slice(0, 12) ?? unknown} · API {info?.app.api_version ?? unknown}{info?.app.revision ? ` · ${info.app.revision.slice(0, 12)}` : ""}</p>
       <p>{zh ? "离线启动：" : "Offline startup: "}<span>{shellText[shell.availability]}</span></p>
       <p>{zh ? "离线授权至：" : "Offline access until: "}{lease ? new Date(lease).toLocaleString(preferences.resolvedLocale) : unknown}</p>
     </footer>

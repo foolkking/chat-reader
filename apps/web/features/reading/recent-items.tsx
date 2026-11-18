@@ -18,27 +18,27 @@ export function RecentItems({ compact = false, showHeading = true }: { compact?:
     staleTime: 10_000,
   });
 
-  if (recentQuery.isLoading) return <StateLine label={zh ? "正在加载最近内容…" : "Loading recent items…"} loading />;
+  const loading = recentQuery.isLoading ? <StateLine label={zh ? "正在加载最近内容…" : "Loading recent items…"} loading /> : null;
   const items = (recentQuery.data ?? []).slice(0, compact ? 3 : undefined);
   const readError = recentQuery.isError ? <StateLine error
     label={items.length
       ? (zh ? "最近阅读更新失败，仍显示上次内容。" : "Could not update recent items. Previously loaded items are shown.")
       : (zh ? "最近阅读加载失败，请重试。" : "Could not load recent items. Try again.")}
     retryLabel={zh ? "重试" : "Retry"} retry={() => void recentQuery.refetch()} busy={recentQuery.isFetching} /> : null;
-  if (readError && items.length === 0) return readError;
-  if (items.length === 0) return compact ? null : <StateLine label={zh ? "打开一个对话后，最近阅读会显示在这里。" : "Open a conversation to start your recent list."} />;
+  const emptyLabel = zh ? "打开一个对话后，最近阅读会显示在这里。" : "Open a conversation to start your recent list.";
+  if (!compact && !items.length) return loading ?? readError ?? <StateLine label={emptyLabel} />;
 
   return (
     <section className="space-y-3" aria-busy={recentQuery.isFetching} aria-labelledby={showHeading ? "recent-heading" : undefined} aria-label={!showHeading ? (zh ? "继续阅读" : "Continue reading") : undefined}>
       {recentQuery.isFetching ? <span role="status" className="sr-only">{zh ? "正在更新" : "Updating"}</span> : null}
       {showHeading ? <div className="flex items-center justify-between">
-        <div><h1 id="recent-heading" className={compact ? "text-sm font-semibold" : "text-xl font-semibold"}>{zh ? "继续阅读" : "Continue reading"}</h1>{!compact ? <p className="mt-1 text-sm text-secondary">{zh ? "回到上次离开的消息和位置。" : "Return to the message and position where you left off."}</p> : null}</div>
-        {compact ? <Link href="/recent" className="text-xs font-medium text-accent">{zh ? "查看全部" : "View all"}</Link> : null}
+        <div><h2 id="recent-heading" className={compact ? "text-sm font-semibold" : "text-xl font-semibold"}>{zh ? "继续阅读" : "Continue reading"}</h2>{!compact ? <p className="mt-1 text-sm text-secondary">{zh ? "回到上次离开的消息和位置。" : "Return to the message and position where you left off."}</p> : null}</div>
+        {compact ? <Link href="/recent" aria-label={zh ? "查看全部最近阅读" : "View all recent reading"} className="inline-flex min-h-11 items-center px-2 text-xs font-medium text-accent">{zh ? "查看全部" : "View all"}</Link> : null}
       </div> : null}
-      {readError}
-      <div className={compact ? "flex snap-x gap-3 overflow-x-auto pb-2" : "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"}>
+      {loading ?? readError ?? (compact && !items.length ? <p className="text-xs text-secondary">{emptyLabel}</p> : null)}
+      {items.length > 0 && <div className={compact ? "flex snap-x gap-3 overflow-x-auto pb-2" : "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"}>
         {items.map((item) => <RecentCard key={item.id} item={item} compact={compact} zh={zh} locale={resolvedLocale} />)}
-      </div>
+      </div>}
     </section>
   );
 }

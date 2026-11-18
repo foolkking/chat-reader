@@ -577,6 +577,7 @@ def validate_checkout(head, *, consumer=False, preflight=False):
 
 
 def main():
+    global REPOSITORY
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-run", default="")
     parser.add_argument("--head", required=True)
@@ -588,6 +589,12 @@ def main():
     args = parser.parse_args()
     require(re.fullmatch(r"[0-9a-f]{40}", args.head), "A full lowercase candidate SHA is required.")
     reuse = args.source_run != ""
+    if not reuse:
+        from update_distribution import full_repository
+        REPOSITORY = full_repository()
+    elif reuse:
+        require(os.environ.get("GITHUB_REPOSITORY", REPOSITORY) == "foolkking/chat-reader",
+                "Historical image-only reuse is restricted to the original repository.")
     require(not reuse or args.source_run == BASE_RUN, "This is not a general quality-skip input; run full CI.")
     require(bool(args.verify_report) == bool(args.manifest), "Consumer requires both proof and manifest.")
     require(not args.preflight or (reuse and not args.verify_report),

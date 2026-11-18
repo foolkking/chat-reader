@@ -163,7 +163,7 @@ full release acceptance remain pending. See the single status ledger.
 ## In-app help and administrator runtime status (deployed 2026-10-02)
 
 Personal settings and Offline Library share **Help & diagnostics**. It shows
-the authenticated API connection, API version/build, the Web build, a guarded
+the authenticated API connection, a guarded
 inspection of this account's existing startup cache, the offline authorization
 expiry, effective account limits and task-specific FAQ. Reading this panel does
 not register a worker or download resources. Capability snapshots use the
@@ -171,6 +171,8 @@ existing account-bound Dexie v2 settings table; offline/failed refresh values
 are explicitly last-known, never current. A generation fence surrounds cache
 reads and writes. Expiry removes the panel with the private workspace; another
 account cannot read or claim the snapshot. Package formats remain unchanged.
+
+Worktree change (not deployed): Web/API build information moved from the help footer to the root-only **Runtime status → Version updates** disclosure. Opening ordinary help does not check the host updater. The existing opt-in redacted diagnostic attachment format and local offline readiness notices are unchanged.
 
 Diagnostics are generated only by the explicit copy action. The serializer
 constructs a new fixed schema with validated enums, numbers, version/revision

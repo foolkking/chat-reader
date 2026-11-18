@@ -1,0 +1,20 @@
+[Unit]
+Description=Chat Reader host update coordinator
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/chat-reader-updater/updater control
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=full
+# The legacy, operator-owned image pointer is the only writable /etc subtree.
+ReadWritePaths=/etc/chat-reader/release-state
+
+[Install]
+WantedBy=multi-user.target

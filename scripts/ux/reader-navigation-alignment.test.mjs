@@ -303,13 +303,15 @@ test("retired navigation cannot become a successful endpoint alignment", async (
 });
 
 test("Reader edge restores retire on input and request the shared protected-window reclamation", () => {
+  const commit = readerDeclarations.get("commitEdgePage").initializer.arguments[0].getText(readerAst);
+  assert.match(commit, /const scrollIntentAtAnchor = scrollIntentSequenceRef\.current/);
+  assert.match(commit, /scrollIntentSequenceRef\.current === scrollIntentAtAnchor/);
+  assert.match(commit, /tokenIsCurrent: restoreIsCurrent/);
   for (const name of ["loadPreviousWindow", "loadNextWindow"]) {
     const declaration = readerDeclarations.get(name);
     assert.ok(declaration, `${name} must remain a Reader callback`);
     const callback = declaration.initializer.arguments[0].getText(readerAst);
-    assert.match(callback, /const scrollIntentAtAnchor = scrollIntentSequenceRef\.current/);
-    assert.match(callback, /scrollIntentSequenceRef\.current === scrollIntentAtAnchor/);
-    assert.match(callback, /tokenIsCurrent: restoreIsCurrent/);
+    assert.match(callback, /await commitEdgePage\(root, current, page, transitionIsCurrent\)/);
     assert.match(callback, /finally \{[\s\S]*requestWindowTrimRef\.current\(\)/);
     assert.doesNotMatch(callback, /trimLoadedTurnWindow\(/, "No second head/tail trim may remove protected visible or selected content.");
   }
@@ -456,10 +458,14 @@ for (const offset of [NaN, Infinity]) {
   });
 }
 
-test("both complete-turn Reader edges capture the physical offset before awaiting their pin", () => {
+test("both complete-turn edges rebase on a live pinned anchor and synchronously commit before paint", () => {
+  const commit = readerDeclarations.get("commitEdgePage").initializer.arguments[0].getText(readerAst);
+  assert.match(commit, /await acquireScrollAnchorLease[\s\S]*const anchor = captureScrollAnchor\(root, ACTIVE_READING_OFFSET\)[\s\S]*anchor\.targetId !== first\.targetId[\s\S]*const scrollOffsetAtAnchor = root\.scrollTop/);
+  assert.match(commit, /scrollOffsetAtCapture: scrollOffsetAtAnchor,[\s\S]*minimumMs: 0, settleMs: 0, commitLayout:[\s\S]*flushSync\(\(\) => applyLoadedWindow\(next\)\)/);
+  assert.match(commit, /finally \{ lease\.release\(\); \}/);
   for (const name of ["loadPreviousWindow", "loadNextWindow"]) {
     const callback = readerDeclarations.get(name).initializer.arguments[0].getText(readerAst);
-    assert.match(callback, /captureScrollAnchor\(root, ACTIVE_READING_OFFSET\)[\s\S]*const scrollOffsetAtAnchor = root\.scrollTop;[\s\S]*await acquireScrollAnchorLease/);
-    assert.match(callback, /restoreScrollAnchor\(\{ root, anchor, tokenIsCurrent: restoreIsCurrent, scrollOffsetAtCapture: scrollOffsetAtAnchor \}\)/);
+    assert.match(callback, /await commitEdgePage\(root, current, page, transitionIsCurrent\)/);
+    assert.doesNotMatch(callback, /applyLoadedWindow\(|waitForMountedMessage\(/);
   }
 });

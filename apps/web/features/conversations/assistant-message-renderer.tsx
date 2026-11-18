@@ -24,6 +24,7 @@ import { extractChatGptBareBracketMath, isChatGptBareBracketMath, normalizeChatG
 import { detectChatGptRichText, withChatGptRichTextProfile } from "../rich-markdown/chatgpt-rich-text-compatibility";
 import { findLeadingThinkingBlocks } from "./thinking-summary";
 import { observeReadingViewport } from "./reading-viewport";
+import { VirtualImageLaneWidth } from "../attachments/image-presentation";
 import { resolveAttachmentCapability } from "../attachments/preview-adapter-registry";
 import { hasReaderMath, virtualizeReaderBlocks } from "./reader-render-policy";
 
@@ -359,6 +360,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
       data-virtualized-block-count={blocks.length}
       className="relative w-full"
     >
+      <VirtualImageLaneWidth.Provider value={layoutMetrics.contentWidth}>
       {groupVirtualFlowRows(virtualFlow.rows, hasMath, units.length).map(group => <div key={group.key} data-reader-virtual-chunk>
       {group.slots.map((row, slot) => {
         if (!row) return <div key={slot} data-reader-virtual-slot />;
@@ -375,6 +377,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
           </div>
         );
       })}</div>)}
+      </VirtualImageLaneWidth.Provider>
       {virtualFlow.gapAfter > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${virtualFlow.gapAfter}px` }} /> : null}
       {virtualItems.length === 0 && blocks.length > 0 ? <div data-virtual-gap-recovery="true" className="flex min-h-[12rem] items-center justify-center px-6 py-12 text-sm text-secondary" role="status" aria-live="polite">正在恢复内容…</div> : null}
     </div>
@@ -452,6 +455,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
       data-virtualized-block-count={blocks.length}
       className="relative w-full"
     >
+      <VirtualImageLaneWidth.Provider value={layoutMetrics.contentWidth}>
       {groupVirtualFlowRows(virtualFlow.rows, hasMath, units.length).map(group => <div key={group.key} data-reader-virtual-chunk>
       {group.slots.map((row, slot) => {
         if (!row) return <div key={slot} data-reader-virtual-slot />;
@@ -468,6 +472,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
           </div>
         );
       })}</div>)}
+      </VirtualImageLaneWidth.Provider>
       {virtualFlow.gapAfter > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${virtualFlow.gapAfter}px` }} /> : null}
       {virtualItems.length === 0 && blocks.length > 0 ? <div data-virtual-gap-recovery="true" className="flex min-h-[12rem] items-center justify-center px-6 py-12 text-sm text-secondary" role="status" aria-live="polite">正在恢复内容…</div> : null}
     </div>
@@ -991,7 +996,10 @@ function VirtualBlockRow({ itemIndex, measureElement, gapAfter, children }: {
     <div
       ref={measureElement}
       data-index={itemIndex}
-      className="w-full"
+      // The measured box owns its children's vertical margins. Without a
+      // formatting context KaTeX margins escape the row: its real flow pitch
+      // and cached height differ every time it enters/leaves the overscan.
+      className="flow-root w-full"
       style={gapAfter ? { paddingBlockEnd: `var(${gapAfter})` } : undefined}
     >
       {children}

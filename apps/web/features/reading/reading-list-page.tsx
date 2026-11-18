@@ -133,7 +133,7 @@ export function ReadingListPage() {
           </div>
         </div>
       </article>)}</div>
-    </> : query.isSuccess ? <div className="state-empty border-y border-ui text-sm text-secondary"><p>{query.data.counts.all ? (zh ? "当前状态下没有条目。" : "No entries in this state.") : (zh ? "暂无符合条件的收藏。可清除筛选，或在对话搜索右侧点亮星标。" : "No matching favorites. Clear filters or select the star next to conversation search.")}</p><button className="mt-2 min-h-11 text-accent" onClick={() => update({ q: "", project_id: "", state: "all" })}>{zh ? "显示全部" : "Show all"}</button><Link href="/recent" className="ml-4 text-accent">{zh ? "最近阅读" : "Recent reading"}</Link></div> : null}
+    </> : query.isSuccess ? <div className="state-empty border-y border-ui text-sm text-secondary"><p>{query.data.counts.all ? (zh ? "当前状态下没有条目。" : "No entries in this state.") : (zh ? "暂无符合条件的收藏。可清除筛选，或在对话搜索右侧点亮星标。" : "No matching favorites. Clear filters or select the star next to conversation search.")}</p><button className="mt-2 min-h-11 text-accent" onClick={() => update({ q: "", project_id: "", state: "all" })}>{zh ? "显示全部" : "Show all"}</button><Link href="/" className="ml-4 text-accent">{zh ? "浏览全部对话" : "Browse all conversations"}</Link></div> : null}
     {query.data ? <CollectionPagination offset={offset} limit={20} hasMore={query.data.has_more} busy={busy || query.isFetching} zh={zh} update={update} /> : null}
   </section>;
 }

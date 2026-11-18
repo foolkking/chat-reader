@@ -1,5 +1,9 @@
 # Administration contract
 
+## Version management (worktree, not yet deployed)
+
+Settings → Administration → **Runtime status** is the only interactive update entry point. After the runtime API has authorized the deployment root, expanding **Version updates** reads Web/API builds and host updater status. No System/backup, sidebar, ordinary help panel or offline page displays updater warnings. Progress survives application restarts on a separate, ticketed **read-only** page. See [enrolment, authorization, release identity and safe recovery](ONLINE_UPDATES.md).
+
 ## Execution interruption and recovery (local, 2026-11-12)
 
 Runtime's aggregate snapshot remains content-free and read-only. **Review current

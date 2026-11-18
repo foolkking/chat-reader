@@ -541,6 +541,21 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 .image-scale-value { min-width: 36px; text-align: right; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
 .image-display-feedback { flex-basis: 100%; font-size: 0.75rem; color: var(--text-secondary); overflow-wrap: anywhere; }
 [data-reader-toolbar] { container-type: inline-size; container-name: reader-toolbar; }
+.nav-sort-settings { container: nav-sort / inline-size; }
+.nav-sort-setting {
+  display: grid;
+  grid-template: "scope chevron" auto "value chevron" auto / minmax(0, 1fr) auto;
+  min-height: 44px;
+  align-content: center;
+  gap: 1px .5rem;
+  padding-block: .375rem;
+}
+.nav-sort-scope { grid-area: scope; }
+.nav-sort-value { grid-area: value; }
+.nav-sort-chevron { grid-area: chevron; align-self: center; }
+@container nav-sort (min-width: 19rem) {
+  .nav-sort-setting { grid-template: "scope value chevron" auto / minmax(0, 1fr) auto auto; align-items: center; }
+}
 [data-reader-toolbar] [data-testid="reading-list-toggle"],
 [data-reader-toolbar] [data-reader-auxiliary] > summary { border-color: transparent; }
 [data-reader-toolbar] [data-reader-navigation-trigger] { min-height: 44px; }

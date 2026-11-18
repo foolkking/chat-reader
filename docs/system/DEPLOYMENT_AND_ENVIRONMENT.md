@@ -1,13 +1,19 @@
 # 部署与运行环境
 
-## 未发布候选：排序／搜索／导入0062 — 2026-11-17
+## 当前生产：排序／搜索／导入26b35501 / 0062 — 2026-11-18
 
-本地候选增加0062单head，不能按CI-only无迁移发布。生产仍7134/0061，未停服或改数据。
-未来准入需精确全CI／资源证据、fresh停写备份、0062迁移与匹配API／worker，
-随后独立健康检查；不得自动downgrade或删除旧批次。当前另有Next16.4.1安全升级事项。
-[合同与剩余检查](NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md)。
+已按新授权部署精确26b35501，数据库单head为`20261117_0062`。
+16:13:43 +08:00原子发布，16:18:42备份后新鲜运行态复核通过。fresh7134/0061停写备份、
+0062迁移／预期回填、91表既有列及四业务卷保全、匹配镜像和API／Web／worker健康均已核验。
+生产env、Compose、Nginx、PostgreSQL与其他服务不变；worker为640MiB内存、
+1280MiB内存加swap总上限、45秒stop timeout。仅删除批准的两份旧传输包，新旧两份备份均保留。
+CI44235842239成功由用户确认，17项前置质量证据／五项内存门禁／精确制品在本地复验；
+不是Git SSH对Actions状态的实时查询。不得自动downgrade、删旧批次或重放本次部署。
+[完整证据](../evidence/navigation-search-import-2026-11-17/production-release-26b35501.json) /
+[产品验收边界](NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md) /
+[Next16.4.5与依赖例外](NEXT_LTS_MIGRATION_CONTRACT.md)。
 
-## 当前生产：71342129 / schema0061 — 已部署并独立验证（2026-11-16）
+## 历史生产：71342129 / schema0061 — 已部署并独立验证（2026-11-16）
 
 2026-11-16 21:46 +08:00原子发布指针切换到71342129；21:49独立复核精确候选镜像、
 完整运行配置、API/Web健康、真实worker heartbeat、HTTPS/TLS/匿名访问边界及备份保护。

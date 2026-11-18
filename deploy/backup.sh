@@ -11,6 +11,7 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
 PYTHON="${PYTHON:-python3}"
 BACKUP_DEDUPLICATE="${BACKUP_DEDUPLICATE:-1}"
 . "$SCRIPT_DIR/backup_volume_reader.sh"
+backup_batch_reader=""
 
 compose() {
   docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" "$@"
@@ -24,21 +25,21 @@ operation_lock="$BACKUP_DIR/.backup-operation.lock"
 mkdir "$operation_lock" || { echo 'Another backup operation or unfinished operation lock exists.' >&2; exit 1; }
 work_dir=""
 cleanup() {
+  if [ -n "$backup_batch_reader" ]; then docker stop -t 1 "$backup_batch_reader" >/dev/null || return 1; fi
   case "$work_dir" in "$BACKUP_DIR"/.chat-reader-backup.*) rm -rf -- "$work_dir" ;; esac
   rmdir "$operation_lock"
 }
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+if [ "${UPDATER_BATCH_READER:-0}" = 1 ]; then backup_batch_start; fi
 
 database_bytes="$(compose exec -T postgres \
   sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "select pg_database_size(current_database())"')"
 backup_require_integer database_bytes "$database_bytes"
 required_kb="$((database_bytes / 1024 + BACKUP_HEADROOM_KB))"
-for component in imports exports offline assets; do
-  component_kb="$(backup_component_size_kb "$component")"
-  required_kb="$((required_kb + component_kb))"
-done
+all_files_kb="$(backup_size_total_kb)"
+required_kb="$((required_kb + all_files_kb))"
 available_kb="$(df -Pk "$BACKUP_DIR" | awk 'NR == 2 {print $4}')"
 if [ "$available_kb" -lt "$required_kb" ]; then
   echo "Backup refused: target has ${available_kb} KiB available; ${required_kb} KiB required." >&2

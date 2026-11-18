@@ -1,5 +1,22 @@
 # 前端架构
 
+## Reader 媒体行几何与跨轮锚点 — 2026-11-19（未发布工作树）
+
+公式的 `.katex-display` 外边距必须包含在 TanStack 实际测量的虚拟行盒内；
+`VirtualBlockRow` 使用 `flow-root` 防止外边距逃逸造成缓存高度与自然流行距不一致。
+虚拟图片 remount 从当前 Reader lane 宽度初始化，不用固定 320px 先估高。
+Reader scroll root 禁用原生 scroll anchoring，媒体尺寸变化只由共享
+`reading-viewport.ts` 的真实 DOM 锚点 owner 校正。
+
+前后翻页仍按 canonical 完整轮次加载。边缘页获取当前真实锚点 lease 后重新捕获，
+再于同一同步提交合并内容和恢复锚点；等待期间若出现新输入/导航则丢弃旧补偿，
+防止异步补偿抢回阅读位置。不得以程序化滚动模拟用户输入或新增独立媒体恢复循环。
+
+隔离合成内容实测：真实 Chromium/Edge 下 10 个 1280px wheel/375px touch
+媒体及跨轮双向案例、28 个既有 Reader/Share/Offline/Compare 与折叠场景通过。
+脱敏逐帧几何和边界见[2026-11-19复审](../evidence/reader-media-motion-2026-11-19/ux-audit.md)；
+这不是生产部署、真实设备或产品验收。
+
 ## 目录／搜索／导入体验候选 — 2026-11-17
 
 复用偏好同步、任务中心、排序菜单与paper/graphite/sea-green样式。

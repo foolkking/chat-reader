@@ -30,9 +30,7 @@ async function focusAnchorError(page: Page, anchor: { id: string; offset: number
 test("navigation, search, reader layout, annotation modes, and screenshots", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  const desktopRecentLink = page.locator('a[href="/recent"]');
-  await expect(desktopRecentLink).toHaveAttribute("href", "/recent");
-  await expect(desktopRecentLink).toBeHidden();
+  await expect(page.locator('a[href="/recent"]')).toHaveCount(0);
   await page.keyboard.press("Control+k");
   await expect(page.locator('input[aria-label*="搜索"], input[aria-label*="Search"]').first()).toBeFocused();
   await page.screenshot({ path: `${evidenceDir}/home-light-1440x900.png`, fullPage: true });
@@ -232,7 +230,8 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
 test("mobile home and reader do not overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.locator('a[href="/recent"]:visible')).toBeVisible();
+  await expect(page.getByRole("link", { name: /View all recent reading|查看全部最近阅读/ })).toBeVisible();
+  await expect(page.locator('aside a[href="/recent"]')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await expect(page.getByTestId("sort-menu-panel").filter({ visible: true })).toHaveCount(0);
   await page.getByTestId("sort-menu-trigger").filter({ visible: true }).click();

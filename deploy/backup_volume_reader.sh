@@ -49,6 +49,10 @@ backup_volume_read() {
     archive) backup_read_command='exec tar -C "$1" -czf - .' ;;
     *) echo "Unknown backup read operation." >&2; return 1 ;;
   esac
+  if [ -n "${backup_batch_reader:-}" ]; then
+    docker exec "$backup_batch_reader" sh -c "$backup_read_command" sh "/data/$1"
+    return
+  fi
   # No Compose/build/pull fallback, credentials, network, or writable data mounts.
   # If a concurrent cleanup removes the pinned source, Docker must fail closed.
   docker run --rm --pull=never --network none --read-only \
@@ -56,6 +60,40 @@ backup_volume_read() {
     --memory 64m --memory-swap 64m --pids-limit 32 \
     --volumes-from "$backup_source_container:ro" --entrypoint sh \
     "$backup_source_image" -c "$backup_read_command" sh "/data/$1"
+}
+
+# Optional host-updater fast path. This is still the existing stopped writer's
+# pinned, unprivileged image with exclusively read-only source mounts. The
+# helper is private to this script invocation, never supplied by the caller.
+backup_batch_start() {
+  backup_batch_reader="$(docker run -d --init --rm --pull=never --network none --read-only \
+    --cap-drop ALL --security-opt no-new-privileges --memory 64m --memory-swap 64m --pids-limit 32 \
+    --volumes-from "$backup_source_container:ro" --entrypoint sleep "$backup_source_image" 7200)" || return "$?"
+  case "$backup_batch_reader" in ''|*[!0-9a-f]*) return 1 ;; esac
+  test "${#backup_batch_reader}" -eq 64
+}
+
+backup_size_total_kb() {
+  if [ "${UPDATER_BATCH_READER:-0}" = 1 ]; then
+    if [ -n "${backup_batch_reader:-}" ]; then
+      backup_rows="$(docker exec "$backup_batch_reader" du -sk /data/imports /data/exports /data/offline /data/assets)" || return "$?"
+    else
+      backup_rows="$(docker run --rm --pull=never --network none --read-only --cap-drop ALL \
+        --security-opt no-new-privileges --memory 64m --memory-swap 64m --pids-limit 32 \
+        --volumes-from "$backup_source_container:ro" --entrypoint du "$backup_source_image" \
+        -sk /data/imports /data/exports /data/offline /data/assets)" || return "$?"
+    fi
+    printf '%s\n' "$backup_rows" | awk '
+      NF!=2 || $1!~/^[0-9]+$/ || $2!~/^\/data\/(imports|exports|offline|assets)$/ || seen[$2]++ {bad=1}
+      {sum+=$1} END {if(bad || NR!=4) exit 1; printf "%.0f\n",sum}'
+  else
+    backup_sum=0
+    for component in imports exports offline assets; do
+      n="$(backup_component_size_kb "$component")" || return "$?"
+      backup_sum=$((backup_sum+n))
+    done
+    printf '%s\n' "$backup_sum"
+  fi
 }
 
 backup_component_size_kb() {

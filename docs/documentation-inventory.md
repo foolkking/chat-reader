@@ -1,5 +1,28 @@
 # Markdown 文档台账
 
+## 2026-11-19 · Reader 正文媒体滚动复审（未发布）
+
+新增[媒体行几何与锚点复审](evidence/reader-media-motion-2026-11-19/ux-audit.md)，记录公式行外边距、
+虚拟图片宽度估算、跨轮锚点提交的根因及修复，并汇总10组逐帧合成浏览器轨迹和28项既有阅读稳定性结果。
+同步[图片/阅读稳定性合同](system/IMAGE_READING_STABILITY_CONTRACT.md)、
+[前端架构](system/FRONTEND_ARCHITECTURE.md)、Project State 与文档入口。
+仅本机隔离服务，无生产操作、发布标签或真实对话材料。完整本机回归和未通过的 PWA 环境边界一并记于[最终验收记录](evidence/online-update-2026-11-18/verification.md)。
+
+## 2026-11-18 · 侧栏与在线更新（未发布）
+
+[在线升级合同与操作手册](system/ONLINE_UPDATES.md)为当前唯一接入/Fork/恢复入口；[验证记录](evidence/online-update-2026-11-18/verification.md)保存真实界面对照、隔离计时与尚未验证的边界。更新 Project State、导航和原部署入口，不更改历史生产回执。
+设置与版本可见性见[管理员合同](system/ADMINISTRATION_CONTRACT.md)和[运行诊断](system/OBSERVABILITY_CONTRACT.md)；手机首页、两端快捷操作和侧栏的不同边界见[路由表](system/PAGE_AND_ROUTE_MAP.md)和[使用流程](system/USER_FLOWS.md)。
+
+## 26b35501 / 0062生产部署与授权清理收尾 — 2026-11-18
+
+新增一份[脱敏发布证据](evidence/navigation-search-import-2026-11-17/production-release-26b35501.json)，
+记录两份旧传输包删除、未降低的容量门禁、精确CI制品、fresh停写备份、0062迁移／保全、
+镜像与运行态／TLS复核、保留备份，以及初次保护比较失败和无效容量预览。
+定点同步Project State、导航、部署入口／环境、产品合同、Small Host台账、Release Safety、
+Next版本合同和证据索引；旧成功／失败JSON不改写，旧暂停指令标为历史。
+明确CI成功来自用户确认及本地精确证据，SSH不能证明Actions实时状态；
+产品体验、真实设备与生产备份恢复演练未验收。未修改应用、测试、工作流或用户资料。
+
 ## 排序与重连 CI 修复 — 2026-11-18
 
 更新 Project State、导航和[排序合同](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md)，区分

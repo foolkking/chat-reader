@@ -1,10 +1,39 @@
 # Project State
 
-## Current candidate: navigation, search and import UX — 2026-11-18
+**未发布工作树（与下方生产状态分开）**：侧栏搜索固定为全部对话；项目与未归类收起仅保留标题。
+“最近”不再作为侧栏标签；手机首页和两端快捷操作保留入口。左下设置的排序按栏宽排列。
+根管理员在 **设置 → 管理 → 运行状态 → 版本更新** 可选接入宿主机分两步升级：后台下载、验签并预装，明确确认后才停写、备份、切换和核验。普通设置和系统备份不显示版本提示。
+Reader 另修复公式虚拟行外边距逃逸、图片行首次宽度估算及跨轮加载后的延迟锚点回拉；桌面/触屏真实浏览器矩阵和既有阅读稳定性套件均通过。
+见[Reader 媒体几何合同](docs/system/IMAGE_READING_STABILITY_CONTRACT.md)、[复审与脱敏验证](docs/evidence/reader-media-motion-2026-11-19/ux-audit.md)、[在线更新接入与隔离验证](docs/system/ONLINE_UPDATES.md)。
+没有发布 Reader 修复标签、触发生产升级或更改生产数据库。
+
+## Current production: 26b35501 / schema 0062 — 2026-11-18
+
+Exact **26b35501bf7011910a83bb23e8982139f8129b7b** was deployed at
+**16:13:43 +08:00**; independent backup verification completed at16:17:38,
+followed by a fresh runtime/TLS check at**16:18:42**. API/Web are healthy;
+worker heartbeat, exact image configs/RootFS, configuration and protection checks pass.
+PostgreSQL and seven unrelated containers were not restarted.
+
+CI **44235842239 / attempt1** success is user-confirmed. The locally available
+exact-run release evidence independently passes17 prerequisite-job identities,
+five real memory cases and archive/image identity checks. SSH confirmed Git
+refs, **not live Actions status**; no browser CI inspection or token fallback.
+Fresh stopped71342129/0061 backup preceded the exact0062 migration; legacy-column
+digests across91 tables, expected preference backfill and four business volumes
+were checked. Read-only attachment audit verifies3,088 objects with zero issues.
+Only the two approved old transfer archives were removed (338MiB allocated).
+The new and prior verified backups remain; no additional image/backup pruning,
+automatic downgrade or production restore exercise. Product acceptance is user-owned.
+[Authoritative release evidence](docs/evidence/navigation-search-import-2026-11-17/production-release-26b35501.json) /
+[behavior and remaining acceptance](docs/system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md).
+Older production pointers and pause instructions below are historical checkpoints.
+
+## Historical repair checkpoint: navigation, search and import UX — 2026-11-18
 
 The candidate adds source-bound import previews, scoped sorting (schema 0062)
-and paginated search. **Not deployed or product-accepted; last verified
-production is 71342129 / schema 0061.**
+and paginated search. At this earlier checkpoint it was not deployed or
+product-accepted; production was71342129/schema0061.
 
 Full CI **44135067562** on `991eabc` failed the PostgreSQL ordering race, Web
 recovery/sort cases and the dependency audit. The local repair keeps the
@@ -13,12 +42,13 @@ needed for sorting from list data needed for reading. See the
 [navigation contract and verification boundary](docs/system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md).
 The [Next pin](docs/system/NEXT_LTS_MIGRATION_CONTRACT.md) is now 16.4.5;
 the [separate picomatch exception](docs/system/RELEASE_SAFETY_BASELINE.md#dependency-policy)
-requires review by 2026-11-25. Submit one full Linux CI with empty
-`quality_source_run_id`, confirm the run and SHA, then pause without deployment.
+requires review by 2026-11-25. This checkpoint authorized one full Linux CI with
+empty `quality_source_run_id`, followed by a pause. The later explicit deployment
+authorization and completed release above supersede that pause.
 The [earlier failure on 7f9ef44](docs/evidence/navigation-search-import-2026-11-17/ci-failure-44063757196-repair.json)
 and the successful runs below are historical, not acceptance of this candidate.
 
-## Latest: two optimized full CI runs independently verified — 2026-11-17
+## Historical: two optimized full CI runs independently verified — 2026-11-17
 
 Exact source **3d465553bf1cf1ae4cd380bc35dfbaa090b341ec** passes two new,
 ordinary full runs, **43942265966 / 43952795958**, both attempt1 with all19 jobs

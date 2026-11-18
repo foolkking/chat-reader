@@ -1,0 +1,22 @@
+[Unit]
+Description=Chat Reader read-only update progress
+After=local-fs.target
+
+[Service]
+User=cr-update-status
+Group=cr-update-status
+ExecStart=/usr/local/lib/chat-reader-updater/updater progress
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX
+ReadWritePaths=/run/chat-reader-update-status
+InaccessiblePaths=-/run/docker.sock -/run/chat-reader-updater -/etc/chat-reader/updater -/var/lib/chat-reader-updater
+
+[Install]
+WantedBy=multi-user.target

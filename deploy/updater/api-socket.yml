@@ -1,0 +1,16 @@
+services:
+  api:
+    healthcheck:
+      start_interval: 1s
+    # Generated at enrollment with the dedicated host group's numeric GID.
+    group_add:
+      - "__COMMAND_GID__"
+    volumes:
+      - type: bind
+        source: /run/chat-reader-updater
+        target: /run/chat-reader-updater
+        read_only: true
+  web:
+    # The normal interval/command is unchanged. Probe promptly while starting.
+    healthcheck:
+      start_interval: 1s

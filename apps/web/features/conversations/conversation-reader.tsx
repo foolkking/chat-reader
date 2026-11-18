@@ -1108,6 +1108,41 @@ export function ConversationReader({
     setLoadedWindow(next);
   }, []);
 
+  const commitEdgePage = useCallback(async (
+    root: HTMLElement, current: LoadedMessageWindow, page: CompleteTurnWindow,
+    transitionIsCurrent: () => boolean,
+  ) => {
+    const next = mergeLoadedTurnWindow(current, page);
+    const currentEdge = () => root.isConnected && transitionIsCurrent() && !navigationInProgressRef.current
+      && !pointerDraggingRef.current && root.dataset.readerViewerLocked !== "true";
+    for (let attempt = 0; attempt < 3 && currentEdge() && !readerPositionBusy(root); attempt++) {
+      // A virtual row lease can take several frames. Never retain a pre-pin
+      // pixel position through that wait (a passive event may arrive late).
+      const first = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+      if (!first) return false;
+      const lease = await acquireScrollAnchorLease(first, currentEdge);
+      if (!lease) return false;
+      try {
+        if (!currentEdge() || loadedWindowRef.current !== current || readerPositionBusy(root)) return false;
+        const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+        if (!anchor || anchor.targetId !== first.targetId) continue;
+        const scrollOffsetAtAnchor = root.scrollTop;
+        const scrollIntentAtAnchor = scrollIntentSequenceRef.current;
+        const restoreIsCurrent = () => currentEdge() && scrollIntentSequenceRef.current === scrollIntentAtAnchor;
+        // One JS turn, one position owner. Painting the prepend and restoring
+        // several frames later exposed an entire intervening turn to the eye.
+        return await restoreScrollAnchor({
+          root, anchor, tokenIsCurrent: restoreIsCurrent, scrollOffsetAtCapture: scrollOffsetAtAnchor,
+          minimumMs: 0, settleMs: 0, commitLayout: () => {
+            flushSync(() => applyLoadedWindow(next));
+            syncTurnAnchorRefs(next, previousTurnAnchorRef, nextTurnAnchorRef);
+          },
+        });
+      } finally { lease.release(); }
+    }
+    return false;
+  }, [applyLoadedWindow]);
+
   useEffect(() => {
     const root = scrollContainerRef.current;
     if (!root || !readerSurfaceAvailable || sourceEditorTarget) return;
@@ -1127,6 +1162,7 @@ export function ConversationReader({
       if (current.turns.length <= 3) return;
       const measurements = new Map<HTMLElement, DOMRect>();
       const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET, measurements);
+      const scrollOffsetAtAnchor = root.scrollTop;
       if (!anchor) return;
       const protectedIds = new Set(selectedMessageIds);
       const bounds = measurements.get(root) ?? root.getBoundingClientRect();
@@ -1147,9 +1183,9 @@ export function ConversationReader({
       let lease: ReaderBlockLease | null = null;
       try {
         lease = await acquireScrollAnchorLease(anchor, currentRequest);
-        if (!lease || !currentRequest()) return;
+        if (!lease || !currentRequest() || root.scrollTop !== scrollOffsetAtAnchor) return;
         await restoreScrollAnchor({
-          root, anchor, minimumMs: 0, settleMs: 0,
+          root, anchor, scrollOffsetAtCapture: scrollOffsetAtAnchor, minimumMs: 0, settleMs: 0,
           tokenIsCurrent: () => ownsReaderReadRecovery(recentOwner) && scrollIntentSequenceRef.current === intent,
           commitLayout: () => {
             // This is a discrete complete-turn removal. The existing position
@@ -1204,7 +1240,6 @@ export function ConversationReader({
     setEdgeLoading("previous");
     setEdgeError(null);
     const generation = current.generation;
-    let anchorLease: ReaderBlockLease | null = null;
     const transitionIsCurrent = () => (
       loadedWindowRef.current.generation === generation &&
       edgeTransitionRef.current === "previous" &&
@@ -1216,47 +1251,23 @@ export function ConversationReader({
         setReaderEdgeStage(root, `previous:cancelled:${edgeCancellationReason(loadedWindowRef.current, generation, edgeTransitionRef.current, scrollDirectionRef.current, "previous")}`);
         return;
       }
-      const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
-      const scrollOffsetAtAnchor = root.scrollTop;
-      const scrollIntentAtAnchor = scrollIntentSequenceRef.current;
-      if (anchor) {
-        anchorLease = await acquireScrollAnchorLease(anchor, transitionIsCurrent);
-        if (!anchorLease) {
-          if (!transitionIsCurrent()) return;
-          throw new Error("The previous-window reading anchor could not be pinned.");
-        }
-      }
-      const currentIds = new Set(current.items.map((message) => message.id));
-      const next = mergeLoadedTurnWindow(current, page);
-      syncTurnAnchorRefs(next, previousTurnAnchorRef, nextTurnAnchorRef);
       setReaderEdgeStage(root, "previous:committing");
-      applyLoadedWindow(next);
-      const firstAddedMessageId = page.items.findLast((message) => !currentIds.has(message.id))?.id;
-      if (firstAddedMessageId && !await waitForMountedMessage(firstAddedMessageId, transitionIsCurrent)) {
-        setReaderEdgeStage(root, `previous:mount-cancelled:${edgeCancellationReason(loadedWindowRef.current, generation, edgeTransitionRef.current, scrollDirectionRef.current, "previous")}`);
+      if (!await commitEdgePage(root, current, page, transitionIsCurrent)) {
+        setReaderEdgeStage(root, "previous:cancelled:anchor");
         return;
       }
-      setReaderEdgeStage(root, "previous:mounted");
       notifyReaderWindowLayoutChanged();
-      const restoreIsCurrent = () => (
-        transitionIsCurrent() &&
-        scrollIntentSequenceRef.current === scrollIntentAtAnchor
-      );
-      if (anchor) await restoreScrollAnchor({ root, anchor, tokenIsCurrent: restoreIsCurrent, scrollOffsetAtCapture: scrollOffsetAtAnchor });
-      // The shared idle reclamation protects the entire visible/interaction
-      // interval; don't separately trim an arbitrary head/tail here.
       setReaderEdgeStage(root, "previous:settled");
     } catch {
       setReaderEdgeStage(root, "previous:failed");
       if (loadedWindowRef.current.generation === generation) setEdgeError("previous");
     } finally {
-      anchorLease?.release();
       loadingPreviousRef.current = false;
       if (edgeTransitionRef.current === "previous") edgeTransitionRef.current = null;
       setEdgeLoading((currentLoading) => currentLoading === "previous" ? null : currentLoading);
       requestWindowTrimRef.current();
     }
-  }, [applyLoadedWindow, conversationId, dataSource]);
+  }, [commitEdgePage, conversationId, dataSource]);
 
   const loadNextWindow = useCallback(async () => {
     const root = scrollContainerRef.current;
@@ -1269,7 +1280,6 @@ export function ConversationReader({
     setEdgeLoading("next");
     setEdgeError(null);
     const generation = current.generation;
-    let anchorLease: ReaderBlockLease | null = null;
     const transitionIsCurrent = () => (
       loadedWindowRef.current.generation === generation &&
       edgeTransitionRef.current === "next" &&
@@ -1281,47 +1291,23 @@ export function ConversationReader({
         setReaderEdgeStage(root, `next:cancelled:${edgeCancellationReason(loadedWindowRef.current, generation, edgeTransitionRef.current, scrollDirectionRef.current, "next")}`);
         return;
       }
-      const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
-      const scrollOffsetAtAnchor = root.scrollTop;
-      const scrollIntentAtAnchor = scrollIntentSequenceRef.current;
-      if (anchor) {
-        anchorLease = await acquireScrollAnchorLease(anchor, transitionIsCurrent);
-        if (!anchorLease) {
-          if (!transitionIsCurrent()) return;
-          throw new Error("The next-window reading anchor could not be pinned.");
-        }
-      }
-      const currentIds = new Set(current.items.map((message) => message.id));
-      const next = mergeLoadedTurnWindow(current, page);
-      syncTurnAnchorRefs(next, previousTurnAnchorRef, nextTurnAnchorRef);
       setReaderEdgeStage(root, "next:committing");
-      applyLoadedWindow(next);
-      const firstAddedMessageId = page.items.find((message) => !currentIds.has(message.id))?.id;
-      if (firstAddedMessageId && !await waitForMountedMessage(firstAddedMessageId, transitionIsCurrent)) {
-        setReaderEdgeStage(root, `next:mount-cancelled:${edgeCancellationReason(loadedWindowRef.current, generation, edgeTransitionRef.current, scrollDirectionRef.current, "next")}`);
+      if (!await commitEdgePage(root, current, page, transitionIsCurrent)) {
+        setReaderEdgeStage(root, "next:cancelled:anchor");
         return;
       }
-      setReaderEdgeStage(root, "next:mounted");
       notifyReaderWindowLayoutChanged();
-      const restoreIsCurrent = () => (
-        transitionIsCurrent() &&
-        scrollIntentSequenceRef.current === scrollIntentAtAnchor
-      );
-      if (anchor) await restoreScrollAnchor({ root, anchor, tokenIsCurrent: restoreIsCurrent, scrollOffsetAtCapture: scrollOffsetAtAnchor });
-      // The shared idle reclamation protects the entire visible/interaction
-      // interval; don't separately trim an arbitrary head/tail here.
       setReaderEdgeStage(root, "next:settled");
     } catch {
       setReaderEdgeStage(root, "next:failed");
       if (loadedWindowRef.current.generation === generation) setEdgeError("next");
     } finally {
-      anchorLease?.release();
       loadingNextRef.current = false;
       if (edgeTransitionRef.current === "next") edgeTransitionRef.current = null;
       setEdgeLoading((currentLoading) => currentLoading === "next" ? null : currentLoading);
       requestWindowTrimRef.current();
     }
-  }, [applyLoadedWindow, conversationId, dataSource]);
+  }, [commitEdgePage, conversationId, dataSource]);
 
   loadPreviousActionRef.current = () => { void loadPreviousWindow(); };
   loadNextActionRef.current = () => { void loadNextWindow(); };
@@ -2261,6 +2247,7 @@ export function ConversationReader({
     let initialGeometryAnchorFrame = 0;
 
     const captureGeometryAnchor = () => {
+      if (root.dataset.readerGeometryOwner === "viewport") return;
       const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
       if (anchor) {
         geometryAnchorRef.current = {
@@ -3647,7 +3634,7 @@ export function ConversationReader({
 
               {messages.length > 0 ? (
                 <ReaderMarkdownCopyBoundary className="space-y-6">
-                  <div ref={loadPreviousSentinelRef} className={`flex items-center justify-center ${edgeLoading === "previous" || edgeError === "previous" ? "min-h-10" : "h-px"}`}>
+                  <div ref={loadPreviousSentinelRef} className={`flex items-center justify-center ${hasPrevious ? "min-h-11" : "h-px"}`}>
                     {edgeLoading === "previous" ? <span className="inline-flex items-center gap-2 text-sm text-secondary"><Spinner dark />{t("loadingEarlier")}</span> : null}
                     {edgeError === "previous" ? <button type="button" onClick={() => void loadPreviousWindow()} className="rounded-lg border border-ui bg-surface px-3 py-1.5 text-sm text-secondary hover:bg-subtle">{t("retryEarlier")}</button> : null}
                   </div>
@@ -3693,7 +3680,7 @@ export function ConversationReader({
                     />
                     );
                   })}
-                  <div ref={loadMoreSentinelRef} className={`flex items-center justify-center ${edgeLoading === "next" || edgeError === "next" ? "min-h-10" : "h-px"}`}>
+                  <div ref={loadMoreSentinelRef} className={`flex items-center justify-center ${hasMore ? "min-h-11" : "h-px"}`}>
                     {edgeLoading === "next" ? (
                       <span className="inline-flex items-center gap-2 text-sm text-secondary">
                         <Spinner dark />

@@ -8,7 +8,7 @@ import { searchConversations } from "../../lib/api";
 import { usePreferences } from "../../components/preferences-provider";
 import { searchResultHref } from "./search-result-target";
 
-export function SidebarSearch({ onNavigate, currentProjectId }: { onNavigate?: () => void; currentProjectId?: string | null }) {
+export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter();
   const { resolvedLocale } = usePreferences();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -16,9 +16,7 @@ export function SidebarSearch({ onNavigate, currentProjectId }: { onNavigate?: (
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
-  const [projectOnly, setProjectOnly] = useState(false);
-  const projectId = projectOnly ? currentProjectId ?? undefined : undefined;
-  const resultsHref = `/search?${new URLSearchParams({ q: query.trim(), ...(projectId ? { project_id: projectId } : {}) })}`;
+  const resultsHref = `/search?${new URLSearchParams({ q: query.trim() })}`;
   const labels = resolvedLocale === "zh-CN"
     ? { placeholder: "搜索标题和消息内容", all: "查看全部结果", empty: "没有匹配结果" }
     : { placeholder: "Search titles and messages", all: "View all results", empty: "No matching results" };
@@ -34,8 +32,8 @@ export function SidebarSearch({ onNavigate, currentProjectId }: { onNavigate?: (
     return () => window.removeEventListener("chat-reader:focus-global-search", focus);
   }, []);
   const result = useQuery({
-    queryKey: ["sidebar-search", debounced, projectId],
-    queryFn: ({ signal }) => searchConversations({ q: debounced, projectId, limit: 8, grouped: true, signal }),
+    queryKey: ["sidebar-search", debounced],
+    queryFn: ({ signal }) => searchConversations({ q: debounced, limit: 8, grouped: true, signal }),
     enabled: !composing && debounced.length > 0,
     staleTime: 15_000,
   });
@@ -83,12 +81,6 @@ export function SidebarSearch({ onNavigate, currentProjectId }: { onNavigate?: (
         data-testid="sidebar-global-search"
       />
       {query ? <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus(); }} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={resolvedLocale === "zh-CN" ? "清除搜索" : "Clear search"}><X className="h-3.5 w-3.5" /></button> : null}
-      <label className="mt-1 flex items-center gap-1 text-xs text-secondary">{resolvedLocale === "zh-CN" ? "范围：" : "Scope: "}
-        <select aria-label={resolvedLocale === "zh-CN" ? "搜索范围" : "Search scope"} value={projectId ? "project" : "all"} className="min-h-11 min-w-0 rounded border border-ui bg-surface px-2" onChange={event => { setProjectOnly(event.target.value === "project"); setActiveDocumentId(null); }}>
-          <option value="all">{resolvedLocale === "zh-CN" ? "全部对话" : "All conversations"}</option>
-          {currentProjectId ? <option value="project">{resolvedLocale === "zh-CN" ? "当前项目" : "Current project"}</option> : null}
-        </select>
-      </label>
       {query.trim() && !composing ? (
          <div className="absolute inset-x-0 top-full z-40 overflow-hidden rounded-lg border border-ui bg-raised shadow-xl">
            {items.map((item, index) => (

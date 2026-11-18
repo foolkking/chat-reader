@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ArrowUpDown, Check } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { usePreferences } from "./preferences-provider";
 import type { ConversationSortMode, ProjectSortMode, SortDirection } from "../lib/types";
 import { useScopedSort, type SortScope } from "./use-scoped-sort";
@@ -38,7 +39,7 @@ const projectOptions: SortOption<ProjectSortMode>[] = [
   { value: "custom", zh: "手动顺序", en: "Manual order" },
 ];
 
-export function ConversationSortMenu({ compact = false, hideCustomDirection = false, scope = "all" }: { compact?: boolean; hideCustomDirection?: boolean; scope?: SortScope } = {}) {
+export function ConversationSortMenu({ compact = false, sidebar = false, settingLabel, hideCustomDirection = false, scope = "all" }: { compact?: boolean; sidebar?: boolean; settingLabel?: string; hideCustomDirection?: boolean; scope?: SortScope } = {}) {
   const preferences = usePreferences();
   const sorting = useScopedSort(scope);
   const { confirm } = useInteractionDialog();
@@ -48,9 +49,9 @@ export function ConversationSortMenu({ compact = false, hideCustomDirection = fa
     setError(false);
     try { await action(); } catch { setError(true); }
   };
-  return <div className="flex flex-wrap items-center gap-2">
+  return <div className={settingLabel ? "min-w-0" : "flex flex-wrap items-center gap-2"}>
     {scope.startsWith("project:") ? <span className="text-xs text-secondary">{sorting.inherited ? (zh ? "跟随项目默认" : "Following project default") : (zh ? "本项目独立设置" : "Project override")}</span> : null}
-    <SortMenu disabled={!sorting.canChange} compact={compact} hideCustomDirection={hideCustomDirection} options={conversationOptions} mode={sorting.conversationSortMode} direction={sorting.conversationSortDirection} onChange={sorting.setSort} locale={preferences.resolvedLocale}
+    <SortMenu disabled={!sorting.canChange} sidebar={sidebar} settingLabel={settingLabel} compact={compact} hideCustomDirection={hideCustomDirection} options={conversationOptions} mode={sorting.conversationSortMode} direction={sorting.conversationSortDirection} onChange={sorting.setSort} locale={preferences.resolvedLocale}
       actions={scope !== "project_default" ? <button type="button" role="menuitem" disabled={!sorting.canChange} className="min-h-11 w-full rounded-md px-3 text-left text-xs text-secondary hover:bg-subtle" onClick={() => void run(async () => {
         if (await confirm({ title: zh ? "按当前排序重建手动顺序？" : "Rebuild manual order from this sort?",
           description: zh ? "替换此范围已保存的手动位置，其他范围不变。" : "Replace saved manual positions in this scope only." })) await sorting.rebuild();
@@ -61,12 +62,14 @@ export function ConversationSortMenu({ compact = false, hideCustomDirection = fa
   </div>;
 }
 
-export function ProjectSortMenu() {
+export function ProjectSortMenu({ sidebar = false, settingLabel }: { sidebar?: boolean; settingLabel?: string } = {}) {
   const preferences = usePreferences();
-  return <SortMenu kind="project" options={projectOptions} mode={preferences.projectSortMode} direction={preferences.projectSortDirection} onChange={preferences.setProjectSort} locale={preferences.resolvedLocale} />;
+  return <SortMenu kind="project" sidebar={sidebar} settingLabel={settingLabel} compact={sidebar} options={projectOptions} mode={preferences.projectSortMode} direction={preferences.projectSortDirection} onChange={preferences.setProjectSort} locale={preferences.resolvedLocale} />;
 }
 
-function SortMenu<T extends string>({ options, mode, direction, onChange, locale, compact = false, hideCustomDirection = false, kind = "conversation", actions, disabled = false }: {
+function SortMenu<T extends string>({ options, mode, direction, onChange, locale, compact = false, sidebar = false, settingLabel, hideCustomDirection = false, kind = "conversation", actions, disabled = false }: {
+  sidebar?: boolean;
+  settingLabel?: string;
   disabled?: boolean;
   actions?: ReactNode;
   kind?: "conversation" | "project";
@@ -80,6 +83,8 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<CSSProperties>({});
   const [open, setOpen] = useState(false);
   const [error, setError] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -89,14 +94,14 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
     savingRef.current = true;
     setSaving(true);
     setError(false);
-    try { await onChange(nextMode, nextDirection); setOpen(false); }
+    try { await onChange(nextMode, nextDirection); if (panelRef.current?.contains(document.activeElement)) triggerRef.current?.focus({ preventScroll: true }); setOpen(false); }
     catch { setError(true); }
     finally { savingRef.current = false; setSaving(false); }
   };
   useEffect(() => {
     if (!open) return;
     const closeOnOutside = (event: PointerEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) return;
+      if (rootRef.current?.contains(event.target as Node) || panelRef.current?.contains(event.target as Node)) return;
       setOpen(false);
       // The outside pointer owns the next focus target. Restoring the trigger
       // here would steal focus after the clicked input receives it.
@@ -115,7 +120,27 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
       window.removeEventListener("keydown", closeOnEscape, true);
     };
   }, [open]);
+  useLayoutEffect(() => {
+    const anchor = triggerRef.current, bounds = anchor?.closest("[data-sidebar-settings-scroll], [data-reader-primary-sidebar]"), panel = panelRef.current;
+    if (!open || !sidebar || !anchor || !bounds || !panel) return;
+    const place = () => {
+      const a = anchor.getBoundingClientRect(), b = bounds.getBoundingClientRect();
+      if (!a.width || a.bottom <= b.top || a.top >= b.bottom) { setOpen(false); return; }
+      const width = Math.min(192, b.width - 16);
+      const floor = Math.min(window.innerHeight, b.bottom) - 8, ceiling = Math.max(0, b.top) + 8;
+      const below = floor - a.bottom - 4, above = a.top - ceiling - 4;
+      const up = below < panel.scrollHeight && above > below;
+      setPosition({ width, left: Math.max(b.left + 8, Math.min(a.right - width, b.right - 8 - width)),
+        maxHeight: Math.max(0, up ? above : below), ...(up ? { bottom: window.innerHeight - a.top + 4 } : { top: a.bottom + 4 }) });
+    };
+    place();
+    panel.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
+    const observer = new ResizeObserver(place); observer.observe(bounds); observer.observe(anchor);
+    window.addEventListener("resize", place); window.addEventListener("scroll", place, true);
+    return () => { observer.disconnect(); window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
+  }, [open, sidebar]);
   const selected = options.find((option) => option.value === mode) ?? options[0];
+  const directionLabel = locale === "zh-CN" ? (direction === "desc" ? "降序" : "升序") : direction === "desc" ? "Descending" : "Ascending";
   const sharedLabel = sharedSortLabels[String(mode)];
   const label = mode === "message_count"
     ? (locale === "zh-CN" ? (direction === "desc" ? "最长对话" : "最短对话") : (direction === "desc" ? "Longest" : "Shortest"))
@@ -132,34 +157,49 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={kind === "project" ? (locale === "zh-CN" ? "项目排序" : "Sort projects") : (locale === "zh-CN" ? "对话排序" : "Sort conversations")}
-        title={`${label} · ${locale === "zh-CN" ? (direction === "desc" ? "降序" : "升序") : direction === "desc" ? "Descending" : "Ascending"}`}
-        className={`flex cursor-pointer items-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle disabled:cursor-default disabled:opacity-50 ${compact ? "h-11 w-11 justify-center sm:h-7 sm:w-7" : "min-h-11 gap-2 px-3 text-sm sm:min-h-9"}`}
+        aria-label={settingLabel ? `${settingLabel}: ${label} · ${directionLabel}` : kind === "project" ? (locale === "zh-CN" ? "项目排序" : "Sort projects") : (locale === "zh-CN" ? "对话排序" : "Sort conversations")}
+        title={`${label} · ${directionLabel}`}
+        className={settingLabel ? "nav-sort-setting w-full rounded-md px-1 text-left hover:bg-subtle disabled:opacity-50" : sidebar ? "flex size-8 items-center justify-center rounded-md text-secondary hover:bg-surface hover:text-primary disabled:opacity-50 [@media(pointer:coarse)]:size-11" : `flex cursor-pointer items-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle disabled:cursor-default disabled:opacity-50 ${compact ? "h-11 w-11 justify-center sm:h-7 sm:w-7" : "min-h-11 gap-2 px-3 text-sm sm:min-h-9"}`}
       >
-        <ArrowUpDown className="h-4 w-4 shrink-0" aria-hidden="true" />{compact ? null : <><span>{label}</span>{direction === "desc" ? <ArrowDown className="h-3 w-3" aria-hidden="true" /> : <ArrowUp className="h-3 w-3" aria-hidden="true" />}</>}
+        {settingLabel ? <>
+          <span className="nav-sort-scope text-sm text-primary">{settingLabel}</span>
+          <span className="nav-sort-value text-xs text-secondary">{label} <span aria-hidden="true">{direction === "desc" ? "↓" : "↑"}</span></span>
+          <ChevronDown aria-hidden="true" className="nav-sort-chevron size-4 text-secondary" />
+        </> : <><ArrowUpDown className="h-4 w-4 shrink-0" aria-hidden="true" />{compact ? null : <><span>{label}</span>{direction === "desc" ? <ArrowDown className="h-3 w-3" aria-hidden="true" /> : <ArrowUp className="h-3 w-3" aria-hidden="true" />}</>}</>}
       </button>
       {error ? <p role="alert" className="text-xs text-[var(--danger)]">{locale === "zh-CN" ? "保存未确认，请刷新后核对。" : "Save unconfirmed. Refresh to check."}</p> : null}
-      {open ? <div
+      {open ? renderPanel(<div ref={panelRef}
         data-testid="sort-menu-panel"
         role="menu"
-        className="fixed inset-x-3 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[150] max-h-[min(70dvh,32rem)] w-auto overflow-y-auto rounded-lg border border-ui bg-raised p-1 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-11 sm:w-52 sm:shadow-xl"
+        style={sidebar ? position : undefined}
+        onKeyDown={event => {
+          if (!sidebar) return;
+          const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+          const i = items.indexOf(document.activeElement as HTMLButtonElement);
+          if (event.key === "Tab") { triggerRef.current?.focus(); setOpen(false); return; }
+          if (!["ArrowUp","ArrowDown","Home","End"].includes(event.key) || !items.length) return;
+          event.preventDefault(); event.stopPropagation();
+          items[event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (i + items.length + (event.key === "ArrowDown" ? 1 : -1)) % items.length]?.focus();
+        }}
+        className={sidebar ? "fixed z-[150] overflow-y-auto overscroll-contain rounded-lg border border-ui bg-raised p-1 shadow-md [&_button]:min-h-8 [@media(pointer:coarse)]:[&_button]:min-h-11" : "fixed inset-x-3 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[150] max-h-[min(70dvh,32rem)] w-auto overflow-y-auto rounded-lg border border-ui bg-raised p-1 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-11 sm:w-52 sm:shadow-xl"}
       >
         {options.map((option) => (
-          <button key={option.value} role="menuitem" type="button" disabled={saving || disabled} onClick={() => void change(option.value, option.value === "title" || option.value === "custom" ? "asc" : "desc")} className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-primary hover:bg-subtle disabled:opacity-50 sm:min-h-9">
+          <button key={option.value} role={sidebar ? "menuitemradio" : "menuitem"} aria-checked={sidebar ? option.value === mode : undefined} type="button" disabled={saving || disabled} onClick={() => void change(option.value, option.value === "title" || option.value === "custom" ? "asc" : "desc")} className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-primary hover:bg-subtle disabled:opacity-50 sm:min-h-9">
             <span className="flex-1">{locale === "zh-CN" ? option.zh : option.en}</span>
             {option.value === mode ? <Check className="h-4 w-4 text-accent" /> : null}
           </button>
         ))}
         {!(hideCustomDirection && mode === "custom") ? <div className="mt-1 flex border-t border-ui pt-1">
           {(["desc", "asc"] as const).map((value) => (
-            <button key={value} role="menuitem" type="button" disabled={saving || disabled} onClick={() => void change(mode, value)} className={`flex min-h-11 flex-1 items-center justify-center gap-1 rounded-md text-xs disabled:opacity-50 sm:min-h-9 ${direction === value ? "bg-subtle text-primary" : "text-secondary hover:bg-subtle"}`}>
+            <button key={value} role={sidebar ? "menuitemradio" : "menuitem"} aria-checked={sidebar ? direction === value : undefined} type="button" disabled={saving || disabled} onClick={() => void change(mode, value)} className={`flex min-h-11 flex-1 items-center justify-center gap-1 rounded-md text-xs disabled:opacity-50 sm:min-h-9 ${direction === value ? "bg-subtle text-primary" : "text-secondary hover:bg-subtle"}`}>
               {value === "desc" ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />}
               {locale === "zh-CN" ? (value === "desc" ? "降序" : "升序") : value === "desc" ? "Descending" : "Ascending"}
             </button>
           ))}
         </div> : null}
         {actions ? <div className="mt-1 border-t border-ui pt-1">{actions}</div> : null}
-      </div> : null}
+      </div>) : null}
     </div>
   );
+  function renderPanel(panel: ReactNode) { return sidebar ? createPortal(panel, document.body) : panel; }
 }

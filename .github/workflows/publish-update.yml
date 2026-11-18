@@ -1,0 +1,84 @@
+name: Publish signed update
+on:
+  push:
+    tags: ['v*']
+permissions: {}
+concurrency:
+  group: distribution-${{ github.repository_id }}
+  cancel-in-progress: false
+env:
+  UPDATE_DISTRIBUTION: ${{ vars.UPDATE_DISTRIBUTION }}
+jobs:
+  qualify:
+    if: github.ref_protected && vars.UPDATE_DISTRIBUTION != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 125
+    permissions:
+      contents: read
+      actions: write # dispatch only; the called build retains its original read permissions
+    outputs:
+      run: ${{ steps.dispatch.outputs.run }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - id: dispatch
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: python3 scripts/ci/publish_update.py dispatch
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          EXACT_RUN: ${{ steps.dispatch.outputs.run }}
+        run: python3 scripts/ci/publish_update.py wait "$EXACT_RUN"
+  rehearse:
+    needs: qualify
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions: {actions: read, contents: read}
+    outputs:
+      kit: ${{ steps.kit.outputs.artifact-id }}
+      transport: ${{ steps.kit.outputs.artifact-digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - name: Verify and materialize exact tested archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXACT_RUN: ${{ needs.qualify.outputs.run }}
+        run: python3 scripts/ci/publish_update.py materialize "$EXACT_RUN"
+      - name: Isolated host updater acceptance (ephemeral runner)
+        run: bash scripts/ci/update-rehearsal.sh "$RUNNER_TEMP/verified-release/chat-reader-images.tar.gz" "$GITHUB_SHA"
+      - name: Retain redacted timing evidence
+        if: ${{ always() && hashFiles('scripts/ci/update-rehearsal.sh') != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: update-timing-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/update-timings.json
+          if-no-files-found: warn
+          retention-days: 14
+      - id: kit
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: updater-kit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/chat-reader-updater-linux-amd64.tar.gz
+          if-no-files-found: error
+          retention-days: 3
+  publish:
+    needs: [qualify, rehearse]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: signed-releases
+    permissions: {actions: read, contents: write, packages: write}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - name: Authenticate publisher to its registry
+        env: {PACKAGE_TOKEN: '${{ github.token }}'}
+        run: printf %s "$PACKAGE_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin >/dev/null
+      - name: Publish exact images and signed release last
+        env:
+          EXACT_RUN: ${{ needs.qualify.outputs.run }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          RELEASE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+          UPDATER_KIT_ID: ${{ needs.rehearse.outputs.kit }}
+          UPDATER_KIT_DIGEST: ${{ needs.rehearse.outputs.transport }}
+        run: python3 scripts/ci/publish_update.py publish "$EXACT_RUN"

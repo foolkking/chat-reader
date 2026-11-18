@@ -582,7 +582,9 @@ test("workspace soft navigation preserves the same Sidebar DOM instance", async 
   await expect(page).toHaveURL(`/projects/${project.id}`);
   await expectSameSidebar();
 
-  await page.locator('a[href="/recent"]').first().evaluate((element) => (element as HTMLAnchorElement).click());
+  await expect(sidebar.locator('a[href="/recent"]')).toHaveCount(0);
+  await sidebar.getByRole("button", { name: /Quick actions|快捷操作/ }).click();
+  await page.getByTestId("action-palette-recent").click();
   await expect(page).toHaveURL("/recent");
   await expectSameSidebar();
 

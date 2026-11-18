@@ -15,6 +15,7 @@ RELEASE_IMAGE_HEADROOM_KB="${RELEASE_IMAGE_HEADROOM_KB:-524288}"
 RELEASE_TRANSFER_HEADROOM_KB="${RELEASE_TRANSFER_HEADROOM_KB:-131072}"
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
 . "$SCRIPT_DIR/backup_volume_reader.sh"
+backup_batch_reader=""
 
 compose() {
   docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" "$@"
@@ -45,7 +46,7 @@ require_non_negative_integer BACKUP_HEADROOM_KB "$BACKUP_HEADROOM_KB"
 require_non_negative_integer RELEASE_IMAGE_HEADROOM_KB "$RELEASE_IMAGE_HEADROOM_KB"
 require_non_negative_integer RELEASE_TRANSFER_HEADROOM_KB "$RELEASE_TRANSFER_HEADROOM_KB"
 
-if [ ! -s "$RELEASE_ARCHIVE" ]; then
+if [ "$RELEASE_ARCHIVE" != --retained-images ] && [ ! -s "$RELEASE_ARCHIVE" ]; then
   echo "Release preflight refused: archive is missing or empty: $RELEASE_ARCHIVE" >&2
   exit 1
 fi
@@ -55,11 +56,23 @@ if [ ! -d "$BACKUP_DIR" ]; then
 fi
 
 backup_source_init
-gzip -t "$RELEASE_ARCHIVE"
-tar -tzf "$RELEASE_ARCHIVE" >/dev/null
-
-archive_bytes="$(wc -c < "$RELEASE_ARCHIVE" | tr -d ' ')"
-expanded_bytes="$(gzip -dc "$RELEASE_ARCHIVE" | wc -c | tr -d ' ')"
+if [ "$RELEASE_ARCHIVE" = --retained-images ]; then
+  archive_bytes=0; expanded_bytes=0; archive_dir="$BACKUP_DIR"
+else
+  archive_bytes="$(wc -c < "$RELEASE_ARCHIVE" | tr -d ' ')"
+  if [ -n "${UPDATER_VERIFIED_EXPANDED_BYTES:-}" ]; then
+    # Only the installed host adapter sets this after parsing the complete tar,
+    # validating gzip CRC and counting actual bytes. Never a manifest/HTTP input.
+    expanded_bytes="$UPDATER_VERIFIED_EXPANDED_BYTES"
+    require_non_negative_integer verified_expanded_bytes "$expanded_bytes"
+    [ "$expanded_bytes" -gt 0 ] && [ "$expanded_bytes" -le 34359738368 ] || exit 1
+  else
+    gzip -t "$RELEASE_ARCHIVE"
+    tar -tzf "$RELEASE_ARCHIVE" >/dev/null
+    expanded_bytes="$(gzip -dc "$RELEASE_ARCHIVE" | wc -c | tr -d ' ')"
+  fi
+  archive_dir="$(dirname "$RELEASE_ARCHIVE")"
+fi
 archive_kb="$(ceil_kb "$archive_bytes")"
 expanded_kb="$(ceil_kb "$expanded_bytes")"
 
@@ -68,14 +81,10 @@ database_bytes="$(compose exec -T postgres \
 require_non_negative_integer database_bytes "$database_bytes"
 database_kb="$(ceil_kb "$database_bytes")"
 backup_required_kb="$((database_kb + BACKUP_HEADROOM_KB))"
-for component in imports exports offline assets; do
-  component_kb="$(backup_component_size_kb "$component")"
-  require_non_negative_integer "${component}_kb" "$component_kb"
-  backup_required_kb="$((backup_required_kb + component_kb))"
-done
+all_files_kb="$(backup_size_total_kb)"
+backup_required_kb="$((backup_required_kb + all_files_kb))"
 
 image_required_kb="$((expanded_kb + RELEASE_IMAGE_HEADROOM_KB))"
-archive_dir="$(dirname "$RELEASE_ARCHIVE")"
 docker_root="$(docker info --format '{{.DockerRootDir}}')"
 if [ ! -d "$docker_root" ]; then
   echo "Release preflight refused: Docker root does not exist: $docker_root" >&2

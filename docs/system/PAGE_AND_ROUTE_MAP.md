@@ -39,7 +39,7 @@ private application routes remain owner-session protected.
 | `/projects/[projectId]` | 在线资料拥有者 | Project 内对话和批量管理 | Project 树 |
 | `/conversations/[conversationId]` | 在线资料拥有者 | Reader、搜索、批注、Share、Export、编辑/版本、当前对话文件 | 各列表、搜索、最近 |
 | `/search` | 在线资料拥有者 | 全局多类型搜索与目标定位 | 侧栏/Cmd/Ctrl+K |
-| `/recent` | 在线资料拥有者 | 最近打开项目和阅读位置 | 移动端；桌面仅兼容直接 URL/历史 |
+| `/recent` | 在线资料拥有者 | 最近阅读和上次阅读位置 | 移动端首页主内容入口；两端快捷操作、直接 URL/历史均保留，侧栏不显示标签 |
 | `/share/[token]` | Share 访客 | token/scope 约束只读 Reader | 分享 URL |
 | `/library` | 本浏览器离线资料库 | 下载/更新、离线搜索、Reader 和批注同步 | 外观与语言/安装 PWA |
 | `/offline` | 任意 | 普通在线页面连接失败提示 | 直接/错误流；不是 Library SW fallback |

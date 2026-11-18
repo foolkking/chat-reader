@@ -1,0 +1,139 @@
+{
+  "environment": "isolated Linux/amd64 Docker/PostgreSQL/Nginx TLS fixture; not WAN or production",
+  "unit": "milliseconds unless named bytes",
+  "runs": {
+    "pre-optimization": [
+      {
+        "action": "prepare",
+        "archive_bytes": 208440152,
+        "download_ms": 4044,
+        "ready_host_ms": 20066,
+        "click_to_ready_ms": 20843
+      },
+      {
+        "action": "apply",
+        "click_to_healthy_ms": 23876,
+        "observed_outage_ms": 18221
+      },
+      {
+        "action": "rollback",
+        "click_to_healthy_ms": 24945,
+        "observed_outage_ms": 19226
+      }
+    ],
+    "cold": [
+      {
+        "action": "prepare",
+        "archive_bytes": 208440152,
+        "download_ms": 1726,
+        "ready_host_ms": 13956,
+        "click_to_ready_ms": 14172
+      },
+      {
+        "action": "apply",
+        "click_to_healthy_ms": 13799,
+        "observed_outage_ms": 11963
+      },
+      {
+        "action": "rollback",
+        "click_to_healthy_ms": 13428,
+        "observed_outage_ms": 10943
+      }
+    ],
+    "warm-1": [
+      {
+        "action": "prepare",
+        "archive_bytes": 208440152,
+        "download_ms": 1923,
+        "ready_host_ms": 13373,
+        "click_to_ready_ms": 14219
+      },
+      {
+        "action": "apply",
+        "click_to_healthy_ms": 12782,
+        "observed_outage_ms": 10962
+      },
+      {
+        "action": "rollback",
+        "click_to_healthy_ms": 14521,
+        "observed_outage_ms": 11991
+      }
+    ],
+    "warm-2": [
+      {
+        "action": "prepare",
+        "archive_bytes": 208440152,
+        "download_ms": 2292,
+        "ready_host_ms": 13564,
+        "click_to_ready_ms": 14162
+      },
+      {
+        "action": "apply",
+        "click_to_healthy_ms": 13886,
+        "observed_outage_ms": 12020
+      },
+      {
+        "action": "rollback",
+        "click_to_healthy_ms": 14736,
+        "observed_outage_ms": 12289
+      }
+    ],
+    "warm-3": [
+      {
+        "action": "prepare",
+        "archive_bytes": 208440152,
+        "download_ms": 2158,
+        "ready_host_ms": 13109,
+        "click_to_ready_ms": 13663
+      },
+      {
+        "action": "apply",
+        "click_to_healthy_ms": 12554,
+        "observed_outage_ms": 10759
+      },
+      {
+        "action": "rollback",
+        "click_to_healthy_ms": 14916,
+        "observed_outage_ms": 12458
+      }
+    ],
+    "acceptance": [
+      {
+        "action": "prepare",
+        "archive_bytes": 208440707,
+        "download_ms": 7057,
+        "ready_host_ms": 24994,
+        "click_to_ready_ms": 25454
+      },
+      {
+        "action": "apply",
+        "click_to_healthy_ms": 16363,
+        "observed_outage_ms": 12353
+      },
+      {
+        "action": "rollback",
+        "click_to_healthy_ms": 15887,
+        "observed_outage_ms": 13012
+      }
+    ],
+    "final-settings": [
+      {
+        "action": "prepare",
+        "archive_bytes": 208443631,
+        "download_ms": 2710,
+        "ready_host_ms": 15842,
+        "click_to_ready_ms": 16710
+      },
+      {
+        "action": "apply",
+        "click_to_healthy_ms": 15704,
+        "observed_outage_ms": 12267
+      },
+      {
+        "action": "rollback",
+        "click_to_healthy_ms": 15066,
+        "observed_outage_ms": 12135
+      }
+    ]
+  }
+}

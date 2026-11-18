@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "host": "king",
+  "authorization": "Explicit latest-only retention request, followed by all items in the reviewed cleanup table; exclusions preserved.",
+  "source_revision": "897ba788fd89e18c9634ca2271ba6146339939a0",
+  "cleanup_start_utc": "2026-11-07T17:35:43.481934+00:00",
+  "destructive_steps_completed_utc": "2026-11-07T17:37:08.763668+00:00",
+  "independent_verification_utc": "2026-11-07T17:42:13.031179+00:00",
+  "runtime_recheck_utc": "2026-11-07T17:43:21.684662+00:00",
+  "disk_before": {
+    "available_kib": 3429096,
+    "total_kib": 40900288,
+    "use_percent": "92%",
+    "used_kib": 36620108
+  },
+  "disk_after": {
+    "available_kib": 13680388,
+    "total_kib": 40900288,
+    "use_percent": "66%",
+    "used_kib": 26368816
+  },
+  "observed_available_kib_increase": 10251292,
+  "space_delta_is_live_filesystem_observation": true,
+  "removed": {
+    "backup_directories": [
+      "chat-reader-20261105T160504Z",
+      "chat-reader-20261106T140111Z"
+    ],
+    "backup_logical_bytes": 4411152596,
+    "image_revisions": [
+      "67e63364f794d2b6d820eb8502ead9010c76f4bd",
+      "9cf235f3730aae0f3ae747fe0e36763056a624c0"
+    ],
+    "image_configs": 4,
+    "image_role_tags": 8,
+    "standalone_image_archives": 10,
+    "mixed_transfer_archives": 2,
+    "archive_logical_bytes": 2223404642,
+    "vscode_server_versions": 4,
+    "dnf_cache_before_kib": 224964,
+    "dnf_cache_after_kib": 5112,
+    "build_cache_reported_reclaimed": "178.1MB",
+    "build_cache_filter": "until=168h; no --all; default local docker builder"
+  },
+  "retained": {
+    "backup": "chat-reader-20261107T133202Z",
+    "image_revision": "897ba788fd89e18c9634ca2271ba6146339939a0",
+    "image_role_tags": 4,
+    "current_image_archive_sha256": "a63b4df2c0a286217023d11a17adc3644aae578b8259c6edb9e10530ba0dd531",
+    "vscode_server_version": "Stable-c4453f8ea430795f941c1b2ff6c9321135a74a02",
+    "transfer_metadata_files": 63,
+    "transfer_metadata_bytes": 349176,
+    "system_logs": true,
+    "business_data_and_all_volumes": true,
+    "other_workloads_and_images": true,
+    "artifact_orphan_candidates": true
+  },
+  "verification": {
+    "actual_restore": false,
+    "backup_sha256_components": 5,
+    "backup_tar_streams": 4,
+    "containers_unchanged": true,
+    "current_archive_sha256": true,
+    "postgres_toc": true,
+    "preserved_transfer_metadata_files_verified": 63,
+    "runtime_configs_unchanged": true,
+    "unrelated_images_unchanged": true,
+    "volumes_unchanged": true
+  },
+  "runtime": {
+    "containers_unchanged": 11,
+    "images_remaining": 12,
+    "api_web_postgresql_healthy": true,
+    "worker_heartbeat": "alive_idle",
+    "database_schema": "20261105_0059",
+    "canonical_https": [
+      {
+        "endpoint": "/api/health",
+        "status": 200,
+        "tls_verified": true,
+        "via_loopback": true
+      },
+      {
+        "endpoint": "/login",
+        "status": 200,
+        "tls_verified": true,
+        "via_loopback": true
+      }
+    ],
+    "vscode_live_launcher_preserved": true,
+    "restart_or_redeploy_performed": false
+  },
+  "rollback": {
+    "direct_local_available": false,
+    "prior_pointer_archived": true,
+    "existing_release_state_verifier_passed": true,
+    "requires_exact_verified_old_image_reacquisition_and_compatibility_check": true
+  },
+  "verification_corrections": [
+    {
+      "original": "container_state_changed",
+      "evidence": "Only Docker mount array ordering differed; normalized order, preserving exact source/destination/type/name plus IDs, start times, images and restart counts. No deletion replayed."
+    },
+    {
+      "original": "PowerShell CR-only final line rejected by sh",
+      "evidence": "Replayed read-only verifier with byte-preserving LF transport; exit 0, rollback_revision=none."
+    }
+  ],
+  "limits": [
+    "One local recovery point only; no off-site or redundant backup protection.",
+    "Checksum/tar/TOC verification is not a production restore rehearsal.",
+    "No authenticated production UI, original ZIP replay, application build/tests or new CI performed.",
+    "Future cleanup and release require fresh authorization and capacity checks."
+  ],
+  "evidence_sha256": {
+    "apply.jsonl": "9f647d774278e35037ed88e96d136bb107c8179449067faa451080c3c4b2ed78",
+    "verify.jsonl": "cadf5585d1166ef6629cfe9fcfc7e54188d6cbd0154d1e82425f9cf193e89d3e",
+    "operational-recheck.json": "bc9101742b43581226e721118b023297d80c348bbf428b010a19463d618bcb85",
+    "release-state-verification.json": "1df3b711071920de9e596386766252eb8364eb28644c6b44f7033a8507871878",
+    "container-comparison-diagnosis.json": "d296d7bee3448d7aaac854e4e386d8ca51925de5eb5d326a2655b566c822e67b"
+  }
+}

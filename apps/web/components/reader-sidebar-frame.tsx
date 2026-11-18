@@ -2,7 +2,7 @@
 
 import { PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { ResizeHandle, useResizablePane } from "./resizable-pane";
 
 export function ReaderSidebarFrame({
@@ -33,14 +33,7 @@ export function ReaderSidebarFrame({
 
   return (
     <>
-      {mobileOpen ? (
-        <div className="fixed inset-0 z-[80] md:hidden">
-          <button type="button" aria-label="Close sidebar" className="absolute inset-0 bg-black/30" onClick={onMobileClose} />
-          <aside data-reader-primary-sidebar className="absolute inset-y-0 left-0 flex w-[86vw] max-w-[20rem] flex-col overflow-hidden border-r border-ui bg-sidebar text-primary shadow-2xl">
-            {children}
-          </aside>
-        </div>
-      ) : null}
+      {mobileOpen && <button type="button" aria-label="Close sidebar" className="fixed inset-0 z-[80] bg-black/30 md:hidden" onClick={onMobileClose} />}
       {!desktopExpanded ? (
         <aside data-reader-primary-sidebar className="hidden h-full w-14 shrink-0 flex-col items-center border-r border-ui bg-sidebar py-3 text-primary md:flex">
           <Link href="/" className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent)] text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-[var(--focus)]" aria-label="Chat Reader 首页">CR</Link>
@@ -49,10 +42,15 @@ export function ReaderSidebarFrame({
           </button>
           {railExtra}
         </aside>
-      ) : (
-        <aside data-reader-primary-sidebar className="relative hidden h-full shrink-0 flex-col overflow-hidden border-r border-ui bg-sidebar text-primary md:flex" style={{ width: sidebarSize.size }}>
+      ) : null}
+      {/* One navigation tree: a CSS-hidden desktop copy previously registered the
+          same drag/drop IDs as the visible drawer and could receive its drops. */}
+      {(desktopExpanded || mobileOpen) && (
+        <aside data-reader-primary-sidebar
+          className={`fixed inset-y-0 left-0 z-[81] ${mobileOpen ? "flex" : "hidden"} w-[86vw] max-w-[20rem] shrink-0 flex-col overflow-hidden border-r border-ui bg-sidebar text-primary shadow-2xl md:relative md:inset-auto md:z-auto md:h-full md:w-[var(--sidebar-width)] md:max-w-none md:shadow-none ${desktopExpanded ? "md:flex" : "md:hidden"}`}
+          style={{ "--sidebar-width": `${sidebarSize.size}px` } as CSSProperties}>
           {children}
-          <ResizeHandle side="right" label="Resize sidebar" onPointerDown={(event) => sidebarSize.startResize(event)} onDoubleClick={sidebarSize.resetSize} />
+          <div className="hidden md:block"><ResizeHandle side="right" label="Resize sidebar" onPointerDown={(event) => sidebarSize.startResize(event)} onDoubleClick={sidebarSize.resetSize} /></div>
         </aside>
       )}
     </>

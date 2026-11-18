@@ -26,11 +26,11 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Archive, ChevronDown, ChevronRight, Clock3, Command, Folder, Import, ListTodo, PanelLeftClose, Plus, X } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Command, Folder, Import, ListTodo, PanelLeftClose, Plus, X } from "lucide-react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   ApiRequestError,
@@ -156,6 +156,9 @@ export function ProjectSidebar({
   const router = useRouter();
   const [name, setName] = useState("");
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
+  // Quick actions and browser history navigate outside a sidebar link. Keep
+  // the persistent workspace, but never leave its drawer over the new page.
+  useEffect(() => setShowMobileDrawer(false), [pathname]);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showTaskCenter, setShowTaskCenter] = useState(false);
@@ -731,6 +734,19 @@ type SidebarContentProps = {
   onCollapse?: () => void;
 };
 
+const headerAction = "flex size-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-surface hover:text-primary [@media(pointer:coarse)]:size-11";
+
+function SectionHeading({ title, collapsed, toggle, children }: { title: string; collapsed: boolean; toggle: () => void; children: ReactNode }) {
+  const Arrow = collapsed ? ChevronRight : ChevronDown;
+  return <div className="flex min-w-0 items-center gap-1 px-1">
+    <h2 className="min-w-0 flex-1"><button type="button" aria-expanded={!collapsed} onClick={toggle}
+      className="flex min-h-9 w-full items-center gap-1 rounded-md px-1 text-left text-xs font-semibold text-secondary hover:text-primary [@media(pointer:coarse)]:min-h-11">
+      <Arrow aria-hidden="true" className="size-3.5 shrink-0" />{title}
+    </button></h2>
+    {!collapsed && children}
+  </div>;
+}
+
 function SidebarContent(props: SidebarContentProps) {
   const [collapsed, setCollapsed] = useNavigationDeviceState<string[]>("collapsed-blocks", [], (value): value is string[] => Array.isArray(value) && value.every(item => item === "projects" || item === "unclassified"));
   const { navigationSort } = usePreferences();
@@ -754,24 +770,24 @@ function SidebarContent(props: SidebarContentProps) {
         <div className="mb-3">
           <button type="button" data-testid="sidebar-import-button" data-workspace-import-drop-target="true" onClick={props.onImportClick} className="min-h-11 w-full rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle"><span className="inline-flex items-center justify-center gap-2"><Import className="h-4 w-4" />{t("importData")}</span></button>
         </div>
-        <SidebarSearch currentProjectId={props.currentProjectId} onNavigate={props.closeMobile} />
+        <SidebarSearch onNavigate={props.closeMobile} />
         <button type="button" data-testid="sidebar-action-palette-button" onClick={() => window.dispatchEvent(new Event("chat-reader:open-action-palette"))} className="mt-2 flex min-h-10 w-full items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"><Command className="h-4 w-4 text-accent" />{zh ? "快捷操作" : "Quick actions"}<kbd className="ml-auto text-[11px] text-secondary">Alt⇧P</kbd></button>
         <button type="button" data-testid="sidebar-tasks-button" onClick={props.onTasksClick} className="mt-2 flex min-h-10 w-full items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"><ListTodo className="h-4 w-4 text-accent" />{t("tasks")}</button>
         <ImportTaskMonitor placement="sidebar" />
-        <nav className="grid grid-cols-2 gap-1 md:grid-cols-1" aria-label={t("quickNavigation")}>
-          <NavLink href="/recent" label={t("recent")} active={props.pathname === "/recent"} icon={<Clock3 className="h-4 w-4" />} onClick={props.closeMobile} className="md:hidden" />
+        <nav aria-label={t("quickNavigation")}>
           <NavLink href="/archived" label={t("archived")} active={props.pathname === "/archived"} icon={<Archive className="h-4 w-4" />} onClick={props.closeMobile} />
         </nav>
 
         <ProjectArchiveFeedback archive={props.projectArchive} />
         {(navigationSort.blocks === "projects_first" ? ["projects", "unclassified"] : ["unclassified", "projects"]).map(block => block === "projects" ? (
-        <section key="projects" className="mt-5" aria-label={t("projects")} aria-busy={props.projectsFetching}>
-          <div className="flex items-center justify-between px-2">
-            <h2 className="text-xs font-semibold text-secondary"><button type="button" className="min-h-11" aria-expanded={!collapsed.includes("projects")} onClick={() => setCollapsed(collapsed.includes("projects") ? collapsed.filter(item => item !== "projects") : [...collapsed, "projects"])}>{t("projects")} {collapsed.includes("projects") ? "▸" : "▾"}</button></h2><ProjectSortMenu />
-            <button ref={projectCreateTriggerRef} type="button" aria-label={zh ? "新建项目" : "New project"} title={zh ? "新建项目" : "New project"} aria-expanded={props.showProjectForm} onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-surface"><Plus className="h-4 w-4" /></button>
-          </div>
+        <section key="projects" className="mt-1" aria-label={t("projects")} aria-busy={props.projectsFetching}>
+          <SectionHeading title={t("projects")} collapsed={collapsed.includes("projects")} toggle={() => setCollapsed(collapsed.includes("projects") ? collapsed.filter(item => item !== "projects") : [...collapsed, "projects"])}>
+            <ProjectSortMenu sidebar />
+            <button ref={projectCreateTriggerRef} type="button" aria-label={zh ? "新建项目" : "New project"} title={zh ? "新建项目" : "New project"} aria-expanded={props.showProjectForm} onClick={() => props.setShowProjectForm(!props.showProjectForm)} className={headerAction}><Plus className="h-4 w-4" /></button>
+          </SectionHeading>
+          <div hidden={collapsed.includes("projects")}>
           {props.showProjectForm ? <ProjectCreateForm {...props} onCancel={closeProjectCreateForm} /> : null}
-          <SortableContext items={props.projects.map((project) => `project-order:${project.id}`)} strategy={verticalListSortingStrategy}><div hidden={collapsed.includes("projects")} className="mt-2 space-y-1">
+          <SortableContext items={props.projects.map((project) => `project-order:${project.id}`)} strategy={verticalListSortingStrategy}><div className="mt-1 space-y-1">
             {props.projects.map((project) => (
               <ProjectBranch
                 key={project.id}
@@ -796,6 +812,7 @@ function SidebarContent(props: SidebarContentProps) {
             fetching={props.projectsFetching}
             onRetry={props.onRetryProjects}
           /> : null}
+          </div>
         </section>) : (
 
         <HistoryDropZone key="unclassified" pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} fetching={props.conversationsFetching} hasMore={props.conversationsHasMore} loadingMore={props.conversationsLoadingMore} onLoadMore={props.onLoadMoreConversations} onRetry={props.onRetryConversations} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} onNewConversation={props.onNewConversation} placement={props.placement} />
@@ -883,14 +900,13 @@ function HistoryDropZone({ pathname, conversations, loading, error, fetching, ha
   const t = useTranslations();
   const zh = usePreferences().resolvedLocale === "zh-CN";
   return (
-    <div className="mt-5 rounded-lg p-1">
-      <div ref={setNodeRef} data-testid="unclassified-container" className={`flex min-h-9 items-center justify-between rounded-lg px-2 ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
-        <h2 className="text-xs font-semibold text-secondary"><button type="button" className="min-h-11" aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>{t("unclassified")} {collapsed ? "▸" : "▾"}</button></h2>
-        <div className="flex items-center gap-1">
-          <ConversationSortMenu scope="unclassified" compact />
+    <div className="mt-1 rounded-lg">
+      <div ref={setNodeRef} data-testid="unclassified-container" className={`rounded-lg ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
+        <SectionHeading title={t("unclassified")} collapsed={collapsed} toggle={() => setCollapsed(!collapsed)}>
+          <ConversationSortMenu scope="unclassified" sidebar compact />
           <span className="text-[11px] text-secondary">{loading || error && conversations.length === 0 ? "—" : `${conversations.length}${hasMore ? "+" : ""}`}</span>
-          <button type="button" data-testid="unclassified-new-conversation-button" onClick={() => { onNewConversation(); closeMobile(); }} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-surface hover:text-primary" aria-label="新建对话" title="新建对话"><Plus className="h-4 w-4" /></button>
-        </div>
+          <button type="button" data-testid="unclassified-new-conversation-button" onClick={() => { onNewConversation(); closeMobile(); }} className={headerAction} aria-label={zh ? "新建对话" : "New conversation"} title={zh ? "新建对话" : "New conversation"}><Plus className="h-4 w-4" /></button>
+        </SectionHeading>
       </div>
       <nav hidden={collapsed} className="mt-2 space-y-1" aria-label={t("unclassified")} aria-busy={fetching}>
         {loading ? <p role="status" className="px-2 py-2 text-xs text-secondary">{zh ? "正在加载对话…" : "Loading conversations…"}</p> : null}

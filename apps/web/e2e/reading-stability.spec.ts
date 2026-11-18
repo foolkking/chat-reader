@@ -2,9 +2,19 @@ import { expect, test, type APIRequestContext, type Locator, type Page, type Tes
 import { syntheticImage as png } from "./synthetic-image";
 import { writeFile } from "node:fs/promises";
 import { settingsAppearance } from "./settings-test-helper";
+import { verifyMediaPassage } from "./reader-media-motion";
 
 test.skip(process.env.E2E_READING_STABILITY !== "1", "Isolated synthetic reading-stability gate");
 test.use({ trace: "off", serviceWorkers: "allow", extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
+
+for (const mobile of [false, true]) test.describe(mobile ? "375px touch input" : "1280px wheel input", () => {
+  test.use({ isMobile: mobile, hasTouch: mobile });
+  for (const kind of ["image", "long-image", "math", "mixed", "turns"] as const) {
+    test(`bidirectional media passage: ${kind} / ${mobile ? "touch" : "wheel"}`, async ({page,request},info) => {
+      await verifyMediaPassage(kind,mobile,page,request,info);
+    });
+  }
+});
 
 // Real upload, canonical parse, package generation, Reader and browser layout.
 // Only image transport timing/failure is controlled; no component/test-only route.
@@ -96,8 +106,13 @@ async function expectOfflineCopyReady(page: Page, fixture: Fixture) {
   // message and all six source-bound cache entries before cutting the network.
   await expect(page.locator(`#message-${fixture.messageId}`)).toBeVisible();
   await expect.poll(() => page.evaluate(async ({ id, assets }) => {
+    const userId=localStorage.getItem("chat-reader:offline-active-user-v1");
+    if(!userId) return 0;
+    const legacy=localStorage.getItem("chat-reader:offline-legacy-owner-v1")===userId;
+    const namespace=Array.from(new TextEncoder().encode(userId),byte=>byte.toString(16).padStart(2,"0")).join("");
+    const suffix=legacy?"":`--user-${namespace}`;
     const rows = await new Promise<{ id: string; sha256: string; byte_size: number }[]>((resolve, reject) => {
-      const opening = indexedDB.open("chat-reader-offline-library");
+      const opening = indexedDB.open(`chat-reader-offline-library${suffix}`);
       opening.onerror = () => reject(opening.error);
       opening.onsuccess = () => {
         const db = opening.result, tx = db.transaction("attachments");
@@ -106,7 +121,7 @@ async function expectOfflineCopyReady(page: Page, fixture: Fixture) {
         tx.onerror = () => { db.close(); reject(tx.error); };
       };
     });
-    const cache = await caches.open("chat-reader-offline-assets-v1");
+    const cache = await caches.open(`chat-reader-offline-assets-v1${suffix}`);
     const available = await Promise.all(assets.map(async id => {
       const row = rows.find(row => row.id === id);
       if (!row) return false;
@@ -620,7 +635,11 @@ test("explicit reading size updates online references but not an existing offlin
   await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
   await expectOfflineCopyReady(page, normal);
   const snapshot = () => page.evaluate(async id => {
-    const opening = indexedDB.open("chat-reader-offline-library");
+    const userId=localStorage.getItem("chat-reader:offline-active-user-v1");
+    if(!userId) throw Error("Offline test requires the active account-bound local store");
+    const legacy=localStorage.getItem("chat-reader:offline-legacy-owner-v1")===userId;
+    const namespace=Array.from(new TextEncoder().encode(userId),byte=>byte.toString(16).padStart(2,"0")).join("");
+    const opening = indexedDB.open(`chat-reader-offline-library${legacy?"":`--user-${namespace}`}`);
     return new Promise<number>((resolve, reject) => {
       opening.onerror = () => reject(opening.error);
       opening.onsuccess = () => {

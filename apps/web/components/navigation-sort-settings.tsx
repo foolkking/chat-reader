@@ -18,28 +18,29 @@ export function NavigationSortSettings() {
       all, project_default, unclassified, blocks, project_mode: p.projectSortMode, project_direction: p.projectSortDirection,
     } }, { mode: "custom", direction: "asc" }); } catch { setError(true); }
   };
-  return <details className="border-y border-ui py-2">
+  return <details className="nav-sort-settings border-y border-ui" onToggle={event => {
+    const details = event.currentTarget, scroll = details.closest<HTMLElement>("[data-sidebar-settings-scroll]");
+    if (details.open && scroll && scroll.getBoundingClientRect().bottom - details.getBoundingClientRect().top < 224)
+      scroll.scrollTop += details.getBoundingClientRect().top - scroll.getBoundingClientRect().top - 8;
+  }}>
     <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold">{zh ? "排序与导航" : "Sorting & navigation"}</summary>
-    <div className="py-2">
-      <div className="space-y-2 pb-3">
-        <p className="text-sm">{zh ? "侧栏顺序" : "Sidebar order"}</p>
-        <div role="group" aria-label={zh ? "侧栏顺序" : "Sidebar order"} className="flex flex-wrap gap-2">
+    <div className="pb-2">
+      <div className="space-y-1 pb-2">
+        <p className="text-xs font-medium text-secondary">{zh ? "侧栏顺序" : "Sidebar order"}</p>
+        <div role="group" aria-label={zh ? "侧栏顺序" : "Sidebar order"} className="grid grid-cols-2 rounded-lg bg-subtle p-1">
           {(["projects_first", "unclassified_first"] as const).map((value, index) => <button type="button" key={value} aria-pressed={p.navigationSort.blocks === value}
-            className={`min-h-11 rounded-lg border px-3 text-sm ${p.navigationSort.blocks === value ? "border-accent bg-[var(--accent-soft)] text-accent" : "border-ui bg-surface text-secondary hover:bg-subtle"}`}
+            className={`min-h-9 min-w-0 rounded-md px-1.5 text-xs leading-4 [@media(pointer:coarse)]:min-h-11 ${p.navigationSort.blocks === value ? "bg-surface font-semibold text-primary shadow-sm" : "text-secondary hover:text-primary"}`}
             onClick={() => { setError(false); void p.setNavigationSort({ ...p.navigationSort, blocks: value }).catch(() => setError(true)); }}>
-            {(zh ? ["项目 → 未归类", "未归类 → 项目"] : ["Projects → Unclassified", "Unclassified → Projects"])[index]}
+            {(zh ? ["项目在前", "未归类在前"] : ["Projects first", "Unclassified first"])[index]}
           </button>)}
         </div>
       </div>
       <div className="divide-y divide-ui border-y border-ui">
-        <div className="flex flex-wrap items-center justify-between gap-2 py-3"><p className="text-sm">{zh ? "项目之间" : "Project order"}</p><ProjectSortMenu /></div>
-        {(["project_default", "all", "unclassified"] as const).map((scope, index) => <div key={scope} className="flex flex-wrap items-center justify-between gap-2 py-3">
-          <div><p className="text-sm">{(zh ? ["项目内对话 · 默认", "全部对话", "未归类"] : ["In projects · default", "All conversations", "Unclassified"])[index]}</p>
-            {scope === "project_default" ? <p className="mt-1 text-xs text-secondary">{zh ? "独立设置的项目不受影响" : "Project overrides are unchanged"}</p> : null}</div>
-          <ConversationSortMenu scope={scope} />
-        </div>)}
+        <ProjectSortMenu sidebar settingLabel={zh ? "项目之间" : "Project order"} />
+        {(["project_default", "all", "unclassified"] as const).map((scope, index) => <ConversationSortMenu key={scope} sidebar scope={scope}
+          settingLabel={(zh ? ["项目内对话 · 默认", "全部对话", "未归类"] : ["In projects · default", "All conversations", "Unclassified"])[index]} />)}
       </div>
-      <p className="py-3 text-xs text-secondary">{zh ? "最近阅读和搜索独立排序。" : "Recent reading and search keep their own order."}</p>
+      <p className="py-2 text-xs leading-5 text-secondary">{zh ? "已单独设置的项目、最近阅读和搜索保留各自的排序。" : "Project overrides, recent reading and search keep their own order."}</p>
       <div className="flex flex-wrap gap-2">
       <button type="button" className="btn-secondary min-h-11 px-3 text-sm" onClick={() => void apply()}>{zh ? "应用推荐规则" : "Apply recommended rules"}</button>
       {previous ? <button type="button" className="min-h-11 px-3 text-sm text-accent" onClick={() => {

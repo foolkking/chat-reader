@@ -9,6 +9,21 @@ assert.equal(gate.status, "passed");
 assert.ok(gate.test_count >= 35, "Existing stability, seven natural-flow cases and all fold/public-output audit regressions must run.");
 assert.equal(gate.result_counts.passed, gate.test_count, "Every new gate case must actually run.");
 for (const status of ["skipped", "failed", "timedOut", "interrupted"]) assert.equal(gate.result_counts[status], 0);
+const passages = readdirSync(root, { recursive: true }).filter(name => name.endsWith("media-passage.json"));
+const requiredPassages = new Set(["image","long-image","math","mixed","turns"].flatMap(kind => [false,true].map(mobile=>`${kind}/${mobile}`)));
+for (const name of passages) {
+  const {kind,mobile,images,phases} = JSON.parse(readFileSync(join(root,name),"utf8"));
+  assert.ok(requiredPassages.delete(`${kind}/${mobile}`), "Unexpected or duplicate gesture trace");
+  assert.deepEqual(phases.map(p=>p.direction),[-1,1,-1,1]);
+  if (["image","long-image","mixed"].includes(kind)) assert.ok(images>0 && phases.some(p=>p.image));
+  if (["math","mixed","turns"].includes(kind)) assert.ok(phases.some(p=>p.math));
+  if (kind==="turns") assert.ok(phases.some(p=>p.edge) && phases.some(p=>p.newArticles>0));
+  for (const p of phases) {
+    assert.ok(p.comparisons>8 && p.blank===0 && p.unmeasuredGap<=.5 && p.worst<=2 && p.reverse<=4);
+    assert.ok(p.travelled>(mobile?130:320), "Zero reversal is not success if the text did not move");
+  }
+}
+assert.equal(requiredPassages.size,0,"All ten input/content combinations must produce frame measurements");
 const files = readdirSync(root, { recursive: true }).filter(name => /(?:stopped|down|up|viewer)-frames\.json$/.test(name));
 assert.equal(files.length, 16 * 4, "All four surfaces, two widths, normal/virtual, stationary, both scroll directions and Viewer round-trips need frame evidence.");
 for (const phase of ["stopped", "down", "up", "viewer"])

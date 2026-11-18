@@ -35,6 +35,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       await openSettings(page, /Help & diagnostics|帮助与诊断/);
       const help = page.getByRole("region", { name: /Help & diagnostics|帮助与诊断/ });
       await expect(help.getByText(/Connected to server|已连接服务器/, { exact: true })).toBeVisible();
+      await expect(help.getByText(/Web build|网页构建|Version updates|版本更新/)).toHaveCount(0);
       await expect(help.getByRole("button", { name: /Generate & copy diagnostics|生成并复制诊断/ })).toHaveCount(0);
       await expect(help.getByText(/^(Allowed|允许)$/)).toHaveCount(0);
       await expect(help.getByText(`${actualCaps.maximum_import_size_mb} MiB`, { exact: true })).toBeVisible();
@@ -43,6 +44,8 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       await page.getByRole("button", { name: /Runtime status|运行状态/ }).click();
       const runtime = page.getByRole("region", { name: /Runtime status|运行状态/ });
       await expect(runtime.getByRole("heading", { name: /Task queues|任务队列/ })).toBeVisible();
+      await expect(runtime.getByRole("button", { name: /Version updates|版本更新/ })).toHaveAttribute("aria-expanded", "false");
+      await expect(runtime.getByRole("region", { name: /Version updates|版本更新/ })).toHaveCount(0);
       await runtime.locator("summary").filter({ hasText: /More runtime information|更多运行信息/ }).click();
       await expect(runtime.locator("details")).toContainText(/does not include server backups|不包含服务器备份/);
       await expect(runtime.getByText(/Configured \(delivery not tested\)|已配置（未测试投递）/)).toBeVisible();

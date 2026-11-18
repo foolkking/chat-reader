@@ -2,16 +2,18 @@
 
 Last synchronized: 2026-11-18
 
-Current candidate pins **Next 16.4.5**, **React/react-dom 19.2.8** in
+Current deployed26b35501 pins **Next 16.4.5**, **React/react-dom 19.2.8** in
 `apps/web/package.json` and `pnpm-lock.yaml`. Web CI and image runtime use
 **Node 22.13.1** in the workflow and Dockerfile. The locked Next upgrade is outside
 the affected range of GHSA-mfr8-8qww-v76h; the November 18 official-registry
 audit no longer lists that advisory. It still reports a separate high picomatch
 advisory, including affected versions in development tooling. See the
 [scoped exception](RELEASE_SAFETY_BASELINE.md#dependency-policy) and
-[Project State](../../PROJECT_STATE.md) for pending full CI. The
+[26b35501 release evidence](../evidence/navigation-search-import-2026-11-17/production-release-26b35501.json)
+for exact-run evidence and verified deployment; authenticated product acceptance
+remains user-owned. The
 [November 4 release receipt](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)
-does not attest this candidate.
+does not attest this later release.
 
 Release F established the Next 16 boundary. The stages, version/provenance tables,
 old backup/rollback references and original acceptance below are **historical

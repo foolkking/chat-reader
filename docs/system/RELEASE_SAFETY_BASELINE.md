@@ -106,9 +106,21 @@ application redeploy.
 
 ## Release execution boundary
 
-**2026-11-18 navigation repair:** submit one ordinary full CI with empty
+**2026-11-18 later explicit authorization, now completed:** delete only the two
+identified old transfer archives, then deploy corrected26b35501. The user confirms
+CI44235842239/attempt1 success; local exact-run evidence verifies17 prerequisites,
+five real memory cases and image identity. SSH verifies Git refs, not live Actions.
+Fresh capacity, stopped backup,0062 migration/data checks, matching runtime and
+independent verification pass; see the
+[release receipt](../evidence/navigation-search-import-2026-11-17/production-release-26b35501.json).
+This is not authorization for further pruning, CI dispatch, source replay,
+automatic downgrade or repeating the completed deployment. Product acceptance
+and production backup restore remain unverified.
+
+**Historical 2026-11-18 navigation-repair checkpoint:** submit one ordinary full CI with empty
 `quality_source_run_id`, confirm the run ID and commit SHA, then pause.
-Do not wait for completion, start another run or deploy under this instruction.
+That checkpoint alone did not authorize waiting, another run or deployment;
+the later explicit authorization above superseded its pause.
 
 The **2026-11-15** continuous repair/release authorization superseded historical
 “confirm dispatch then pause”. Ordinary full CI uses an empty quality source
@@ -490,7 +502,7 @@ CI installs pinned pnpm `9.15.4` through `pnpm/action-setup`. The Web image pins
 
 The audit source is `https://registry.npmjs.org`. Critical and high advisories fail the release unless an exact, unexpired record exists in `security/dependency-exceptions.json`. The gate rejects unknown advisories, mismatched severity, duplicate records, expired records, and unused broad exceptions. Exceptions identify runtime, build supply-chain, or development exposure and include a mitigation, remediation track, and review date.
 
-**Current candidate, 2026-11-18:** GHSA-fc5q-39xc-vjpf (`picomatch`, high)
+**Deployed26b35501, audit recorded2026-11-18:** GHSA-fc5q-39xc-vjpf (`picomatch`, high)
 has no upstream fix in the registry audit. The [temporary exception](../../security/dependency-exceptions.json)
 requires review by **2026-11-25**. The [scope check](../../scripts/security/verify-picomatch-scope.mjs)
 checks the reported versions (2.3.2 and 4.0.5), their development dependency

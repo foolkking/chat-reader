@@ -183,12 +183,23 @@ Measured row caches survive ordinary image/content resize; width/font/density
 changes may remeasure. Code tokenization retains the same inline newline/blank
 line geometry as fallback. Late Mermaid/content height changes are covered by
 the scroller owner. Independent Compare scrollers never compensate each other.
+Each measured natural-flow virtual row establishes a formatting context, so
+KaTeX vertical margins remain inside the exact box cached by TanStack. Virtual
+image rows initialize from their own live Reader lane width, not a global or
+fixed-width estimate; a remount in a narrow/wide lane therefore cannot seed a
+wrong image height. The Reader root disables native scroll anchoring so the
+browser cannot race the shared real-anchor owner.
 Natural-flow virtual rows cache their real mounted height even while TanStack
 is in scrolling mode, before they can leave the range and become a spacer.
 The shared ref/explicit-measurement adapter retains normal observer cleanup,
 updates only the affected row and never writes scroll or clears other sizes.
 This prevents a row's estimate/actual gap from oscillating at a range boundary
 as the explicit layout owner compensates its real DOM anchor.
+Previous/next complete-turn pages acquire and recapture the current real block
+anchor, then merge and restore in one synchronous layout transaction before a
+paint can expose an intermediate page position. New user intent retires stale
+compensation; it does not create another restoration loop or alter the full-turn
+window contract.
 Compare's explicit section navigation aligns within 1px of its 24px inset;
 the shared navigator's legacy default tolerance and visible physical-endpoint
 exception remain intact. Compare releases its navigation flag and rebases the

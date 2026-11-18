@@ -653,6 +653,8 @@ try {
   if(!touchOnly&&!requestOnly&&!retentionOnly) for(const delay of [0,180]) {
     const page=await browser.newPage({viewport:{width:1280,height:720}});
     current=page;page.on("pageerror",error=>errors.push(error.stack??error.message));
+    let holdEdge=false, releaseEdge;
+    const edgeResponse=new Promise(resolve=>{releaseEdge=resolve;});
     await page.addInitScript(delay=>{
       window.fixtureKind="retention";window.fixtureCount=10000;window.fixtureRemoteRequests=true;
       window.edgeNativeFrames=[];window.edgeNativeEvents=[];window.delayEdgeWheel=false;
@@ -672,6 +674,7 @@ try {
       const url=new URL(route.request().url()),p=url.pathname;
       if(p.endsWith("/reader-turn")) {
         const payload=await page.evaluate(anchor=>window.syntheticTurn(anchor??"m0"),url.searchParams.get("anchor_message_id"));
+        if(holdEdge) await edgeResponse;
         await new Promise(resolve=>setTimeout(resolve,8));
         return route.fulfill({json:payload});
       }
@@ -683,11 +686,14 @@ try {
     await page.goto("http://reader.synthetic/");
     const scroller=page.locator('[data-reader-scroll-root="true"]');
     await expect(scroller.locator("article").first()).toBeVisible();await scroller.hover();
+    holdEdge=true;
     for(let step=0;step<20;step++) {
       await page.mouse.wheel(0,120);await page.waitForTimeout(34);
       if(/^next:(loading|committing|mounted)$/.test(await scroller.getAttribute("data-reader-edge-stage")??"")) break;
     }
-    await expect(scroller).toHaveAttribute("data-reader-edge-stage","next:mounted",{timeout:15000});
+    // The actual append and compensation are now indivisible. Inject native
+    // motion across the in-flight response, not a nonexistent post-paint gap.
+    await expect(scroller).toHaveAttribute("data-reader-edge-stage","next:loading",{timeout:15000});
     const before=await scroller.evaluate(root=>{
       const line=root.getBoundingClientRect().top+120;
       const article=[...root.querySelectorAll("article[data-message-id]")].find(node=>{
@@ -706,7 +712,8 @@ try {
       };frame();
       return {top:root.scrollTop,anchorTop:article.getBoundingClientRect().top-root.getBoundingClientRect().top};
     });
-    await page.mouse.wheel(0,120);await page.waitForTimeout(260);
+    await page.mouse.wheel(0,120);holdEdge=false;releaseEdge();await page.waitForTimeout(260);
+    await expect(scroller).toHaveAttribute("data-reader-edge-stage","next:settled");
     const after=await page.evaluate(()=>{
       window.edgeNativeSampling=false;
       return {frames:window.edgeNativeFrames,events:window.edgeNativeEvents};

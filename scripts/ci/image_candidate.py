@@ -14,8 +14,9 @@ import zipfile
 
 from quality_schedule import SCHEDULE_SHA256, load_schedule
 from image_archive_identity import identities as archive_identities
+from update_distribution import full_repository
 
-REPOSITORY = "foolkking/chat-reader"
+REPOSITORY = full_repository()
 ROLES = ("api", "import-worker", "migrate", "web")
 FILES = ("chat-reader-images.tar.gz", "image-inspection.json", "small-zip-memory.json",
          "bounded-zip-memory.json", "deploy/nginx-internal-diagnostics.location.conf")
