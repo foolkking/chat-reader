@@ -3,7 +3,7 @@ import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from threading import Barrier
+from threading import Barrier, Event, Lock
 from time import monotonic
 
 import pytest
@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
+from app.api.routes import conversation_order as conversation_order_route
 from app.api.routes.conversation_order import OrderChange, change_order, read_order
 from app.models.conversation import Conversation
 from app.models.search_document import SearchDocument
@@ -57,7 +58,7 @@ def test_upgrade_preserves_preferences_and_distinguishes_unused_manual_positions
     migrate("head")
 
 
-def test_concurrent_anchor_writes_have_exactly_one_winner(isolated_schema):
+def test_concurrent_anchor_writes_have_exactly_one_winner(isolated_schema, monkeypatch):
     engine, migrate = isolated_schema
     migrate("head")
     request = Request({"type": "http"})
@@ -69,11 +70,27 @@ def test_concurrent_anchor_writes_have_exactly_one_winner(isolated_schema):
         db.commit()
         ids = [row.id for row in rows]
         version = read_order(request, db=db)["version"]
-    barrier = Barrier(2)
+    first_writer_has_order_lock = Event()
+    release_first_writer = Event()
+    call_lock = Lock()
+    order_lock_calls = 0
+    original_lock = conversation_order_route.lock_navigation_order
+
+    def hold_first_writer_after_lock(connection, owner_user_id, *, nowait=False):
+        nonlocal order_lock_calls
+        original_lock(connection, owner_user_id, nowait=nowait)
+        with call_lock:
+            order_lock_calls += 1
+            is_first = order_lock_calls == 1
+        if is_first:
+            first_writer_has_order_lock.set()
+            if not release_first_writer.wait(timeout=10):
+                raise AssertionError("Timed out waiting to release the first ordering writer.")
+
+    monkeypatch.setattr(conversation_order_route, "lock_navigation_order", hold_first_writer_after_lock)
 
     def move(identifier):
         with Session(engine) as db:
-            barrier.wait(timeout=10)
             try:
                 change_order(OrderChange(scope="all", expected_version=version, conversation_id=identifier,
                     before_id=ids[0]), request, db)
@@ -83,9 +100,48 @@ def test_concurrent_anchor_writes_have_exactly_one_winner(isolated_schema):
                 return error.status_code
 
     with ThreadPoolExecutor(2) as executor:
-        assert sorted(executor.map(move, ids[2:])) == [200, 409]
+        first_writer = executor.submit(move, ids[2])
+        assert first_writer_has_order_lock.wait(timeout=10), "First writer did not acquire the ordering lock."
+        competing_writer = executor.submit(move, ids[3])
+        try:
+            # Keep the first transaction open while the competitor reaches the
+            # same scope. Exactly one write must win; the second must fail fast.
+            assert competing_writer.result(timeout=10) == 409
+        finally:
+            release_first_writer.set()
+        assert first_writer.result(timeout=10) == 200
     with Session(engine) as db:
         assert read_order(request, db=db)["count"] == 4
+
+    # A different request can acquire the preference fence immediately after
+    # our commit. It must not turn a successful write into a post-commit 409.
+    with Session(engine) as blocker, Session(engine) as winner:
+        version = read_order(request, db=winner)["version"]
+        commit = winner.commit
+
+        def commit_then_hold_preference():
+            commit()
+            conversation_order_route.get_or_create_preferences(blocker, "local:default", nowait=True)
+
+        monkeypatch.setattr(winner, "commit", commit_then_hold_preference)
+        saved = change_order(OrderChange(scope="all", expected_version=version,
+            conversation_id=ids[3], before_id=ids[0]), request, winner)
+        assert saved["count"] == 4 and saved["initialized"]
+        assert saved["version"] != version
+    with Session(engine) as db:
+        assert read_order(request, db=db)["version"] == saved["version"]
+
+    # Retain the original simultaneous-start race as well as the deterministic
+    # overlap and post-commit fence controls above.
+    version = saved["version"]
+    barrier = Barrier(2)
+
+    def simultaneous_move(identifier):
+        barrier.wait(timeout=10)
+        return move(identifier)
+
+    with ThreadPoolExecutor(2) as executor:
+        assert sorted(executor.map(simultaneous_move, ids[2:])) == [200, 409]
 
 
 def test_order_does_not_wait_behind_locked_canonical_writer(isolated_schema, monkeypatch):

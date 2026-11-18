@@ -1,4 +1,7 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import path from "node:path";
+import { collectNextPatternEvidence, collectRuntimeSources, verifyPicomatchScope } from "./security/verify-picomatch-scope.mjs";
 
 const [auditPath, exceptionsPath, reportPath] = process.argv.slice(2);
 if (!auditPath || !exceptionsPath || !reportPath) {
@@ -19,6 +22,40 @@ const allowedDispositions = new Set([
 const today = new Date().toISOString().slice(0, 10);
 const exceptions = new Map();
 const policyErrors = [];
+let picomatchScopeVerification = null;
+
+const picomatchAdvisories = Object.values(audit.advisories ?? {}).filter(
+  (item) => item.module_name === "picomatch" && item.github_advisory_id === "GHSA-fc5q-39xc-vjpf",
+);
+if (picomatchAdvisories.length) {
+  const pnpmArgs = ["--filter", "web", "list", "--prod", "--depth", "Infinity", "--json"];
+  const result = spawnSync(
+    process.platform === "win32" ? "corepack.cmd" : "pnpm",
+    process.platform === "win32" ? ["pnpm", ...pnpmArgs] : pnpmArgs,
+    {
+      encoding: "utf8",
+      maxBuffer: 32 * 1024 * 1024,
+      shell: process.platform === "win32",
+      timeout: 60_000,
+    },
+  );
+  if (result.error || result.status !== 0) {
+    policyErrors.push(`Could not verify the production dependency tree for picomatch: ${result.error?.message ?? result.stderr ?? `exit ${result.status}`}`);
+  } else {
+    try {
+      picomatchScopeVerification = verifyPicomatchScope({
+        audit,
+        productionTree: JSON.parse(result.stdout.replace(/^\uFEFF/, "")),
+        webPackage: readJson(path.resolve("apps/web/package.json")),
+        exceptions: policyDocument,
+        runtimeSources: collectRuntimeSources(path.resolve()),
+        nextPatternEvidence: collectNextPatternEvidence(path.resolve()),
+      });
+    } catch (error) {
+      policyErrors.push(`picomatch scope verification failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+}
 
 for (const item of policyDocument.exceptions ?? []) {
   const key = `${item.advisory_id}:${item.package}`;
@@ -27,6 +64,15 @@ for (const item of policyDocument.exceptions ?? []) {
   if (!item.review_by || item.review_by < today) policyErrors.push(`Expired exception ${key} (${item.review_by ?? "missing"})`);
   for (const field of ["severity", "scope", "reason", "mitigation", "track"]) {
     if (!item[field]) policyErrors.push(`Missing ${field} for ${key}`);
+  }
+  if (item.disposition === "NOT_APPLICABLE") {
+    const evidencePath = typeof item.evidence === "string"
+      ? path.resolve(process.cwd(), item.evidence)
+      : "";
+    const repoRoot = path.resolve(process.cwd());
+    if (!evidencePath || !evidencePath.startsWith(`${repoRoot}${path.sep}`) || !fs.existsSync(evidencePath)) {
+      policyErrors.push(`NOT_APPLICABLE exception ${key} requires an in-repository automated evidence file`);
+    }
   }
   exceptions.set(key, item);
 }
@@ -61,6 +107,7 @@ for (const advisory of blocked) {
     scope: exception.scope,
     track: exception.track,
     review_by: exception.review_by,
+    evidence: exception.evidence ?? null,
   });
 }
 
@@ -77,6 +124,7 @@ const report = {
     policy_errors: policyErrors.length,
   },
   approved_exceptions: approved,
+  picomatch_scope_verification: picomatchScopeVerification,
   unapproved,
   policy_errors: policyErrors,
   lower_severity_advisories: advisories

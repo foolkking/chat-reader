@@ -18,6 +18,12 @@ if (process.platform === "win32") {
     /^(?:c:\/users\/86182\/desktop\/wkkk|e:\/chat-reader-temp)\/[^/]+/);
 }
 const output = mkdtempSync(join(tempRoot, "release-source-controls-"));
+const scopeTests = spawnSync(process.execPath,
+  ["--test", join(root, "scripts/security/verify-picomatch-scope.test.mjs")],
+  { cwd: root, env: { ...process.env, TEMP: output, TMP: output }, stdio: "inherit" });
+assert.ifError(scopeTests.error);
+assert.equal(scopeTests.signal, null, "Dependency scope controls were interrupted.");
+assert.equal(scopeTests.status, 0, "Dependency scope controls did not pass.");
 const config = join(output, "playwright.config.cjs");
 writeFileSync(config, `
 const original = require(${JSON.stringify(join(web, "playwright.config.ts"))}).default;

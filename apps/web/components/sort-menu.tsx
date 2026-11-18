@@ -50,13 +50,13 @@ export function ConversationSortMenu({ compact = false, hideCustomDirection = fa
   };
   return <div className="flex flex-wrap items-center gap-2">
     {scope.startsWith("project:") ? <span className="text-xs text-secondary">{sorting.inherited ? (zh ? "跟随项目默认" : "Following project default") : (zh ? "本项目独立设置" : "Project override")}</span> : null}
-    <SortMenu compact={compact} hideCustomDirection={hideCustomDirection} options={conversationOptions} mode={sorting.conversationSortMode} direction={sorting.conversationSortDirection} onChange={sorting.setSort} locale={preferences.resolvedLocale}
-      actions={scope !== "project_default" ? <button type="button" role="menuitem" className="min-h-11 w-full rounded-md px-3 text-left text-xs text-secondary hover:bg-subtle" onClick={() => void run(async () => {
+    <SortMenu disabled={!sorting.canChange} compact={compact} hideCustomDirection={hideCustomDirection} options={conversationOptions} mode={sorting.conversationSortMode} direction={sorting.conversationSortDirection} onChange={sorting.setSort} locale={preferences.resolvedLocale}
+      actions={scope !== "project_default" ? <button type="button" role="menuitem" disabled={!sorting.canChange} className="min-h-11 w-full rounded-md px-3 text-left text-xs text-secondary hover:bg-subtle" onClick={() => void run(async () => {
         if (await confirm({ title: zh ? "按当前排序重建手动顺序？" : "Rebuild manual order from this sort?",
           description: zh ? "替换此范围已保存的手动位置，其他范围不变。" : "Replace saved manual positions in this scope only." })) await sorting.rebuild();
       })}>{zh ? "按当前排序重建手动顺序…" : "Rebuild manual order from current sort…"}</button> : null}
     />
-    {scope.startsWith("project:") && !sorting.inherited ? <button type="button" className="min-h-11 text-xs text-accent" onClick={() => void run(sorting.inherit)}>{zh ? "恢复跟随" : "Use default"}</button> : null}
+    {scope.startsWith("project:") && !sorting.inherited ? <button type="button" disabled={!sorting.canChange} className="min-h-11 text-xs text-accent disabled:opacity-50" onClick={() => void run(sorting.inherit)}>{zh ? "恢复跟随" : "Use default"}</button> : null}
     {error ? <p role="alert" className="text-xs text-[var(--danger)]">{zh ? "保存未确认，请刷新后核对；没有覆盖其他范围。" : "Save unconfirmed. Refresh to check; other scopes were not overwritten."}</p> : null}
   </div>;
 }
@@ -66,7 +66,8 @@ export function ProjectSortMenu() {
   return <SortMenu kind="project" options={projectOptions} mode={preferences.projectSortMode} direction={preferences.projectSortDirection} onChange={preferences.setProjectSort} locale={preferences.resolvedLocale} />;
 }
 
-function SortMenu<T extends string>({ options, mode, direction, onChange, locale, compact = false, hideCustomDirection = false, kind = "conversation", actions }: {
+function SortMenu<T extends string>({ options, mode, direction, onChange, locale, compact = false, hideCustomDirection = false, kind = "conversation", actions, disabled = false }: {
+  disabled?: boolean;
   actions?: ReactNode;
   kind?: "conversation" | "project";
   options: SortOption<T>[];
@@ -84,7 +85,7 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const change = async (nextMode: T, nextDirection: SortDirection) => {
-    if (savingRef.current) return;
+    if (savingRef.current || disabled) return;
     savingRef.current = true;
     setSaving(true);
     setError(false);
@@ -126,13 +127,14 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
       <button
         ref={triggerRef}
         type="button"
+        disabled={disabled}
         data-testid="sort-menu-trigger"
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={kind === "project" ? (locale === "zh-CN" ? "项目排序" : "Sort projects") : (locale === "zh-CN" ? "对话排序" : "Sort conversations")}
         title={`${label} · ${locale === "zh-CN" ? (direction === "desc" ? "降序" : "升序") : direction === "desc" ? "Descending" : "Ascending"}`}
-        className={`flex cursor-pointer items-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle ${compact ? "h-11 w-11 justify-center sm:h-7 sm:w-7" : "min-h-11 gap-2 px-3 text-sm sm:min-h-9"}`}
+        className={`flex cursor-pointer items-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle disabled:cursor-default disabled:opacity-50 ${compact ? "h-11 w-11 justify-center sm:h-7 sm:w-7" : "min-h-11 gap-2 px-3 text-sm sm:min-h-9"}`}
       >
         <ArrowUpDown className="h-4 w-4 shrink-0" aria-hidden="true" />{compact ? null : <><span>{label}</span>{direction === "desc" ? <ArrowDown className="h-3 w-3" aria-hidden="true" /> : <ArrowUp className="h-3 w-3" aria-hidden="true" />}</>}
       </button>
@@ -143,14 +145,14 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
         className="fixed inset-x-3 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[150] max-h-[min(70dvh,32rem)] w-auto overflow-y-auto rounded-lg border border-ui bg-raised p-1 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-11 sm:w-52 sm:shadow-xl"
       >
         {options.map((option) => (
-          <button key={option.value} role="menuitem" type="button" disabled={saving} onClick={() => void change(option.value, option.value === "title" || option.value === "custom" ? "asc" : "desc")} className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-primary hover:bg-subtle disabled:opacity-50 sm:min-h-9">
+          <button key={option.value} role="menuitem" type="button" disabled={saving || disabled} onClick={() => void change(option.value, option.value === "title" || option.value === "custom" ? "asc" : "desc")} className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-primary hover:bg-subtle disabled:opacity-50 sm:min-h-9">
             <span className="flex-1">{locale === "zh-CN" ? option.zh : option.en}</span>
             {option.value === mode ? <Check className="h-4 w-4 text-accent" /> : null}
           </button>
         ))}
         {!(hideCustomDirection && mode === "custom") ? <div className="mt-1 flex border-t border-ui pt-1">
           {(["desc", "asc"] as const).map((value) => (
-            <button key={value} role="menuitem" type="button" disabled={saving} onClick={() => void change(mode, value)} className={`flex min-h-11 flex-1 items-center justify-center gap-1 rounded-md text-xs disabled:opacity-50 sm:min-h-9 ${direction === value ? "bg-subtle text-primary" : "text-secondary hover:bg-subtle"}`}>
+            <button key={value} role="menuitem" type="button" disabled={saving || disabled} onClick={() => void change(mode, value)} className={`flex min-h-11 flex-1 items-center justify-center gap-1 rounded-md text-xs disabled:opacity-50 sm:min-h-9 ${direction === value ? "bg-subtle text-primary" : "text-secondary hover:bg-subtle"}`}>
               {value === "desc" ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />}
               {locale === "zh-CN" ? (value === "desc" ? "降序" : "升序") : value === "desc" ? "Descending" : "Ascending"}
             </button>

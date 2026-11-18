@@ -129,6 +129,7 @@ export function ConversationList({
       return { items: rows.slice(0, pageSize), offset: pageParam, hasMore: rows.length > pageSize };
     },
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.offset + pageSize : undefined,
+    refetchOnReconnect: "always",
     // Do not show or mutate the old sort's rows under the new sort controls.
     staleTime: 10_000,
   });

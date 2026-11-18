@@ -16,7 +16,7 @@
     "tests/test_navigation_search_postgres.py": {
       "count": 4,
       "shard": 2,
-      "source_lf_sha256": "c39abce63851ea41aff7154a3e56b9f67d2eb2ad02f4f93c84bd92731114c005"
+      "source_lf_sha256": "b8dd53f5e70c8e46d529f7149940566e2ebe07af4e9a470224b1a89e01f37e43"
     },
     "tests/test_navigation_sort.py": {
       "count": 5,

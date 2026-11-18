@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-18",
+  "failed_ci": {
+    "run_id": "44135067562",
+    "head": "991eabcd5a94288807338d450e1a0e586b4ffb42",
+    "observed_failures": [
+      "Two concurrent anchor writes both reported 409",
+      "Desktop sidebar reconnect, active/archived list reconnect, empty-project sorting",
+      "Official dependency audit blocked high GHSA-fc5q-39xc-vjpf"
+    ]
+  },
+  "local_repair_checks": {
+    "ci_node_passed": 162,
+    "ci_python_passed": 142,
+    "ux_node_passed": 2579,
+    "release_source_controls_passed": 88,
+    "dependency_scope_controls_passed": 10,
+    "frozen_install_without_lifecycle_scripts": true,
+    "next_version_installed": "16.4.5",
+    "web_lint_typecheck_production_build": "passed",
+    "dedicated_postgres_navigation_tests_passed": 4,
+    "browser": {
+      "fixture": "Isolated production Web build, test-mode API and new PostgreSQL cluster; no existing data or services used.",
+      "first_matrix": "11/12: the desktop archived list failed before its saved sort had loaded.",
+      "final_matrix": "12 cases at 375px / 1440px; run twice without retries.",
+      "passed": 24,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "registry_audit": {
+      "total": 4,
+      "high": 1,
+      "approved_temporary_exceptions": 1,
+      "unapproved": 0,
+      "review_by": "2026-11-25",
+      "negative_controls": "An expired exception and a newly available fix both failed the policy check."
+    }
+  },
+  "boundary": "Local Windows verification, not full Linux CI, production deployment, or product acceptance."
+}

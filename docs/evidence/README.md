@@ -1,5 +1,10 @@
 # 事实证据索引
 
+## 并发排序、重连与依赖门禁 — 2026-11-18
+
+[CI 44135067562 与本地验证](navigation-search-import-2026-11-17/ci-44135067562-local-repair.json)：
+独立 PostgreSQL 回归 4 项通过，浏览器 12 个场景各跑两次，24 次均通过；不替代完整 Linux CI。
+
 ## 排序、搜索与导入CI失败修复 — 2026-11-17
 
 [CI44063757196与定点修复](navigation-search-import-2026-11-17/ci-failure-44063757196-repair.json)

@@ -104,9 +104,13 @@ for a fully green run; the failed43m29s duration is not speedup evidence. Produc
 user-owned. Production is already71342129/schema0061; these CI-only changes do not require an
 application redeploy.
 
-## Current release execution boundary — 2026-11-15
+## Release execution boundary
 
-The latest continuous repair/release authorization supersedes historical
+**2026-11-18 navigation repair:** submit one ordinary full CI with empty
+`quality_source_run_id`, confirm the run ID and commit SHA, then pause.
+Do not wait for completion, start another run or deploy under this instruction.
+
+The **2026-11-15** continuous repair/release authorization superseded historical
 “confirm dispatch then pause”. Ordinary full CI uses an empty quality source
 and fresh exact-source quality, memory, image and independent consumer proof.
 After a new real55-minute wait, self-check and repair failures; deploy only
@@ -485,6 +489,18 @@ CI installs pinned pnpm `9.15.4` through `pnpm/action-setup`. The Web image pins
 ## Dependency policy
 
 The audit source is `https://registry.npmjs.org`. Critical and high advisories fail the release unless an exact, unexpired record exists in `security/dependency-exceptions.json`. The gate rejects unknown advisories, mismatched severity, duplicate records, expired records, and unused broad exceptions. Exceptions identify runtime, build supply-chain, or development exposure and include a mitigation, remediation track, and review date.
+
+**Current candidate, 2026-11-18:** GHSA-fc5q-39xc-vjpf (`picomatch`, high)
+has no upstream fix in the registry audit. The [temporary exception](../../security/dependency-exceptions.json)
+requires review by **2026-11-25**. The [scope check](../../scripts/security/verify-picomatch-scope.mjs)
+checks the reported versions (2.3.2 and 4.0.5), their development dependency
+paths, the installed production tree, and application imports. Next 16.4.5
+also bundles a matcher; its reviewed image helpers use configuration patterns.
+The gate pins those sources and the config and rejects a changed upstream fix
+range. Passing this check neither patches the matcher nor proves that all
+framework code is unreachable.
+
+Historical Release A dependency decisions:
 
 - Next is patched within Release A from `14.2.23` to `14.2.35`. Next 14 is unsupported, so `NEXT_SUPPORTED_LTS_BASELINE = MIGRATION_REQUIRED`; the separate track is `NEXT_LTS_MIGRATION_TRACK`.
 - Mermaid is patched from `11.16.0` to `11.16.1` and retains `securityLevel: "strict"`.

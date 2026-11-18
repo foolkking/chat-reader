@@ -1,28 +1,22 @@
 # Project State
 
-## Current worktree: navigation, search and import UX — 2026-11-17
+## Current candidate: navigation, search and import UX — 2026-11-18
 
-Candidate implementation adds source-bound import previews/disposition management,
-scoped sorting with migration0062, server-paginated conversation search, and compact
-desktop/mobile layouts. **Not deployed or product-accepted; production remains7134/0061.**
-The [current contract and remaining checks](docs/system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md)
-separate actual API/PostgreSQL and mounted-component checks from pending full-site,
-Linux/resource acceptance. Existing CI success below belongs to3d46555, not this candidate.
-Candidate7f9ef44 was pushed and ordinary full **CI44063757196/attempt1 failed**:
-six failed jobs, eight successful, five skipped; no deployable release artifact.
-The repair fixes metadata-outage list blocking and duplicate import filenames,
-adapts browser tests to grouped search/Task Center/manual-order UI, and repairs
-two old-schema migration tests. Frozen partitions/skips remain unchanged:
-API7034; six reviewed legacy files retain28 original node IDs; one Settings file
-retains all six native identities/timeouts within470+restore1.
-Local UX2577, CI162+142, real PostgreSQL migration/split3, mounted40+12+12,
-lint/typecheck/build and88 release-source controls pass. Two7034 collections
-match; Settings470 identities/source/runtime timeouts verify. These are not
-full-site execution or new full-CI acceptance. [Failure and repair evidence](docs/evidence/navigation-search-import-2026-11-17/ci-failure-44063757196-repair.json).
-The earlier Windows diagnostic/build09 failures remain historical evidence.
-The new build succeeds without a dependency change/bypass; the previously
-reported Next advisory is not thereby resolved. Next action: submit one fresh
-ordinary full CI, then pause; no production action.
+The candidate adds source-bound import previews, scoped sorting (schema 0062)
+and paginated search. **Not deployed or product-accepted; last verified
+production is 71342129 / schema 0061.**
+
+Full CI **44135067562** on `991eabc` failed the PostgreSQL ordering race, Web
+recovery/sort cases and the dependency audit. The local repair keeps the
+winning write's response inside its transaction and separates project metadata
+needed for sorting from list data needed for reading. See the
+[navigation contract and verification boundary](docs/system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md).
+The [Next pin](docs/system/NEXT_LTS_MIGRATION_CONTRACT.md) is now 16.4.5;
+the [separate picomatch exception](docs/system/RELEASE_SAFETY_BASELINE.md#dependency-policy)
+requires review by 2026-11-25. Submit one full Linux CI with empty
+`quality_source_run_id`, confirm the run and SHA, then pause without deployment.
+The [earlier failure on 7f9ef44](docs/evidence/navigation-search-import-2026-11-17/ci-failure-44063757196-repair.json)
+and the successful runs below are historical, not acceptance of this candidate.
 
 ## Latest: two optimized full CI runs independently verified — 2026-11-17
 

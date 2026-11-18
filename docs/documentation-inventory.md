@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+## 排序与重连 CI 修复 — 2026-11-18
+
+更新 Project State、导航和[排序合同](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md)，区分
+`991eabc` 的完整 CI 失败与本轮本地复测；[Next 版本合同](system/NEXT_LTS_MIGRATION_CONTRACT.md)
+和[发布基线](system/RELEASE_SAFETY_BASELINE.md#dependency-policy)记录候选锁定版本与有期限的依赖例外。
+
 ## 排序、搜索与导入体验候选 — 2026-11-17
 
 新增`system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md`承载范围／状态／接口／0062及验证边界；

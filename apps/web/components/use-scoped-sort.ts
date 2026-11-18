@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { changeConversationOrder, getConversationOrder, getProjects, updateProject } from "../lib/api";
-import type { ConversationSortMode, SortDirection } from "../lib/types";
+import type { ConversationSortMode, ProjectRead, SortDirection } from "../lib/types";
 import { usePreferences } from "./preferences-provider";
 import { authenticationGeneration } from "../lib/offline-access";
 
@@ -24,6 +24,17 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
   const project = projects.data?.find(item => item.id === projectId);
   const assertProjectWritable = () => {
     if (projectId && (!project || projects.isError)) throw new Error("Refresh projects before changing sorting.");
+  };
+  const refreshConfirmedProject = (updated: ProjectRead) => {
+    assertAccount();
+    void client.cancelQueries({ queryKey: ["projects"] }).catch(() => undefined);
+    client.setQueriesData<ProjectRead[]>({ queryKey: ["projects"] }, current =>
+      current?.map(item => item.id === updated.id && (item.sort_revision ?? 0) <= (updated.sort_revision ?? 0)
+        ? { ...item, conversation_sort: updated.conversation_sort, sort_revision: updated.sort_revision }
+        : item));
+    // A confirmed write should not keep the sort menu busy while unrelated
+    // active project queries finish refreshing.
+    void client.invalidateQueries({ queryKey: ["projects"] }).catch(() => undefined);
   };
   const sort = projectId ? project?.conversation_sort ?? preferences.navigationSort.project_default
     : preferences.navigationSort[scope as "all" | "unclassified" | "project_default"];
@@ -67,8 +78,8 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
     assertAccount();
     if (projectId) {
       if (!project) throw new Error("Refresh projects before changing sorting.");
-      await updateProject(projectId, { conversation_sort: { mode, direction }, expected_sort_revision: project.sort_revision ?? 1 });
-      await client.invalidateQueries({ queryKey: ["projects"] });
+      const updated = await updateProject(projectId, { conversation_sort: { mode, direction }, expected_sort_revision: project.sort_revision ?? 1 });
+      refreshConfirmedProject(updated);
     } else await preferences.setNavigationSort({ ...preferences.navigationSort, [scope]: { mode, direction } });
   };
   const inherit = async () => {
@@ -77,8 +88,8 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
     if (!projectId || !project) return;
     if (preferences.navigationSort.project_default.mode === "custom") await initialize();
     assertAccount();
-    await updateProject(projectId, { conversation_sort: null, expected_sort_revision: project.sort_revision ?? 1 });
-    await client.invalidateQueries({ queryKey: ["projects"] });
+    const updated = await updateProject(projectId, { conversation_sort: null, expected_sort_revision: project.sort_revision ?? 1 });
+    refreshConfirmedProject(updated);
   };
   const place = async (id: string, before: string | null, after: string | null, expectedVersion: string | undefined) => {
     assertAccount();
@@ -97,5 +108,6 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
     // A metadata outage must not hide independently readable conversations.
     // The list API enforces access; every ordering write still requires metadata.
     ready: !projectId || !!project || projects.isError,
+    canChange: !projectId || (!!project && !projects.isError),
     rebuild: () => initialize(true), inherited: !!projectId && !project?.conversation_sort };
 }

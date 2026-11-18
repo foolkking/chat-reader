@@ -1,6 +1,6 @@
 import { openReaderAction } from "./reader-actions";
 import { expect, test as base, type Page } from "@playwright/test";
-import type { BackgroundTaskRead, ConversationCreateResponse, ConversationDetail, ProjectConversationRead, ProjectRead, ReadingPositionInput, ReadingPositionRead, RecentItemRead, SearchResponse, SearchResultItem } from "../lib/types";
+import type { BackgroundTaskRead, ConversationCreateResponse, ConversationDetail, ProjectConversationRead, ProjectRead, ReadingPositionInput, ReadingPositionRead, RecentItemRead, SearchResponse, SearchResultItem, UserPreferenceRead } from "../lib/types";
 
 const test = base.extend<{ readerPlacementTrace: void }>({
   readerPlacementTrace: [async ({ context }, use, info) => {
@@ -1079,7 +1079,9 @@ async function status(page: Page, id: string) {
 }
 
 async function preferences(page: Page, zh: boolean) {
-  expect((await page.request.patch("/api/preferences", { data: { locale_mode: zh ? "zh-CN" : "en-US", theme_mode: zh ? "light" : "dark" } })).ok()).toBe(true);
+  const response = await page.request.patch("/api/preferences", { data: { locale_mode: zh ? "zh-CN" : "en-US", theme_mode: zh ? "light" : "dark" } });
+  expect(response.ok()).toBe(true);
+  return await response.json() as UserPreferenceRead;
 }
 
 async function setBrowserConnectivity(page: Page, online: boolean) {
@@ -1093,6 +1095,9 @@ async function setBrowserConnectivity(page: Page, online: boolean) {
   await page.context().setOffline(!online);
   await observedEvent;
   await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(online);
+  // Flush the app's zero-delay query notifications under Playwright's fake
+  // clock before asserting the reconnect-triggered request.
+  await page.clock.fastForward(1);
 }
 
 async function createArchivedProject(page: Page, name: string) {
@@ -1296,7 +1301,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
 for (const [width, zh] of [[375, true], [1440, false]] as const) {
   for (const scope of ["projects", "history", "branch"] as const) {
     test(`${width}px ${scope}: sidebar read failure keeps the same reading node and retries only its own query`, async ({ page }, info) => {
-      await preferences(page, zh);
+      const saved = await preferences(page, zh);
       await page.setViewportSize({ width, height: 900 });
       const fixture = await createSidebarReadFixture(page, `Synthetic sidebar ${scope} recovery`);
       const reads = { projects: 0, history: 0, branch: 0 };
@@ -1322,7 +1327,15 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
           }
           await route.continue();
         });
-        await page.goto("/");
+        // A row from the shell's initial sort can be visible as placeholder
+        // data before the saved sort has ever succeeded. Fail a *refetch* of
+        // the saved list, not the first read of a different query key.
+        await Promise.all([page.waitForResponse(response => {
+          const url = new URL(response.url());
+          return readScope(url) === "projects" && response.ok()
+            && url.searchParams.get("sort") === saved.project_sort_mode
+            && url.searchParams.get("direction") === saved.project_sort_direction;
+        }), page.goto("/")]);
         if (width === 375) await page.getByTestId("mobile-sidebar-button").filter({ visible: true }).click();
         const sidebar = page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true });
         if (scope === "branch") await sidebar.getByRole("button", { name: `Expand ${fixture.project.name}`, exact: true }).click();
@@ -1331,7 +1344,9 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
             : sidebar.getByRole("group", { name: zh ? `项目对话：${fixture.project.name}` : `Conversations in ${fixture.project.name}`, exact: true });
         const link = scope === "projects" ? region.locator(`a[href="/projects/${fixture.project.id}"]`)
           : region.locator(`a[href^="/conversations/${scope === "history" ? fixture.unclassified.conversation.id : fixture.conversation.conversation.id}"]`);
-        await expect(link).toBeVisible(); await page.clock.install();
+        await expect(link).toBeVisible();
+        await expect(region).toHaveAttribute("aria-busy", "false");
+        await page.clock.install();
         // Let the cache become stale before capturing the node whose identity
         // must survive the actual failed refetch.
         await page.clock.fastForward(20_000);
@@ -2101,7 +2116,8 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
 for (const [width, zh] of [[375, true], [1440, false]] as const) {
   for (const mode of ["active", "archived"] as const) {
     test(`${width}px ${mode}: failed conversation refresh keeps the reading node and selection through retry`, async ({ page }, info) => {
-      await preferences(page, zh);
+      const saved = await preferences(page, zh);
+      const sort = saved.navigation_sort?.all ?? { mode: saved.conversation_sort_mode, direction: saved.conversation_sort_direction };
       await page.setViewportSize({ width, height: 900 });
       const created = await createConversation(page, `Synthetic ${mode} retained list`);
       const id = created.conversation.id;
@@ -2114,21 +2130,27 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         page.on("request", request => {
           if (new URL(request.url()).pathname.startsWith("/api/conversations") && !["GET", "HEAD", "OPTIONS"].includes(request.method())) writes += 1;
         });
-        await page.route(url => url.pathname === "/api/conversations"
+        const firstPage = (url: URL) => url.pathname === "/api/conversations"
           && url.searchParams.get("status_scope") === mode && url.searchParams.get("scope") === "all"
-          && url.searchParams.get("limit") === "101" && url.searchParams.get("offset") === "0", async route => {
+          && url.searchParams.get("limit") === "101" && url.searchParams.get("offset") === "0";
+        await page.route(firstPage, async route => {
           reads += 1;
           if (holdRead) await heldRead;
           if (failRead) await route.fulfill({ status: 503, json: { detail: "Synthetic list exception must not render" } });
           else await route.continue();
         });
-        await page.clock.install();
-        await page.goto(mode === "active" ? "/" : "/archived");
+        await Promise.all([page.waitForResponse(response => {
+          const url = new URL(response.url());
+          return firstPage(url) && response.ok() && url.searchParams.get("sort") === sort.mode
+            && url.searchParams.get("direction") === sort.direction;
+        }), page.goto(mode === "active" ? "/" : "/archived")]);
         const heading = mode === "active" ? (zh ? "对话记录" : "Conversation history") : (zh ? "已归档对话" : "Archived conversations");
         const list = page.locator("section[aria-busy]").filter({ has: page.getByRole("heading", { name: heading, exact: true }) });
         const link = list.locator(`a[href="/conversations/${id}"]`);
         await expect(link).toBeVisible();
+        await expect(list).toHaveAttribute("aria-busy", "false");
         await expect.poll(() => reads).toBeGreaterThan(0);
+        await page.clock.install();
         await page.clock.fastForward(11_000);
         await link.focus();
         const original = await link.elementHandle();
@@ -2149,7 +2171,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         await expect(page.getByText("Synthetic list exception must not render", { exact: true })).toHaveCount(0);
 
         await list.getByRole("button", { name: zh ? "批量操作" : "Manage conversations", exact: true }).click();
-        const selected = list.getByRole("checkbox", { name: `${zh ? "选择" : "Select"} ${created.conversation.title}`, exact: true });
+        const selected = list.getByTestId(`conversation-sortable-row-${id}`).getByRole("checkbox", { name: `${zh ? "选择" : "Select"} ${created.conversation.title}`, exact: true });
         await selected.check();
         const retry = error.getByRole("button", { name: zh ? "重试" : "Retry", exact: true });
         const beforeRetry = reads;

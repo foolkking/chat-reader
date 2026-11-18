@@ -146,5 +146,13 @@ def change_order(payload: OrderChange, request: Request, db: Session = Depends(g
             field = "unclassified_sort_order" if payload.scope == "unclassified" else "manual_sort_order"
             db.query(Conversation).filter_by(id=identifier).update({field: value})
     preference.field_revisions = {**(preference.field_revisions or {}), key: (preference.field_revisions or {}).get(key, 0) + 1}
+    # Capture the response while our transaction still owns the fences. A new
+    # read after commit can lose to another writer and falsely report that an
+    # already committed placement failed (or return another writer's version).
+    db.flush()
+    _, saved_rows, _, _, saved_preference, saved_key, saved_digest = snapshot(
+        db, request, payload.scope, payload.project_id)
+    result = {"version": saved_digest, "count": len(saved_rows),
+              "initialized": bool((saved_preference.field_revisions or {}).get(saved_key))}
     db.commit()
-    return read_order(request, payload.scope, payload.project_id, db)
+    return result

@@ -188,7 +188,8 @@ export function ProjectSidebar({
   );
   const projectsQuery = useQuery({
     queryKey: ["projects", projectSortMode, projectSortDirection],
-    queryFn: () => getProjects({ sort: projectSortMode, direction: projectSortDirection }),
+    queryFn: ({ signal }) => getProjects({ sort: projectSortMode, direction: projectSortDirection }, signal),
+    refetchOnReconnect: "always",
     // Keep droppable project rows mounted while a background refresh runs.
     // Unmounting a target mid-drag makes dnd-kit fall back to the unclassified
     // container and loses the placement intent.
@@ -205,6 +206,7 @@ export function ProjectSidebar({
       }, signal);
       return { items: rows.slice(0, pageSize), offset: pageParam, hasMore: rows.length > pageSize };
     },
+    refetchOnReconnect: "always",
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.offset + pageSize : undefined,
   });
   const createMutation = useMutation({
@@ -835,6 +837,7 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
       });
       return { items: rows.slice(0, pageSize), offset: pageParam, hasMore: rows.length > pageSize };
     },
+    refetchOnReconnect: "always",
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.offset + pageSize : undefined,
     enabled: expanded && sorting.ready !== false,
   });
