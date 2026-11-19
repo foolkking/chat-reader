@@ -126,6 +126,28 @@ export function trimLoadedTurnWindow(
   return loadedWindowFromTurns(candidate, current.generation);
 }
 
+// A short, inexpensive conversation opened from the beginning already fits in
+// the Reader's working set. Evicting its leading turns changes the scrollbar
+// origin between wheel ticks, then fetches the same turns again on reversal.
+// Never fetch extra content here or extend a middle/target window backwards.
+export function canKeepShortReaderPrefix(current: LoadedMessageWindow): boolean {
+  if (current.hasPrevious || current.startOffset !== 0 || !Number.isInteger(current.total)
+    || current.total < current.items.length || current.total > 40 || !current.items.length
+    || current.endOffset !== current.items.length) return false;
+  let blocks = 0, chars = 0;
+  return current.items.every(message => {
+    const rows = message.render_blocks;
+    if (message.is_heavy !== false || message.content_truncated || !Array.isArray(rows)
+      || !Number.isSafeInteger(message.char_count) || message.char_count < 0
+      || message.block_count !== rows.length || !rows.length) return false;
+    blocks += rows.length;
+    chars += Math.max(message.char_count, message.current_version?.display_text?.length ?? 0,
+      message.current_version?.plain_text?.length ?? 0);
+    return blocks <= 40 && chars <= 16_384
+      && rows.every(row => row.block_type === "paragraph" || row.block_type === "heading");
+  });
+}
+
 /** Preserve the actual viewport/interaction interval, not an arbitrary tail. */
 export function trimLoadedTurnWindowToProtectedMessages(
   current: LoadedMessageWindow,

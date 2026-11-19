@@ -35,6 +35,7 @@ import { MessageInsertDialog } from "./message-insert-dialog";
 import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, restoreScrollAnchor, readerPositionBusy } from "./reader-navigation";
 import { firstVisibleRangeRect, resolveTextAnchorRange } from "./text-anchor";
 import {
+  canKeepShortReaderPrefix,
   emptyLoadedWindow,
   INITIAL_WINDOW_TURNS,
   isUnchangedReaderPrefix,
@@ -1191,7 +1192,7 @@ export function ConversationReader({
       if (selection && !selection.isCollapsed && (
         root.contains(selection.anchorNode) || root.contains(selection.focusNode))) return;
       const current = loadedWindowRef.current;
-      if (current.turns.length <= 3) return;
+      if (current.turns.length <= 3 || canKeepShortReaderPrefix(current)) return;
       const measurements = new Map<HTMLElement, DOMRect>();
       const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET, measurements);
       const scrollOffsetAtAnchor = root.scrollTop;
