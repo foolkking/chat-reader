@@ -460,8 +460,11 @@ function compileComponent(relative, stubs) {
 const tablePresentation = compileComponent("../../apps/web/features/conversations/markdown-table.tsx", {});
 const clipboardCopy = compileComponent("../../apps/web/components/use-clipboard-copy.ts", {});
 const thinkingSummary = (await load("../../apps/web/features/conversations/thinking-summary.ts")).module;
+// Keep the same React context on both sides of the SSR fixture. Browser
+// geometry and decoding are exercised by the separate Reader media gate.
+const imagePresentation = { VirtualImageLaneWidth: React.createContext(null), useImageSource: () => ({ onDecoded: () => {} }) };
 const renderer = compileComponent("../../apps/web/features/conversations/markdown-renderer.tsx", {
-  "../attachments/image-presentation": { useImageSource: () => ({ onDecoded: () => {} }) },
+  "../attachments/image-presentation": imagePresentation,
   "../attachments/attachment-block": { AttachmentBlock: () => null },
   "@assistant-ui/react": uiAdapter,
   "@assistant-ui/react-markdown": uiAdapter,
@@ -741,6 +744,7 @@ const virtualizer = ({ count, getItemKey }) => ({
   measure: () => {}, measureElement: () => {},
 });
 const assistant = compileComponent("../../apps/web/features/conversations/assistant-message-renderer.tsx", {
+  "../attachments/image-presentation": imagePresentation,
   "../../lib/image-display": compileComponent("../../apps/web/lib/image-display.ts", {}),
   "./reading-viewport": { observeReadingViewport: () => () => {} },
   "./reader-render-policy": compileComponent("../../apps/web/features/conversations/reader-render-policy.ts", {}),

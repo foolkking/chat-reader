@@ -56,7 +56,7 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <div className="relative mb-3">
+    <div data-sidebar-search-row className="relative mb-3">
       <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-secondary" />
       <input
         ref={inputRef}

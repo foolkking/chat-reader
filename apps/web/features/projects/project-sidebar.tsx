@@ -766,7 +766,7 @@ function SidebarContent(props: SidebarContentProps) {
         </Link>
         {props.onCollapse ? <button type="button" onClick={props.onCollapse} className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-secondary hover:bg-surface hover:text-primary" aria-label={t("closeSidebar")} title={t("closeSidebar")}><PanelLeftClose className="h-5 w-5" /></button> : null}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+      <div data-sidebar-navigation-scroll className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         <div className="mb-3">
           <button type="button" data-testid="sidebar-import-button" data-workspace-import-drop-target="true" onClick={props.onImportClick} className="min-h-11 w-full rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle"><span className="inline-flex items-center justify-center gap-2"><Import className="h-4 w-4" />{t("importData")}</span></button>
         </div>

@@ -1,8 +1,13 @@
 {
   "schema_version": 1,
   "base_schedule_sha256": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
-  "reason": "2026-11-17 product regression coverage; original assignments and skips unchanged",
+  "reason": "Add navigation, import and root-admin update coverage without changing original assignments, timeouts or skips",
   "api": {
+    "tests/test_admin_updates.py": {
+      "count": 9,
+      "shard": 3,
+      "source_lf_sha256": "d3fe97e563fda817de2ea8079a786f27b955ddfcd4058f5c5f7ea7bfccd96f57"
+    },
     "tests/test_grouped_search.py": {
       "count": 8,
       "shard": 3,
@@ -157,6 +162,19 @@
         }
       ],
       "reason": "Follow the approved compact import entry through Manage imports and this exact batch in Task Center; preserve all six original native case identities, timeouts, real mapping/health/repair assertions and source data."
+    },
+    "settings-help-runtime.spec.ts": {
+      "previous_source_lf_sha256": "c7438f1113ac285d67455d67a42cdadb8d9dcb3b5614d2413785626f66b46863",
+      "source_lf_sha256": "13d5948de43b884bab81e3a12eb7bdac12b998811743aee544949e29dd936b51",
+      "cases": [
+        { "id": "d6bbd48652a1ab3730c8-c76c09833fc6d0041823", "file": "settings-help-runtime.spec.ts", "title": "diagnostic serializer excludes injected strings and nested sensitive fields", "line": 17, "column": 5, "timeout": 90000, "project_id": "" },
+        { "id": "d6bbd48652a1ab3730c8-512fc624aae7e2bb73ed", "file": "settings-help-runtime.spec.ts", "title": "help and runtime use real server data, recover failures and retain offline limits 375", "line": 27, "column": 7, "timeout": 180000, "project_id": "" },
+        { "id": "d6bbd48652a1ab3730c8-bacf4e4eb5b1a8deee96", "file": "settings-help-runtime.spec.ts", "title": "help and runtime use real server data, recover failures and retain offline limits 768", "line": 27, "column": 7, "timeout": 180000, "project_id": "" },
+        { "id": "d6bbd48652a1ab3730c8-eda33ccfcfaed3913e32", "file": "settings-help-runtime.spec.ts", "title": "help and runtime use real server data, recover failures and retain offline limits 1440", "line": 27, "column": 7, "timeout": 180000, "project_id": "" },
+        { "id": "d6bbd48652a1ab3730c8-e8f37132914e2f01a389", "file": "settings-help-runtime.spec.ts", "title": "runtime polling pauses when hidden and resumes with a fresh real request", "line": 88, "column": 5, "timeout": 90000, "project_id": "" },
+        { "id": "d6bbd48652a1ab3730c8-2ab2dfaa0489f2759cde", "file": "settings-help-runtime.spec.ts", "title": "help cache stays account-scoped and disappears behind expired authorization", "line": 112, "column": 5, "timeout": 180000, "project_id": "" }
+      ],
+      "reason": "All six original identities, declarations, deadlines and behaviors are retained. The three responsive admin sessions additionally require no version information in Help and a collapsed update control in Runtime status."
     }
   }
 }

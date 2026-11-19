@@ -433,11 +433,18 @@ test("recent terminal task results survive refresh and presentation dismissal st
 test("sort menu closes on outside click without stealing focus and Escape restores trigger focus", async ({ page }) => {
   await page.route("**/api/**", async (route) => mockOwnerApi(route, [], []));
   await page.goto("/");
-  const trigger = page.getByTestId("sort-menu-trigger").filter({ visible: true }).last();
+  const heading = page.getByTestId("unclassified-container");
+  const trigger = heading.getByTestId("sort-menu-trigger");
+  await expect(heading.getByTestId("unclassified-new-conversation-button")).toHaveAccessibleName(/^(New conversation|新建对话)$/);
   const outsideInput = page.getByTestId("sidebar-global-search").filter({ visible: true }).first();
 
   await trigger.click();
-  await expect(page.getByTestId("sort-menu-panel").filter({ visible: true })).toBeVisible();
+  const panel = page.getByTestId("sort-menu-panel").filter({ visible: true });
+  await expect(panel).toBeVisible();
+  await expect.poll(async () => {
+    const [menu, search] = await Promise.all([panel.boundingBox(), outsideInput.boundingBox()]);
+    return !!(menu && search && menu.height > 0 && menu.y >= search.y + search.height);
+  }).toBe(true);
   await outsideInput.click();
   await expect(page.getByTestId("sort-menu-panel").filter({ visible: true })).toHaveCount(0);
   await expect.poll(() => outsideInput.evaluate((element) => document.activeElement === element)).toBe(true);

@@ -171,7 +171,6 @@ export function frozenSettingsRuntimeTimeouts(collection) {
     const source = fs.readFileSync(path.join(REPO, "apps/web/e2e", file), "utf8").replaceAll("\r\n", "\n");
     requireEvidence(sha256(source) === sources[file], "original Settings test source changed");
   }
-  validateReviewedSettingsCases(cases, schedule);
   // --list never enters test bodies. Bind each original body-level setTimeout
   // to its unchanged source location instead of comparing it with the default.
   const key = ({ file, line, column }) => JSON.stringify([file, line, column]);
@@ -186,10 +185,17 @@ export function frozenSettingsRuntimeTimeouts(collection) {
   const timeouts = new Map();
   for (const [id, { identity }] of cases) {
     const location = key(identity);
-    if (overrides.has(location)) used.add(location);
+    if (overrides.has(location)) {
+      requireEvidence(identity.timeout === collection.config.projects[0].timeout,
+        "listed default changed for original body-level timeout");
+      used.add(location);
+    }
     timeouts.set(id, overrides.get(location) ?? identity.timeout);
   }
   sameIds([...used], [...overrides.keys()], "original runtime timeout declaration missing from collection");
+  // Compare reviewed identities against their effective, frozen deadlines.
+  // verifyNativeShardUnion still checks the *actual* runtime timeout separately.
+  validateReviewedSettingsCases(nativeCases(collection, { collection: true, runtimeTimeouts: timeouts }), schedule);
   return timeouts;
 }
 

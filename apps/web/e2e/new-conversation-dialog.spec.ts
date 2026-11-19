@@ -17,5 +17,5 @@ test("new conversation entry is attached to the unclassified heading", () => {
   const source = readFileSync(resolve(process.cwd(), "features/projects/project-sidebar.tsx"), "utf8");
   expect(source).not.toContain('data-testid="sidebar-new-conversation-button"');
   expect(source).toContain('data-testid="unclassified-new-conversation-button"');
-  expect(source).toContain('aria-label="新建对话"');
+  expect(source).toMatch(/data-testid="unclassified-new-conversation-button"[^\n]*aria-label=\{zh \? "新建对话" : "New conversation"\}/);
 });

@@ -121,21 +121,25 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
     };
   }, [open]);
   useLayoutEffect(() => {
-    const anchor = triggerRef.current, bounds = anchor?.closest("[data-sidebar-settings-scroll], [data-reader-primary-sidebar]"), panel = panelRef.current;
+    const anchor = triggerRef.current, bounds = anchor?.closest("[data-sidebar-settings-scroll], [data-sidebar-navigation-scroll]"), panel = panelRef.current;
     if (!open || !sidebar || !anchor || !bounds || !panel) return;
+    const search = bounds.querySelector("[data-sidebar-search-row]");
     const place = () => {
       const a = anchor.getBoundingClientRect(), b = bounds.getBoundingClientRect();
       if (!a.width || a.bottom <= b.top || a.top >= b.bottom) { setOpen(false); return; }
-      const width = Math.min(192, b.width - 16);
-      const floor = Math.min(window.innerHeight, b.bottom) - 8, ceiling = Math.max(0, b.top) + 8;
+      // The search field is a primary outside-click/focus target. A long menu
+      // can scroll inside the list lane; it must not cover search or the footer.
+      const width = Math.min(192, bounds.clientWidth - 16);
+      const floor = Math.min(window.innerHeight, b.bottom) - 8;
+      const ceiling = Math.max(0, b.top, search?.getBoundingClientRect().bottom ?? 0) + 8;
       const below = floor - a.bottom - 4, above = a.top - ceiling - 4;
       const up = below < panel.scrollHeight && above > below;
-      setPosition({ width, left: Math.max(b.left + 8, Math.min(a.right - width, b.right - 8 - width)),
+      setPosition({ width, left: Math.max(b.left + 8, Math.min(a.right - width, b.left + bounds.clientWidth - 8 - width)),
         maxHeight: Math.max(0, up ? above : below), ...(up ? { bottom: window.innerHeight - a.top + 4 } : { top: a.bottom + 4 }) });
     };
     place();
     panel.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
-    const observer = new ResizeObserver(place); observer.observe(bounds); observer.observe(anchor);
+    const observer = new ResizeObserver(place); observer.observe(bounds); observer.observe(anchor); if (search) observer.observe(search);
     window.addEventListener("resize", place); window.addEventListener("scroll", place, true);
     return () => { observer.disconnect(); window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
   }, [open, sidebar]);

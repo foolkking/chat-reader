@@ -65,7 +65,7 @@ window.refreshBatches=()=>client.invalidateQueries({queryKey:["unfinished-import
 function Fixture(){const zh=window.fixtureLocale==="zh-CN";const section=location.pathname.slice(1);
 return <main className="mx-auto max-w-3xl space-y-5 bg-page p-4 text-primary sm:p-6">
 <header className="border-b border-ui pb-4"><h1 className="text-lg font-semibold">{zh?"对话资料库":"Conversation library"}</h1></header>
-{section==="sorting"?<NavigationSortSettings/>:section==="imports"?<ImportBatchManager/>:section==="overview"||section.startsWith("invalid")?
+{section==="sorting"?<div data-sidebar-settings-scroll className="max-h-[32rem] max-w-72 overflow-y-auto"><NavigationSortSettings/></div>:section==="imports"?<ImportBatchManager/>:section==="overview"||section.startsWith("invalid")?
 <AdaptiveImportWorkspace session={window.session} onSession={()=>{}} onBack={()=>{}} onImport={()=>{window.importClicked=true}} importing={false} error={null}/>:
 section==="preview"?
 <section><h2 className="break-words text-sm font-semibold">{window.group.files[0].filename}</h2><ImportSourcePreview session={window.session} group={window.group} showSourceName={false}/></section>:
@@ -167,11 +167,14 @@ try {
         await expect(page.getByText("A-only secret text", { exact: true })).toHaveCount(0);
       } else if (section === "sorting") {
         await page.getByText(/排序与导航|Sorting & navigation/, { exact: true }).click();
-        const sectionButton = page.getByRole("button", { name: /未归类 → 项目|Unclassified → Projects/, exact: true });
+        const sectionButton = page.getByRole("group", { name: /侧栏顺序|Sidebar order/ })
+          .getByRole("button", { name: /^(未归类在前|Unclassified first)$/ });
         await sectionButton.click();
         await expect(sectionButton).toHaveAttribute("aria-pressed", "true");
-        await page.getByRole("button", { name: /对话排序|Sort conversations/, exact: true }).nth(1).click();
-        await page.getByRole("menuitem", { name: /标题|Title/, exact: true }).click();
+        const all = page.getByRole("button", { name: /^(全部对话|All conversations):/ });
+        await all.click();
+        await page.getByRole("menuitemradio", { name: /^(标题|Title)$/ }).click();
+        await expect(all).toHaveAttribute("aria-expanded", "false");
         assert.deepEqual(await page.evaluate(() => [window.fixtureNavigation.all.mode, window.fixtureNavigation.project_default.mode]),
           ["title", "imported"]);
       } else if (section.startsWith("invalid")) {
