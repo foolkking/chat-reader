@@ -187,10 +187,14 @@ export function ConversationList({
   useEffect(() => {
     setSelectedConversationIds(new Set());
     setMergeOrderIds([]);
-    setSelectionMode(false);
     setSortError(false);
     setSortBoundaryNotice(false);
-  }, [mode, conversationSortMode, conversationSortDirection]);
+  }, [mode, tagId, conversationSortMode, conversationSortDirection]);
+
+  // A late preference read can reorder the *same* list after a real Manage
+  // click. Invalidate row choices, not the user's intent to make a selection.
+  // A different list (or the identity-change handler above) still exits it.
+  useEffect(() => { setSelectionMode(false); }, [mode, tagId]);
 
   useEffect(() => {
     const handleDeleteProgress = (event: Event) => {

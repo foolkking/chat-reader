@@ -1,6 +1,7 @@
 # Markdown 文档台账
 
 2026-11-19：[四轮完整 CI 超时复核](evidence/online-update-2026-11-18/verification.md#timeout-review-2026-11-19)区分断言、整例超时、性能超限和有意等待的导出验收；[测试入口](testing.md#reader-offline-browser-evidence)记录离线包观测与账户隔离合同，不改变生产存储。
+第五轮另定位首页批量选择被延迟排序关闭的竞态，见[红绿对照](evidence/online-update-2026-11-18/verification.md#batch-sort-review)和[主列表排序合同](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#排序按范围独立置顶只分组)。
 
 2026-11-19：补充[阅读几何合同](system/IMAGE_READING_STABILITY_CONTRACT.md)的纯追加条件，以及[第三次全量 CI 的失败与复核](evidence/online-update-2026-11-18/verification.md)。管理员恢复区与版本区的收起状态在真实浏览器分别验证。
 

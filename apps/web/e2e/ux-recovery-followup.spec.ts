@@ -1957,21 +1957,49 @@ for (const mode of ["archive", "restore"] as const) {
 }
 
 test("a batch with zero confirmed archives offers no empty undo", async ({ page }) => {
-  await preferences(page, false);
+  const saved = await preferences(page, false);
+  expect(saved.navigation_sort).toBeDefined();
   const created = await createConversation(page, "Synthetic rejected archive");
   const id = created.conversation.id;
+  let releasePreferences!: () => void;
+  const held = new Promise<void>(resolve => { releasePreferences = resolve; });
   try {
+    // The shell initially sorts by recent_read. Deliver a different, genuinely
+    // saved order after one real Manage click, not before the control is used.
+    expect((await page.request.patch("/api/preferences", { data: { navigation_sort: {
+      ...saved.navigation_sort, all: { mode: "created", direction: "desc" },
+    } } })).ok()).toBe(true);
+    await page.route(url => url.pathname === "/api/preferences", async route => {
+      if (route.request().method() === "GET") await held;
+      await route.continue();
+    });
     await page.route(`**/api/conversations/${id}/archive`, (route) => route.fulfill({ status: 503, json: { detail: "Synthetic rejected archive" } }));
     await page.goto("/");
     await page.getByRole("button", { name: "Manage conversations", exact: true }).click();
-    await page.getByRole("checkbox", { name: "Select Synthetic rejected archive", exact: true }).check();
-    await page.getByTestId("selection-toolbar").getByRole("button", { name: "Archive", exact: true }).click();
+    const toolbar = page.getByTestId("selection-toolbar");
+    await expect(toolbar).toBeVisible();
+    const selected = page.getByRole("checkbox", { name: "Select Synthetic rejected archive", exact: true });
+    await selected.check();
+    const ordered = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/conversations" && url.searchParams.get("scope") === "all"
+        && url.searchParams.get("sort") === "created" && url.searchParams.get("direction") === "desc";
+    });
+    releasePreferences();
+    expect((await ordered).ok()).toBe(true);
+    await expect(page.getByRole("button", { name: "Done", exact: true, pressed: true })).toHaveCount(1);
+    await expect(selected).toBeVisible();
+    await expect(selected).not.toBeChecked(); // Never silently operate on pre-refresh selections.
+    await selected.check();
+    await toolbar.getByRole("button", { name: "Archive", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "0 confirmed complete, 0 definite failures, 1 unconfirmed, 0 not started" })).toBeVisible();
     await expect(page.locator('[aria-label="Undo conversation action"]')).toHaveCount(0);
-    await expect(page.getByRole("checkbox", { name: "Select Synthetic rejected archive", exact: true })).toBeChecked();
+    await expect(selected).toBeChecked();
     expect(await status(page, id)).toBe("active");
   } finally {
+    releasePreferences();
     await page.unrouteAll({ behavior: "wait" });
+    expect((await page.request.patch("/api/preferences", { data: { navigation_sort: saved.navigation_sort } })).ok()).toBe(true);
     expect((await page.request.delete(`/api/conversations/${id}`)).ok()).toBe(true);
   }
 });
