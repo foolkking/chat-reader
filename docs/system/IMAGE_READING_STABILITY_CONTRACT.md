@@ -8,6 +8,23 @@ see the [current release receipt](../execution/IMAGE_NATURAL_FLOW_RELEASE_2026-1
 Synthetic CI and runtime checks are not authenticated production UI or
 physical-device acceptance. This contract does not authorize a future rollout.
 
+## Complete-turn removal during quiet reading
+
+The browser may clamp `scrollTop` when trimming offscreen turns makes the old
+offset larger than the new scroll range. This is not wheel/touch intent.
+During that synchronous removal only, the position owner may accept the exact
+new maximum after validating the old offset, then restore the same surviving
+DOM anchor before paint. Interior motion, input before or after the commit,
+lost ownership and a stale intent token still cancel; edge appends and other
+restorations do not opt in. Check the absolute anchor displacement, not only
+its direction: a forward jump is a reading defect too.
+
+An explicit return from the contents uses the checkpoint's actual pixel offset.
+If the remounted window cannot reach that coordinate, load a bounded
+first-reading neighborhood of complete turns; do not fabricate scroll space.
+Hold off optional reclamation during the return. If exact alignment remains
+impossible, preserve the checkpoint and offer retry or message-only navigation.
+
 ## Geometry and saved dimensions
 
 - Original geometry and the owner's saved percentage are separate. Optional

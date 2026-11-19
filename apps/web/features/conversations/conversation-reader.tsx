@@ -1148,7 +1148,7 @@ export function ConversationReader({
     if (!root || !readerSurfaceAvailable || sourceEditorTarget) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let active = true, running = false;
-    const busy = () => navigationInProgressRef.current || restoreInProgressRef.current
+    const busy = () => navigationInProgressRef.current || restoreInProgressRef.current || tocReturnFlightRef.current !== null
       || edgeTransitionRef.current !== null || readerPositionBusy(root)
       || pointerDraggingRef.current || root.dataset.readerViewerLocked === "true"
       || root.dataset.readerLayoutCompensating === "true" || root.dataset.readerSurfaceCompensating === "true";
@@ -1185,7 +1185,7 @@ export function ConversationReader({
         lease = await acquireScrollAnchorLease(anchor, currentRequest);
         if (!lease || !currentRequest() || root.scrollTop !== scrollOffsetAtAnchor) return;
         await restoreScrollAnchor({
-          root, anchor, scrollOffsetAtCapture: scrollOffsetAtAnchor, minimumMs: 0, settleMs: 0,
+          root, anchor, scrollOffsetAtCapture: scrollOffsetAtAnchor, allowWindowTrimClamp: true, minimumMs: 0, settleMs: 0,
           tokenIsCurrent: () => ownsReaderReadRecovery(recentOwner) && scrollIntentSequenceRef.current === intent,
           commitLayout: () => {
             // This is a discrete complete-turn removal. The existing position
@@ -1313,7 +1313,7 @@ export function ConversationReader({
   loadNextActionRef.current = () => { void loadNextWindow(); };
 
   const navigateToTarget = useCallback(
-    async (target: NavigateTarget, options?: { restorePosition?: boolean; isCurrent?: () => boolean }): Promise<NavigationResult> => {
+    async (target: NavigateTarget, options?: { restorePosition?: boolean; isCurrent?: () => boolean; checkpoint?: ScrollAnchorSnapshot }): Promise<NavigationResult> => {
       const { messageId, blockIndex, characterOffset, endCharacterOffset, quote, prefix, suffix, alignmentOffset, allowMessageFallback } = target;
       const blockId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
       const messageIdDom = `message-${messageId}`;
@@ -1460,8 +1460,12 @@ export function ConversationReader({
               queryClient.setQueryData(["toc", sourceKey, conversationId, messageId, mode], targetContext.toc);
             }
           }
-        } else if (!loadedWindowRef.current.items.some((message) => message.id === messageId)) {
-          const page = await loadCompleteTurnWindow(dataSource, conversationId, messageId);
+        } else if (!loadedWindowRef.current.items.some((message) => message.id === messageId)
+          || (options?.checkpoint && !checkpointFitsWindow(scrollContainerRef.current, options.checkpoint))) {
+          // A three-turn navigation window can be shorter than the focus-mode
+          // viewport. Use the ordinary first-reading budget on an explicit
+          // exact return; never synthesize padding or load unbounded history.
+          const page = await loadCompleteTurnWindow(dataSource, conversationId, messageId, options?.checkpoint ? INITIAL_WINDOW_TURNS : undefined);
           if (!tokenIsCurrent()) {
             return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
           }
@@ -3335,9 +3339,10 @@ export function ConversationReader({
         ...(messageOnly ? { allowMessageFallback: true } : {
           messageVersionId: anchor.messageVersionId ?? undefined,
           blockIndex: anchor.blockIndex ?? undefined,
+          alignmentOffset: anchor.offset,
         }),
         source: "message-action",
-      });
+      }, messageOnly ? undefined : { checkpoint: anchor });
       if (tocReturnFlightRef.current !== flight || !ownsReaderReadRecovery(recentOwner)) return;
       if (!result.ok) {
         if (result.reason !== "cancelled") setTocReturnError(resolvedLocale === "zh-CN" ? "未能恢复原阅读位置；检查点仍保留，可重试或定位到原消息。" : "Could not restore the original position. The checkpoint is retained; retry or locate the original message.");
@@ -3351,6 +3356,7 @@ export function ConversationReader({
       const restored = messageOnly || await restoreScrollAnchor({
         root: scrollContainerRef.current,
         anchor,
+        requireExact: true,
         tokenIsCurrent: () => tocReturnFlightRef.current === flight && navigationTokenRef.current === token
           && ownsReaderReadRecovery(recentOwner) && !userScrollIntentRef.current,
         timeoutMs: 3500,
@@ -3367,6 +3373,7 @@ export function ConversationReader({
       if (tocReturnFlightRef.current === flight) {
         tocReturnFlightRef.current = null;
         setTocReturnPending(false);
+        requestWindowTrimRef.current();
       }
     }
   };
@@ -4048,6 +4055,13 @@ function captureMutationScrollAnchor(
     targetId: target.id,
     offset: target.getBoundingClientRect().top - root.getBoundingClientRect().top,
   };
+}
+
+function checkpointFitsWindow(root: HTMLElement | null, anchor: ScrollAnchorSnapshot): boolean {
+  const target = document.getElementById(anchor.targetId);
+  if (!root || !target || !root.contains(target)) return false;
+  const needed = root.scrollTop + target.getBoundingClientRect().top - root.getBoundingClientRect().top - anchor.offset;
+  return needed >= -1 && needed <= root.scrollHeight - root.clientHeight + 1;
 }
 
 async function acquireScrollAnchorLease(

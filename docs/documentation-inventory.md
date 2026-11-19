@@ -7,6 +7,7 @@
 同步[图片/阅读稳定性合同](system/IMAGE_READING_STABILITY_CONTRACT.md)、
 [前端架构](system/FRONTEND_ARCHITECTURE.md)、Project State 与文档入口。
 仅本机隔离服务，无生产操作、发布标签或真实对话材料。完整本机回归和未通过的 PWA 环境边界一并记于[最终验收记录](evidence/online-update-2026-11-18/verification.md)。
+同一记录保留两次全量 CI 失败及随后发现的纯文本停滚回收跳跃（同锚点 495.375→0.375px）；同步稳定性合同和[依赖审计例外退役记录](system/RELEASE_SAFETY_BASELINE.md#dependency-policy)。
 
 ## 2026-11-18 · 侧栏与在线更新（未发布）
 

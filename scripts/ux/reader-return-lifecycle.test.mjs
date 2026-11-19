@@ -18,10 +18,11 @@ function fixture() {
     tocReturnIdentityRef: { current: { accessGeneration: 1, conversationId: "conversation" } },
     authenticationGeneration: () => 1, setTocReturnPoint: value => calls.push(["checkpoint", value]),
     setTocReturnError: value => calls.push(["error", value]), setTocReturnPending: value => calls.push(["pending", value]),
-    navigateToTarget: target => { calls.push(["navigate", target]); return navigation.promise; },
+    navigateToTarget: (target, options) => { calls.push(["navigate", target, options]); return navigation.promise; },
     restoreScrollAnchor: options => { calls.push(["align", options]); return alignment.promise; },
     ownsReaderReadRecovery: () => true, recentOwner: {}, userScrollIntentRef: { current: false },
     navigationTokenRef: { current: 1 }, scrollContainerRef: { current: {} },
+    requestWindowTrimRef: { current: () => calls.push(["trim"]) },
     resolvedLocale: "en-US", conversationId: "conversation",
   };
   const run = new Function(...Object.keys(state), `${code};return returnToTocOrigin;`)(...Object.values(state));
@@ -31,7 +32,10 @@ test("Return remains busy through final exact alignment and rejects duplicate ac
   const f = fixture(), first = f.run();
   await f.run();
   assert.equal(f.calls.filter(([name]) => name === "navigate").length, 1);
+  assert.equal(f.calls.find(([name]) => name === "navigate")[1].alignmentOffset, f.anchor.offset);
+  assert.equal(f.calls.find(([name]) => name === "navigate")[2].checkpoint, f.anchor);
   f.navigation.resolve({ ok: true }); await Promise.resolve();
+  assert.equal(f.calls.find(([name]) => name === "align")[1].requireExact, true);
   assert.deepEqual(f.calls.filter(([name]) => name === "pending"), [["pending", true]]);
   assert.equal(f.state.tocReturnPointRef.current, f.anchor);
   f.alignment.resolve(true); await first;
@@ -44,6 +48,15 @@ test("failure preserves the original checkpoint and explains retry", async () =>
   assert.equal(f.state.tocReturnPointRef.current, f.anchor);
   assert.match(f.calls.find(([name, value]) => name === "error" && value)?.[1], /checkpoint is retained/i);
   assert.equal(f.state.tocReturnFlightRef.current, null);
+});
+
+test("an unreachable exact pixel keeps the checkpoint and offers a message-only fallback", async () => {
+  const f = fixture(), work = f.run();
+  f.navigation.resolve({ ok: true }); await Promise.resolve();
+  f.alignment.resolve(false); await work;
+  assert.equal(f.state.tocReturnPointRef.current, f.anchor);
+  assert.match(f.calls.find(([name, value]) => name === "error" && value)?.[1], /exact reading position is unavailable/i);
+  assert.equal(f.calls.filter(([name]) => name === "trim").length, 1);
 });
 test("identity retirement prevents a late Return from clearing or republishing state", async () => {
   const f = fixture(), work = f.run();

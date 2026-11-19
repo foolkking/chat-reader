@@ -28,6 +28,10 @@ type RestoreScrollAnchorOptions = {
   tokenIsCurrent?: () => boolean;
   /** Edge loads must not reclaim native motion before passive intent arrives. */
   scrollOffsetAtCapture?: number;
+  /** Only idle, synchronous removal of loaded turns can shrink the available scroll range. */
+  allowWindowTrimClamp?: boolean;
+  /** Returning to a saved pixel is not successful at an unrelated clamped endpoint. */
+  requireExact?: boolean;
   minimumMs?: number;
   settleMs?: number;
   timeoutMs?: number;
@@ -256,6 +260,8 @@ export async function restoreScrollAnchor({
   anchor,
   tokenIsCurrent = () => true,
   scrollOffsetAtCapture,
+  allowWindowTrimClamp = false,
+  requireExact = false,
   minimumMs = 320,
   settleMs = 120,
   timeoutMs = 1500,
@@ -311,12 +317,13 @@ export async function restoreScrollAnchor({
         lastChangeAt = window.performance.now();
       }
       const now = window.performance.now();
-      if (now - startedAt >= minimumMs && now - lastChangeAt >= settleMs) {
+      const exactEnough = () => !requireExact || Math.abs(target.getBoundingClientRect().top - (rootTop + anchor.offset)) <= 1;
+      if (now - startedAt >= minimumMs && now - lastChangeAt >= settleMs && exactEnough()) {
         finish(true);
         return;
       }
       if (now - startedAt >= timeoutMs) {
-        finish(true);
+        finish(exactEnough());
         return;
       }
       frame = window.requestAnimationFrame(check);
@@ -328,7 +335,20 @@ export async function restoreScrollAnchor({
     if (observedLayout) observer.observe(observedLayout);
     if (commitLayout) {
       try {
+        const beforeMax = allowWindowTrimClamp && root && ownedScrollOffset !== undefined
+          ? Math.max(0, root.scrollHeight - root.clientHeight) : undefined;
+        if (!owner.current() || !tokenIsCurrent() || !scrollIsCurrent()) { finish(false); return; }
         commitLayout();
+        if (beforeMax !== undefined && root && ownedScrollOffset !== undefined) {
+          // Removing both ends can put the old coordinate outside the entire
+          // new scroll range. Layout clamps it even with overflow-anchor:none.
+          // Accept only that exact physical boundary during OUR flush, never
+          // rebase the fence to arbitrary compositor motion or a later frame.
+          const afterMax = Math.max(0, root.scrollHeight - root.clientHeight);
+          if (ownedScrollOffset <= beforeMax && ownedScrollOffset > afterMax && root.scrollTop === afterMax) {
+            ownedScrollOffset = afterMax;
+          }
+        }
         check();
       } catch (error) {
         cleanup();

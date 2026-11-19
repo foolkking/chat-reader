@@ -344,6 +344,48 @@ test("input retirement before a discrete restoration cannot commit stale removal
   assert.equal(commits, 0); assert.equal(f.busy(), false);
 });
 
+test("synchronous window removal may clamp scrollTop before the surviving DOM anchor is restored", async () => {
+  const f = fixture({ height: 608, extent: 3863, contentTop: 2800 });
+  f.root.scrollTop = 2760;
+  const before = f.target.getBoundingClientRect().top;
+  const result = await f.restore({ scrollOffsetAtCapture: 2760, allowWindowTrimClamp: true, minimumMs: 0, settleMs: 0,
+    commitLayout() {
+      f.moveContent(-2363); f.root.scrollHeight = 1500;
+      // Browsers clamp the existing offset when the content becomes shorter.
+      f.root.scrollTop = f.root.scrollTop;
+      assert.equal(f.root.scrollTop, 892);
+    } });
+  assert.equal(result, true);
+  assert.equal(f.root.scrollTop, 397); assert.equal(f.target.getBoundingClientRect().top, before);
+});
+
+test("an explicitly exact checkpoint must not report success when a short viewport clamps the requested pixel", async () => {
+  const f = fixture({ height: 900, extent: 900, contentTop: 118 });
+  const anchor = { targetId: f.target.id, offset: 89 };
+  assert.equal(await f.restore({ anchor, requireExact: true, timeoutMs: 120 }), false);
+  assert.equal(f.root.scrollTop, 0);
+  f.grow(1100);
+  assert.equal(await f.restore({ anchor, requireExact: true, minimumMs: 0, settleMs: 0 }), true);
+  assert.equal(f.root.scrollTop, 29);
+});
+
+for (const mode of ["not-trimming", "interior-motion", "retired-token", "revoked-owner"]) {
+  test(`a trim does not adopt unrelated physical input or lost ownership: ${mode}`, async () => {
+    const f = fixture({ height: 608, extent: 3863, contentTop: 2800 });
+    f.root.scrollTop = 2760;
+    let writesAtCommit = 0;
+    const result = await f.restore({ scrollOffsetAtCapture: 2760, allowWindowTrimClamp: mode !== "not-trimming",
+      minimumMs: 0, settleMs: 0, commitLayout() {
+        f.moveContent(-2363); f.root.scrollHeight = 1500;
+        f.root.scrollTop = mode === "interior-motion" ? 780 : 892;
+        if (mode === "retired-token") f.cancel();
+        if (mode === "revoked-owner") f.cancelPosition();
+        writesAtCommit = f.writes.length;
+      } });
+    assert.equal(result, false); assert.equal(f.writes.length, writesAtCommit);
+  });
+}
+
 test("retired Reader edge restoration cannot overwrite a later user scroll", async () => {
   const f = fixture({ extent: 5000 });
   let userScrollWriteCount = 0;
