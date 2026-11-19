@@ -1,0 +1,205 @@
+{
+  "scope": "Four exact attempts; one combined log per executed job, not duplicated per-step logs. Time shown by the list reporter is rounded. Diagnostic/baseline samples and expected negative controls are not candidate passes. No assertions, retries or time budgets changed.",
+  "runs": [
+    {
+      "run": 44446805723,
+      "attempt": 1,
+      "head_sha": "276209dab477ab570700d27f875936d833286aac",
+      "conclusions": {
+        "success": 4,
+        "failure": 10,
+        "skipped": 5
+      },
+      "completed_job_logs_scanned": 14,
+      "terminal_job_timeouts": 0,
+      "playwright_retry_or_flaky_summary_lines": 0,
+      "reported_browser_failures_excluding_separate_performance_baseline_candidate_diagnostics": [
+        {
+          "file": "new-conversation-dialog.spec.ts",
+          "case": "new conversation entry is attached to the unclassified heading",
+          "seconds_reporter_display": 0.005
+        },
+        {
+          "file": "task-center-dismissal.spec.ts",
+          "case": "sort menu closes on outside click without stealing focus and Escape restores trigger focus",
+          "seconds_reporter_display": 90.0
+        }
+      ],
+      "passed_browser_cases_reported_at_least_45s_by_file": {},
+      "jobs_with_explicit_timeout_error_lines": {
+        "web-quality-shard-3 _ gates": 1
+      }
+    },
+    {
+      "run": 44452527035,
+      "attempt": 1,
+      "head_sha": "2c34470f06a8abaf4699832b011926baa0692dfc",
+      "conclusions": {
+        "success": 11,
+        "failure": 4,
+        "skipped": 4
+      },
+      "completed_job_logs_scanned": 15,
+      "terminal_job_timeouts": 0,
+      "playwright_retry_or_flaky_summary_lines": 0,
+      "reported_browser_failures_excluding_separate_performance_baseline_candidate_diagnostics": [
+        {
+          "file": "settings-presentation.spec.ts",
+          "case": "settings disclosure, identity persistence and archive routing 375 zh-CN",
+          "seconds_reporter_display": 66.0
+        },
+        {
+          "file": "settings-presentation.spec.ts",
+          "case": "settings disclosure, identity persistence and archive routing 375 en-US",
+          "seconds_reporter_display": 60.0
+        },
+        {
+          "file": "settings-presentation.spec.ts",
+          "case": "settings disclosure, identity persistence and archive routing 768 zh-CN",
+          "seconds_reporter_display": 66.0
+        },
+        {
+          "file": "settings-presentation.spec.ts",
+          "case": "settings disclosure, identity persistence and archive routing 768 en-US",
+          "seconds_reporter_display": 66.0
+        },
+        {
+          "file": "settings-presentation.spec.ts",
+          "case": "settings disclosure, identity persistence and archive routing 1440 zh-CN",
+          "seconds_reporter_display": 60.0
+        },
+        {
+          "file": "settings-presentation.spec.ts",
+          "case": "settings disclosure, identity persistence and archive routing 1440 en-US",
+          "seconds_reporter_display": 66.0
+        },
+        {
+          "file": "ux-recovery-followup.spec.ts",
+          "case": "1440px: batch undo checks unknown outcomes, keeps failed reads and retries only unresolved items",
+          "seconds_reporter_display": 20.7
+        },
+        {
+          "file": "ux-recovery-followup.spec.ts",
+          "case": "1440px: recent initial and background failures keep recovery, cached anchors and named progress",
+          "seconds_reporter_display": 15.5
+        }
+      ],
+      "passed_browser_cases_reported_at_least_45s_by_file": {
+        "settings-export-retention.spec.ts": 7
+      },
+      "jobs_with_explicit_timeout_error_lines": {
+        "settings-quality-shard-1 _ matrix": 6,
+        "web-quality-shard-2 _ gates": 1
+      }
+    },
+    {
+      "run": 44461628131,
+      "attempt": 1,
+      "head_sha": "0d92fac979bfe5098b8c547f9787706bf523b705",
+      "conclusions": {
+        "success": 14,
+        "failure": 2,
+        "skipped": 3
+      },
+      "completed_job_logs_scanned": 16,
+      "terminal_job_timeouts": 0,
+      "playwright_retry_or_flaky_summary_lines": 0,
+      "reported_browser_failures_excluding_separate_performance_baseline_candidate_diagnostics": [],
+      "passed_browser_cases_reported_at_least_45s_by_file": {
+        "settings-export-retention.spec.ts": 7
+      },
+      "jobs_with_explicit_timeout_error_lines": {
+        "web-quality-shard-1 _ gates": 1
+      }
+    },
+    {
+      "run": 44472188015,
+      "attempt": 1,
+      "head_sha": "21ae8106a4bacf9930fa15d78c95004253025ed7",
+      "conclusions": {
+        "success": 15,
+        "failure": 1,
+        "skipped": 3
+      },
+      "completed_job_logs_scanned": 16,
+      "terminal_job_timeouts": 0,
+      "playwright_retry_or_flaky_summary_lines": 0,
+      "reported_browser_failures_excluding_separate_performance_baseline_candidate_diagnostics": [
+        {
+          "file": "reading-stability.spec.ts",
+          "case": "375px normal offline: stable frames, reading motion and Viewer return",
+          "seconds_reporter_display": 60.0
+        },
+        {
+          "file": "reading-stability.spec.ts",
+          "case": "375px virtual offline: stable frames, reading motion and Viewer return",
+          "seconds_reporter_display": 60.0
+        },
+        {
+          "file": "reading-stability.spec.ts",
+          "case": "1440px normal offline: stable frames, reading motion and Viewer return",
+          "seconds_reporter_display": 60.0
+        },
+        {
+          "file": "reading-stability.spec.ts",
+          "case": "1440px virtual offline: stable frames, reading motion and Viewer return",
+          "seconds_reporter_display": 60.0
+        },
+        {
+          "file": "reading-stability.spec.ts",
+          "case": "offline: collapsing preserves a surviving anchor, locates a hidden reading point and respects user wheel",
+          "seconds_reporter_display": 60.0
+        },
+        {
+          "file": "reading-stability.spec.ts",
+          "case": "explicit reading size updates online references but not an existing offline snapshot",
+          "seconds_reporter_display": 60.0
+        }
+      ],
+      "passed_browser_cases_reported_at_least_45s_by_file": {
+        "settings-export-retention.spec.ts": 7
+      },
+      "jobs_with_explicit_timeout_error_lines": {
+        "web-quality-shard-1 _ gates": 6
+      }
+    }
+  ],
+  "fourth_run_verified_api_shard_junit": [
+    {
+      "id": 14505960481,
+      "digest": "sha256:22369be7066658215a063a0bdeec12955b0647d7604511b333be40a452694277",
+      "file": "api-junit.xml",
+      "tests": 761,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    {
+      "id": 14504923680,
+      "digest": "sha256:e5b8a57a29179c4c2d8987552ba8393a7f9ba71fe26b37ec28c5feaded358ea9",
+      "file": "api-junit.xml",
+      "tests": 1162,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "id": 14504838409,
+      "digest": "sha256:adec83a84160eb1207a1ea41e928de3c07478e118adf4970682732b38f8f3850",
+      "file": "api-junit.xml",
+      "tests": 972,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "id": 14504544381,
+      "digest": "sha256:e2f53b457211e3df0b5f0dd7243c6fb680d34d864dc32a2734144ca49027fd69",
+      "file": "api-junit.xml",
+      "tests": 4148,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2
+    }
+  ]
+}

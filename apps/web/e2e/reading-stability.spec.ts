@@ -3,6 +3,7 @@ import { syntheticImage as png } from "./synthetic-image";
 import { writeFile } from "node:fs/promises";
 import { settingsAppearance } from "./settings-test-helper";
 import { verifyMediaPassage } from "./reader-media-motion";
+import { readReadingOfflineEvidence } from "./reading-offline-evidence";
 
 test.skip(process.env.E2E_READING_STABILITY !== "1", "Isolated synthetic reading-stability gate");
 test.use({ trace: "off", serviceWorkers: "allow", extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
@@ -101,35 +102,63 @@ async function expectReaderReady(root: Locator) {
     .toMatch(/^(fresh|settled)$/);
 }
 
+function offlineEvidence(page: Page, fixture: Fixture, scaleAsset?: string) {
+  return page.evaluate(readReadingOfflineEvidence, {
+    conversationId: fixture.id, assets: fixture.assets, scaleAsset,
+    // Match app/layout.tsx; absence of a user alone is never authorization.
+    allowUnboundTestStore: process.env.APP_ENV === "test" && process.env.AUTH_ENABLED !== "true",
+  });
+}
+
+test("offline evidence rejects unbound protected stores, other owners and same-length corrupt bytes", async ({ page }) => {
+  // Use a fresh controlled origin, never the deployed app's local storage.
+  await page.route("https://offline-evidence.invalid/**", route => route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Scope control</title>" }));
+  await page.goto("https://offline-evidence.invalid/");
+  const input = { conversationId: "conversation", assets: ["asset"], scaleAsset: "asset", allowUnboundTestStore: true };
+  const inspect = (allowUnboundTestStore: boolean) => page.evaluate(readReadingOfflineEvidence, { ...input, allowUnboundTestStore });
+  expect((await inspect(true)).state).toBe("no-package-database");
+  expect(await page.evaluate(async () => (await indexedDB.databases()).length)).toBe(0);
+  const seed = (suffix: string, scale: number) => page.evaluate(async ({ suffix, scale }) => {
+    const bytes = new Uint8Array([1, 2, 3]);
+    const sha = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), n => n.toString(16).padStart(2, "0")).join("");
+    const open = indexedDB.open(`chat-reader-offline-library${suffix}`, 1);
+    open.onupgradeneeded = () => open.result.createObjectStore("attachments", { keyPath: "id" }).createIndex("conversation_id", "conversation_id");
+    await new Promise<void>((resolve, reject) => {
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result, tx = db.transaction("attachments", "readwrite");
+        tx.objectStore("attachments").put({ id: "asset", conversation_id: "conversation", sha256: sha,
+          byte_size: bytes.length, image_display_v1: { scale_percent: scale } });
+        tx.oncomplete = () => { db.close(); resolve(); }; tx.onabort = () => { db.close(); reject(tx.error); };
+      };
+    });
+    const key = `https://offline.chat-reader.local/assets/asset/${sha}`;
+    await (await caches.open(`chat-reader-offline-assets-v1${suffix}`)).put(key, new Response(bytes));
+    return key;
+  }, { suffix, scale });
+  await seed("", 25);
+  expect(await inspect(true)).toEqual({ state: "package", rows: 1, bytesVerified: 1, scale: 25 });
+  expect((await inspect(false)).state).toBe("no-active-owner");
+  await page.evaluate(() => localStorage.setItem("chat-reader:offline-legacy-owner-v1", "A"));
+  expect((await inspect(true)).state).toBe("no-active-owner");
+  await page.evaluate(() => localStorage.setItem("chat-reader:offline-active-user-v1", "B"));
+  expect((await inspect(false)).state).toBe("no-package-database"); // never borrow A's valid attachment
+  const key = await seed("--user-42", 50);
+  expect(await inspect(false)).toEqual({ state: "package", rows: 1, bytesVerified: 1, scale: 50 });
+  await page.evaluate(async key => {
+    await (await caches.open("chat-reader-offline-assets-v1--user-42")).put(key, new Response(new Uint8Array([3, 2, 1])));
+  }, key);
+  expect(await inspect(false)).toEqual({ state: "package", rows: 1, bytesVerified: 0, scale: 50 });
+  await page.evaluate(() => localStorage.setItem("chat-reader:offline-active-user-v1", "A"));
+  expect(await inspect(false)).toEqual({ state: "package", rows: 1, bytesVerified: 1, scale: 25 });
+});
+
 async function expectOfflineCopyReady(page: Page, fixture: Fixture) {
   // Shell readiness is not package readiness. Wait for the actual canonical
   // message and all six source-bound cache entries before cutting the network.
   await expect(page.locator(`#message-${fixture.messageId}`)).toBeVisible();
-  await expect.poll(() => page.evaluate(async ({ id, assets }) => {
-    const userId=localStorage.getItem("chat-reader:offline-active-user-v1");
-    if(!userId) return 0;
-    const legacy=localStorage.getItem("chat-reader:offline-legacy-owner-v1")===userId;
-    const namespace=Array.from(new TextEncoder().encode(userId),byte=>byte.toString(16).padStart(2,"0")).join("");
-    const suffix=legacy?"":`--user-${namespace}`;
-    const rows = await new Promise<{ id: string; sha256: string; byte_size: number }[]>((resolve, reject) => {
-      const opening = indexedDB.open(`chat-reader-offline-library${suffix}`);
-      opening.onerror = () => reject(opening.error);
-      opening.onsuccess = () => {
-        const db = opening.result, tx = db.transaction("attachments");
-        const request = tx.objectStore("attachments").index("conversation_id").getAll(id);
-        tx.oncomplete = () => { db.close(); resolve(request.result); };
-        tx.onerror = () => { db.close(); reject(tx.error); };
-      };
-    });
-    const cache = await caches.open(`chat-reader-offline-assets-v1${suffix}`);
-    const available = await Promise.all(assets.map(async id => {
-      const row = rows.find(row => row.id === id);
-      if (!row) return false;
-      const response = await cache.match(`https://offline.chat-reader.local/assets/${id}/${row.sha256}`);
-      return Boolean(response && (await response.blob()).size === row.byte_size);
-    }));
-    return available.filter(Boolean).length;
-  }, { id: fixture.id, assets: fixture.assets })).toBe(fixture.assets.length);
+  await expect.poll(() => offlineEvidence(page, fixture), { message: "Offline package must contain every source-bound attachment" })
+    .toMatchObject({ state: "package", rows: fixture.assets.length, bytesVerified: fixture.assets.length });
   // The indicator lives in the library sidebar, which is closed on mobile.
   // Open it explicitly, then close it before the reading measurement begins.
   const status = page.locator("p:visible, span:visible", { hasText: /^(Offline ready|Existing offline version is available)/ }).first();
@@ -634,21 +663,7 @@ test("explicit reading size updates online references but not an existing offlin
   await page.goto(`/library?conversationId=${normal.id}`);
   await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
   await expectOfflineCopyReady(page, normal);
-  const snapshot = () => page.evaluate(async id => {
-    const userId=localStorage.getItem("chat-reader:offline-active-user-v1");
-    if(!userId) throw Error("Offline test requires the active account-bound local store");
-    const legacy=localStorage.getItem("chat-reader:offline-legacy-owner-v1")===userId;
-    const namespace=Array.from(new TextEncoder().encode(userId),byte=>byte.toString(16).padStart(2,"0")).join("");
-    const opening = indexedDB.open(`chat-reader-offline-library${legacy?"":`--user-${namespace}`}`);
-    return new Promise<number>((resolve, reject) => {
-      opening.onerror = () => reject(opening.error);
-      opening.onsuccess = () => {
-        const db = opening.result, tx = db.transaction("attachments"), row = tx.objectStore("attachments").get(id);
-        tx.oncomplete = () => { db.close(); resolve(row.result.image_display_v1.scale_percent); };
-        tx.onerror = () => reject(tx.error);
-      };
-    });
-  }, normal.assets[1]);
+  const snapshot = async () => (await offlineEvidence(page, normal, normal.assets[1])).scale;
   expect(await snapshot()).toBe(25);
   await page.goto(`/conversations/${normal.id}`);
   await expectReaderReady(page.getByTestId("reader-scroll-root"));

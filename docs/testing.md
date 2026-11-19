@@ -1,5 +1,17 @@
 # Testing
 
+## Reader offline browser evidence
+
+The reading-stability gate waits for the canonical message **and** the six exact
+attachment rows and cached bodies before disconnecting. The fixture reads the
+same store the app opened: only an explicit `APP_ENV=test`, auth-off instance
+without a claimed owner may use the unbound database. A protected session must
+have an active owner. The probe never searches another user's stores or creates
+a missing database. It verifies byte length and SHA-256, and reads saved display
+size from that same package. A fresh-origin control covers missing storage,
+account changes, claimed legacy data and corruption of unchanged length.
+[Pre-fix reproduction and cross-gate timeout review](evidence/online-update-2026-11-18/verification.md#timeout-review-2026-11-19).
+
 ## Worktree navigation/search/import coverage — 2026-11-17
 
 **Current:** pushed7f9ef44 / ordinary full CI44063757196 attempt1 failed in six
