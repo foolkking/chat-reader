@@ -105,7 +105,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     }
   };
   const { annotations, notebook, conflicts: notebookConflicts, reads, reload, publishNotebook: setNotebook,
-    notebookReady, canUseNotebook, isCurrent, scopeKey, currentAnnotations, updateAnnotations } = useAnnotationWorkspaceReads(conversationId, repository, open);
+    notebookReady, canUseNotebook, isCurrent, isCurrentVisit, scopeKey, currentAnnotations, updateAnnotations } = useAnnotationWorkspaceReads(conversationId, repository, open);
   const [, refreshComments] = useScopedState(scopeKey, 0);
   const commentDraftsRef = useMemo(() => ({ current: {} as Record<string, CommentDraft> }), [scopeKey]);
   const commentDrafts = commentDraftsRef.current;
@@ -468,9 +468,17 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     setFocusedAnnotationId(bookmarkNotice?.id ?? null); onOpenChange(true); setBookmarkNotice(null);
   };
   const openNotebookConflicts = async () => {
-    if (!notebook || !canUseNotebook()) return;
-    conflictOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setConflictKey(await ensureNotebookConflict(notebook, notebookConflicts));
+    if (!notebook || !isCurrentVisit()) return;
+    const active = document.activeElement;
+    conflictOpener.current = active && active instanceof HTMLElement ? active : null;
+    // Reconnect may start refreshing between rendering an enabled button and
+    // its click. A durable marker is sufficient to *open* comparison. Only
+    // currently confirmed reads may manufacture a marker from a remote copy.
+    const ready = canUseNotebook();
+    const key = await ensureNotebookConflict(notebook, notebookConflicts, () =>
+      ready && isCurrentVisit() && canUseNotebook() && reads.notebook.currentData() === notebook
+      && reads.conflicts.currentData() === notebookConflicts);
+    if (isCurrentVisit()) setConflictKey(key);
   };
   useEffect(() => {
     if (!open) return;

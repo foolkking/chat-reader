@@ -16,12 +16,20 @@ export type ConflictPreview = {
 };
 export class ConflictChangedError extends Error {}
 
-export async function ensureNotebookConflict(current: NotebookRead, copies: NotebookRead[]): Promise<string> {
+export async function ensureNotebookConflict(current: NotebookRead, copies: NotebookRead[], canSeed: () => boolean): Promise<string> {
   const key = `sync-conflict:notebook:${current.conversation_id}`, db = offlineDb, access = captureOfflineAccess();
   return db.transaction("rw", db.settings, async () => {
     assertOfflineAccess(access);
-    if (await db.settings.get(key)) return key;
-    const copy = copies.find((item) => item.conflict_of_id === current.id);
+    const existing = await db.settings.get(key);
+    assertOfflineAccess(access);
+    if (existing) {
+      const marker = existing.value as Partial<ConflictMarker> | null;
+      if (marker?.entity_type !== "notebook" || marker.conversation_id !== current.conversation_id || !marker.conflict_copy_id)
+        throw new ConflictChangedError();
+      return key;
+    }
+    if (!canSeed()) throw new ConflictChangedError();
+    const copy = copies.find((item) => item.conversation_id === current.conversation_id && item.conflict_of_id === current.id);
     if (!copy) throw new ConflictChangedError();
     await db.settings.put({ key, value: { entity_type: "notebook", entity_id: current.id, local_entity_id: current.id,
       conversation_id: current.conversation_id, conflict_copy_id: copy.id, local_action: "upsert", local_payload: { title: copy.title, blocks: copy.blocks } } });

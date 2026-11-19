@@ -10,6 +10,33 @@ const source = readFileSync(new URL("../../apps/web/components/offline-conflict-
 const compiled = ts.transpileModule(source, { fileName: "offline-conflict-review.tsx", compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX,
 } }).outputText;
+
+test("opening a verified notebook marker needs no new write; only a current matching copy can create one", async () => {
+  const lib = readFileSync(new URL("../../apps/web/lib/offline-conflicts.ts", import.meta.url), "utf8");
+  const js = ts.transpileModule(lib, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
+  let row, writes = 0, epoch = 1, revokeDuringRead = false;
+  const db = { transaction: (_mode, _store, fn) => fn(), settings: {
+    get: async () => { if (revokeDuringRead) epoch++; return row; }, put: async value => { row = value; writes++; },
+  } };
+  const service = {};
+  new Function("require", "exports", js)(name => name === "./offline-db" ? { offlineDb: db } : name === "./offline-access"
+    ? { captureOfflineAccess: () => epoch, assertOfflineAccess: generation => { if (epoch !== generation) throw Error("access changed"); } } : {}, service);
+  const note = { id: "base", conversation_id: "one" };
+  const copy = { id: "copy", conflict_of_id: "base", conversation_id: "one", blocks: [], title: "Synthetic local" };
+  const open = (copies, ready) => service.ensureNotebookConflict(note, copies, () => ready);
+  await assert.rejects(open([copy], false), service.ConflictChangedError);
+  await assert.rejects(open([{ ...copy, conversation_id: "two" }], true), service.ConflictChangedError);
+  assert.equal(writes, 0);
+  assert.equal(await open([copy], true), "sync-conflict:notebook:one"); assert.equal(writes, 1);
+  assert.equal(await open([], false), row.key); assert.equal(writes, 1);
+  const good = row;
+  for (const invalid of [{ conversation_id: "two" }, { conflict_copy_id: null }, { entity_type: "annotation" }]) {
+    row = { ...good, value: { ...good.value, ...invalid } };
+    await assert.rejects(open([copy], true), service.ConflictChangedError);
+  }
+  row = good; revokeDuringRead = true;
+  await assert.rejects(open([copy], true), /access changed/); assert.equal(writes, 1);
+});
 const same = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
 const deferred = () => {
   let resolve, reject;

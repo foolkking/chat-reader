@@ -284,6 +284,32 @@ test("mobile can select marks for export and a new bookmark is revealed through 
   } finally { r.dispose(); }
 });
 
+for (const leave of [false, true]) test(`one notebook conflict click during background refresh opens only its own visit (leave=${leave})`, async () => {
+  const read = deferred(), marker = deferred();
+  let hold = false, requests = 0;
+  const r = runtime({ "../../lib/offline-conflicts": { ensureNotebookConflict: async (_note, _copies, canSeed) => {
+    requests++; assert.equal(canSeed(), false, "retained rows cannot create new conflict evidence during refresh");
+    return marker.promise;
+  } } });
+  const repo = repository({ listNotebookConflicts: () => hold ? read.promise : [note("copy")] });
+  const props = { conversationId: "synthetic-a", repository: repo.value, open: true, messages: [], activeMessageId: null,
+    onOpenChange: noop, onNavigate: noop };
+  const render = () => r.render("annotation-workspace.tsx", "AnnotationWorkspace", props);
+  try {
+    render(); r.flush(); await setImmediate(); let tree = render(); r.flush();
+    await button(tree, "Notes").onClick(); tree = render(); r.flush();
+    const notebook = find(tree, item => item.type === "Notebook").props;
+    assert.equal(notebook.saveBlocked, false);
+    // Sync invalidates the live read before the already-rendered button updates.
+    hold = true; r.events.dispatchEvent(new Event("sync"));
+    const opened = notebook.onResolve();
+    assert.equal(requests, 1, "a real click on the enabled button must not disappear");
+    if (leave) { props.open = false; render(); props.open = true; render(); }
+    marker.resolve("synthetic-conflict"); await opened;
+    assert.equal(Boolean(find(render(), item => item.type === "Settings")), !leave);
+  } finally { read.resolve([]); marker.resolve("synthetic-conflict"); await setImmediate(); r.dispose(); }
+});
+
 test("the shared leave guard blocks a scope switch and notes-tab exit when storage has not retained the draft", async () => {
   let consent = false; const confirmations = [], closed = [];
   const r = runtime({ "../../components/interaction-dialog-provider": { useInteractionDialog: () => ({

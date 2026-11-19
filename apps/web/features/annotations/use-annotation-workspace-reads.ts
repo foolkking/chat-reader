@@ -108,6 +108,7 @@ export function useAnnotationWorkspaceReads(conversationId: string, repository: 
       ...(!kind || kind === "conflicts" ? [loadConflicts()] : []),
     ]);
   }, [loadAnnotations, loadNotebook, loadConflicts]);
+  const sequence = visit.current.sequence;
   return {
     annotations: annotations.data ?? EMPTY_ANNOTATIONS,
     notebook: notebook.data,
@@ -119,6 +120,7 @@ export function useAnnotationWorkspaceReads(conversationId: string, repository: 
     publishNotebook: notebook.publish,
     canUseNotebook,
     isCurrent: annotations.ownsScope,
+    isCurrentVisit: () => annotations.ownsScope() && visit.current.open && visit.current.sequence === sequence,
     currentAnnotations: annotations.currentData,
     updateAnnotations: annotations.updateData,
   };

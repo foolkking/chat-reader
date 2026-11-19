@@ -12,6 +12,11 @@ size from that same package. A fresh-origin control covers missing storage,
 account changes, claimed legacy data and corruption of unchanged length.
 [Pre-fix reproduction and cross-gate timeout review](evidence/online-update-2026-11-18/verification.md#timeout-review-2026-11-19).
 
+For notebook conflict review, exercise a click concurrent with background
+refresh: an existing account-scoped marker can open comparison without
+creating a new one; missing evidence, stale visits and account changes cannot.
+Keep the authenticated 375px local-choice flow and its original timeout.
+
 ## Worktree navigation/search/import coverage — 2026-11-17
 
 **Current:** pushed7f9ef44 / ordinary full CI44063757196 attempt1 failed in six
