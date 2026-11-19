@@ -10,6 +10,7 @@ new Function("exports", ts.transpileModule(readFileSync(new URL(
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText)(exports);
 const {
+  canKeepShortReaderPrefix: keepPrefix,
   mergeLoadedTurnWindow: merge,
   isUnchangedReaderPrefix: isPrefix,
   trimLoadedTurnWindowToProtectedMessages: trim,
@@ -29,6 +30,29 @@ const makeWindow = (sizes = Array(20).fill(2)) => {
   return replaceLoadedWindow({ turns, items: turns.flatMap(t => t.items), total, offset: 0,
     has_previous: false, has_more: false }, 7);
 };
+
+test("only a known small lightweight prefix keeps its real scrollbar origin, without prefetch", () => {
+  function lightweight(n) {
+    const w = makeWindow(Array(n).fill(1));
+    for (const m of w.items) Object.assign(m, {char_count: 10, is_heavy: false, block_count: 1,
+      render_blocks: [{block_type: "paragraph", plain_text: "short text"}]});
+    return w;
+  }
+  assert.equal(keepPrefix(lightweight(40)), true);
+  const partial = lightweight(12);
+  Object.assign(partial, {total: 36, hasMore: true});
+  assert.equal(keepPrefix(partial), true);
+  assert.equal(partial.items.length, 12);
+  for (const edit of [
+    w => { w.total = 41; }, w => { w.total = 0; }, w => { w.startOffset = 2; },
+    w => { w.hasPrevious = true; }, w => { w.endOffset++; }, w => { w.items[0].is_heavy = true; },
+    w => { w.items[1].content_truncated = true; }, w => { w.items[0].char_count = 16_384; },
+    w => { w.items[0].current_version = {display_text: "x".repeat(16_385)}; },
+    w => { delete w.items[0].render_blocks; }, w => { w.items[0].block_count++; },
+    w => { w.items[0].render_blocks[0].block_type = "image"; },
+    w => { w.items[0].render_blocks.push({block_type: "paragraph"}); w.items[0].block_count++; },
+  ]) { const w = lightweight(40); edit(w); assert.equal(keepPrefix(w), false); }
+});
 
 test("idle reclamation surrounds the real viewport rather than forcing the first/last three turns", () => {
   const current = makeWindow(), next = trim(current, new Set(["m18", "m19", "m20", "m21"]));

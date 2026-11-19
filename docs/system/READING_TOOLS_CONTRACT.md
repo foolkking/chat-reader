@@ -47,6 +47,13 @@ The real retained block is pinned and the existing position owner synchronously
 commits/reconciles removal before paint; newer intent retires stale work.
 Reclaimed content remains reachable via the original complete-turn API.
 
+When reading from the beginning of a known short conversation (at most 40
+messages), the already-loaded prefix stays mounted if it contains at most
+40 simple paragraph/heading blocks and 16 Ki characters. A brief pause then
+cannot reset the physical scrollbar origin or force a refetch on reversal.
+This never prefetches remaining turns. Heavy, truncated, incomplete-metadata,
+rich, large and middle/target windows keep the normal reclamation path.
+
 This changes ConversationReader, not Share/Together's independent DOM/window
 implementations. Shared navigation keeps its ordinary timing unless the caller
 explicitly supplies the synchronous commit. Full original stability gates remain

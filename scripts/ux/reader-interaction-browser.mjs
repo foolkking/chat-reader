@@ -359,6 +359,34 @@ try {
           assert.ok(sample.mounted<=120);
           if(gesture!=="pointer") assert.ok(sample.scrolls.every((top,i)=>!i||top>=sample.scrolls[i-1]-2),"Wheel input must not be undone by geometry compensation.");
         }
+        if(kind==="short") {
+          // Separate from the unchanged timed gestures above. Force the quiet
+          // interval that fell between two CI wheel deliveries (266.7ms).
+          await page.reload();await expect(page.locator(".katex").first()).toBeVisible();
+          await scroller.hover();
+          for(let step=0;step<60&&!(await scroller.locator("#message-m35").count());step++) {
+            await page.mouse.wheel(0,120);await page.waitForTimeout(34);
+          }
+          await expect(scroller.locator("#message-m35")).toBeAttached();
+          await scroller.evaluate(r=>{r.scrollTop=Math.floor((r.scrollHeight-r.clientHeight)*.6);});
+          await page.mouse.wheel(0,80);await page.waitForTimeout(60);
+          const before=await scroller.evaluate(r=>{
+            const top=r.getBoundingClientRect().top;
+            const a=[...r.querySelectorAll("article[data-message-id]")].find(el=>el.getBoundingClientRect().bottom>top+120);
+            return {id:a.id,offset:a.getBoundingClientRect().top-top,scroll:r.scrollTop,reads:window.turnReads.length};
+          });
+          await page.waitForTimeout(450);
+          const after=await scroller.evaluate((r,id)=>{
+            const a=document.getElementById(id);
+            return {offset:a?a.getBoundingClientRect().top-r.getBoundingClientRect().top:null,scroll:r.scrollTop};
+          },before.id);
+          results.push({shortInputPause:true,before,after});
+          assert.ok(after.offset!==null&&Math.abs(after.offset-before.offset)<=2,"A quiet interval must preserve the same readable article.");
+          assert.ok(Math.abs(after.scroll-before.scroll)<=2,"A bounded short Reader must not discard its physical scrollbar origin during a pause.");
+          await page.mouse.wheel(0,-160);
+          await expect.poll(()=>scroller.evaluate(r=>r.scrollTop)).toBeLessThan(before.scroll-100);
+          assert.equal(await page.evaluate(()=>window.turnReads.length),before.reads,"Reversal inside the retained prefix must not refetch turns.");
+        }
       }
     }
     if(width===1440&&locale==="en-US"&&theme==="light") {
