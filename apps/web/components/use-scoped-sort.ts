@@ -16,9 +16,15 @@ export function useScopedSort(scope: SortScope = "all", { orderVisible = true }:
     if (generation !== authenticationGeneration()) throw new Error("Account changed. Reopen this directory.");
   };
   const projectId = scope.startsWith("project:") ? scope.slice(8) : null;
+  // This reads a project's identity/revision, not the presentation order of
+  // the project directory. Re-keying on late preferences disabled a perfectly
+  // valid native button between pointerdown and click. Use a stable existing
+  // list key; never make placeholder/error data writable to bridge the gap.
+  const indexMode = projectId ? "custom" : preferences.projectSortMode;
+  const indexDirection = projectId ? "asc" : preferences.projectSortDirection;
   const projects = useQuery({
-    queryKey: ["projects", preferences.projectSortMode, preferences.projectSortDirection],
-    queryFn: ({ signal }) => getProjects({ sort: preferences.projectSortMode, direction: preferences.projectSortDirection }, signal),
+    queryKey: ["projects", indexMode, indexDirection],
+    queryFn: ({ signal }) => getProjects({ sort: indexMode, direction: indexDirection }, signal),
     enabled: !!projectId || scope === "project_default",
   });
   const project = projects.data?.find(item => item.id === projectId);

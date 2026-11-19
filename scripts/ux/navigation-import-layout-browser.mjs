@@ -38,10 +38,16 @@ export const getAdaptiveImportSession=async()=>window.session;
 export const cancelAdaptiveImportSession=async()=>{};
 export const cancelTask=async()=>{};
 export const retryTask=async()=>{};
-export const getProjects=async()=>[];
+export const getProjects=async({sort})=>{
+ if(location.pathname!=="/project-press")return [];
+ if(window.holdSortedIndex&&sort==="recent_read")await new Promise(resolve=>{window.releaseSortedIndex=resolve});
+ return [{id:"synthetic-scope",sort_revision:1,conversation_sort:null}];
+};
 export const getConversationOrder=async()=>({initialized:true,version:"synthetic-order",count:2});
 export const changeConversationOrder=async value=>{window.orderWrite=value};
-export const updateProject=async()=>{};
+export const updateProject=async(id,patch)=>{window.projectWrites??=[];window.projectWrites.push({id,...patch});
+ return {id,sort_revision:2,conversation_sort:patch.conversation_sort}};
+export function hydrateProjectOrdering(){window.holdSortedIndex=true;window.projectMode="recent_read";publish()}
 export const searchConversations=async()=>({items:window.hits,has_more:false});
 const forbidden=()=>{throw Error("Unexpected import mutation")};
 export const excludeAdaptiveImportGroup=forbidden,getAdaptiveImportArchive=forbidden,reanalyzeAdaptiveImportSession=forbidden,
@@ -54,7 +60,9 @@ export default function Link({href,children,...props}){return <a href={href} {..
 writeFileSync(join(out, "entry.tsx"), `
 import React from "react";
 import {createRoot} from "react-dom/client";
-import {QueryClient,QueryClientProvider} from "@tanstack/react-query";
+import {QueryClient,QueryClientProvider,useQuery} from "@tanstack/react-query";
+import {ConversationSortMenu} from ${modulePath("components/sort-menu.tsx")};
+import {getProjects,hydrateProjectOrdering,usePreferences} from ${JSON.stringify(adapter.replaceAll("\\", "/"))};
 import {NavigationSortSettings} from ${modulePath("components/navigation-sort-settings.tsx")};
 import {ImportBatchManager} from ${modulePath("features/import/import-batch-manager.tsx")};
 import {ImportSourcePreview} from ${modulePath("features/import/import-source-preview.tsx")};
@@ -62,10 +70,14 @@ import {AdaptiveImportWorkspace} from ${modulePath("features/import/adaptive-imp
 import {SearchResults} from ${modulePath("features/search/search-results.tsx")};
 const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
 window.refreshBatches=()=>client.invalidateQueries({queryKey:["unfinished-imports"]});
+function ProjectPress(){const p=usePreferences();
+ useQuery({queryKey:["projects",p.projectSortMode,p.projectSortDirection],queryFn:()=>getProjects({sort:p.projectSortMode})});
+ window.hydrateProjectOrdering=hydrateProjectOrdering;
+ return <ConversationSortMenu scope="project:synthetic-scope" compact hideCustomDirection/>;}
 function Fixture(){const zh=window.fixtureLocale==="zh-CN";const section=location.pathname.slice(1);
 return <main className="mx-auto max-w-3xl space-y-5 bg-page p-4 text-primary sm:p-6">
 <header className="border-b border-ui pb-4"><h1 className="text-lg font-semibold">{zh?"对话资料库":"Conversation library"}</h1></header>
-{section==="sorting"?<div data-sidebar-settings-scroll className="max-h-[32rem] max-w-72 overflow-y-auto"><NavigationSortSettings/></div>:section==="imports"?<ImportBatchManager/>:section==="overview"||section.startsWith("invalid")?
+{section==="project-press"?<ProjectPress/>:section==="sorting"?<div data-sidebar-settings-scroll className="max-h-[32rem] max-w-72 overflow-y-auto"><NavigationSortSettings/></div>:section==="imports"?<ImportBatchManager/>:section==="overview"||section.startsWith("invalid")?
 <AdaptiveImportWorkspace session={window.session} onSession={()=>{}} onBack={()=>{}} onImport={()=>{window.importClicked=true}} importing={false} error={null}/>:
 section==="preview"?
 <section><h2 className="break-words text-sm font-semibold">{window.group.files[0].filename}</h2><ImportSourcePreview session={window.session} group={window.group} showSourceName={false}/></section>:
@@ -144,6 +156,28 @@ try {
       return route.fulfill({ contentType: path === "/bundle.js" ? "text/javascript" : path === "/style.css" ? "text/css" : "text/html",
         body: path === "/bundle.js" ? bundle : path === "/style.css" ? css.css : html });
     });
+    // The first screen can accept a pointer-down using defaults before the
+    // account's project *index* sort arrives. Hold its new list read across
+    // pointer-up: the project itself, its permissions and sort did not change.
+    await page.goto("https://layout.synthetic/project-press");
+    const projectTrigger = page.getByTestId("sort-menu-trigger");
+    await expect(projectTrigger).toBeEnabled();
+    const press = await projectTrigger.boundingBox();
+    await page.mouse.move(press.x + press.width / 2, press.y + press.height / 2);
+    await page.mouse.down();
+    await page.evaluate(() => window.hydrateProjectOrdering());
+    await page.waitForFunction(() => typeof window.releaseSortedIndex === "function");
+    await page.mouse.up();
+    assert.equal(await projectTrigger.getAttribute("aria-expanded"), "true",
+      "Changing the catalog sort during a native press must not swallow its click");
+    assert.deepEqual(await page.evaluate(() => window.projectWrites ?? []), []);
+    await page.evaluate(() => window.releaseSortedIndex());
+    await page.getByRole("menuitem", { name: locale === "zh-CN" ? "手动顺序" : "Manual order", exact: true }).click();
+    await expect(projectTrigger).toHaveAttribute("aria-expanded", "false");
+    assert.deepEqual(await page.evaluate(() => window.projectWrites), [{
+      id: "synthetic-scope", conversation_sort: { mode: "custom", direction: "asc" }, expected_sort_revision: 1,
+    }]);
+    results.push({ width, locale, section: "project-sort-native-press-during-index-refresh", pass: true });
     for (const section of ["imports", "overview", "preview", "sorting", "search", "invalid-single", "invalid-multiple"]) {
       await page.goto(`https://layout.synthetic/${section}`);
       if (section === "imports") {

@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-19：[空项目首次排序点击的精确 CI 证据和本机红绿对照](evidence/reader-media-motion-2026-11-19/release-qualification.md#project-sort-native-press)记录目录展示查询与项目自身排序元数据的边界。
+
 2026-11-19：[首次签名发布的资格失败与短正文红绿对照](evidence/reader-media-motion-2026-11-19/release-qualification.md)，
 对应[完整轮次的阅读与回收合同](system/READING_TOOLS_CONTRACT.md)。不把普通 CI 当作标签资格。
 

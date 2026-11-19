@@ -18,3 +18,23 @@
   immediately without an extra turn read. All 46 mounted cases and 100
   focused Node tests passed. This does not certify a physical device,
   Linux qualification, production backup, or a signed release.
+
+## Project sort native press
+
+- Ordinary full CI `44542132920/1` at `eb988e698f0c48c7772bb601951574f3867d3732`:
+  web shard 1 (Reader) passed; web shard 2, job `135622992281`, failed. Exact artifact
+  `14540261311`, SHA-256 `fe61341d3919d0d842c87375ace06a1e32ef6a8e0f07b54b1b2db0f10d0108f0`.
+  Source Editor/mutation gate: 120/121 passed. The 375px empty-project case timed out
+  waiting for the manual-sort item; the native failure snapshot shows a closed trigger,
+  not a rendered menu with the wrong selector. The trace was disabled in the existing
+  suite, so the exact ordering of pointer and fetch events on that runner is unknown.
+- Reproduced a concrete path to the same symptom using the real React Query hook, menu and
+  Chromium: after native pointer-down, apply the account's project-directory sort and hold
+  that reordered list read until pointer-up. Previously the metadata query changed keys,
+  the native button became disabled mid-press, and its click was lost. Read a project's
+  sort metadata using a stable existing list key, independent of directory presentation.
+  A missing/failed read still cannot authorize a write; the server checks the sort revision.
+- Red on the unchanged hook; green on the fixed hook. At 375/1440px and zh-CN/en-US every
+  press opened the menu and only choosing manual order produced one project-scoped write.
+  The full mounted navigation/import matrix passed 44 cases; 83 focused tests, lint and
+  typecheck passed. This is not a claim that the original failing end-to-end gate has rerun.
