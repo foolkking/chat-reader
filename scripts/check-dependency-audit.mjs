@@ -24,6 +24,27 @@ const exceptions = new Map();
 const policyErrors = [];
 let picomatchScopeVerification = null;
 
+// Some registry/transport failures also exit pnpm with status 1. In particular
+// an empty exception file must not turn an error envelope into a clean audit.
+const severities = ["info", "low", "moderate", "high", "critical"];
+const auditCounts = audit.metadata?.vulnerabilities;
+if (audit.error || !audit.advisories || typeof audit.advisories !== "object" || Array.isArray(audit.advisories)
+  || !severities.every(level => Number.isSafeInteger(auditCounts?.[level]) && auditCounts[level] >= 0)) {
+  policyErrors.push("Invalid or incomplete official registry audit response");
+} else {
+  if (Object.values(audit.advisories).some(row => !row || !severities.includes(row.severity)
+    || typeof row.module_name !== "string" || !row.module_name || typeof row.github_advisory_id !== "string" || !row.github_advisory_id)) {
+    policyErrors.push("Unidentifiable advisory in the registry audit");
+  }
+  for (const level of severities) {
+    const rows = Object.values(audit.advisories).filter(item => item?.severity === level).length;
+    // One advisory can count multiple affected installed versions.
+    if (rows > auditCounts[level] || (rows === 0 && auditCounts[level] !== 0)) {
+      policyErrors.push(`Inconsistent advisory inventory for ${level}`);
+    }
+  }
+}
+
 const picomatchAdvisories = Object.values(audit.advisories ?? {}).filter(
   (item) => item.module_name === "picomatch" && item.github_advisory_id === "GHSA-fc5q-39xc-vjpf",
 );

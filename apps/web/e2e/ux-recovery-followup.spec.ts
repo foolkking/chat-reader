@@ -1835,7 +1835,12 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       });
       await page.goto(`/projects/${project.id}`);
       await page.getByRole("button", { name: zh ? "批量操作" : "Manage conversations", exact: true }).click();
+      // Select the actual loaded rows, not a toolbar changing width while the
+      // asynchronous list switches from its loading state to two records.
+      const boxes = created.map(item => page.getByRole("checkbox", { name: `${zh ? "选择" : "Select"} ${item.conversation.title}`, exact: true }));
+      for (const box of boxes) await expect(box).toBeVisible();
       await page.getByTestId("selection-toolbar").getByRole("button", { name: zh ? "全选" : "Select all", exact: true }).click();
+      for (const box of boxes) await expect(box).toBeChecked();
       await page.getByTestId("selection-toolbar").getByRole("button", { name: zh ? "归档" : "Archive", exact: true }).click();
       const notice = page.locator(`[aria-label="${zh ? "撤销对话操作" : "Undo conversation action"}"]`);
       const undo = notice.getByRole("button", { name: zh ? "撤销" : "Undo", exact: true });
@@ -2108,7 +2113,10 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     } finally {
       await page.unrouteAll({ behavior: "wait" });
-      expect((await page.request.delete(`/api/conversations/${id}`)).ok()).toBe(true);
+      // Fixture cleanup still takes the real same-origin DELETE exactly once.
+      // An idle upstream pool socket reset here previously masked the outcome.
+      const removed = await page.request.delete(`/api/conversations/${id}`, { headers: { Connection: "close" } });
+      expect(removed.status(), "recent fixture must be deleted by the API").toBe(204);
     }
   });
 }

@@ -3,20 +3,7 @@
   "policy": {
     "audit_source": "https://registry.npmjs.org",
     "blocked_severities": ["critical", "high"],
-    "review_date": "2026-11-18"
+    "review_date": "2026-11-19"
   },
-  "exceptions": [
-    {
-      "advisory_id": "GHSA-fc5q-39xc-vjpf",
-      "package": "picomatch",
-      "severity": "high",
-      "disposition": "EXPLICIT_TEMPORARY_EXCEPTION",
-      "scope": "Official audit paths are Web build/lint development dependencies; Next also bundles picomatch, so its image-helper call sites and the exact static pattern configuration are reviewed rather than claiming the library is absent from all runtime code.",
-      "reason": "The official audit lists no patched range. Its dependency paths terminate below Tailwind CSS or typescript-eslint. The reviewed Next 16.4.5 image helpers take their patterns from Next configuration/defaults, not from the requested URL.",
-      "mitigation": "Required CI checks audited versions and development roots, the installed production tree, literal matcher imports in shipped Web sources, and the hashes of the bundled matcher, image helpers, defaults and configuration. Changes outside the reviewed scope or to the affected/fixed ranges require review. This exception is not a patch.",
-      "track": "Re-review and remove this record as soon as the advisory is fixed upstream or the dependency/runtime graph changes.",
-      "review_by": "2026-11-25",
-      "evidence": "scripts/security/verify-picomatch-scope.mjs"
-    }
-  ]
+  "exceptions": []
 }

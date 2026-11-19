@@ -98,7 +98,10 @@ for (const profile of profiles) {
         path: measurementPath,
         contentType: "application/json",
       });
-      console.info(`[reader-capacity] ${JSON.stringify(payload)}`);
+      // The complete, unfiltered DOM measurements were written and attached
+      // above. Do not feed megabytes of duplicate JSON through the runner's
+      // log masker while it is starting the next timed browser fixture.
+      console.info(`[reader-capacity] ${measurementName} cold=${runs.map(r => r.longestTask).join(",")}ms warmMonotonic=${warm.scrollMonotonic}`);
 
       for (const run of runs) {
         expect(run.scrollMonotonic).toBe(true);

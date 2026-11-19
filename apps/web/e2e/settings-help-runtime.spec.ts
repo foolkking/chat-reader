@@ -42,7 +42,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: /Runtime status|运行状态/ }).click();
       const runtime = page.getByRole("region", { name: /Runtime status|运行状态/ });
-      await expectRuntimeWithCollapsedUpdates(runtime);
+      await expectRuntimeWithCollapsedUpdates(runtime, page);
       await runtime.locator("summary").filter({ hasText: /More runtime information|更多运行信息/ }).click();
       await expect(runtime.locator("details")).toContainText(/does not include server backups|不包含服务器备份/);
       await expect(runtime.getByText(/Configured \(delivery not tested\)|已配置（未测试投递）/)).toBeVisible();
@@ -154,8 +154,19 @@ async function expectConnectedHelpWithoutBuildInfo(help: Locator) {
   await expect(help.getByText(/Web build|网页构建|Version updates|版本更新/)).toHaveCount(0);
 }
 
-async function expectRuntimeWithCollapsedUpdates(runtime: Locator) {
+async function expectRuntimeWithCollapsedUpdates(runtime: Locator, page: Page) {
   await expect(runtime.getByRole("heading", { name: /Task queues|任务队列/ })).toBeVisible();
-  await expect(runtime.getByRole("button", { name: /Version updates|版本更新/ })).toHaveAttribute("aria-expanded", "false");
-  await expect(runtime.getByRole("region", { name: /Version updates|版本更新/ })).toHaveCount(0);
+  const toggle = runtime.getByRole("button", { name: /Version updates|版本更新/ });
+  const panel = runtime.getByRole("region", { name: /Version updates|版本更新/ });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(panel).toHaveCount(0);
+  const response = await page.request.get(new URL("/api/app-info", page.url()).href);
+  expect(response.status()).toBe(200);
+  const { api_version } = await response.json();
+  expect(typeof api_version).toBe("string"); expect(api_version.length).toBeGreaterThan(0);
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(panel).toContainText(`API ${api_version}`);
+  await toggle.click();
+  await expect(panel).toHaveCount(0);
 }

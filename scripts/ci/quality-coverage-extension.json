@@ -165,7 +165,7 @@
     },
     "settings-help-runtime.spec.ts": {
       "previous_source_lf_sha256": "c7438f1113ac285d67455d67a42cdadb8d9dcb3b5614d2413785626f66b46863",
-      "source_lf_sha256": "13d5948de43b884bab81e3a12eb7bdac12b998811743aee544949e29dd936b51",
+      "source_lf_sha256": "20fc90cc13f4b23967b7f8aebfa63e57c9efd4de34c58ef341a20c66fbd1fe42",
       "cases": [
         { "id": "d6bbd48652a1ab3730c8-c76c09833fc6d0041823", "file": "settings-help-runtime.spec.ts", "title": "diagnostic serializer excludes injected strings and nested sensitive fields", "line": 17, "column": 5, "timeout": 90000, "project_id": "" },
         { "id": "d6bbd48652a1ab3730c8-512fc624aae7e2bb73ed", "file": "settings-help-runtime.spec.ts", "title": "help and runtime use real server data, recover failures and retain offline limits 375", "line": 27, "column": 7, "timeout": 180000, "project_id": "" },
@@ -174,7 +174,20 @@
         { "id": "d6bbd48652a1ab3730c8-e8f37132914e2f01a389", "file": "settings-help-runtime.spec.ts", "title": "runtime polling pauses when hidden and resumes with a fresh real request", "line": 88, "column": 5, "timeout": 90000, "project_id": "" },
         { "id": "d6bbd48652a1ab3730c8-2ab2dfaa0489f2759cde", "file": "settings-help-runtime.spec.ts", "title": "help cache stays account-scoped and disappears behind expired authorization", "line": 112, "column": 5, "timeout": 180000, "project_id": "" }
       ],
-      "reason": "All six original identities, declarations, deadlines and behaviors are retained. The three responsive admin sessions additionally require no version information in Help and a collapsed update control in Runtime status."
+      "reason": "All six original identities, declarations and deadlines are retained. The responsive root-admin sessions verify that Help has no version display, then expand Runtime status, match the actual server API version and close it again."
+    },
+    "settings-presentation.spec.ts": {
+      "previous_source_lf_sha256": "4ea973f934ee4ebc593f19cea9275e9782dae7d013082a267d2d207b1aa3a912",
+      "source_lf_sha256": "0a4e86f1f038d7af803520a2fdbb45cc790fe1bf7a280c7d2d48dd4a16a50ffe",
+      "cases": [
+        { "id": "b65ce3c7918d929f6ce4-7fb150d001a92b049e43", "file": "settings-presentation.spec.ts", "title": "settings disclosure, identity persistence and archive routing 375 zh-CN", "line": 21, "column": 7, "timeout": 180000, "project_id": "" },
+        { "id": "b65ce3c7918d929f6ce4-1dfd82d8d8834f205003", "file": "settings-presentation.spec.ts", "title": "settings disclosure, identity persistence and archive routing 375 en-US", "line": 21, "column": 7, "timeout": 180000, "project_id": "" },
+        { "id": "b65ce3c7918d929f6ce4-53155323bad3fa5c41fd", "file": "settings-presentation.spec.ts", "title": "settings disclosure, identity persistence and archive routing 768 zh-CN", "line": 21, "column": 7, "timeout": 180000, "project_id": "" },
+        { "id": "b65ce3c7918d929f6ce4-950af71ec3e9b9eac8a0", "file": "settings-presentation.spec.ts", "title": "settings disclosure, identity persistence and archive routing 768 en-US", "line": 21, "column": 7, "timeout": 180000, "project_id": "" },
+        { "id": "b65ce3c7918d929f6ce4-2e63af697bce778bdaf5", "file": "settings-presentation.spec.ts", "title": "settings disclosure, identity persistence and archive routing 1440 zh-CN", "line": 21, "column": 7, "timeout": 180000, "project_id": "" },
+        { "id": "b65ce3c7918d929f6ce4-cb11a65d796e4e692d1f", "file": "settings-presentation.spec.ts", "title": "settings disclosure, identity persistence and archive routing 1440 en-US", "line": 21, "column": 7, "timeout": 180000, "project_id": "" }
+      ],
+      "reason": "Use the approved ordinary-user Help contract (connection, offline startup and lease visible; versions absent) in all six existing presentations. The positive API version check moves to the expanded root-admin panel; no other interaction, deadline or case changes."
     }
   }
 }

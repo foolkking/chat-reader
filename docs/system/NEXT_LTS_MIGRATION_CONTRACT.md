@@ -1,14 +1,15 @@
 # Next LTS Migration Contract
 
-Last synchronized: 2026-11-18
+Last synchronized: 2026-11-19
 
 Current deployed26b35501 pins **Next 16.4.5**, **React/react-dom 19.2.8** in
 `apps/web/package.json` and `pnpm-lock.yaml`. Web CI and image runtime use
 **Node 22.13.1** in the workflow and Dockerfile. The locked Next upgrade is outside
 the affected range of GHSA-mfr8-8qww-v76h; the November 18 official-registry
-audit no longer lists that advisory. It still reports a separate high picomatch
-advisory, including affected versions in development tooling. See the
-[scoped exception](RELEASE_SAFETY_BASELINE.md#dependency-policy) and
+audit no longer listed that advisory. That audit reported a separate high
+picomatch advisory; the November 19 official audit no longer lists it and
+the unused allowance was retired. See the
+[dependency policy](RELEASE_SAFETY_BASELINE.md#dependency-policy) and
 [26b35501 release evidence](../evidence/navigation-search-import-2026-11-17/production-release-26b35501.json)
 for exact-run evidence and verified deployment; authenticated product acceptance
 remains user-owned. The

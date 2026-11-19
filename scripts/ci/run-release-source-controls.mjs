@@ -19,7 +19,8 @@ if (process.platform === "win32") {
 }
 const output = mkdtempSync(join(tempRoot, "release-source-controls-"));
 const scopeTests = spawnSync(process.execPath,
-  ["--test", join(root, "scripts/security/verify-picomatch-scope.test.mjs")],
+  ["--test", join(root, "scripts/security/verify-picomatch-scope.test.mjs"),
+    join(root, "scripts/security/dependency-audit-envelope.test.mjs")],
   { cwd: root, env: { ...process.env, TEMP: output, TMP: output }, stdio: "inherit" });
 assert.ifError(scopeTests.error);
 assert.equal(scopeTests.signal, null, "Dependency scope controls were interrupted.");

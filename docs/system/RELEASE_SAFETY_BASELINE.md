@@ -502,9 +502,15 @@ CI installs pinned pnpm `9.15.4` through `pnpm/action-setup`. The Web image pins
 
 The audit source is `https://registry.npmjs.org`. Critical and high advisories fail the release unless an exact, unexpired record exists in `security/dependency-exceptions.json`. The gate rejects unknown advisories, mismatched severity, duplicate records, expired records, and unused broad exceptions. Exceptions identify runtime, build supply-chain, or development exposure and include a mitigation, remediation track, and review date.
 
-**Deployed26b35501, audit recorded2026-11-18:** GHSA-fc5q-39xc-vjpf (`picomatch`, high)
-has no upstream fix in the registry audit. The [temporary exception](../../security/dependency-exceptions.json)
-requires review by **2026-11-25**. The [scope check](../../scripts/security/verify-picomatch-scope.mjs)
+**2026-11-19:** the official registry audit in run `44452527035/1` and an independent
+query against the same lockfile both returned zero high/critical findings and no
+GHSA-fc5q-39xc-vjpf. The now-unused [exception](../../security/dependency-exceptions.json)
+was removed, not extended. Registry errors, missing inventories and blocked findings
+without an exact allowance still fail. This is not a claim that a package was patched.
+
+**Historical 2026-11-18 deployment `26b35501`:** GHSA-fc5q-39xc-vjpf (`picomatch`, high)
+had no fix listed in that day's audit. Its exception had a **2026-11-25** deadline.
+The [scope check](../../scripts/security/verify-picomatch-scope.mjs)
 checks the reported versions (2.3.2 and 4.0.5), their development dependency
 paths, the installed production tree, and application imports. Next 16.4.5
 also bundles a matcher; its reviewed image helpers use configuration patterns.

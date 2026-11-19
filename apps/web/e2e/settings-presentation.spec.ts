@@ -77,7 +77,10 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       const help = await openSettings(page, /^(Help & diagnostics|帮助与诊断)$/);
       await expect(help.getByText(/Connected to server|已连接服务器/, { exact: true })).toBeVisible();
       const footer = help.locator("footer");
-      await expect(footer).toContainText(/API/);
+      await expect(footer.getByRole("button", { name: /^(Check again|重新检查)$/ })).toBeVisible();
+      await expect(footer).toContainText(/Offline startup:|离线启动：/);
+      await expect(footer).toContainText(/Offline access until:|离线授权至：/);
+      await expect(help.getByText(/Web build|网页构建|\bAPI\b|Version updates|版本更新/)).toHaveCount(0);
       await expect(help.getByText(/Check your environment|查看当前环境/)).toHaveCount(0);
       if (process.env.E2E_SETTINGS_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SETTINGS_SCREENSHOTS}/help-${width}-${locale}.png` });
       await page.keyboard.press("Escape");
