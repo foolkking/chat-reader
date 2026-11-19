@@ -84,7 +84,7 @@ export function AdminRuntimePanel() {
       </p> : null}
       {data.worker.available && (data.worker.execution || (data.worker.status === "stale" && (data.worker.processing_task_count ?? 0) > 0))
         ? <button type="button" aria-expanded={recoveryGeneration === generation} className="btn-secondary min-h-11 px-3 text-sm" onClick={event => openRecovery(event.currentTarget)}>{zh ? "处理当前执行" : "Review current execution"}</button> : null}
-      {recoveryGeneration === generation ? <AdminExecutionRecovery key={generation} generation={generation} zh={zh} locale={resolvedLocale} onClose={() => {
+      {recoveryGeneration === generation ? <AdminExecutionRecovery key={`execution:${generation}`} generation={generation} zh={zh} locale={resolvedLocale} onClose={() => {
         setRecoveryGeneration(null);
         if (recoveryTrigger.current?.isConnected) recoveryTrigger.current.focus({ preventScroll: true });
       }} /> : null}
@@ -115,7 +115,7 @@ export function AdminRuntimePanel() {
           <StatusRow label={zh ? "邮件配置" : "Email configuration"}>{data.mail.configured ? (zh ? "已配置（未测试投递）" : "Configured (delivery not tested)") : (zh ? "未配置" : "Not configured")}</StatusRow>
         </dl>
       </details>
-      <RuntimeVersions key={generation} zh={zh} />
+      <RuntimeVersions key={`versions:${generation}`} zh={zh} />
     </> : null}
   </section>;
 }

@@ -38,12 +38,21 @@ await new Promise((yes, no) => webpack({
   optimization: { minimize: false },
   resolve: { extensions: [".tsx", ".ts", ".js"], modules: ["node_modules", join(web, "node_modules"), join(root, "node_modules")],
     alias: { "react$": require.resolve("react"), "react/jsx-runtime$": require.resolve("react/jsx-runtime"), "react-dom/client$": require.resolve("react-dom/client") } },
-  plugins: [new webpack.NormalModuleReplacementPlugin(/(?:preferences-provider|offline-access)$/, resource => { resource.request = join(out, "adapters.tsx"); })],
+  plugins: [
+    new webpack.NormalModuleReplacementPlugin(/(?:preferences-provider|offline-access)$/, resource => { resource.request = join(out, "adapters.tsx"); }),
+    // Next replaces public build metadata at compile time. Keep this standalone
+    // production-runtime harness aligned with the default Next build value.
+    new webpack.DefinePlugin({
+      "process.env.NEXT_PUBLIC_BUILD_REVISION": JSON.stringify(""),
+      "process.env.NEXT_PUBLIC_PWA_NEGATIVE_TESTS": JSON.stringify(""),
+    }),
+  ],
   module: { rules: [{ test: /\.tsx?$/, exclude: /node_modules/, use: join(out, "loader.cjs") }] },
 }, (error, stats) => error || stats.hasErrors() ? no(error ?? Error(stats.toString({ all: false, errors: true }))) : yes()));
 const styles = await require("postcss")([require("tailwindcss")({ content: [join(web, "components/**/*.tsx")] })])
   .process(readFileSync(join(web, "app/globals.css"), "utf8"), { from: join(web, "app/globals.css") });
 const bundle = readFileSync(join(out, "bundle.js"));
+assert.doesNotMatch(bundle.toString("utf8"), /process\.env\./, "standalone production fixture must compile out every Next public env access");
 const html = '<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><body><div id="root"></div><script src="/bundle.js"></script></body></html>';
 const { chromium, expect } = require("@playwright/test");
 const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? "chromium" : "chrome" });
@@ -193,7 +202,11 @@ try {
     assert.deepEqual(await page.evaluate(() => window.sentIdentity), await page.evaluate(() => window.execution.identity));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({ path: join(out, `runtime-recovery-${width}-${locale}-${theme}.png`) });
-    await page.keyboard.press("Escape"); await expect(recovery).toHaveCount(0); await expect(recoveryTrigger).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(recovery).toHaveCount(0); await expect(recoveryTrigger).toBeFocused();
+    await expect(recoveryTrigger).toHaveAttribute("aria-expanded", "false");
+    await expect(panel.getByText("Synthetic reader", { exact: true })).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: zh ? "版本更新" : "Version updates", exact: true })).toHaveCount(1);
     await page.evaluate(() => { window.execution = { ...window.execution, state: "finished", canonical_status: "failed" };
       window.lastStop = structuredClone(window.execution); });
     await recoveryTrigger.click();
