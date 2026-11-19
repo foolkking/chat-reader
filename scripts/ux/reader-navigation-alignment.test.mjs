@@ -511,3 +511,38 @@ test("both complete-turn edges rebase on a live pinned anchor and synchronously 
     assert.doesNotMatch(callback, /applyLoadedWindow\(|waitForMountedMessage\(/);
   }
 });
+
+test("the edge callback avoids post-append geometry only for an unchanged, already overflowing suffix", async () => {
+  const code = readerDeclarations.get("commitEdgePage").initializer.arguments[0].getText(readerAst);
+  const body = ts.transpileModule(`const callback = ${code}`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  async function probe({ direction = "next", prefix = true, height = 2100, lost = false } = {}) {
+    const events = [], current = {}, next = {};
+    let published = false;
+    const root = { isConnected: true, dataset: {}, clientHeight: 720, scrollHeight: height,
+      get scrollTop() { events.push(published ? "read-after" : "read-before"); return 520; } };
+    const anchor = { targetId: "real-block", offset: 80 };
+    const deps = {
+      mergeLoadedTurnWindow: () => next, readerPositionBusy: () => false, ACTIVE_READING_OFFSET: 120,
+      captureScrollAnchor: () => anchor,
+      acquireScrollAnchorLease: async () => { events.push("pin"); if (lost) root.isConnected = false;
+        return { release() { events.push("release"); } }; },
+      loadedWindowRef: { current }, navigationInProgressRef: { current: false }, pointerDraggingRef: { current: false },
+      edgeTransitionRef: { current: direction }, scrollIntentSequenceRef: { current: 1 },
+      previousTurnAnchorRef: {}, nextTurnAnchorRef: {}, isUnchangedReaderPrefix: () => prefix,
+      flushSync: fn => fn(), applyLoadedWindow: window => { assert.equal(window, next); published = true; events.push("commit"); },
+      syncTurnAnchorRefs() {}, restoreScrollAnchor: async opts => {
+        events.push("guarded-restore"); assert.ok(opts.tokenIsCurrent()); opts.commitLayout(); void root.scrollTop; return true;
+      },
+    };
+    const callback = new Function(...Object.keys(deps), `${body}\nreturn callback`)(...Object.values(deps));
+    assert.equal(await callback(root, current, {}, () => true), !lost);
+    return events.filter(e => e !== "read-before");
+  }
+  assert.deepEqual(await probe(), ["pin", "commit", "release"]);
+  for (const opts of [{ direction: "previous" }, { prefix: false }, { height: 720 }]) {
+    assert.deepEqual(await probe(opts), ["pin", "guarded-restore", "commit", "read-after", "release"]);
+  }
+  assert.deepEqual(await probe({ lost: true }), ["pin", "release"]);
+});

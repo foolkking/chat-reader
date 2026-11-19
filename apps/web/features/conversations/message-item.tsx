@@ -34,6 +34,7 @@ function MessageItemComponent({
   turnCollapsed = false,
   turnLead = false,
   turnMessageCount = 1,
+  turnKey,
   hiddenByTurn = false,
   onToggleTurn,
 }: {
@@ -42,7 +43,7 @@ function MessageItemComponent({
   readOnly?: boolean;
   allowCopySelection?: boolean;
   selected?: boolean;
-  onSelectedChange?: (selected: boolean) => void;
+  onSelectedChange?: (selected: boolean, messageId: string) => void;
   highlightTargetId?: string | null;
   editing?: boolean;
   onEdit?: (message: MessageListItem, blockId?: string | null) => void;
@@ -56,8 +57,9 @@ function MessageItemComponent({
   turnCollapsed?: boolean;
   turnLead?: boolean;
   turnMessageCount?: number;
+  turnKey?: string;
   hiddenByTurn?: boolean;
-  onToggleTurn?: () => void;
+  onToggleTurn?: (turnKey: string) => void;
 }) {
   const { t, resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -276,7 +278,7 @@ function MessageItemComponent({
         </button>
       ) : null}
       {onSelectedChange ? (
-        <button type="button" onClick={() => onSelectedChange(!selected)} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-subtle ${selected ? "text-accent" : "text-secondary"}`} aria-pressed={selected} aria-label={selected ? (zh ? "\u53d6\u6d88\u9009\u62e9\u6d88\u606f" : "Deselect message") : t("select")} title={selected ? (zh ? "\u53d6\u6d88\u9009\u62e9" : "Deselect") : t("select")}>
+        <button type="button" onClick={() => onSelectedChange(!selected, message.id)} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-subtle ${selected ? "text-accent" : "text-secondary"}`} aria-pressed={selected} aria-label={selected ? (zh ? "\u53d6\u6d88\u9009\u62e9\u6d88\u606f" : "Deselect message") : t("select")} title={selected ? (zh ? "\u53d6\u6d88\u9009\u62e9" : "Deselect") : t("select")}>
           {selected ? <CheckSquare2 className="h-4 w-4" /> : <Square className="h-4 w-4" />}
         </button>
       ) : null}
@@ -311,7 +313,7 @@ function MessageItemComponent({
         <div data-message-meta className="group/message-actions relative mb-2 flex min-h-10 items-center gap-2">
           <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${isUser ? "bg-[var(--accent-soft)] text-accent" : "bg-[var(--text)] text-[var(--surface)]"}`}>{isUser ? "U" : "CR"}</span>
           <span className="text-xs font-semibold text-secondary">{isUser ? userLabel ?? t("you") : "Assistant"} - #{message.ordinal ?? message.order_key}</span>
-          {turnLead && onToggleTurn ? (
+          {turnLead && turnKey && onToggleTurn ? (
             <button
               type="button"
               data-reader-turn-toggle="true"
@@ -319,7 +321,7 @@ function MessageItemComponent({
               aria-label={turnCollapsed
                 ? (zh ? `展开本轮（${turnMessageCount} 条消息）` : `Expand turn (${turnMessageCount} messages)`)
                 : (zh ? `折叠本轮（${turnMessageCount} 条消息）` : `Fold turn (${turnMessageCount} messages)`)}
-              onClick={onToggleTurn}
+              onClick={() => onToggleTurn(turnKey)}
               className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-xs text-secondary hover:bg-subtle hover:text-primary focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"
             >
               {turnCollapsed ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronUp className="h-4 w-4" aria-hidden="true" />}
@@ -405,15 +407,21 @@ export const MessageItem = memo(MessageItemComponent, (previous, next) => (
   && previous.selected === next.selected
   && previous.highlightTargetId === next.highlightTargetId
   && previous.editing === next.editing
+  && previous.onChanged === next.onChanged
+  && previous.onEdit === next.onEdit
+  && previous.onSelectedChange === next.onSelectedChange
+  && previous.onBookmark === next.onBookmark
   && previous.onInsert === next.onInsert
   && previous.onDelete === next.onDelete
   && previous.scrollRootMode === next.scrollRootMode
   && previous.attachmentAccess?.kind === next.attachmentAccess?.kind
+  && (previous.attachmentAccess?.kind !== "owner" || next.attachmentAccess?.kind !== "owner" || previous.attachmentAccess.readOnly === next.attachmentAccess.readOnly)
   && (previous.attachmentAccess?.kind !== "admin" || next.attachmentAccess?.kind !== "admin" || previous.attachmentAccess.userId === next.attachmentAccess.userId)
   && (previous.attachmentAccess?.kind !== "share" || next.attachmentAccess?.kind !== "share" || previous.attachmentAccess.token === next.attachmentAccess.token)
   && previous.turnCollapsed === next.turnCollapsed
   && previous.turnLead === next.turnLead
   && previous.turnMessageCount === next.turnMessageCount
+  && previous.turnKey === next.turnKey
   && previous.hiddenByTurn === next.hiddenByTurn
   && previous.onToggleTurn === next.onToggleTurn
 ));

@@ -37,6 +37,7 @@ import { firstVisibleRangeRect, resolveTextAnchorRange } from "./text-anchor";
 import {
   emptyLoadedWindow,
   INITIAL_WINDOW_TURNS,
+  isUnchangedReaderPrefix,
   MAX_WINDOW_MESSAGES,
   loadCompleteTurnWindow as loadTurnNeighborhood,
   mergeLoadedTurnWindow,
@@ -98,6 +99,14 @@ const APP_TITLE = "chat-reader";
 function sourceLocateAlignmentOffset(root: HTMLElement | null): number {
   const viewportHeight = root?.clientHeight ?? (typeof window === "undefined" ? 720 : window.innerHeight);
   return Math.max(120, Math.round(viewportHeight * 0.5));
+}
+
+// Mounted rows can outlive several window/permission/revision changes.
+// Keep a stable prop but call the action from the last committed render.
+function useCommittedReaderAction<A extends unknown[], R>(action: (...args: A) => R) {
+  const actionRef = useRef(action);
+  useLayoutEffect(() => { actionRef.current = action; }, [action]);
+  return useCallback((...args: A) => actionRef.current(...args), []);
 }
 
 export function ConversationReader({
@@ -164,9 +173,6 @@ export function ConversationReader({
     collapsedTurnKeysRef.current = next;
     setCollapsedTurnKeys(next);
   }, []);
-  const turnToggleHandlers = useMemo(() => new Map(turnGroups.map(turn => [
-    turn.key, () => toggleTurnCollapsed(turn.key),
-  ])), [turnGroups, toggleTurnCollapsed]);
   useEffect(() => {
     collapsedTurnKeysRef.current = new Set();
     setCollapsedTurnKeys(new Set());
@@ -195,6 +201,21 @@ export function ConversationReader({
     setSearchReadingQueue(queue);
   }, [router, searchQueueId, searchQueueIndex, searchQueueOwnerId]);
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
+  const rowChanged = useCommittedReaderAction(applyMessageChange);
+  const rowEdit = useCommittedReaderAction(openSourceEditor);
+  const rowDelete = useCommittedReaderAction(deleteReaderMessage);
+  const rowSelect = useCallback((selected: boolean, id: string) => {
+    setSelectedMessageIds((current) => {
+      const next = new Set(current);
+      if (selected) next.add(id); else next.delete(id);
+      return next;
+    });
+  }, []);
+  const rowBookmark = useCallback((message: MessageListItem) => {
+    window.dispatchEvent(new CustomEvent("chat-reader:create-bookmark", {
+      detail: { conversationId, messageId: message.id, messageVersionId: message.current_version?.id },
+    }));
+  }, [conversationId]);
   const [showShare, setShowShare] = useState(false);
   const [showTags, setShowTags] = useState(false);
   const [showUpdates, setShowUpdates] = useState(false);
@@ -1129,6 +1150,17 @@ export function ConversationReader({
         const scrollOffsetAtAnchor = root.scrollTop;
         const scrollIntentAtAnchor = scrollIntentSequenceRef.current;
         const restoreIsCurrent = () => currentEdge() && scrollIntentSequenceRef.current === scrollIntentAtAnchor;
+        // A strict suffix below unchanged mounted turns cannot move the
+        // reading line in an already overflowing, top-aligned scroll root.
+        // Keep the live lease and atomic commit, but don't force the entire
+        // new DOM through synchronous layout to write back a zero delta.
+        if (edgeTransitionRef.current === "next" && isUnchangedReaderPrefix(current, next)
+            && root.clientHeight > 0 && root.scrollHeight > root.clientHeight
+            && restoreIsCurrent() && root.scrollTop === scrollOffsetAtAnchor) {
+          flushSync(() => applyLoadedWindow(next));
+          syncTurnAnchorRefs(next, previousTurnAnchorRef, nextTurnAnchorRef);
+          return true;
+        }
         // One JS turn, one position owner. Painting the prepend and restoring
         // several frames later exposed an entire intervening turn to the eye.
         return await restoreScrollAnchor({
@@ -3654,36 +3686,23 @@ export function ConversationReader({
                       key={message.id}
                       message={message}
                       conversationTitle={conversation.display_title || conversation.title}
-                      onChanged={applyMessageChange}
+                      onChanged={rowChanged}
                       readOnly={!canManageCanonical}
                       highlightTargetId={null}
                       editing={sourceEditorTarget?.message.id === message.id}
-                      onEdit={canManageCanonical ? openSourceEditor : undefined}
+                      onEdit={canManageCanonical ? rowEdit : undefined}
                       onInsert={canManageCanonical ? setMessageInsertTarget : undefined}
-                      onDelete={canManageCanonical ? deleteReaderMessage : undefined}
+                      onDelete={canManageCanonical ? rowDelete : undefined}
                       attachmentAccess={libraryMode ? { kind: "offline" } : { kind: "owner" }}
                       turnCollapsed={turnCollapsed}
                       turnLead={isTurnLead}
                       turnMessageCount={turn?.messageIds.length ?? 1}
+                      turnKey={isTurnLead ? turn?.key : undefined}
                       hiddenByTurn={turnCollapsed && !isTurnLead}
-                      onToggleTurn={isTurnLead && turn ? turnToggleHandlers.get(turn.key) : undefined}
+                      onToggleTurn={isTurnLead && turn ? toggleTurnCollapsed : undefined}
                       selected={selectedMessageIds.has(message.id)}
-                      onSelectedChange={!canManageCanonical ? undefined : (selected) => {
-                        setSelectedMessageIds((current) => {
-                          const next = new Set(current);
-                          if (selected) {
-                            next.add(message.id);
-                          } else {
-                            next.delete(message.id);
-                          }
-                          return next;
-                        });
-                      }}
-                      onBookmark={() => {
-                        window.dispatchEvent(new CustomEvent("chat-reader:create-bookmark", {
-                          detail: { conversationId, messageId: message.id, messageVersionId: message.current_version?.id },
-                        }));
-                      }}
+                      onSelectedChange={canManageCanonical ? rowSelect : undefined}
+                      onBookmark={rowBookmark}
                     />
                     );
                   })}

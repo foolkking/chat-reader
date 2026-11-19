@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-19：补充[阅读几何合同](system/IMAGE_READING_STABILITY_CONTRACT.md)的纯追加条件，以及[第三次全量 CI 的失败与复核](evidence/online-update-2026-11-18/verification.md)。管理员恢复区与版本区的收起状态在真实浏览器分别验证。
+
 ## 2026-11-19 · Reader 正文媒体滚动复审（未发布）
 
 新增[媒体行几何与锚点复审](evidence/reader-media-motion-2026-11-19/ux-audit.md)，记录公式行外边距、

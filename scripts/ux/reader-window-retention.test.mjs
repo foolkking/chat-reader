@@ -9,7 +9,12 @@ new Function("exports", ts.transpileModule(readFileSync(new URL(
   "../../apps/web/features/conversations/reader-window.ts", import.meta.url), "utf8"), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText)(exports);
-const { trimLoadedTurnWindowToProtectedMessages: trim, replaceLoadedWindow } = exports;
+const {
+  mergeLoadedTurnWindow: merge,
+  isUnchangedReaderPrefix: isPrefix,
+  trimLoadedTurnWindowToProtectedMessages: trim,
+  replaceLoadedWindow,
+} = exports;
 const makeWindow = (sizes = Array(20).fill(2)) => {
   let offset = 0;
   const total = sizes.reduce((sum, size) => sum + size, 0);
@@ -71,4 +76,74 @@ test("endpoints retain three complete turns and truthful subsequent loading boun
   assert.equal(first.items.length, 6); assert.equal(last.items.length, 6);
   assert.equal(first.hasPrevious, false); assert.equal(first.hasMore, true);
   assert.equal(last.hasPrevious, true); assert.equal(last.hasMore, false);
+});
+
+test("overlapping identical turns retain row identity; changes are not inferred from version IDs", () => {
+  const current = makeWindow([2, 2, 2]);
+  const formulaMessage = current.turns[1].items[0];
+  Object.assign(formulaMessage, {
+    role: "assistant",
+    current_version: { id: "version-1", display_text: String.raw`\[x^2+y^2=z^2\]`, content_hash: "hash-1" },
+    render_blocks: [{
+      id: "block-1", block_index: 0, block_type: "math", plain_text: "x^2+y^2=z^2",
+      data: { attachmentOccurrences: [{ occurrenceKey: "image-1", imageDisplay: "natural" }] },
+      char_count: 11, collapsed_by_default: false, render_priority: 1,
+    }],
+  });
+  const pageFor = (turns) => ({
+    items: turns.flatMap((turn) => turn.items), turns, limit: turns.flatMap((turn) => turn.items).length,
+    offset: turns[0].start_offset, total: current.total, has_previous: true, has_more: false,
+    previousTurnAnchorMessageId: turns[0].previous_anchor_message_id,
+    nextTurnAnchorMessageId: turns.at(-1).next_anchor_message_id,
+  });
+  const identicalPage = [current.turns[1], current.turns[2]].map((turn) => structuredClone(turn));
+  const unchanged = merge(current, pageFor(identicalPage));
+  assert.equal(unchanged.turns[1], current.turns[1]);
+  assert.equal(unchanged.items.find((message) => message.id === formulaMessage.id), formulaMessage);
+
+  for (const edit of [
+    m => { m.current_version.display_text = String.raw`\[\frac{x^2}{y^2}=z^2\]`; },
+    m => { m.render_blocks[0].data.attachmentOccurrences[0].imageDisplay = "wide"; },
+    m => { m.future_extension = { policy: "changed" }; },
+    m => { delete m.render_blocks; },
+  ]) {
+    const changedPage = structuredClone(identicalPage);
+    edit(changedPage[0].items[0]);
+    const changed = merge(current, pageFor(changedPage));
+    assert.equal(changed.turns[1].items[0], changedPage[0].items[0]);
+    assert.equal(changed.turns[1].items[1], current.turns[1].items[1]);
+  }
+});
+
+test("only a strict suffix with unchanged turns, rows, and header is safe without compensation", () => {
+  const all = makeWindow([2, 2, 2, 2]);
+  const page = (turns) => ({ turns, items: turns.flatMap(t => t.items), total: 8, offset: turns[0].start_offset,
+    has_previous: !!turns[0].previous_anchor_message_id, has_more: !!turns.at(-1).next_anchor_message_id });
+  const current = replaceLoadedWindow(page(all.turns.slice(0, 2)), 7);
+  const suffix = structuredClone(all.turns.slice(1));
+  const next = merge(current, page(suffix));
+  assert.ok(isPrefix(current, next));
+  assert.equal(isPrefix(current, current), false);
+  assert.equal(isPrefix(replaceLoadedWindow(page(all.turns.slice(1, 3)), 7), all), false);
+  for (const override of [{ generation: 8 }, { total: 9 }, { hasPrevious: true }, { startOffset: 1 },
+    { items: [next.items[1], next.items[0], ...next.items.slice(2)] }]) {
+    assert.equal(isPrefix(current, { ...next, ...override }), false);
+  }
+  for (const edit of [
+    t => { t.next_anchor_message_id = "different"; }, t => { t.items[0].order_key = "999"; },
+    t => { t.extension_metadata = "new"; }, t => { t.items[0].render_blocks = []; },
+  ]) {
+    const fresh = structuredClone(suffix); edit(fresh[0]);
+    assert.equal(isPrefix(current, merge(current, page(fresh))), false);
+  }
+});
+
+test("very large or deeply nested overlaps fall back to fresh data, never the fast suffix", () => {
+  for (const content of ["x".repeat(150_000), Array(5000).fill(1),
+    Array.from({ length: 40 }).reduce(child => ({ child }), null)]) {
+    const current = makeWindow([2, 2]);
+    current.turns[0].items[0].data = content;
+    const fresh = structuredClone(current.turns);
+    assert.equal(merge(current, { turns: fresh }).turns[0].items[0], fresh[0].items[0]);
+  }
 });

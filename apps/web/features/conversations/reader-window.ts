@@ -54,11 +54,60 @@ export function mergeLoadedTurnWindow(
   page: CompleteTurnWindow,
 ): LoadedMessageWindow {
   const turnsByKey = new Map(current.turns.map((turn) => [turn.turn_key, turn]));
-  for (const turn of page.turns) turnsByKey.set(turn.turn_key, turn);
+  const budget = { nodes: 4096, chars: 131072 };
+  for (const turn of page.turns) {
+    turnsByKey.set(turn.turn_key, mergeReaderTurn(turnsByKey.get(turn.turn_key), turn, budget));
+  }
   return loadedWindowFromTurns(
     Array.from(turnsByKey.values()).sort((left, right) => left.start_offset - right.start_offset),
     current.generation,
   );
+}
+
+type ComparisonBudget = { nodes: number; chars: number };
+
+function mergeReaderTurn(existing: ReaderTurnResponse | undefined, incoming: ReaderTurnResponse, budget: ComparisonBudget): ReaderTurnResponse {
+  if (!existing || existing === incoming || budget.nodes <= 0) return incoming;
+  const { items: previousItems, ...previousMetadata } = existing;
+  const { items: incomingItems, ...incomingMetadata } = incoming;
+  const previousById = new Map(previousItems.map((message) => [message.id, message]));
+  const items = incomingItems.map((message) => {
+    const previous = previousById.get(message.id);
+    return previous && sameReaderJson(previous, message, budget) ? previous : message;
+  });
+  if (items.length === previousItems.length && items.every((message, index) => message === previousItems[index])
+    && sameReaderJson(previousMetadata, incomingMetadata, budget)) return existing;
+  if (items.every((message, index) => message === incomingItems[index])) return incoming;
+  return { ...incoming, items };
+}
+
+// The neighbour of an edge often repeats a mounted turn. Never treat an ID,
+// revision, or hash as proof that attachment/extension fields are unchanged.
+// If comparison would be expensive, accept the fresh response instead.
+function sameReaderJson(a: unknown, b: unknown, budget: ComparisonBudget, depth = 0): boolean {
+  if (--budget.nodes < 0 || depth > 32) return false;
+  if (typeof a === "string" && (typeof b !== "string" || a.length !== b.length || (budget.chars -= a.length) < 0)) return false;
+  if (a === b) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.length <= budget.nodes
+      && a.every((value, index) => sameReaderJson(value, b[index], budget, depth + 1));
+  }
+  const prototype = Object.getPrototypeOf(a);
+  if ((prototype !== Object.prototype && prototype !== null) || Object.getPrototypeOf(b) !== prototype) return false;
+  const left = a as Record<string, unknown>, right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length <= budget.nodes && keys.length === Object.keys(right).length
+    && keys.every((key) => Object.hasOwn(right, key) && sameReaderJson(left[key], right[key], budget, depth + 1));
+}
+
+export function isUnchangedReaderPrefix(current: LoadedMessageWindow, next: LoadedMessageWindow): boolean {
+  return current.generation === next.generation && current.total === next.total
+    && current.startOffset === next.startOffset && current.hasPrevious === next.hasPrevious
+    && current.items.length > 0 && next.items.length > current.items.length
+    && current.turns.length > 0 && next.turns.length > current.turns.length
+    && current.turns.every((turn, index) => turn === next.turns[index])
+    && current.items.every((message, index) => message === next.items[index]);
 }
 
 export function trimLoadedTurnWindow(

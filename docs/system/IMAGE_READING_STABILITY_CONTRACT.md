@@ -19,6 +19,15 @@ lost ownership and a stale intent token still cancel; edge appends and other
 restorations do not opt in. Check the absolute anchor displacement, not only
 its direction: a forward jump is a reading defect too.
 
+An edge load still pins and rechecks a live reading-line anchor before commit.
+For a strict suffix only, an already overflowing top-aligned root can append
+without synchronously measuring the newly enlarged document or writing its
+scroll offset. The generation, total, start, previous edge, and every mounted
+turn and message must be unchanged. Fresh overlapping JSON is compared with
+a bounded budget, including block, attachment and unknown fields; when in
+doubt the new payload wins and the same-frame guarded restoration runs.
+Prepends, short roots and changed overlaps do not take the suffix path.
+
 An explicit return from the contents uses the checkpoint's actual pixel offset.
 If the remounted window cannot reach that coordinate, load a bounded
 first-reading neighborhood of complete turns; do not fabricate scroll space.
