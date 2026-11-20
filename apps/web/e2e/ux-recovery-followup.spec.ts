@@ -2013,7 +2013,15 @@ test(`mixed-type search pagination retains the selected document and actual Ente
   const offsets: number[] = [];
   let releaseNextPage: () => void = () => {};
   const nextPageGate = new Promise<void>(resolve => { releaseNextPage = resolve; });
+  let releaseSavedSearches: () => void = () => {};
+  const savedSearchGate = new Promise<void>(resolve => { releaseSavedSearches = resolve; });
   try {
+    // On the failed native trace the independent collapsed saved-search read
+    // finished after page two. Exercise that ordering instead of waiting it out.
+    if (continuation === "legacy") await page.route("**/api/user-feature-entries/saved-search", async route => {
+      await savedSearchGate;
+      await route.fulfill({ json: [] });
+    });
     created.push(await createConversation(page, "Synthetic selected message"));
     created.push(await createConversation(page, "Synthetic later annotation"));
     const items: SearchResultItem[] = created.map((item, index) => ({
@@ -2054,6 +2062,12 @@ test(`mixed-type search pagination retains the selected document and actual Ente
     await page.mouse.move(stationaryPoint.x, stationaryPoint.y);
     releaseNextPage();
     await expect(page.locator("a[data-search-index]")).toHaveCount(2);
+    if (continuation === "legacy") {
+      const save = page.getByRole("button", { name: "Save current search", exact: true });
+      await expect(save).toBeDisabled();
+      releaseSavedSearches();
+      await expect(save).toBeEnabled();
+    }
     expect(offsets).toEqual([0, 1]);
     await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
     const first = page.locator('a[data-search-index="0"]');
@@ -2089,6 +2103,7 @@ test(`mixed-type search pagination retains the selected document and actual Ente
     await expect(page).toHaveURL((url) => url.pathname + url.search === destination);
   } finally {
     releaseNextPage();
+    releaseSavedSearches();
     await page.unrouteAll({ behavior: "wait" });
     for (const item of created) expect((await page.request.delete(`/api/conversations/${item.conversation.id}`)).ok()).toBe(true);
   }
