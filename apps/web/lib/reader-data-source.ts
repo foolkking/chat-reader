@@ -13,7 +13,7 @@ import { readSyncedReadingPosition, saveLocalReadingPosition } from "./reading-p
 import { getOfflineAttachment, offlineDb, type OfflineMessageRecord, type OfflineSearchDocument } from "./offline-db";
 import { assertOfflineAccess, authenticationGeneration, captureOfflineAccess } from "./offline-access";
 import { withRequestDeadline } from "./request-deadline";
-import { searchOfflinePage } from "./offline-search";
+import { captureOfflineSearchIndex, searchOfflinePage } from "./offline-search";
 import { findOpeningThinkingSummary } from "../features/conversations/thinking-summary";
 import { findSearchTextMatches } from "./search-text-matches";
 import type {
@@ -51,6 +51,10 @@ export type ReaderSearchOptions = {
   role?: string;
   limit?: number;
   offset?: number;
+  /** Raw worker candidate for this logical offset in the same query. */
+  candidateOffset?: number;
+  matchOffset?: number;
+  matchDocumentId?: string;
   signal?: AbortSignal;
 };
 
@@ -127,7 +131,7 @@ export interface ReaderDataSource {
   getMessageBlocks(messageId: string, options?: { start?: number; limit?: number }): Promise<RenderBlockRead[]>;
   getToc(conversationId: string, options?: TocOptions): Promise<TocResponse>;
   getTargetContext(conversationId: string, target: NavigateTarget, options?: { includeNavigation?: boolean }): Promise<ReaderTargetContext>;
-  searchConversation(conversationId: string, options: ReaderSearchOptions): Promise<SearchResponse>;
+  searchConversation(conversationId: string, options: ReaderSearchOptions): Promise<SearchResponse & { nextCandidateOffset?: number }>;
   getReadingPosition(conversationId: string): Promise<ReadingPositionResponse>;
   saveReadingPosition(conversationId: string, input: ReadingPositionInput): Promise<void>;
   recordRecent(conversationId: string, projectId?: string | null): Promise<ConversationListItem | null>;
@@ -160,6 +164,10 @@ export const remoteReaderDataSource: ReaderDataSource = {
     return searchConversations({
       q: options.query,
       conversationId,
+      readerFind: true,
+      matchOffset: options.matchOffset,
+      matchDocumentId: options.matchDocumentId,
+      statusScope: "all",
       documentType: options.documentType,
       role: options.role,
       limit: options.limit ?? 50,
@@ -285,34 +293,48 @@ export const offlineReaderDataSource: ReaderDataSource = {
     return loadTargetContext(offlineReaderDataSource, conversationId, target, options);
   },
   async searchConversation(conversationId, options) {
-    options.signal?.throwIfAborted();
     const access = captureOfflineAccess();
+    const index = captureOfflineSearchIndex();
     const limit = options.limit ?? 50;
     const offset = options.offset ?? 0;
-    const page = await searchOfflinePage(options.query, limit, offset, {
-      conversationId,
-      documentType: options.documentType,
-      role: options.role,
-      contentOnly: true,
-    });
-    const documents = page.items
-      .filter((item) => item.conversation_id === conversationId)
-      .filter((item) => !options.documentType || item.document_type === options.documentType)
-      .filter((item) => !options.role || item.role === options.role)
-      .slice(0, limit);
-    const items = await Promise.all(documents.map((item, index) =>
-      resolveOfflineSearchResult(item, options.query, documents.length - index)));
-    assertOfflineAccess(access);
-    options.signal?.throwIfAborted();
-    return {
-      query: options.query,
-      items,
-      limit,
-      offset,
-      total: page.total,
-      total_is_exact: page.total_is_exact,
-      has_more: page.has_more,
-    };
+    const scope = { conversationId, documentType: options.documentType, role: options.role, contentOnly: true };
+    const items: SearchResultItem[] = [];
+    const base = { query: options.query, items, limit, offset };
+    let candidate = options.candidateOffset ?? 0;
+    let skip = options.candidateOffset == null ? offset : 0;
+    const check = () => { options.signal?.throwIfAborted(); assertOfflineAccess(access); };
+    check();
+    // The worker's message index may join several render blocks. Page *valid
+    // locations*, not those raw candidates. Keep only one bounded batch and
+    // carry a raw cursor so the next UI page never re-reads earlier blocks.
+    while (limit > 0) {
+      const batch = items.length === limit ? 8 : Math.min(50, Math.max(16, limit));
+      const page = await searchOfflinePage(options.query, batch, candidate, scope, index);
+      check();
+      if (options.matchOffset && candidate === options.candidateOffset
+        && page.items[0]?.id !== options.matchDocumentId) throw new Error("The searched content changed. Restart search.");
+      const projected = await Promise.all(page.items.map((doc, n) =>
+        doc.conversation_id === conversationId && (!scope.role || doc.role === scope.role)
+          && (!scope.documentType || doc.document_type === scope.documentType)
+          ? resolveOfflineSearchResult(doc, options.query, 1, true,
+            candidate === options.candidateOffset && n === 0 ? options.matchOffset ?? 0 : 0) : null));
+      check();
+      for (let n = 0; n < projected.length; n++) {
+        const item = projected[n];
+        if (!item) continue;
+        if (skip > 0) { skip--; continue; }
+        if (items.length === limit) return { ...base, has_more: true, total_is_exact: false,
+          total: offset + items.length + 1, nextCandidateOffset: candidate + n };
+        items.push(item);
+        if (item.matches_truncated) return { ...base, has_more: true, total_is_exact: false,
+          total: offset + items.length, next_offset: offset + items.length - 1,
+          next_match_offset: (candidate === options.candidateOffset && n === 0 ? options.matchOffset ?? 0 : 0) + (item.matches?.length ?? 0),
+          next_document_id: item.document_id, nextCandidateOffset: candidate + n };
+      }
+      if (!page.has_more || !page.items.length) break;
+      candidate += page.items.length;
+    }
+    return { ...base, has_more: false, total_is_exact: true, total: offset - skip + items.length };
   },
   async getReadingPosition(conversationId) {
     return readSyncedReadingPosition(conversationId, navigator.onLine);
@@ -325,11 +347,15 @@ export const offlineReaderDataSource: ReaderDataSource = {
 };
 
 /** Project an indexed offline document into the shared, canonical search target. */
+export function resolveOfflineSearchResult(item: OfflineSearchDocument, query: string, rank?: number): Promise<SearchResultItem>;
+export function resolveOfflineSearchResult(item: OfflineSearchDocument, query: string, rank: number, literalOnly: true, matchOffset?: number): Promise<SearchResultItem | null>;
 export async function resolveOfflineSearchResult(
   item: OfflineSearchDocument,
   query: string,
   rank = 1,
-): Promise<SearchResultItem> {
+  literalOnly = false,
+  matchOffset = 0,
+): Promise<SearchResultItem | null> {
   const access = captureOfflineAccess();
   const storedMessage = item.message_id ? await offlineDb.messages.get(item.message_id) : null;
   const message = storedMessage?.conversation_id === item.conversation_id ? storedMessage : null;
@@ -343,12 +369,19 @@ export async function resolveOfflineSearchResult(
     ? blocks.map((block) => ({ blockIndex: block.block_index, renderBlockId: block.id ?? null, text: block.plain_text ?? "" }))
     : [];
   const matches: SearchMatch[] = [];
+  const matchSkip = { remaining: matchOffset };
   for (const candidate of candidates) {
     const remaining = 101 - matches.length;
     if (remaining <= 0) break;
-    matches.push(...findSearchTextMatches(candidate.text, query, candidate.blockIndex, candidate.renderBlockId, remaining));
+    matches.push(...findSearchTextMatches(candidate.text, query, candidate.blockIndex, candidate.renderBlockId, remaining, literalOnly, matchSkip));
   }
   const matchesTruncated = matches.length > 100;
+  // Only a legacy record without canonical candidates can fall back to the
+  // message. Don't send the reader to a "match" that exists only across blocks.
+  if (literalOnly && candidates.length && !matches.length) {
+    assertOfflineAccess(access);
+    return null;
+  }
   const visibleMatches = matches.slice(0, 100);
   const firstMatch = visibleMatches[0];
   const snippet = firstMatch

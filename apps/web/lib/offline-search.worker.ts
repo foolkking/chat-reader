@@ -6,6 +6,10 @@ import type { OfflineSearchScope } from "./offline-search";
 
 let documents = new Map<string, OfflineSearchDocument>();
 let index = createIndex();
+let readerScope: { id: string; rows: OfflineSearchDocument[] } | null = null;
+const readerTypes = new Set(["message", "heading", "code", "annotation", "attachment"]);
+const compare = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
+const literal = (s: string) => s.trim().replace(/\s+/gu, " ").toLowerCase();
 
 self.addEventListener("message", (event: MessageEvent<{ type: string; requestId: string; documents?: OfflineSearchDocument[]; query?: string; limit?: number; offset?: number; scope?: OfflineSearchScope }>) => {
   const { type, requestId } = event.data;
@@ -19,6 +23,7 @@ self.addEventListener("message", (event: MessageEvent<{ type: string; requestId:
     return;
   }
   if (type === "init") {
+    readerScope = null;
     documents = new Map();
     index = createIndex();
     for (const document of event.data.documents ?? []) {
@@ -45,6 +50,61 @@ self.addEventListener("message", (event: MessageEvent<{ type: string; requestId:
       return;
     }
     const scope = event.data.scope;
+    if (!scope) {
+      // Directory search is not token-prefix completion. Match every literal
+      // word/quoted phrase in the same document, including Chinese infixes
+      // and identifiers. Reuse stored references, not a second text corpus.
+      const terms = [...query.matchAll(/"([^"]+)"|(\S+)/gu)]
+        .map(hit => literal(hit[1] ?? hit[2])).filter(Boolean);
+      const titleNeedle = literal(query);
+      const items: OfflineSearchDocument[] = [];
+      let total = 0;
+      // Exact titles, containing titles, then body hits: deterministic across
+      // pages without materializing or sorting a copy of the complete corpus.
+      for (let rank = 0; rank < 3; rank++) for (const d of documents.values()) {
+        const title = literal(d.title ?? "");
+        const tier = title === titleNeedle ? 0 : terms.every(term => title.includes(term)) ? 1 : 2;
+        if (tier !== rank) continue;
+        if (!terms.length) continue;
+        if (rank === 2) {
+          const body = literal(d.search_text ?? d.plain_text);
+          if (!terms.every(term => title.includes(term) || body.includes(term))) continue;
+        }
+        if (++total > offset + limit) {
+          self.postMessage({ requestId, items, total, totalIsExact: false, hasMore: true });
+          return;
+        }
+        if (total > offset) items.push(d);
+      }
+      self.postMessage({ requestId, items, total, totalIsExact: true, hasMore: false });
+      return;
+    }
+    if (scope?.conversationId && scope.contentOnly) {
+      // Forward tokenization misses substrings in the middle of a Chinese
+      // sentence or an identifier. Find inside this one local conversation;
+      // sort references (not copies of text) before pagination, not each page.
+      if (readerScope?.id !== scope.conversationId) {
+        const rows: OfflineSearchDocument[] = [];
+        for (const d of documents.values()) {
+          if (d.conversation_id === scope.conversationId && readerTypes.has(d.document_type)) rows.push(d);
+        }
+        rows.sort((a, b) => Number(a.order_key == null) - Number(b.order_key == null)
+          || compare(a.order_key ?? "", b.order_key ?? "") || compare(a.id, b.id));
+        readerScope = { id: scope.conversationId, rows };
+      }
+      const text = literal(query), items: OfflineSearchDocument[] = [];
+      let total = 0;
+      for (const d of readerScope.rows) {
+        if ((scope.documentType && d.document_type !== scope.documentType) || (scope.role && d.role !== scope.role)) continue;
+        const body = d.document_type === "attachment" ? `${d.title ?? ""}\n${d.search_text ?? d.plain_text}` : d.plain_text;
+        if (!literal(body).includes(text)) continue;
+        if (++total > offset + limit) break;
+        if (total > offset) items.push(d);
+      }
+      const hasMore = total > offset + limit;
+      self.postMessage({ requestId, items, total, totalIsExact: !hasMore, hasMore });
+      return;
+    }
     // FlexSearch 0.8's tag intersection applies a default 100-result content
     // window before filtering. Query with an explicit positive corpus bound
     // (zero also means the default), then scope IDs before the page window.

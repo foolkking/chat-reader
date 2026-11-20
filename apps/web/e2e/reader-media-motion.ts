@@ -2,21 +2,24 @@ import { expect, type APIRequestContext, type Page, type TestInfo } from "@playw
 import { writeFile } from "node:fs/promises";
 import { syntheticImage } from "./synthetic-image";
 
-type Kind = "image" | "long-image" | "math" | "mixed" | "turns";
+type Kind = "text" | "image" | "long-image" | "math" | "mixed" | "turns";
 type Phase = { direction: number; travelled: number; reverse: number; worst: number; blank: number;
   comparisons: number; corrections: number; maxCorrection: number; unmeasuredGap: number; newArticles: number;
-  edge: boolean; image: boolean; math: boolean };
+  edge: boolean; image: boolean; math: boolean; invisibleTextFrames: number; textFrames: number; textWorst: number;
+  frames: { time: number; scroll: number; writer: string; text: string; top: number | null }[] };
 
 // Measure the movement of *the same canonical block* across adjacent paints.
 // scrollTop alone cannot detect a prepend jumping the visible text, and it can
 // change legitimately when an image above the reading line obtains its height.
-async function startTrace(page: Page, direction: number) {
+export async function startTrace(page: Page, direction: number) {
   await page.getByTestId("reader-scroll-root").evaluate((el, direction) => {
     const root = el as HTMLElement;
     const out: Phase = { direction, travelled: 0, reverse: 0, worst: 0, blank: 0, comparisons: 0,
-      corrections: 0, maxCorrection: 0, unmeasuredGap: 0, newArticles: 0, edge: false, image: false, math: false };
+      corrections: 0, maxCorrection: 0, unmeasuredGap: 0, newArticles: 0, edge: false, image: false, math: false,
+      invisibleTextFrames: 0, textFrames: 0, textWorst: 0, frames: [] };
     const articles = new Set(Array.from(root.querySelectorAll("article[data-message-id]"), el => el.id));
     let frame = 0, previous = new Map<string, number>(), prior = 0;
+    let witness: { range: Range; node: Node; offset: number; top: number } | null = null;
     const correction = (event: Event) => {
       out.corrections++; out.maxCorrection = Math.max(out.maxCorrection, Math.abs((event as CustomEvent).detail.applied));
     };
@@ -41,6 +44,35 @@ async function startTrace(page: Page, direction: number) {
       }
       const common = Array.from(previous).filter(([id]) => current.has(id))
         .sort((a,b) => Math.abs(a[1] - line) - Math.abs(b[1] - line))[0];
+      if (witness?.node.isConnected && witness.range.startContainer === witness.node
+        && witness.range.startOffset === witness.offset) {
+        const bounds = witness.range.getBoundingClientRect();
+        if (bounds.height > 0) {
+          out.textFrames++;
+          out.textWorst = Math.max(out.textWorst, (bounds.top - witness.top) * direction);
+        }
+      }
+      witness = null;
+      const nearest = Array.from(current).sort((a,b) => Math.abs(a[1] - line) - Math.abs(b[1] - line))[0];
+      const block = nearest ? document.getElementById(nearest[0]) : null;
+      if (block) {
+        const bounds = block.getBoundingClientRect();
+        const caret = (document as Document & { caretRangeFromPoint(x: number, y: number): Range | null })
+          .caretRangeFromPoint(bounds.left + Math.min(24, bounds.width / 2), Math.max(bounds.top + 2, Math.min(line, bounds.bottom - 2)));
+        if (caret?.startContainer.nodeType === Node.TEXT_NODE && block.contains(caret.startContainer)
+          && caret.startContainer.textContent?.length) {
+          const node = caret.startContainer, offset = Math.min(caret.startOffset, node.textContent!.length - 1);
+          caret.setStart(node, offset); caret.setEnd(node, offset + 1);
+          const r = caret.getBoundingClientRect();
+          if (r.height > 0) {
+            witness = { range: caret, node, offset, top: r.top };
+            if (!node.parentElement?.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) out.invisibleTextFrames++;
+          }
+        }
+      }
+      if (out.frames.length < 600) out.frames.push({ time: performance.now(), scroll: root.scrollTop,
+        writer: root.dataset.readerLastScrollWriter ?? "none", top: witness?.top ?? null,
+        text: witness?.node.textContent?.slice(witness.offset, witness.offset + 48) ?? "" });
       if (common) {
         const distance = (common[1] - current.get(common[0])!) * direction;
         out.travelled += distance; out.reverse += Math.max(0, -distance);
@@ -60,7 +92,7 @@ async function startTrace(page: Page, direction: number) {
   }, direction);
 }
 
-async function finish(page: Page): Promise<Phase> {
+export async function finish(page: Page): Promise<Phase> {
   return page.evaluate(() => (window as unknown as { finishMediaTrace: () => Phase }).finishMediaTrace());
 }
 
@@ -189,6 +221,8 @@ export async function verifyMediaPassage(kind: Kind, mobile: boolean, page: Page
     if(kind==="turns") { expect(rows.some(r=>r.edge)).toBe(true); expect(rows.some(r=>r.newArticles>0)).toBe(true); }
     for(const r of rows) {
       expect(r.blank,"visible blocks disappeared between slow input frames").toBe(0);
+      expect(r.invisibleTextFrames, "a real text witness became visually hidden").toBe(0);
+      expect(r.textWorst, "the same text character moved against the gesture").toBeLessThanOrEqual(2);
       expect(r.worst,"visible text jumped against the gesture in one frame").toBeLessThanOrEqual(2);
       expect(r.reverse,"visible text repeatedly pulled back").toBeLessThanOrEqual(4);
       expect(r.unmeasuredGap,"mounted row pitches must equal the cached border boxes").toBeLessThanOrEqual(.5);

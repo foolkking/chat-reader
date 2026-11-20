@@ -17,6 +17,14 @@ export function ShortcutManager() {
       const isSlash = event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey;
       const isActionPalette = event.altKey && event.shiftKey && event.key.toLowerCase() === "p" && !event.ctrlKey && !event.metaKey;
       if (!isFind && !isSlash && !isGlobalSearch && !isActionPalette) return;
+      if ((isFind || isSlash) && document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      const readerAvailable = pathname?.startsWith("/share/")
+        ? Boolean(document.querySelector("[data-shared-find-trigger]"))
+        : pathname?.startsWith("/conversations/") || pathname === "/read-together"
+          || (pathname === "/library" && document.querySelector('[data-reader-scroll-root="true"]'));
+      const globalAvailable = Boolean(pathname?.startsWith("/conversations/") ||
+        document.querySelector('[data-testid="sidebar-global-search"], #search-selection-status'));
+      if (!isActionPalette && (isGlobalSearch ? !globalAvailable : !readerAvailable && !globalAvailable)) return;
       event.preventDefault();
       window.dispatchEvent(
         new Event(
@@ -24,7 +32,7 @@ export function ShortcutManager() {
             ? "chat-reader:open-action-palette"
             : isGlobalSearch
             ? "chat-reader:focus-global-search"
-            : pathname?.startsWith("/conversations/") || pathname === "/read-together"
+            : readerAvailable
               ? "chat-reader:open-reader-search"
               : "chat-reader:focus-global-search",
         ),

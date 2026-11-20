@@ -100,7 +100,8 @@ function fixture({ allowed = true } = {}) {
       setTimeout: setTimer, clearTimeout: clearTimer,
     },
     setTimeout: setTimer, clearTimeout: clearTimer, navigator: {},
-    libraryActivityTime: () => 0, searchOffline: query => search(query),
+    libraryActivityTime: () => 0, searchOfflinePage: async query => ({ items: await search(query), has_more: false }),
+    searchComposing: false, searchOffset: 0, setSearchPageBusy: setter("busy"), setSearchMore: setter("more"),
     searchIndexReady: true,
   };
   new Function(...Object.keys(bindings), compiled)(...Object.values(bindings));

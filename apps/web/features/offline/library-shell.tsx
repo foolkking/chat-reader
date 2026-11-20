@@ -13,7 +13,8 @@ import { offlineDownloadSummary, offlineQueueIsPaused } from "../../lib/offline-
 import { OfflineDownloadRecovery } from "../../components/offline-download-recovery";
 import { offlineReaderDataSource, resolveOfflineSearchResult } from "../../lib/reader-data-source";
 import { matchesLibrarySearchTarget, searchResultHref, type SearchResultReplay } from "../search/search-result-target";
-import { initializeOfflineSearch, searchOffline } from "../../lib/offline-search";
+import { initializeOfflineSearch, searchOfflinePage } from "../../lib/offline-search";
+import { SearchSnippet } from "../search/search-snippet";
 import { buildOfflineSearchDocuments } from "../../lib/offline-search-documents";
 import { invalidateReaderSearch } from "../../lib/reader-search-cache";
 import { AUTH_GENERATION_CHANGED_EVENT, assertOfflineAccess, captureOfflineAccess } from "../../lib/offline-access";
@@ -80,7 +81,12 @@ export function LibraryShell() {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<OfflineSearchDocument[]>([]);
   const [searchResultQuery, setSearchResultQuery] = useState("");
+  const [searchPaging, setSearchPaging] = useState({ query: "", revision: -1, offset: 0 });
+  const [searchMore, setSearchMore] = useState(false);
+  const [searchPageBusy, setSearchPageBusy] = useState(false);
+  const [searchComposing, setSearchComposing] = useState(false);
   const [searchIndexRevision, setSearchIndexRevision] = useState(0);
+  const searchOffset = searchPaging.query === query && searchPaging.revision === searchIndexRevision ? searchPaging.offset : 0;
   const [searchIndexReady, setSearchIndexReady] = useState(false);
   const [searchWatchRevision, setSearchWatchRevision] = useState(0);
   const [searchFailed, setSearchFailed] = useState(false);
@@ -491,19 +497,22 @@ export function LibraryShell() {
   }, [catalogQuery.data, conversations, download, downloadFailure, reloadLocal, runDownload, zh]);
 
   useEffect(() => {
-    if (!searchIndexReady) return;
+    if (!searchIndexReady || searchComposing) return;
     const indexSequence = searchReloadSequenceRef.current;
     let active = true;
+    setSearchPageBusy(true);
     const timer = window.setTimeout(() => {
-      void searchOffline(query).then((results) => {
+      void searchOfflinePage(query, 80, searchOffset).then((page) => {
         if (active && indexSequence === searchReloadSequenceRef.current) {
-          setSearchResults(results);
+          setSearchResults(page.items);
           setSearchResultQuery(query);
+          setSearchMore(page.has_more);
+          setSearchPageBusy(false);
         }
-      }).catch(() => { if (active && indexSequence === searchReloadSequenceRef.current) setSearchFailed(true); });
+      }).catch(() => { if (active && indexSequence === searchReloadSequenceRef.current) { setSearchFailed(true); setSearchPageBusy(false); } });
     }, 120);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [query, searchIndexReady, searchIndexRevision]);
+  }, [query, searchComposing, searchOffset, searchIndexReady, searchIndexRevision]);
 
   function openConversation(conversationId: string, messageId?: string | null, blockIndex?: number | null, characterOffset?: number | null) {
     setSelectedId(conversationId);
@@ -611,7 +620,13 @@ export function LibraryShell() {
       query={query}
       setQuery={setQuery}
       searchResults={searchIndexReady && searchResultQuery === query ? searchResults : []}
-      searchState={searchFailed ? "unavailable" : searchIndexReady && searchResultQuery === query ? "ready" : "loading"}
+      onSearchComposition={setSearchComposing}
+      searchPagination={query && searchIndexReady && searchResultQuery === query && !searchFailed ? <nav aria-label={zh ? "本地搜索分页" : "Offline search pages"} className="flex flex-wrap items-center gap-2 border-t border-ui px-3 py-2 text-xs text-secondary">
+        <span role="status">{searchPageBusy ? (zh ? "正在搜索…" : "Searching…") : (zh ? `第 ${searchOffset + (searchResults.length ? 1 : 0)}–${searchOffset + searchResults.length} 条${searchMore ? "，仍有更多" : ""}` : `${searchOffset + (searchResults.length ? 1 : 0)}–${searchOffset + searchResults.length}${searchMore ? ", more available" : ""}`)}</span>
+        {searchOffset > 0 ? <button type="button" disabled={searchPageBusy} className="min-h-11 px-2 text-accent" onClick={() => setSearchPaging({ query, revision: searchIndexRevision, offset: Math.max(0, searchOffset - 80) })}>{zh ? "上一页" : "Previous"}</button> : null}
+        {searchMore ? <button type="button" disabled={searchPageBusy} className="min-h-11 px-2 text-accent" onClick={() => setSearchPaging({ query, revision: searchIndexRevision, offset: searchOffset + 80 })}>{zh ? "下一页" : "Next"}</button> : null}
+      </nav> : null}
+      searchState={searchFailed ? "unavailable" : searchIndexReady && !searchPageBusy && !searchComposing && searchResultQuery === query ? "ready" : "loading"}
       onRetrySearch={() => {
         setSearchFailed(false);
         setSearchIndexRevision(0);
@@ -701,7 +716,7 @@ function formatLibraryConversationTitle(conversation: { display_title: string; p
   return project ? `${project} / ${title}` : title;
 }
 
-function LibrarySidebar({ online, catalog, conversations, sidebarConversations, unclassifiedConversations, selectedId, groupedProjects, query, setQuery, searchResults, searchState, onRetrySearch, download, storage, assetMode, offlineShellStatus, error, failedDownload, recoveryControls, localRead, downloadStatusError, catalogReadError, catalogReadFetching, suppressDesktopError, onClose, onCollapse, onOpen, onOpenSearchResult, onDownload, onRetryDownload, onRetryLocalRead, onRetryDownloadStatus, onRetryCatalog, onAssetModeChange, onRetryShell, onRemove }: {
+function LibrarySidebar({ onSearchComposition, searchPagination, online, catalog, conversations, sidebarConversations, unclassifiedConversations, selectedId, groupedProjects, query, setQuery, searchResults, searchState, onRetrySearch, download, storage, assetMode, offlineShellStatus, error, failedDownload, recoveryControls, localRead, downloadStatusError, catalogReadError, catalogReadFetching, suppressDesktopError, onClose, onCollapse, onOpen, onOpenSearchResult, onDownload, onRetryDownload, onRetryLocalRead, onRetryDownloadStatus, onRetryCatalog, onAssetModeChange, onRetryShell, onRemove }: {
   online: boolean;
   catalog?: OfflineCatalogResponse;
   conversations: OfflineConversationRecord[];
@@ -712,6 +727,8 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
   query: string;
   setQuery: (value: string) => void;
   searchResults: OfflineSearchDocument[];
+  searchPagination: React.ReactNode;
+  onSearchComposition: (value: boolean) => void;
   searchState: "loading" | "ready" | "unavailable";
   onRetrySearch: () => void;
   download: DownloadState;
@@ -770,7 +787,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
   return <div className="flex h-full min-h-0 flex-col">
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ui px-4"><span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-xs font-bold text-white">CR</span><div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold">{zh ? "离线资料库" : "Offline library"}</h1><p className="flex items-center gap-1 text-xs text-secondary">{online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{online ? (zh ? "已联网" : "Online") : (zh ? "离线阅读" : "Offline reading")}</p></div><button type="button" onClick={onCollapse} className="hidden h-9 w-9 items-center justify-center rounded-md text-secondary hover:bg-surface md:flex" aria-label={zh ? "收起侧栏" : "Collapse sidebar"} title={zh ? "收起侧栏" : "Collapse sidebar"}><PanelLeftClose className="h-5 w-5" /></button><button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-md text-secondary md:hidden" aria-label={zh ? "关闭" : "Close"}><X className="h-5 w-5" /></button></header>
     <div className="shrink-0 space-y-3 border-b border-ui p-3">
-      <label className="flex min-h-10 items-center gap-2 rounded-md border border-ui bg-surface px-3"><Search className="h-4 w-4 text-secondary" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={zh ? "搜索本地正文、代码与批注" : "Search offline text, code, and annotations"} /></label>
+      <label className="flex min-h-10 items-center gap-2 rounded-md border border-ui bg-surface px-3"><Search className="h-4 w-4 text-secondary" /><input value={query} onCompositionStart={() => onSearchComposition(true)} onCompositionEnd={() => onSearchComposition(false)} onChange={(event) => setQuery(event.target.value)} aria-label={zh ? "搜索已下载的内容" : "Search downloaded content"} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={zh ? "搜索本地正文、代码与批注" : "Search offline text, code, and annotations"} /></label>
       <OfflineShellIndicator status={offlineShellStatus} online={online} onRetry={onRetryShell} />
       <OfflineDeviceControls />
       {downloadStatusError ? <div role="alert" className="space-y-2 rounded-md bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger)]"><p>{zh ? "无法读取下载状态。下载可能仍在继续，请重试读取状态。" : "Could not read download status. A download may still be running; retry the status read."}</p><button type="button" onClick={onRetryDownloadStatus} className="inline-flex min-h-9 items-center gap-1 rounded border border-[var(--danger)] px-2 font-medium"><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试状态读取" : "Retry status read"}</button></div> : null}
@@ -786,7 +803,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
       {error ? <div className={`space-y-2 border-l-2 border-[var(--danger)] pl-3 text-xs ${suppressDesktopError ? "md:hidden" : ""}`}><p role="status" className="text-[var(--danger)]">{error}</p>{recoveryControls ?? (failedDownload && online ? <button type="button" onClick={onRetryDownload} className="btn-secondary inline-flex min-h-11 items-center gap-1 px-2 font-medium" aria-label={zh ? "重试离线下载" : "Retry offline download"}><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试" : "Retry"}</button> : null)}{catalogReadError && online ? <button type="button" disabled={catalogReadFetching} onClick={onRetryCatalog} className="btn-secondary inline-flex min-h-11 items-center gap-1 px-2 font-medium disabled:opacity-50" aria-label={zh ? "重试读取在线目录" : "Retry online catalog"}><RefreshCw className={`h-3.5 w-3.5 ${catalogReadFetching ? "motion-safe:animate-spin" : ""}`} />{zh ? "重试目录" : "Retry catalog"}</button> : null}</div> : null}
     </div>
     <div className="min-h-0 flex-1 overflow-y-auto p-2">
-      {query ? localRead.phase !== "ready" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "读取本地资料后才能搜索…" : "Read local copies before searching…"}</p> : searchState === "unavailable" ? <div role="alert" className="space-y-2 px-3 py-5 text-sm text-secondary"><p>{zh ? "离线搜索暂不可用。若离线资源缺失，请联网更新后重试。已下载的对话仍然保留。" : "Offline search is unavailable. If resources are missing, reconnect to update them and retry. Downloaded conversations are retained."}</p><button type="button" onClick={onRetrySearch} className="btn-secondary min-h-11 px-3">{zh ? "重试离线搜索" : "Retry offline search"}</button></div> : searchState === "loading" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "正在准备离线搜索…" : "Preparing offline search…"}</p> : <SearchResultList items={searchResults} query={query} conversations={conversations} onOpen={onOpen} onOpenSearchResult={onOpenSearchResult} /> : localRead.phase !== "ready" ? null : <>
+      {query ? localRead.phase !== "ready" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "读取本地资料后才能搜索…" : "Read local copies before searching…"}</p> : searchState === "unavailable" ? <div role="alert" className="space-y-2 px-3 py-5 text-sm text-secondary"><p>{zh ? "离线搜索暂不可用。若离线资源缺失，请联网更新后重试。已下载的对话仍然保留。" : "Offline search is unavailable. If resources are missing, reconnect to update them and retry. Downloaded conversations are retained."}</p><button type="button" onClick={onRetrySearch} className="btn-secondary min-h-11 px-3">{zh ? "重试离线搜索" : "Retry offline search"}</button></div> : searchState === "loading" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "正在准备离线搜索…" : "Preparing offline search…"}</p> : <><SearchResultList items={searchResults} query={query} conversations={conversations} onOpen={onOpen} onOpenSearchResult={onOpenSearchResult} />{searchPagination}</> : localRead.phase !== "ready" ? null : <>
         <section aria-labelledby="library-projects-heading">
           <div className="flex min-h-8 items-center justify-between px-2"><h2 id="library-projects-heading" className="text-xs font-semibold text-secondary">{zh ? "项目" : "Projects"}</h2><span className="text-[11px] text-secondary">{groupedProjects.length}</span></div>
           <ProjectRows projects={groupedProjects} selectedId={selectedId} expandedProjects={expandedProjects} setExpandedProjects={setExpandedProjects} catalog={catalog} onOpen={onOpen} onDownload={onDownload} onRemove={onRemove} />
@@ -963,7 +980,7 @@ function SearchResultList({ items, query, conversations, onOpen, onOpenSearchRes
       }
     }
   };
-  return <div className="space-y-1">{items.map((item) => <div key={item.id}><button type="button" aria-busy={navigation?.scope === scope && navigation.pendingId === item.id || undefined} onClick={() => void activate(item)} className="w-full rounded-md px-3 py-2 text-left hover:bg-surface"><p className="truncate text-sm font-medium">{item.title || titles.get(item.conversation_id) || (zh ? "对话" : "Conversation")}</p><p className="mt-1 line-clamp-3 text-xs leading-5 text-secondary">{item.plain_text.slice(0, 240)}</p></button>{navigation?.scope === scope && navigation.failedId === item.id ? <p role="alert" className="px-3 pb-2 text-xs text-secondary">{zh ? "无法定位此结果，本地副本已保留。请重试。" : "Could not locate this result. Your local copy is retained. Try again."}</p> : null}</div>)}{!items.length ? <p className="px-3 py-8 text-center text-sm text-secondary">{zh ? "无本地结果" : "No offline results"}</p> : null}</div>;
+  return <div className="space-y-1">{items.map((item) => <div key={item.id}><button type="button" aria-busy={navigation?.scope === scope && navigation.pendingId === item.id || undefined} onClick={() => void activate(item)} className="w-full rounded-md px-3 py-2 text-left hover:bg-surface"><p className="truncate text-sm font-medium">{item.title || titles.get(item.conversation_id) || (zh ? "对话" : "Conversation")}</p><p className="mt-1 line-clamp-3 text-xs leading-5 text-secondary"><SearchSnippet text={item.plain_text} query={query} /></p></button>{navigation?.scope === scope && navigation.failedId === item.id ? <p role="alert" className="px-3 pb-2 text-xs text-secondary">{zh ? "无法定位此结果，本地副本已保留。请重试。" : "Could not locate this result. Your local copy is retained. Try again."}</p> : null}</div>)}{!items.length ? <p className="px-3 py-8 text-center text-sm text-secondary">{zh ? "无本地结果" : "No offline results"}</p> : null}</div>;
 }
 
 function mergeLibraryConversations(localConversations: OfflineConversationRecord[], catalog?: OfflineCatalogResponse): LibrarySidebarConversation[] {

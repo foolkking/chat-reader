@@ -44,6 +44,24 @@ function fixture(documents) {
   };
 }
 
+test("directory finds 97 Chinese infixes and code identifiers through bounded pages", () => {
+  const docs = Array.from({ length: 97 }, (_, n) => document(`catalog-${n}`, {
+    plain_text: `开始，等到潮汐再次出现；read_frame_anchor_${n}。`,
+  }));
+  const f = fixture(docs);
+  for (const query of ["潮汐", "frame_anchor"]) {
+    const first = f.page(query, 0, 80), next = f.page(query, 80, 80);
+    assert.equal(first.items.length, 80);
+    assert.equal(first.total, 81);
+    assert.equal(first.hasMore, true);
+    assert.equal(first.totalIsExact, false);
+    assert.equal(next.items.length, 17);
+    assert.equal(next.hasMore, false);
+    assert.equal(next.totalIsExact, true);
+    assert.equal(new Set([...first.items, ...next.items].map(item => item.id)).size, 97);
+  }
+});
+
 test("scoped content search cannot lose its target behind more than the old global candidate window", () => {
   const unrelated = Array.from({ length: 400 }, (_, index) =>
     document(`unrelated-${index}`, { conversation_id: "synthetic-other-conversation" }));
@@ -71,6 +89,16 @@ test("scoped pages use lookahead, retain distinct IDs and disclose when the boun
   assert.equal(pages.at(-1).total, 121);
   assert.equal(new Set(pages.flatMap(page => page.items.map(item => item.id))).size, 121);
   assert.deepEqual(pages.flatMap(page => page.items.map(item => item.id)), documents.map(item => item.id));
+});
+
+test("in-conversation find locates a mid-sentence Chinese substring in reading order before pagination", () => {
+  const early = document("early", { order_key: "001", plain_text: "快速向下滑动，仍然阅读正文。" });
+  const late = document("late", { order_key: "009", plain_text: "继续向下滑动。" });
+  const decoy = document("decoy", { order_key: "000", title: "向下滑", search_text: "assistant 向下滑", plain_text: "无关正文" });
+  const f = fixture([late, decoy, early, { ...early, id: "elsewhere", conversation_id: "different" }]);
+  const scope = { conversationId: early.conversation_id, documentType: "message", contentOnly: true };
+  assert.deepEqual([0, 1].flatMap(offset => f.page("向下滑", offset, 1, scope).items.map(d => d.id)), ["early", "late"]);
+  assert.deepEqual(f.search("assistant", 10, scope), []);
 });
 
 test("title/body union stays scoped and complete past the library's implicit 100-result window", () => {

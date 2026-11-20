@@ -65,14 +65,14 @@ function fixture({ project = async item => projected(item), locale = "en-US" } =
   const exports = {};
   new Function("require", "exports", "usePreferences", "useSearchParams", "useMemo", "useLayoutEffect", "useState",
     "resolveOfflineSearchResult", "setSelectedId", "setMobileOpen", "window", "LAST_LIBRARY_CONVERSATION_KEY",
-    "router", "searchResultHref", "matchesLibrarySearchTarget", "searchParams", "setSearchReplay", compiled)(name => {
+    "router", "searchResultHref", "matchesLibrarySearchTarget", "searchParams", "setSearchReplay", "SearchSnippet", compiled)(name => {
     assert.equal(name, "react/jsx-runtime"); return require(name);
   }, exports, () => ({ resolvedLocale: locale }), () => ({ toString: () => route }), useMemo, useLayoutEffect, useState,
   (item, query) => { calls.projects.push({ item, query }); return project(item, query); },
   value => calls.selected.push(value), value => calls.mobile.push(value),
   { localStorage: { setItem: (...args) => calls.storage.push(args) } }, "synthetic-last-library-key",
   { replace: href => calls.routes.push(href) }, targets.searchResultHref, targets.matchesLibrarySearchTarget,
-  { toString: () => route }, next => { replay = next(replay); calls.replays.push(replay); });
+  { toString: () => route }, next => { replay = next(replay); calls.replays.push(replay); }, "SearchSnippet");
   props.onOpen = (...args) => calls.legacy.push(args);
   props.onOpenSearchResult = exports.open;
   const render = () => {

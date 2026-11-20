@@ -7,8 +7,11 @@ export function findSearchTextMatches(
   blockIndex: number | null,
   renderBlockId: string | null = null,
   limit = 100,
+  literalOnly = false,
+  skip?: { remaining: number },
 ): SearchMatch[] {
   if (limit <= 0) return [];
+  if (literalOnly) return findLiteralMatches(text, query, blockIndex, renderBlockId, limit, skip);
   const source = normalizeSearchText(text);
   const needle = normalizeSearchText(query).text;
   if (!source.text || !needle) return [];
@@ -39,6 +42,43 @@ export function findSearchTextMatches(
       ));
       break;
     }
+  }
+  return matches;
+}
+
+function findLiteralMatches(text: string, query: string, blockIndex: number | null, renderBlockId: string | null, limit: number, skip?: { remaining: number }): SearchMatch[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return [];
+  const expression = needle.split(/\s+/u).map(word => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
+  const shadow = text.toLowerCase(), sameWidth = shadow.length === text.length;
+  const matches: SearchMatch[] = [];
+  // Walk only as far as the last result. A table of UTF-16 -> code-point
+  // spans for every character of every non-matching block stalls the reader.
+  let unitStart = 0, unitEnd = 0, shadowEnd = 0, codePointEnd = 0;
+  let lastStart = -1, lastEnd = -1;
+  const advance = (at: number) => {
+    while (shadowEnd <= at) {
+      unitStart = unitEnd;
+      unitEnd += text.codePointAt(unitStart)! > 0xffff ? 2 : 1;
+      shadowEnd += sameWidth ? unitEnd - unitStart : text.slice(unitStart, unitEnd).toLowerCase().length;
+      codePointEnd++;
+    }
+  };
+  for (const hit of shadow.matchAll(new RegExp(expression, "gu"))) {
+    advance(hit.index);
+    const start = codePointEnd - 1, startUnit = unitStart;
+    advance(hit.index + hit[0].length - 1);
+    if (lastStart === start && lastEnd === codePointEnd) continue;
+    lastStart = start; lastEnd = codePointEnd;
+    if (skip && skip.remaining > 0) { skip.remaining--; continue; }
+    matches.push({
+      block_index: blockIndex, render_block_id: renderBlockId, match_start: start, match_end: codePointEnd,
+      quote: text.slice(startUnit, unitEnd),
+      // At most 160 UTF-16 units contain the adjacent 80 complete code points.
+      context_before: Array.from(text.slice(Math.max(0, startUnit - 160), startUnit)).slice(-80).join(""),
+      context_after: Array.from(text.slice(unitEnd, unitEnd + 160)).slice(0, 80).join(""),
+    });
+    if (matches.length === limit) break;
   }
   return matches;
 }

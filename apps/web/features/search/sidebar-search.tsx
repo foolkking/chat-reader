@@ -7,11 +7,13 @@ import { useEffect, useRef, useState } from "react";
 import { searchConversations } from "../../lib/api";
 import { usePreferences } from "../../components/preferences-provider";
 import { searchResultHref } from "./search-result-target";
+import { SearchSnippet } from "./search-snippet";
 
 export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter();
   const { resolvedLocale } = usePreferences();
   const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [composing, setComposing] = useState(false);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -44,6 +46,13 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
   const activeIndex = activeDocumentId === null
     ? -1
     : items.findIndex((item) => item.document_id === activeDocumentId);
+  useEffect(() => {
+    const menu = menuRef.current, row = menu?.querySelector<HTMLElement>('[aria-current="true"]');
+    if (!menu || !row) return;
+    const bounds = menu.getBoundingClientRect(), rect = row.getBoundingClientRect();
+    if (rect.bottom > bounds.bottom) menu.scrollTop += rect.bottom - bounds.bottom;
+    else if (rect.top < bounds.top) menu.scrollTop += rect.top - bounds.top;
+  }, [activeIndex]);
   const selectIndex = (index: number) => {
     const item = items[index];
     if (item) setActiveDocumentId(item.document_id);
@@ -75,18 +84,18 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
           }
           if (event.key === "Escape") { setQuery(""); inputRef.current?.blur(); }
         }}
-        className="h-10 w-full rounded-lg border border-ui bg-surface pl-9 pr-9 text-sm text-primary outline-none placeholder:text-secondary focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
+        className="h-11 w-full rounded-lg border border-ui bg-surface pl-9 pr-11 text-sm text-primary outline-none placeholder:text-secondary focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
         placeholder={labels.placeholder}
         aria-label={labels.placeholder}
         data-testid="sidebar-global-search"
       />
-      {query ? <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus(); }} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={resolvedLocale === "zh-CN" ? "清除搜索" : "Clear search"}><X className="h-3.5 w-3.5" /></button> : null}
+      {query ? <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus({ preventScroll: true }); }} className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={resolvedLocale === "zh-CN" ? "清除搜索" : "Clear search"}><X className="h-3.5 w-3.5" /></button> : null}
       {query.trim() && !composing ? (
-         <div className="absolute inset-x-0 top-full z-40 overflow-hidden rounded-lg border border-ui bg-raised shadow-xl">
+         <div ref={menuRef} className="absolute inset-x-0 top-full z-40 max-h-[min(32rem,65dvh)] overflow-y-auto overscroll-contain rounded-lg border border-ui bg-raised shadow-xl">
            {items.map((item, index) => (
-             <button key={item.document_id} type="button" onClick={() => openResult(index)} className={`block w-full px-3 py-2 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
+             <button key={item.document_id} type="button" aria-current={activeIndex === index || undefined} onClick={() => openResult(index)} className={`block min-h-11 w-full px-3 py-2 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
                <span className="block truncate text-sm font-medium text-primary">{item.document_type === "attachment" ? (item.attachment_display_name ?? item.conversation_title) : item.conversation_title}</span>
-               <span className="mt-0.5 block truncate text-xs text-secondary">{item.snippet}</span>
+               <span className="mt-0.5 block line-clamp-2 break-words text-xs text-secondary [overflow-wrap:anywhere]"><SearchSnippet text={item.snippet} query={item.matches?.[0]?.quote ?? debounced} /></span>
             </button>
           ))}
           {currentResults && !result.isError && !result.isFetching && items.length === 0 ? <p className="px-3 py-3 text-sm text-secondary">{labels.empty}</p> : null}

@@ -14,7 +14,7 @@ const declarations = new Map(reader.body.statements.filter(ts.isVariableStatemen
 const callbacks = new Set(["markReaderScrollIntent", "applyLoadedWindow", "navigateToTarget", "refreshActiveMessageFromLayout"]);
 const selected = reader.body.statements.filter(node => {
   if (ts.isVariableStatement(node)) return node.declarationList.declarations.some(item => callbacks.has(item.name.getText(ast)));
-  if (!ts.isExpressionStatement(node) || !ts.isCallExpression(node.expression) || node.expression.expression.getText(ast) !== "useEffect") return false;
+  if (!ts.isExpressionStatement(node) || !ts.isCallExpression(node.expression) || !["useEffect", "useLayoutEffect"].includes(node.expression.expression.getText(ast))) return false;
   const text = node.getText(ast);
   return text.includes("const markWheelIntent =") || text.includes("const handleReadingShortcut =") || text.includes("setInitialPaintReady(true)")
     || text.includes("if (!windowQuery.isSuccess || initialWindowAppliedRef.current)")
@@ -72,7 +72,7 @@ const refDefaults = {
 };
 const inputNames = [...Object.keys(refDefaults), "loadedWindowRef", "scrollContainerRef", "messagesRef", "resolvedLocatorKeysRef",
   "loadPreviousActionRef", "loadNextActionRef", "recentOwner", "recentOwnerRef", "conversationId", "dataSource", "conversationQuery",
-  "windowQuery", "positionQuery", "targetMessageId", "savedPosition", "loadedWindow", "initialPaintReady", "mergedIntoConversationId",
+  "windowQuery", "positionQuery", "targetMessageId", "canLoadInitialWindow", "savedPosition", "loadedWindow", "initialPaintReady", "mergedIntoConversationId",
   "queryClient", "setInitialPaintReady", "setLoadedWindow", "setPendingTargetMessageId", "setNavigationStatus", "setNavigationFailureReason",
   "setActiveMessageId", "setActiveBlockId", "setLocatePulse", "setReadingSaveError",
   "setTocReturnPoint", "setTocReturnError", "setReturnCueStartedAt", "pruneMessageState", "setCollapsedTurnKeys"];
@@ -186,7 +186,7 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
     scrollContainerRef: { current: rootMounted ? root : null }, messagesRef: { current: [] }, resolvedLocatorKeysRef: { current: new Set() },
     loadPreviousActionRef: { current: () => edgeLoads.push("previous") }, loadNextActionRef: { current: () => edgeLoads.push("next") },
     conversationQuery: status(cold ? "pending" : "success", cold ? undefined : { id: owner.conversationId, offline_revision: 1 }),
-    windowQuery: status("error"), positionQuery: status(positionError ? "error" : "success"), targetMessageId: null, savedPosition: saved,
+    windowQuery: status("error"), positionQuery: status(positionError ? "error" : "success"), canLoadInitialWindow: true, targetMessageId: null, savedPosition: saved,
     initialPaintReady: false, mergedIntoConversationId: null, navigationStatus: "idle", readingSaveError: false,
     queryClient: { setQueryData: (...args) => cacheWrites.push(args) },
     setInitialPaintReady: value => change("initialPaintReady", value), setLoadedWindow: value => change("loadedWindow", value),
@@ -223,7 +223,7 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
     settlements.push(options); if (holds.has("settle")) await holds.get("settle").promise; return options.tokenIsCurrent();
   };
   const module = { exports: {} };
-  const dependencies = { module, useEffect, useCallback, window, document, Element: Surface, CSS: { escape: value => value },
+  const dependencies = { module, useEffect, useLayoutEffect: useEffect, useCallback, window, document, Element: Surface, CSS: { escape: value => value },
     resolveCanonicalSearchAnchor: searchTargetHelpers.resolveCanonicalSearchAnchor,
     authenticationGeneration: () => epoch, captureTask, ApiRequestError, ACTIVE_READING_OFFSET: 120,
     ...windowHelpers, loadTurnNeighborhood: windowHelpers.loadCompleteTurnWindow,

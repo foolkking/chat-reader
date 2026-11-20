@@ -3,14 +3,37 @@ import { syntheticImage as png } from "./synthetic-image";
 import { writeFile } from "node:fs/promises";
 import { settingsAppearance } from "./settings-test-helper";
 import { verifyMediaPassage } from "./reader-media-motion";
+import { verifyEarlyMovementBeatsLateRestore, verifyFastReader, verifyReaderFind } from "./reader-fast-find";
 import { readReadingOfflineEvidence } from "./reading-offline-evidence";
+import { verifyDelayedMessageRefresh, verifyGlobalSearchReturn, verifySharedFind } from "./search-reading-flow";
 
 test.skip(process.env.E2E_READING_STABILITY !== "1", "Isolated synthetic reading-stability gate");
-test.use({ trace: "off", serviceWorkers: "allow", extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
+test.use({ trace: "off", serviceWorkers: "allow", extraHTTPHeaders: {
+  Origin: new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3107").origin,
+} });
+
+for (const width of [320, 375, 800, 1440]) test(`${width}px authorized shared find reaches unloaded text and rejects revoked pages`, async ({ page, request }, info) => {
+  await verifySharedFind(width, page, request, info);
+});
+test("global search returns to all loaded pages, expanded hits and exact list position", async ({ page, request }, info) => {
+  await verifyGlobalSearchReturn(page, request, info);
+});
+test("late same-height message refresh never cancels repeated small reverse gestures", async ({ page, request }, info) => {
+  await verifyDelayedMessageRefresh(page, request, info);
+});
 
 for (const mobile of [false, true]) test.describe(mobile ? "375px touch input" : "1280px wheel input", () => {
   test.use({ isMobile: mobile, hasTouch: mobile });
-  for (const kind of ["image", "long-image", "math", "mixed", "turns"] as const) {
+  test("fast forward across newly mounted virtual replies never rewinds", async ({ page, request }, info) => {
+    await verifyFastReader(mobile, page, request, info);
+  });
+  test("early wheel/touch intent wins before saved position finishes loading", async ({ page, request }, info) => {
+    await verifyEarlyMovementBeatsLateRestore(mobile, page, request, info);
+  });
+  test("find a distant repeated phrase in an archived conversation and return to that match", async ({ page, request }, info) => {
+    await verifyReaderFind(mobile, page, request, info);
+  });
+  for (const kind of ["text", "image", "long-image", "math", "mixed", "turns"] as const) {
     test(`bidirectional media passage: ${kind} / ${mobile ? "touch" : "wheel"}`, async ({page,request},info) => {
       await verifyMediaPassage(kind,mobile,page,request,info);
     });

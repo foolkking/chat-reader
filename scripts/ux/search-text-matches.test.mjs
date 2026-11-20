@@ -43,3 +43,14 @@ test("lowercase expansion before the match does not shift its canonical offset",
   assert.equal(match.match_start, 4);
   assert.equal(Array.from(text).slice(match.match_start, match.match_end).join(""), match.quote);
 });
+
+test("bounded Reader find maps complete Unicode contexts without confusing folded offsets and raw offsets", () => {
+  const text = "😀".repeat(90) + "İ ß S ος 𐐀 \t A.B+  中文滑动" + "🚀".repeat(90);
+  for (const q of ["\u0307", "S", "ος", "𐐨   a.b+", "A.B+", "文滑", "🚀"]) {
+    const expected = exports.findSearchTextMatches(text, q, 5, "block", 4);
+    assert.ok(expected.length > 0);
+    assert.deepEqual(exports.findSearchTextMatches(text, q, 5, "block", 4, true), expected);
+  }
+  assert.deepEqual(exports.findSearchTextMatches(text, "s missing", 5, null, 100, true), []);
+  assert.equal(exports.findSearchTextMatches("NeedLe ".repeat(200), "needle", 5, null, 101, true).length, 101);
+});

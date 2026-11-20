@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "base_schedule_sha256": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
-  "reason": "Add navigation, import and root-admin update coverage without changing original assignments, timeouts or skips",
+  "reason": "Add navigation, in-conversation find, import and root-admin update coverage without changing original assignments, timeouts or skips",
   "api": {
     "tests/test_admin_updates.py": {
       "count": 9,
@@ -27,6 +27,11 @@
       "count": 5,
       "shard": 1,
       "source_lf_sha256": "52ffecfa8d2b18ecc4f15e2728e0658982316f71897036c2fb762ce6668cbb51"
+    },
+    "tests/test_reader_find.py": {
+      "count": 6,
+      "shard": 3,
+      "source_lf_sha256": "386a5d2c95f0dd481ba47e3e6651fb692c0be67e8a631e2a3bea18785033c20a"
     }
   },
   "api_fixture_revisions": {

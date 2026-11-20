@@ -1166,6 +1166,9 @@ export async function getRecentItems(): Promise<RecentItemRead[]> {
 
 export async function searchConversations(input: {
   q: string;
+  readerFind?: boolean;
+  matchOffset?: number;
+  matchDocumentId?: string;
   grouped?: boolean; termsMode?: boolean; sort?: "relevance" | "content_updated" | "imported";
   limit?: number;
   offset?: number;
@@ -1188,6 +1191,9 @@ export async function searchConversations(input: {
   if (input.conversationId) {
     params.set("conversation_id", input.conversationId);
   }
+  if (input.readerFind) params.set("reader_find", "true");
+  if (input.matchOffset) params.set("match_offset", String(input.matchOffset));
+  if (input.matchDocumentId) params.set("match_document_id", input.matchDocumentId);
   if (input.projectId) {
     params.set("project_id", input.projectId);
   }
@@ -2050,6 +2056,18 @@ export async function resolveSharedLocator(
     `/api/shared/${encodeURIComponent(token)}/resolve-locator`,
     jsonRequest("POST", input),
   );
+}
+
+export function findSharedConversation(token: string, options: {
+  query: string; documentType?: string; role?: string; limit?: number; offset?: number;
+  matchOffset?: number; matchDocumentId?: string; signal?: AbortSignal;
+}): Promise<SearchResponse> {
+  return fetchJson<SearchResponse>(`/api/shared/${encodeURIComponent(token)}/find`, {
+    ...jsonRequest("POST", { q: options.query, document_type: options.documentType ?? "message",
+      role: options.role, limit: options.limit ?? 50, offset: options.offset ?? 0,
+      match_offset: options.matchOffset ?? 0, match_document_id: options.matchDocumentId }),
+    signal: options.signal, cache: "no-store",
+  });
 }
 
 export async function getSharedDialogueIndex(
