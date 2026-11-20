@@ -357,10 +357,22 @@ test("offline conversation search scopes before its limit and excludes title/typ
   const panel = page.getByRole("dialog", { name: /^(搜索|Search)$/ });
   const input = panel.getByRole("textbox", { name: /^(搜索当前对话|Search this conversation)$/ });
   await expect(input).toBeVisible();
-  await panel.getByRole("combobox", { name: /^(我 \/ ChatGPT|Role)$/ }).selectOption("assistant");
+  // The header action and the keyboard shortcut must both stay inside the
+  // active local Reader even after network loss. Leave the Library input.
+  await input.press("Escape");
+  await expect(panel).not.toBeVisible();
+  await page.getByTestId("reader-scroll-root").focus();
+  await page.keyboard.press("Control+f");
+  await expect(input).toBeFocused();
+  await input.fill("向下滑");
+  await expect(panel.getByRole("button").filter({ hasText: "向下滑" })).toHaveCount(1);
+  await input.fill("40 prefix");
+  await expect(panel.getByText(/没有找到.*40 prefix|No results for.*40 prefix/)).toBeVisible();
+  await panel.getByRole("button", { name: /^(筛选|Filters)$/ }).click();
+  await panel.getByRole("combobox", { name: /^(角色|Role)$/ }).selectOption("assistant");
   await input.fill("target-annotation-40");
   await expect(panel.getByRole("status").filter({
-    hasText: /^(已加载 1 \/ 1 条结果 · 1 个定位项|1 of 1 results loaded · 1 locations)$/,
+    hasText: /^0 \/ 1 (处匹配|matches)$/,
   })).toBeVisible();
 
   await input.fill("TitleOnlyFixture");
@@ -372,6 +384,80 @@ test("offline conversation search scopes before its limit and excludes title/typ
   await panel.getByRole("button").filter({ hasText: /target-annotation-40/ }).click();
   await expect(page.locator("#block-offline-message-40-1")).toBeVisible();
   await expect.poll(() => readingLineDelta(page, "block-offline-message-40-1")).toBeLessThan(36);
+  expect(new URL(page.url()).pathname).toBe("/library");
+});
+
+for (const width of [375, 1440]) test(`${width}px offline directory reaches the 81st Chinese infix and code identifier without media reads`, async ({ page, context }, info) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto("/library");
+  await expect(offlineReadyStatus(page)).toBeVisible();
+  await seedOfflineFixture(page);
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const open = indexedDB.open("chat-reader-offline-library");
+      open.onsuccess = () => resolve(open.result); open.onerror = () => reject(open.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(["conversations", "messages", "blocks", "searchDocuments"], "readwrite");
+      const store = tx.objectStore("searchDocuments"), template = tx.objectStore("messages").get("offline-message-2");
+      const conversation = tx.objectStore("conversations").get("offline-fixture");
+      conversation.onsuccess = () => tx.objectStore("conversations").put({ ...conversation.result, message_count: 234, turn_count: 117 });
+      template.onsuccess = () => {
+        for (let i = 0; i < 97; i++) {
+          const text = `Synthetic unrelated introduction. ${"before ".repeat(60)} tide passage ${i} 潮汐 and read_frame_anchor.`;
+          for (const role of ["user", "assistant"]) {
+            const number = 41 + i * 2 + Number(role === "assistant"), id = `offline-paging-${number}`;
+            const plain_text = role === "assistant" ? text : `Synthetic question ${i}`;
+            tx.objectStore("messages").put({ ...template.result, id, role, order_key: String(number).padStart(6, "0"),
+              ordinal: number, turn_index: 21 + i, block_count: 1, char_count: plain_text.length, is_heavy: false,
+              current_version: { ...template.result.current_version, id: `version-${id}`, plain_text, display_text: plain_text } });
+            tx.objectStore("blocks").put({ key: `${id}:0`, id: `canonical-${id}`, conversation_id: "offline-fixture",
+              message_id: id, block_index: 0, block_type: "paragraph", plain_text, data: { text: plain_text } });
+            if (role === "assistant") store.put({ id: `paging-synthetic-${String(i).padStart(3, "0")}`,
+              conversation_id: "offline-fixture", message_id: id, document_type: "message", role,
+              title: `Synthetic passage ${i}`, plain_text: text, search_text: text,
+              order_key: String(number).padStart(6, "0"), turn_index: 21 + i, metadata: {} });
+          }
+        }
+      };
+      tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await page.reload();
+  await expect(offlineReadyStatus(page)).toBeVisible();
+  await context.setOffline(true);
+  const input = page.locator('input:visible[placeholder="搜索本地正文、代码与批注"], input:visible[placeholder="Search offline text, code, and annotations"]');
+  const sidebar = page.locator("[data-reader-primary-sidebar]:visible");
+  await page.evaluate(() => {
+    const probe = window as typeof window & { syntheticSearchMediaReads: number };
+    probe.syntheticSearchMediaReads = 0;
+    const get = IDBObjectStore.prototype.get, getAll = IDBObjectStore.prototype.getAll;
+    IDBObjectStore.prototype.get = function (...args: Parameters<typeof get>) {
+      if (this.name === "attachments") probe.syntheticSearchMediaReads++;
+      return get.apply(this, args);
+    };
+    IDBObjectStore.prototype.getAll = function (...args: Parameters<typeof getAll>) {
+      if (this.name === "attachments") probe.syntheticSearchMediaReads++;
+      return getAll.apply(this, args);
+    };
+  });
+  for (const query of ["潮汐", "frame_anchor"]) {
+    await input.fill(query);
+    await expect(sidebar.locator("mark").filter({ hasText: query })).toHaveCount(80);
+    await sidebar.getByRole("button", { name: /^(下一页|Next)$/ }).click();
+    await expect(sidebar.locator("mark").filter({ hasText: query })).toHaveCount(17);
+    await expect(sidebar.getByRole("status").filter({ hasText: /81/ })).toBeVisible();
+    await expect(sidebar.getByRole("button", { name: /^(下一页|Next)$/ })).toHaveCount(0);
+    await page.screenshot({ path: info.outputPath(`offline-directory-${width}-${query === "潮汐" ? "zh" : "code"}.png`) });
+    await sidebar.getByRole("button", { name: /^(上一页|Previous)$/ }).click();
+    await expect(sidebar.locator("mark").filter({ hasText: query })).toHaveCount(80);
+  }
+  expect(await page.evaluate(() => (window as typeof window & { syntheticSearchMediaReads: number }).syntheticSearchMediaReads)).toBe(0);
+  await sidebar.getByRole("button", { name: /^(下一页|Next)$/ }).click();
+  await expect(sidebar.locator("mark")).toHaveCount(17);
+  await sidebar.getByRole("button", { name: /Synthetic passage 80/ }).click();
+  await expect(page.locator("#block-offline-paging-202-0")).toBeInViewport();
   expect(new URL(page.url()).pathname).toBe("/library");
 });
 
@@ -1045,7 +1131,7 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
       });
       for (let index = 1; index <= 40; index += 1) {
         const messageId = `offline-message-${index}`;
-        const paragraph = index === 40 ? "prefix target-annotation-40 suffix" : `quantumfixture paragraph ${index}`;
+        const paragraph = index === 40 ? "prefix target-annotation-40 suffix，连续向下滑动。" : `quantumfixture paragraph ${index}`;
         const displayText = index === 6 ? `2026/07/26 00:06:00\n${paragraph}` : `Section ${index}\n${paragraph}`;
         const contentPreview = index === 5 ? `2026/07/26 00:05:00\n${paragraph}` : index === 6 ? null : paragraph;
         transaction.objectStore("messages").put({
@@ -1126,8 +1212,8 @@ async function seedOfflineFixture(page: import("@playwright/test").Page): Promis
         document_type: "message",
         role: "assistant",
         title: "离线测试对话",
-        plain_text: "prefix target-annotation-40 suffix",
-        search_text: "prefix target-annotation-40 suffix",
+        plain_text: "prefix target-annotation-40 suffix，连续向下滑动。",
+        search_text: "prefix target-annotation-40 suffix，连续向下滑动。",
         order_key: "000040",
         turn_index: 20,
         metadata: { block_index: 1, character_offset: 7 },
@@ -1297,6 +1383,10 @@ async function seedOfflineSearchFixture(page: Page): Promise<void> {
       });
       const target = documents.get("document:offline-target");
       target.onsuccess = () => documents.put({ ...target.result, title: "TitleOnlyFixture",
+        // Real packages concatenate the heading and paragraph in the message
+        // index, but no individual block contains the phrase "40 prefix".
+        plain_text: "Section 40\n" + target.result.plain_text,
+        search_text: "Section 40\n" + target.result.search_text,
         metadata: { block_index: 0, character_offset: 0 } });
       const messages = tx.objectStore("messages");
       const message = messages.get("offline-message-2");

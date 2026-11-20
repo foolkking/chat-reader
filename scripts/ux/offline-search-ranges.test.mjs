@@ -16,7 +16,7 @@ const method = declaration.initializer.properties.find(node => node.name?.getTex
 assert.ok(method && ts.isMethodDeclaration(method));
 const metadata = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "metadataNumber");
 const readBlocks = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "getOfflineMessageBlocks");
-const projection = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "resolveOfflineSearchResult");
+const projection = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.body && node.name?.text === "resolveOfflineSearchResult");
 assert.ok(metadata && readBlocks && projection);
 const compile = text => ts.transpileModule(text, { compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
@@ -35,27 +35,75 @@ const block = { id: "synthetic-block", message_id: message.id, block_index: 0, p
 
 // Actual extracted offline search and matcher. FlexSearch recall and Dexie
 // reads are controlled adapters, not IndexedDB/package migration evidence.
-async function search(documents, blocks = [block], indexedBlocks = blocks, { storedMessage = message, assertAccess = () => {} } = {}) {
+async function search(documents, blocks = [block], indexedBlocks = blocks, {
+  storedMessage = message, assertAccess = () => {}, searchPage, byMessage, options = {},
+} = {}) {
   const exports = {};
   const offlineDb = {
-    messages: { get: async id => id === message.id ? storedMessage : null },
+    messages: { get: async id => byMessage?.has(id) ? { ...message, id } : id === message.id ? storedMessage : null },
     blocks: {
-      where: () => ({ equals: () => ({ sortBy: async () => indexedBlocks }) }),
+      where: () => ({ equals: id => ({ sortBy: async () => byMessage?.get(id) ?? indexedBlocks }) }),
       toArray: async () => blocks,
     },
   };
-  new Function("exports", "searchOfflinePage", "offlineDb", "findSearchTextMatches", "captureOfflineAccess", "assertOfflineAccess", "hydrateOfflineBlockAttachments", compiled)(
-    exports, async (query, limit, offset, scope) => {
+  new Function("exports", "searchOfflinePage", "captureOfflineSearchIndex", "offlineDb", "findSearchTextMatches", "captureOfflineAccess", "assertOfflineAccess", "hydrateOfflineBlockAttachments", compiled)(
+    exports, searchPage ?? (async (query, limit, offset, scope) => {
       assert.equal(query, "needle");
       assert.equal(limit, 50);
       assert.equal(offset, 0);
       assert.deepEqual(scope, { conversationId: document.conversation_id, documentType: undefined, role: undefined, contentOnly: true });
       return { items: documents, total: documents.length, offset, has_more: false, total_is_exact: true };
-    }, offlineDb, matcherExports.findSearchTextMatches, () => 1, assertAccess,
+    }), () => ({}), offlineDb, matcherExports.findSearchTextMatches, () => 1, assertAccess,
     () => { throw Error("Text search must not hydrate media or create object URLs."); },
   );
-  return exports.source.searchConversation(document.conversation_id, { query: "needle" });
+  return exports.source.searchConversation(document.conversation_id, { query: "needle", ...options });
 }
+
+test("cross-block phrases cannot crowd out real locations, inflate totals or break offline continuation", async () => {
+  const docs = [], byMessage = new Map(), offsets = [];
+  for (let i = 0; i < 125; i++) {
+    const id = `m-${i}`, words = i === 55 || i === 90 || i === 120 ? ["a b"] : ["a", "b"];
+    docs.push({ ...document, id: `d-${i}`, message_id: id, plain_text: words.join("\n"), order_key: `${i}` });
+    byMessage.set(id, words.map((plain_text, n) => ({ ...block, id: `b-${i}-${n}`, message_id: id, block_index: n, plain_text })));
+  }
+  const searchPage = async (query, limit, offset) => {
+    assert.equal(query, "a b"); assert.ok(limit > 0 && limit <= 50); offsets.push(offset);
+    return { items: docs.slice(offset, offset + limit), total: docs.length, has_more: offset + limit < docs.length };
+  };
+  const page = (options = {}) => search([], [], [], { byMessage, searchPage, options: { query: "a b", limit: 2, ...options } });
+  const first = await page();
+  assert.deepEqual(first.items.map(d => d.document_id), ["d-55", "d-90"]);
+  assert.equal(first.total, 3); assert.equal(first.total_is_exact, false); assert.equal(first.has_more, true);
+  offsets.length = 0;
+  const second = await page({ offset: 2, candidateOffset: first.nextCandidateOffset });
+  assert.deepEqual(second.items.map(d => d.document_id), ["d-120"]);
+  assert.equal(offsets[0], 120, "continuation does not re-project earlier messages");
+  assert.equal(second.total, 3); assert.equal(second.total_is_exact, true); assert.equal(second.has_more, false);
+  const randomAccess = await page({ offset: 2 });
+  assert.deepEqual(randomAccess.items, second.items);
+});
+
+test("offline canonical ranges can continue to the 101st and 205th match without reading media", async () => {
+  const plain_text = "needle ".repeat(205);
+  const docs = [{ ...document, plain_text, search_text: plain_text }];
+  const blocks = [{ ...block, plain_text }];
+  const first = await search(docs, blocks);
+  assert.equal(first.items[0].matches.length, 100);
+  assert.equal(first.next_match_offset, 100);
+  const second = await search(docs, blocks, blocks, { options: {
+    candidateOffset: first.nextCandidateOffset, offset: first.next_offset,
+    matchOffset: first.next_match_offset, matchDocumentId: first.next_document_id,
+  } });
+  assert.equal(second.items[0].matches.length, 100);
+  assert.equal(second.next_match_offset, 200);
+  const third = await search(docs, blocks, blocks, { options: {
+    candidateOffset: second.nextCandidateOffset, offset: second.next_offset,
+    matchOffset: second.next_match_offset, matchDocumentId: second.next_document_id,
+  } });
+  assert.equal(third.items[0].matches.length, 5);
+  assert.equal(third.has_more, false);
+  assert.equal(new Set([first, second, third].flatMap(p => p.items.flatMap(i => i.matches.map(m => m.match_start)))).size, 205);
+});
 
 test("offline search preserves indexed version and raw code-point match ranges", async () => {
   const result = await search([document]);

@@ -34,6 +34,7 @@ import { MessageItem } from "./message-item";
 import { MessageInsertDialog } from "./message-insert-dialog";
 import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, restoreScrollAnchor, readerPositionBusy } from "./reader-navigation";
 import { firstVisibleRangeRect, resolveTextAnchorRange } from "./text-anchor";
+import { applySearchHighlight } from "./reader-search-highlight";
 import {
   canKeepShortReaderPrefix,
   emptyLoadedWindow,
@@ -1904,6 +1905,8 @@ export function ConversationReader({
     });
     if (result.ok && searchNavigationRef.current === context && ownsReaderReadRecovery(recentOwner)) {
       publishSearchNavigation({ ...context, index });
+      const key = context.occurrenceKeys?.[index];
+      if (key) setSearchPanelState(previous => ({ ...previous, activeIndex: index, activeOccurrenceKey: key }));
       setSearchHighlight(result.fallback ? null : { targetId: result.targetId, quote: target.quote ?? "", start: target.characterOffset, end: target.endCharacterOffset, prefix: target.prefix, suffix: target.suffix });
     }
   }, [navigateToTarget, openSearchAnnotation, openSearchAttachment, publishSearchNavigation, recentOwner, searchNavigation]);
@@ -3557,11 +3560,18 @@ export function ConversationReader({
               {navigationTargetIsAttachment ? <button type="button" onClick={() => void refreshAttachmentReferences()} className="shrink-0 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle">{resolvedLocale === "zh-CN" ? "刷新文件引用" : "Refresh file references"}</button> : null}
             </div>
           ) : null}
-          {searchNavigation ? <div className="flex min-w-0 items-center gap-2 border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-primary" role="status">
+          {utilityPanel === "search" && !sourceEditorTarget ? <div className="shrink-0 border-t border-ui md:hidden">
+            <ConversationSearchPanel compact showHeader={false} conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onPrepareRetry={onPrepareSearchRetry} onClose={() => { setUtilityPanel(null); clearSearchNavigation(); (restoreMobileUtilityFocus() ?? scrollContainerRef.current)?.focus({ preventScroll: true }); }} />
+          </div> : null}
+          {searchNavigation && utilityPanel !== "search" ? <div className="flex min-w-0 items-center gap-2 border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-primary" role="status">
             <span className="min-w-0 flex-1 truncate font-medium">{searchNavigation.query}</span>
-            <span className="shrink-0 text-xs text-secondary">{searchNavigation.index + 1} / {searchNavigation.targets.length}</span>
-            <button type="button" onClick={() => void navigateSearchResult(Math.max(0, searchNavigation.index - 1))} disabled={searchNavigation.index === 0} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "上一个匹配" : "Previous match"}><ChevronUp className="h-4 w-4" /></button>
-            <button type="button" onClick={() => void navigateSearchResult(Math.min(searchNavigation.targets.length - 1, searchNavigation.index + 1))} disabled={searchNavigation.index >= searchNavigation.targets.length - 1} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "下一个匹配" : "Next match"}><ChevronDown className="h-4 w-4" /></button>
+            <span className="shrink-0 text-xs text-secondary">{searchNavigation.index + 1} / {searchNavigation.targets.length}{searchNavigation.hasMore ? "+" : ""}</span>
+            <button type="button" onClick={() => void navigateSearchResult(Math.max(0, searchNavigation.index - 1))} disabled={searchNavigation.index === 0} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "上一个匹配" : "Previous match"}><ChevronUp className="h-4 w-4" /></button>
+            {searchNavigation.hasMore && searchNavigation.index === searchNavigation.targets.length - 1 ? <button type="button" className="min-h-11 shrink-0 rounded-md px-2 text-xs hover:bg-surface" onClick={() => {
+              const key = searchNavigation.occurrenceKeys?.[searchNavigation.index];
+              if (key) setSearchPanelState(previous => ({ ...previous, activeIndex: searchNavigation.index, activeOccurrenceKey: key, continueAfterKey: key }));
+              clearSearchNavigation(); void openUtilityPanel("search");
+            }}>{resolvedLocale === "zh-CN" ? "更多匹配" : "More matches"}</button> : <button type="button" onClick={() => void navigateSearchResult(Math.min(searchNavigation.targets.length - 1, searchNavigation.index + 1))} disabled={searchNavigation.index >= searchNavigation.targets.length - 1} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "下一个匹配" : "Next match"}><ChevronDown className="h-4 w-4" /></button>}
             <button type="button" onClick={() => { clearSearchNavigation(); void openUtilityPanel("search"); }} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-surface">{resolvedLocale === "zh-CN" ? "返回搜索" : "Return to search"}</button>
             <button type="button" onClick={() => { clearSearchNavigation(); setLocatePulse(null); }} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-surface" aria-label={t("close")}><X className="h-4 w-4" /></button>
           </div> : null}
@@ -3804,9 +3814,7 @@ export function ConversationReader({
       >
         {navigationContent}
       </MobileReaderSheet>
-      <MobileReaderSheet open={utilityPanel === "search" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={t("search")} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("search")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setUtilityPanel(null)} onPrepareRetry={onPrepareSearchRetry} showHeader={false} />
-      </MobileReaderSheet>
+
       <TabletReaderNavigationDrawer
         open={utilityPanel === "navigation" && navigationViewport === "tablet" && !sourceEditorTarget}
         label={t("readerNavigation")}
@@ -4325,32 +4333,6 @@ function buildReaderUrl(basePath: string, location: { conversationId: string; me
   return query ? `${basePath}?${query}` : basePath;
 }
 
-function applySearchHighlight(target: { targetId: string; quote: string; start?: number; end?: number; prefix?: string; suffix?: string } | null): () => void {
-  const highlights = (CSS as unknown as { highlights?: { set: (name: string, value: unknown) => void; delete: (name: string) => void } }).highlights;
-  const HighlightConstructor = (window as unknown as { Highlight?: new (...ranges: Range[]) => unknown }).Highlight;
-  if (!target || !highlights || !HighlightConstructor || !target.quote) {
-    highlights?.delete("chat-reader-search-match");
-    return () => undefined;
-  }
-  let frame = 0;
-  const apply = () => {
-    const element = document.getElementById(target.targetId);
-    const range = element ? resolveTextAnchorRange(element, {
-      quote: target.quote,
-      prefix: target.prefix,
-      suffix: target.suffix,
-      startOffset: target.start,
-      endOffset: target.end,
-    }) : null;
-    if (range) highlights.set("chat-reader-search-match", new HighlightConstructor(range));
-  };
-  apply();
-  frame = window.requestAnimationFrame(apply);
-  return () => {
-    if (frame) window.cancelAnimationFrame(frame);
-    highlights.delete("chat-reader-search-match");
-  };
-}
 
 function _navigationFailureCopy(
   reason: NavigationResult["reason"] | null,

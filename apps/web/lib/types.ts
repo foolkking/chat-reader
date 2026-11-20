@@ -1085,6 +1085,9 @@ export type SearchResponse = {
   has_more?: boolean;
   /** Offline bounded lookahead can report a lower bound, not a full count. */
   total_is_exact?: boolean;
+  next_offset?: number | null;
+  next_match_offset?: number;
+  next_document_id?: string | null;
 };
 export type ReadingContentChangesResponse = {
   conversation_id: string;

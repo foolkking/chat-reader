@@ -5,6 +5,7 @@ import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useR
 import {
   ApiRequestError,
   getSharedConversation,
+  findSharedConversation,
   getSharedDialogueIndex,
   getSharedReaderTurn,
   getSharedToc,
@@ -29,11 +30,15 @@ import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame"
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
 import { useDialogFocus } from "../../components/use-dialog-focus";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, Search, X } from "lucide-react";
 import { acquireReaderBlockLease, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "../conversations/block-virtualization";
 import { resolveActiveReadingTarget } from "../conversations/reader-active-position";
 import { ReaderMarkdownCopyBoundary } from "../conversations/reader-markdown-copy";
 import { tocNavigationTarget } from "../conversations/reader-locator-target";
+
+import { ConversationSearchPanel, type ConversationSearchPanelState } from "../search/conversation-search-panel";
+import { applySearchHighlight } from "../conversations/reader-search-highlight";
+import type { ReaderSearchOptions } from "../../lib/reader-data-source";
 
 const ACTIVE_READING_OFFSET = 96;
 
@@ -66,6 +71,21 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   const storageIsCurrent = storageVisit === navigationVisit;
   const currentSavedPosition = storageIsCurrent ? savedPosition : null;
   const [positionReady, setPositionReady] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findState, setFindState] = useState<ConversationSearchPanelState>({ query: "", documentType: "message", role: "all", activeIndex: 0 });
+  const [findHighlight, setFindHighlight] = useState<Parameters<typeof applySearchHighlight>[0]>(null);
+  // Share capabilities and password grants must never reuse another visit's find cache.
+  const findCacheKey = useMemo(() => ({ token, id: crypto.randomUUID() }), [token]);
+  const findSource = useMemo(() => ({ mode: "remote" as const,
+    searchConversation: (_id: string, options: ReaderSearchOptions) => findSharedConversation(token, options),
+  }), [token]);
+  useEffect(() => { setFindOpen(false); setFindHighlight(null); setFindState({ query: "", documentType: "message", role: "all", activeIndex: 0 }); }, [token]);
+  useEffect(() => applySearchHighlight(findHighlight), [findHighlight]);
+  useEffect(() => {
+    const open = () => { if (document.querySelector("[data-shared-find-trigger]")) setFindOpen(true); };
+    window.addEventListener("chat-reader:open-reader-search", open);
+    return () => window.removeEventListener("chat-reader:open-reader-search", open);
+  }, []);
   const [unlockPassword, setUnlockPassword] = useState("");
   const [unlockBusy, setUnlockBusy] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
@@ -328,7 +348,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     blockIndex?: number,
     alignmentOffset = 80,
     characterOffset?: number,
-    options?: { restorePosition?: boolean },
+    options?: { restorePosition?: boolean; isCurrent?: () => boolean },
   ): Promise<NavigationResult> => {
     const target: NavigateTarget = typeof targetOrMessageId === "string"
       ? { messageId: targetOrMessageId, blockIndex }
@@ -350,7 +370,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     let resolvedLocator: ResolvedLocatorResponse | undefined;
     const navigationToken = navigationTokenRef.current + 1;
     navigationTokenRef.current = navigationToken;
-    const tokenIsCurrent = () => navigationVisit.active && navigationTokenRef.current === navigationToken;
+    const tokenIsCurrent = () => navigationVisit.active && navigationTokenRef.current === navigationToken && options?.isCurrent?.() !== false;
     if (!options?.restorePosition) {
       restoreAttemptedRef.current = true;
       setPositionReady(true);
@@ -824,22 +844,23 @@ export function ShareReadonlyReader({ token }: { token: string }) {
 
   return (
     <main className="flex min-h-screen flex-col bg-page text-primary [--reader-sticky-top:5rem] [overflow-anchor:none]">
-      <header className="sticky top-0 z-10 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-ui bg-raised backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl flex-col justify-center px-4 sm:px-6">
           <p
             role="status"
             title={storageIsCurrent && positionStorageUnavailable
               ? (zh ? "本次无法保存阅读位置；阅读不受影响。" : "Your place cannot be saved for this visit. Reading is still available.")
               : undefined}
-            className="truncate text-xs font-medium text-[#6b7280]"
+            className="truncate text-xs font-medium text-secondary"
           >{storageIsCurrent && positionStorageUnavailable
             ? (zh ? "只读分享 · 本机进度无法保存" : "Read-only share · Progress not saved")
             : (zh ? "只读分享" : "Read-only share")}</p>
           <div className="flex items-center justify-between gap-3">
-            <h1 className="truncate text-lg font-semibold text-[#111827]">
+            <h1 className="truncate text-lg font-semibold text-primary">
               {payload.share.title || payload.conversation.display_title || payload.conversation.title}
             </h1>
             <div className="flex shrink-0 gap-2">
+              <button data-shared-find-trigger type="button" aria-label={zh ? "搜索分享正文" : "Find in shared text"} aria-expanded={findOpen} className="h-11 w-11 rounded-md text-primary hover:bg-subtle" onClick={() => setFindOpen(value => !value)}><Search className="mx-auto h-5 w-5" /></button>
               {tocReturnPoint ? <button type="button" onClick={() => void returnToTocOrigin()}
                 disabled={tocReturnBusy}
                 aria-busy={tocReturnBusy}
@@ -858,6 +879,18 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           <button type="button" onClick={() => void locateTocOriginMessage()} disabled={tocReturnBusy} className="min-h-10 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle">{zh ? "定位原消息" : "Locate message"}</button>
         </div> : null}
       </header>
+      {findOpen ? <aside className={navigationViewport === "mobile" ? "sticky top-16 z-10 border-b border-ui" : "fixed bottom-0 right-0 top-16 z-30 flex w-[min(28rem,45vw)] border-l border-ui bg-raised shadow-xl"}>
+        <ConversationSearchPanel compact={navigationViewport === "mobile"} bodyOnly showHeader={navigationViewport !== "mobile"}
+          conversationId={payload.conversation.id} sourceKey={`shared:${findCacheKey.id}`} dataSource={findSource}
+          initialState={findState} onStateChange={setFindState}
+          onClose={() => { setFindOpen(false); navigationTokenRef.current++; document.querySelector<HTMLButtonElement>("[data-shared-find-trigger]")?.focus({ preventScroll: true }); }}
+          onNavigate={async (target, _context, isCurrent) => {
+            if (!target.messageId || isCurrent?.() === false) return { ok: false, targetId: "", reason: "cancelled" };
+            const result = await navigateToTarget({ ...target, annotationId: undefined, messageId: target.messageId, source: "search" }, undefined, ACTIVE_READING_OFFSET, undefined, { isCurrent });
+            if (result.ok && isCurrent?.() !== false) setFindHighlight(result.fallback ? null : { targetId: result.targetId, quote: target.quote ?? "", start: target.characterOffset, end: target.endCharacterOffset, prefix: target.prefix, suffix: target.suffix });
+            return result;
+          }} />
+      </aside> : null}
       <ResponsiveReaderFrame index={<ConversationIndex
             conversationId={payload.conversation.id}
             activeMessageId={navigationTargetMessageId ?? activeMessageId}
@@ -1132,9 +1165,9 @@ function ShareState({
   retrying?: boolean;
 }) {
   return (
-    <div className="mx-auto w-full max-w-xl px-4 py-10 text-[#111827]">
+    <div className="mx-auto w-full max-w-xl px-4 py-10 text-primary">
       <h1 className="text-lg font-semibold">{title}</h1>
-      <p className="mt-2 text-sm leading-6 text-[#6b7280]">{detail}</p>
+      <p className="mt-2 text-sm leading-6 text-secondary">{detail}</p>
       {onRetry ? (
         <button
           type="button"

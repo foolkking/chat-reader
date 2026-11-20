@@ -18,13 +18,14 @@ export function TogetherChooser({ open, onClose, onChoose, openedIds = [], notic
   const zh = usePreferences().resolvedLocale === "zh-CN", id = useId();
   const root = useRef<HTMLElement>(null), input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState(""), [term, setTerm] = useState(""), [page, setPage] = useState(0);
+  const [composing, setComposing] = useState(false);
   useDialogFocus({ open, rootRef: root, initialFocusRef: input, onClose });
-  useEffect(() => { const timer = setTimeout(() => { setTerm(query.trim()); setPage(0); }, 250); return () => clearTimeout(timer); }, [query]);
+  useEffect(() => { if (composing) return; const timer = setTimeout(() => { setTerm(query.trim()); setPage(0); }, 250); return () => clearTimeout(timer); }, [query, composing]);
   const results = useQuery({
     queryKey: ["search", "together-picker", term, page], enabled: open,
     queryFn: async ({ signal }) => {
       if (term) {
-        const result = await searchConversations({ q: term, limit: 20, offset: page * 20, signal, statusScope: "all" });
+        const result = await searchConversations({ q: term,  limit: 20, offset: page * 20, signal, statusScope: "all" });
         return { hasMore: (page + 1) * 20 < result.total, items: result.items.map(item => ({
           conversationId: item.conversation_id, title: item.conversation_title, href: searchResultHref(item),
           snippet: item.snippet, key: item.document_id,
@@ -46,7 +47,7 @@ export function TogetherChooser({ open, onClose, onChoose, openedIds = [], notic
   return <div className="fixed inset-0 z-[185] flex items-start justify-center bg-[var(--overlay)] px-4 pt-[10svh]" onPointerDown={event => { if (event.target === event.currentTarget) onClose(); }}>
     <section ref={root} role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} className="flex max-h-[80svh] w-full max-w-xl flex-col rounded-xl border border-ui bg-raised shadow-2xl">
       <header className="flex items-center gap-2 border-b border-ui px-4 py-2"><h2 id={`${id}-title`} className="flex-1 text-sm font-semibold">{zh ? "打开另一个对话一起阅读" : "Open another conversation to read together"}</h2><button type="button" className="h-11 w-11" aria-label={zh ? "关闭" : "Close"} onClick={onClose}><X className="mx-auto h-5 w-5" /></button></header>
-      <div className="flex items-center gap-2 px-4 py-2"><Search className="h-4 w-4 text-secondary" /><input ref={input} value={query} onChange={event => setQuery(event.target.value)} maxLength={200}
+      <div className="flex items-center gap-2 px-4 py-2"><Search className="h-4 w-4 text-secondary" /><input ref={input} value={query} onCompositionStart={() => setComposing(true)} onCompositionEnd={() => setComposing(false)} onChange={event => setQuery(event.target.value)} maxLength={200}
         placeholder={zh ? "搜索你要一起阅读的对话或正文…" : "Find a conversation or passage to read alongside…"} aria-label={zh ? "搜索一起阅读的对话" : "Search conversations to read together"} className="min-h-11 min-w-0 flex-1 bg-transparent text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" /></div>
       <div className="min-h-0 flex-1 overflow-auto border-t border-ui p-2">
         {notice ? <p role="status" className="px-3 py-2 text-sm text-secondary">{notice}</p> : null}

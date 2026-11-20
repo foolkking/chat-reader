@@ -59,7 +59,7 @@ test("search waits for the local conversation read but keeps catalog download de
 });
 
 test("retry only reopens the existing local reload path", () => {
-  const retry = between("const retryLocalRead", "  useEffect(() => {\n    if (selectedId");
+  const retry = between("const retryLocalRead", "    if (selectedId");
   assert.match(retry, /if \(localReadRef\.current\.refreshing\) return;/);
   assert.match(retry, /void reloadLocal\(\)\.catch\(\(\) => undefined\)/);
   assert.doesNotMatch(retry, /enqueueOfflineDownload|retryOfflineDownload|router\./);

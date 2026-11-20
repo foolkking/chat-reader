@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Pencil, Save, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Pencil, Save, Trash2, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { getUserFeatureEntries } from "../../lib/api";
 import type { SavedSearchValue, UserFeatureEntry } from "../../lib/types";
@@ -26,6 +26,7 @@ export function SavedSearchesPanel({
     staleTime: 30_000,
   });
   const [saveOpen, setSaveOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState("");
@@ -36,6 +37,7 @@ export function SavedSearchesPanel({
       });
       setEditing(null);
       setSaveOpen(false);
+      setListOpen(true);
       setNewName("");
       setError("");
   };
@@ -77,13 +79,13 @@ export function SavedSearchesPanel({
 
   return (
     <section aria-labelledby="saved-searches-heading" className="border-y border-ui py-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="saved-searches-heading" className="text-sm font-semibold text-primary">{zh ? "已保存的搜索" : "Saved searches"}</h2>
-        <button type="button" disabled={recovery.blocked || !current.q.trim() || !searches.isSuccess || searches.data.length >= 20} onClick={() => { setSaveOpen((open) => !open); setError(""); }} className="btn-secondary inline-flex min-h-10 items-center gap-1.5 px-3 text-sm disabled:opacity-50">
-          <Save className="h-4 w-4" aria-hidden="true" />{zh ? "保存当前搜索" : "Save current search"}
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="saved-searches-heading" className="min-w-0 text-sm font-semibold text-primary"><button type="button" className="inline-flex min-h-11 items-center gap-1 text-left" aria-expanded={listOpen} onClick={() => setListOpen(value => !value)}><ChevronDown aria-hidden className={`h-4 w-4 shrink-0 ${listOpen ? "" : "-rotate-90"}`} />{zh ? "已保存的搜索" : "Saved searches"}{searches.data?.length ? ` · ${searches.data.length}` : ""}</button></h2>
+        <button type="button" aria-label={zh ? "保存当前搜索" : "Save current search"} disabled={recovery.blocked || !current.q.trim() || !searches.isSuccess || searches.data.length >= 20} onClick={() => { setSaveOpen((open) => !open); setError(""); }} className="btn-secondary inline-flex min-h-11 shrink-0 items-center gap-1.5 px-2 text-sm disabled:opacity-50">
+          <Save className="h-4 w-4" aria-hidden="true" />{zh ? "保存搜索" : "Save search"}
         </button>
       </div>
-      <p className="mt-1 text-xs text-secondary">{zh ? "只保存筛选条件，不保存搜索结果。最多 20 项；这些条件与你的账户同步，不记录搜索正文到诊断信息。" : "Saves filters, not result snapshots. Up to 20 per account; query conditions sync with your account and are excluded from diagnostic details."}</p>
+      {saveOpen ? <p className="mt-1 text-xs text-secondary">{zh ? "只保存筛选条件，不保存搜索结果。最多 20 项；这些条件与你的账户同步，不记录搜索正文到诊断信息。" : "Saves filters, not result snapshots. Up to 20 per account; query conditions sync with your account and are excluded from diagnostic details."}</p> : null}
       {saveOpen ? <form onSubmit={saveCurrent} className="mt-3 flex flex-wrap items-end gap-2">
         <label className="min-w-48 flex-1 text-xs font-medium text-secondary">
           {zh ? "名称" : "Name"}
@@ -94,7 +96,7 @@ export function SavedSearchesPanel({
       </form> : null}
       {searches.isPending ? <p role="status" className="mt-3 text-sm text-secondary">{zh ? "正在读取已保存搜索…" : "Loading saved searches…"}</p> : null}
       {searches.isError ? <div role="alert" className="mt-3 text-sm text-secondary"><p>{zh ? "无法读取已保存搜索；当前搜索功能不受影响。" : "Saved searches could not be loaded. Search itself is unaffected."}</p><button type="button" disabled={recovery.blocked} onClick={() => void searches.refetch()} className="mt-1 min-h-10 text-accent underline">{zh ? "重试" : "Retry"}</button></div> : null}
-      {searches.isSuccess && searches.data.length ? <ul className="mt-3 divide-y divide-[var(--border)]">
+      {searches.isSuccess && searches.data.length ? <ul hidden={!listOpen} className="mt-3 divide-y divide-[var(--border)]">
         {searches.data.map((entry) => <li key={entry.id} className="flex flex-wrap items-center gap-2 py-2">
           {editing?.id === entry.id ? <form onSubmit={(event) => rename(event, entry)} className="flex min-w-48 flex-1 items-center gap-2">
             <input disabled={recovery.blocked} aria-label={zh ? "搜索名称" : "Search name"} autoFocus maxLength={80} value={editing.name} onChange={(event) => setEditing({ id: entry.id, name: event.currentTarget.value })} className="min-h-10 min-w-0 flex-1 rounded-md border border-ui bg-surface px-2 text-sm text-primary" required />
@@ -109,7 +111,7 @@ export function SavedSearchesPanel({
             <button type="button" disabled={remove.isPending || recovery.blocked} onClick={() => remove.mutate(entry)} className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] disabled:opacity-50" aria-label={zh ? `删除 ${entry.value.name}` : `Delete ${entry.value.name}`}><Trash2 className="h-4 w-4" /></button>
           </> : null}
         </li>)}
-      </ul> : searches.isSuccess ? <p className="mt-3 text-sm text-secondary">{zh ? "尚无已保存的搜索。" : "No saved searches yet."}</p> : null}
+      </ul> : listOpen && searches.isSuccess ? <p className="mt-3 text-sm text-secondary">{zh ? "尚无已保存的搜索。" : "No saved searches yet."}</p> : null}
       {error ? <p role="alert" className="mt-2 text-sm text-[var(--danger)]">{error}</p> : null}
     {recovery.panel}
     </section>

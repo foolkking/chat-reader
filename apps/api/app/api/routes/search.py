@@ -41,6 +41,9 @@ def search_documents(
     tag_id: uuid.UUID | None = None,
     duplicate_of: uuid.UUID | None = None,
     terms_mode: bool = False,
+    reader_find: bool = False,
+    match_offset: int = Query(default=0, ge=0),
+    match_document_id: uuid.UUID | None = None,
     sort: str = Query(default="relevance", pattern="^(relevance|content_updated|imported)$"),
     db: Session = Depends(get_db),
 ) -> SearchResponse:
@@ -65,6 +68,9 @@ def search_documents(
             duplicate_of=duplicate_of,
             grouped=request.url.path.endswith("/conversations") and conversation_id is None,
             terms_mode=terms_mode or request.url.path.endswith("/conversations"),
+            reader_find=reader_find,
+            match_offset=match_offset,
+            match_document_id=match_document_id,
             sort=sort,
             ownership_scope=ownership_scope_from_request(request),
         )
@@ -107,6 +113,9 @@ def search_documents(
         offset=page.offset,
         total=page.total,
         has_more=page.has_more,
+        next_offset=page.next_offset,
+        next_match_offset=page.next_match_offset,
+        next_document_id=page.next_document_id,
     )
 
 

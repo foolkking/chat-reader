@@ -8,6 +8,7 @@ import { usePreferences } from "../../components/preferences-provider";
 import { searchResultHref } from "./search-result-target";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import type { SearchDisclosure } from "./search-return-state";
 import { searchConversations } from "../../lib/api";
 
 export function orderSearchResults(items: SearchResultItem[]) { return [...items]; }
@@ -19,7 +20,10 @@ export function SearchResults({
   onActiveIndexChange,
   selectedConversationIds,
   onConversationSelectionChange,
+  disclosures, onDisclosureChange,
 }: {
+  disclosures?: Record<string, SearchDisclosure>;
+  onDisclosureChange?: (key: string, value: SearchDisclosure) => void;
   items: SearchResultItem[];
   query: string;
   activeIndex?: number;
@@ -52,17 +56,20 @@ export function SearchResults({
         <Link href={`/conversations/${item.conversation_id}`} className="block min-h-11 content-center break-words text-base font-semibold text-primary [overflow-wrap:anywhere] focus:ring-2 focus:ring-[var(--focus)]">{item.conversation_title}</Link>
         <p className="text-xs text-secondary">{item.project_name ?? (resolvedLocale === "zh-CN" ? "未归类" : "Unclassified")}{item.conversation_status === "archived" ? (resolvedLocale === "zh-CN" ? " · 已归档" : " · Archived") : ""}</p>
         <Link href={searchResultHref(item)} data-search-index={index} aria-current={activeIndex === index ? "true" : undefined} className="mt-2 block min-h-11 break-words text-sm leading-6 text-secondary underline-offset-2 [overflow-wrap:anywhere] hover:underline"><span className="mr-2 text-xs text-accent">{documentLabel(item.document_type, resolvedLocale)}{item.role ? ` · ${roleLabel(item.role, resolvedLocale)}` : ""}{item.attachment_display_name ? ` · ${item.attachment_display_name}` : ""}</span><Highlight text={clean(item.snippet)} query={item.matches?.[0]?.quote || query} /></Link>
-        {(item.hit_count ?? 1) > 1 ? <ConversationHits item={item} query={query} /> : null}
+        {(item.hit_count ?? 1) > 1 ? <ConversationHits item={item} query={query} saved={disclosures?.[`hits:${item.document_id}`]} onSave={onDisclosureChange ? value => onDisclosureChange(`hits:${item.document_id}`, value) : undefined} /> : null}
       </div>
-      {item.document_type === "message" && item.occurrence_count > 1 ? <DuplicateLocations item={item} query={query} /> : null}
+      {item.document_type === "message" && item.occurrence_count > 1 ? <DuplicateLocations item={item} query={query} saved={disclosures?.[`duplicates:${item.document_id}`]} onSave={onDisclosureChange ? value => onDisclosureChange(`duplicates:${item.document_id}`, value) : undefined} /> : null}
     </div>;
   })}</div>;
 }
 
-function ConversationHits({ item, query }: { item: SearchResultItem; query: string }) {
+function ConversationHits({ item, query, saved, onSave }: { item: SearchResultItem; query: string; saved?: SearchDisclosure; onSave?: (value: SearchDisclosure) => void }) {
   const zh = usePreferences().resolvedLocale === "zh-CN";
-  const [open, setOpen] = useState(false);
-  const [offset, setOffset] = useState(0);
+  const [local, setLocal] = useState<SearchDisclosure>({ open: false, offset: 0 });
+  const { open, offset } = saved ?? local;
+  const save = (next: SearchDisclosure) => { setLocal(next); onSave?.(next); };
+  const setOpen = (update: (value: boolean) => boolean) => save({ open: update(open), offset });
+  const setOffset = (update: (value: number) => number) => save({ open, offset: update(offset) });
   const params = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
   const result = useQuery({
     queryKey: ["conversation-search-hits", item.conversation_id, query, params.toString(), offset],
@@ -82,10 +89,13 @@ function ConversationHits({ item, query }: { item: SearchResultItem; query: stri
     </div> : null}</div>;
 }
 
-function DuplicateLocations({ item, query }: { item: SearchResultItem; query: string }) {
+function DuplicateLocations({ item, query, saved, onSave }: { item: SearchResultItem; query: string; saved?: SearchDisclosure; onSave?: (value: SearchDisclosure) => void }) {
   const zh = usePreferences().resolvedLocale === "zh-CN";
-  const [open, setOpen] = useState(false);
-  const [offset, setOffset] = useState(0);
+  const [local, setLocal] = useState<SearchDisclosure>({ open: false, offset: 0 });
+  const { open, offset } = saved ?? local;
+  const save = (next: SearchDisclosure) => { setLocal(next); onSave?.(next); };
+  const setOpen = (update: (value: boolean) => boolean) => save({ open: update(open), offset });
+  const setOffset = (update: (value: number) => number) => save({ open, offset: update(offset) });
   const params = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
   const result = useQuery({
     queryKey: ["duplicate-locations", item.document_id, query, offset, params.toString()],

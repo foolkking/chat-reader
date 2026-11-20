@@ -50,9 +50,10 @@ class ApiShardTests(unittest.TestCase):
         original = json.loads((ROOT / "scripts/ci/quality-schedule-v2.json").read_text("utf8"))
         self.assertEqual(original["api"]["collected_count"], 7010)
         self.assertEqual(original["api"]["expected_passed"], 7007)
-        self.assertEqual(plan["api"]["collected_count"], 7043)
-        self.assertEqual(plan["api"]["expected_passed"], 7040)
-        self.assertEqual(sum(plan["api"]["added_file_counts"].values()), 33)
+        self.assertEqual(plan["api"]["collected_count"], 7049)
+        self.assertEqual(plan["api"]["expected_passed"], 7046)
+        self.assertEqual(sum(plan["api"]["added_file_counts"].values()), 39)
+        self.assertEqual(plan["api"]["added_file_counts"]["tests/test_reader_find.py"], 6)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_admin_updates.py"], 9)
         for family in ("settings", "web"):
             self.assertEqual(plan[family], original[family])

@@ -128,6 +128,11 @@ function fixture({ items = [A, B], locale = "en-US", initialState = initial, nav
       input().onChange({ target: { value } }); render(); if (debounce) timersRun();
     },
     filter(index, value) {
+      // Filters are intentionally disclosed on demand; preserve all retirement assertions.
+      if (!walk(tree).some(node => node.type === "select")) {
+        const button = walk(tree).find(node => node.type === "button" && [node.props.children].flat().includes("Filters"));
+        assert.ok(button, "Filters disclosure exists"); button.props.onClick(); render();
+      }
       walk(tree).filter(node => node.type === "select")[index].props.onChange({ target: { value } }); render();
     },
     key(key, extra = {}) {
@@ -198,7 +203,10 @@ for (const locale of ["en-US", "zh-CN"]) {
           prefix: A.matches[0].context_before, suffix: A.matches[0].context_after,
         };
         assert.deepEqual(f.calls.navigation[0], { target: expectedB,
-          context: { query: "synthetic", index: 0, targets: [expectedB, expectedA] } });
+          context: { query: "synthetic", index: 0, targets: [expectedB, expectedA], hasMore: false,
+            occurrenceKeys: [B, A].map(item => JSON.stringify([item.conversation_id, item.document_type, item.message_id,
+              item.message_version_id, item.matches[0].render_block_id, 3, item.matches[0].match_start,
+              item.matches[0].match_end, item.matches[0].quote])) } });
       } finally { f.dispose(); }
     });
   }
@@ -232,6 +240,7 @@ test("appended pages retain the selected occurrence and disclose document versus
     assert.match(f.text(), /more available/i);
     f.loadMore(); assert.equal(f.calls.nextPages, 1);
     assert.equal(f.options.getNextPageParam(pages[0]), 50);
+    assert.deepEqual(f.options.getNextPageParam({ ...pages[0], nextCandidateOffset: 67 }), { offset: 1, candidateOffset: 67 });
     assert.equal(f.options.getNextPageParam({ ...pages[1], items: [], has_more: true }), undefined);
     assert.equal(f.options.getNextPageParam({ ...pages[1], has_more: false }), undefined);
   } finally { f.dispose(); }
@@ -262,6 +271,19 @@ test("a removed selection has no replacement highlight or Enter navigation and e
     f.key("Enter"); await setImmediate();
     assert.deepEqual(f.calls.navigation, []);
     assert.equal(f.calls.closes, 0);
+  } finally { f.dispose(); }
+});
+
+test("reindexing an unchanged passage replaces its index id but not the chosen destination", async () => {
+  const f = fixture();
+  try {
+    f.key("ArrowDown");
+    const selectedKey = f.calls.states.at(-1).activeOccurrenceKey;
+    f.setItems([{ ...B, document_id: "rebuilt-b" }, { ...A, document_id: "rebuilt-a" }]);
+    assert.deepEqual(f.selected(), ["Synthetic match B"]);
+    assert.equal(f.calls.states.at(-1).activeOccurrenceKey, selectedKey);
+    f.key("Enter"); await setImmediate();
+    assert.equal(f.calls.navigation[0].target.messageId, B.message_id);
   } finally { f.dispose(); }
 });
 

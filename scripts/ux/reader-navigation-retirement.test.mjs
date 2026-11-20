@@ -503,7 +503,7 @@ for (const scope of ["source", "conversation"]) {
   });
 }
 
-test("both footer dismiss actions use the synchronous clear and context state has one publisher", () => {
+test("return, continue at the page boundary, and dismiss synchronously retire footer context; it has one publisher", () => {
   const dismissals = [], stateWrites = [];
   const visit = node => {
     if (ts.isJsxAttribute(node) && node.name.getText(ast) === "onClick"
@@ -512,8 +512,10 @@ test("both footer dismiss actions use the synchronous clear and context state ha
     ts.forEachChild(node, visit);
   };
   visit(reader);
-  assert.equal(dismissals.length, 2);
-  assert.ok(dismissals.some(text => text.includes('openUtilityPanel("search")')));
+  assert.equal(dismissals.length, 3);
+  const reopen = dismissals.filter(text => text.includes('openUtilityPanel("search")'));
+  assert.equal(reopen.length, 2);
+  assert.equal(reopen.filter(text => text.includes("continueAfterKey: key")).length, 1);
   assert.ok(dismissals.some(text => text.includes("setLocatePulse(null)")));
   assert.equal(stateWrites.length, 1);
 });

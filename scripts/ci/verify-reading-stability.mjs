@@ -9,8 +9,29 @@ assert.equal(gate.status, "passed");
 assert.ok(gate.test_count >= 35, "Existing stability, seven natural-flow cases and all fold/public-output audit regressions must run.");
 assert.equal(gate.result_counts.passed, gate.test_count, "Every new gate case must actually run.");
 for (const status of ["skipped", "failed", "timedOut", "interrupted"]) assert.equal(gate.result_counts[status], 0);
+for (const leaf of ["fast-read.json", "find-navigation.json", "find-remount.json", "early-movement.json"]) {
+  const inputs = new Set([false, true]);
+  for (const file of readdirSync(root, { recursive: true }).filter(name => name.endsWith(leaf))) {
+    const data = JSON.parse(readFileSync(join(root, file), "utf8"));
+    assert.ok(inputs.delete(data.mobile), `Unexpected or duplicate input for ${leaf}`);
+    if (leaf === "fast-read.json") {
+      assert.equal(data.virtual, true); assert.ok(data.lines > 12 && data.highest >= 11);
+      assert.equal(data.topResets, 0); assert.equal(data.worstBacktrack, 0);
+    } else if (leaf === "find-navigation.json") {
+      assert.equal(data.rowsAtStart, 50); assert.equal(data.chosenNumber, 51);
+      assert.equal(data.resumedNumber, 52); assert.equal(data.virtualRowRemountHighlight, true);
+    } else if (leaf === "find-remount.json") {
+      assert.ok(data.virtualRows > 0); assert.equal(data.targetMounted, false);
+      assert.ok(data.scrollTop > 1000);
+    } else {
+      assert.equal(data.staleRestoreRejected, true); assert.equal(data.restoredWithoutMovement, true);
+      assert.ok(data.afterUserMovement > data.initialTop + 80 && data.frames >= 15 && data.max <= 2);
+    }
+  }
+  assert.equal(inputs.size, 0, `Missing real browser evidence: ${leaf}`);
+}
 const passages = readdirSync(root, { recursive: true }).filter(name => name.endsWith("media-passage.json"));
-const requiredPassages = new Set(["image","long-image","math","mixed","turns"].flatMap(kind => [false,true].map(mobile=>`${kind}/${mobile}`)));
+const requiredPassages = new Set(["text","image","long-image","math","mixed","turns"].flatMap(kind => [false,true].map(mobile=>`${kind}/${mobile}`)));
 for (const name of passages) {
   const {kind,mobile,images,phases} = JSON.parse(readFileSync(join(root,name),"utf8"));
   assert.ok(requiredPassages.delete(`${kind}/${mobile}`), "Unexpected or duplicate gesture trace");
@@ -20,10 +41,13 @@ for (const name of passages) {
   if (kind==="turns") assert.ok(phases.some(p=>p.edge) && phases.some(p=>p.newArticles>0));
   for (const p of phases) {
     assert.ok(p.comparisons>8 && p.blank===0 && p.unmeasuredGap<=.5 && p.worst<=2 && p.reverse<=4);
+    assert.ok(p.invisibleTextFrames === 0 && p.textWorst <= 2 && p.frames.length > 8);
+    assert.ok(p.frames.every(f => Number.isFinite(f.time) && Number.isFinite(f.scroll) && typeof f.writer === "string"));
     assert.ok(p.travelled>(mobile?130:320), "Zero reversal is not success if the text did not move");
   }
+  assert.ok(phases.reduce((total, p) => total + p.textFrames, 0) > 8, "Real character witnesses, not just scrollTop, must be measured");
 }
-assert.equal(requiredPassages.size,0,"All ten input/content combinations must produce frame measurements");
+assert.equal(requiredPassages.size,0,"All twelve input/content combinations must produce frame measurements");
 const files = readdirSync(root, { recursive: true }).filter(name => /(?:stopped|down|up|viewer)-frames\.json$/.test(name));
 assert.equal(files.length, 16 * 4, "All four surfaces, two widths, normal/virtual, stationary, both scroll directions and Viewer round-trips need frame evidence.");
 for (const phase of ["stopped", "down", "up", "viewer"])

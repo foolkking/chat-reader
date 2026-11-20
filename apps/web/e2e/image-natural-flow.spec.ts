@@ -5,7 +5,9 @@ import { syntheticImage } from "./synthetic-image";
 import { legacyImageMetadata } from "./image-legacy-test-helper";
 
 test.skip(process.env.E2E_READING_STABILITY !== "1", "Isolated synthetic image-flow gate");
-test.use({ serviceWorkers: "block", extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
+test.use({ serviceWorkers: "block", extraHTTPHeaders: {
+  Origin: new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3107").origin,
+} });
 type Asset = { id: string; asset_object: { sha256: string }; metadata: Record<string, unknown> };
 let conversation = "", message = "";
 const assets: Asset[] = [];

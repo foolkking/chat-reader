@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { archiveConversation, getProjects, getUserFeatureEntries, searchConversations } from "../../lib/api";
 import type { SearchResultItem, SavedSearchValue, ConversationTagValue } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
@@ -17,6 +17,9 @@ import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-se
 import { buildSearchReadingQueue, sanitizeSearchReturnHref, searchReadingQueueStorageKey, withSearchReadingQueue } from "./search-reading-queue";
 import { getCurrentOfflineRuntimeUserId } from "../../lib/auth-client";
 import { collectSearchPages } from "./search-pages";
+import { activeSearchFilter } from "./search-filter-state";
+import { authenticationGeneration } from "../../lib/offline-access";
+import type { SearchReturnState, SearchDisclosure } from "./search-return-state";
 
 const PAGE_SIZE = 50;
 
@@ -45,6 +48,13 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   const searchEpochRef = useRef(0);
   const queryScope = JSON.stringify([query, sort, documentType, role, projectId, statusScope, dateFrom, dateTo, tagId]);
   const scope = JSON.stringify([queryScope, searchEpoch]);
+  const queryClient = useQueryClient();
+  const returnKey = ["search-return", authenticationGeneration(), getCurrentOfflineRuntimeUserId(), queryScope];
+  const [returnState] = useState(() => queryClient.getQueryData<SearchReturnState>(returnKey));
+  const returnScope = useRef(scope);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [disclosureState, setDisclosureState] = useState({ scope, values: returnState?.disclosures ?? {} as Record<string, SearchDisclosure> });
+  const disclosures = disclosureState.scope === scope ? disclosureState.values : {};
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const restartSearch = (remainingIds: string[] = []) => {
@@ -53,12 +63,12 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
     setConversationSelection({ scope: JSON.stringify([queryScope, next]), ids: remainingIds });
   };
   const tags = useQuery({ queryKey: ["user-feature-entries", "conversation-tag"], queryFn: ({ signal }) => getUserFeatureEntries<ConversationTagValue>("conversation-tag", signal) });
-  const [paging, setPaging] = useState({ scope, offset: 0 });
+  const [paging, setPaging] = useState({ scope, offset: returnState?.offset ?? 0 });
   const offset = paging.scope === scope ? paging.offset : 0;
-  const [collection, setCollection] = useState<{ scope: string; pages: Record<number, SearchResultItem[]> }>({ scope, pages: {} });
+  const [collection, setCollection] = useState<{ scope: string; pages: Record<number, SearchResultItem[]> }>({ scope, pages: returnState?.pages ?? {} });
   const items = useMemo(() => collection.scope === scope ? collectSearchPages(collection.pages) : [], [collection, scope]);
-  const [selection, setSelection] = useState<{ scope: string; documentId: string | null }>({ scope, documentId: null });
-  const [conversationSelection, setConversationSelection] = useState<{ scope: string; ids: string[] }>({ scope, ids: [] });
+  const [selection, setSelection] = useState<{ scope: string; documentId: string | null }>({ scope, documentId: returnState?.documentId ?? null });
+  const [conversationSelection, setConversationSelection] = useState<{ scope: string; ids: string[] }>({ scope, ids: returnState?.selectedIds ?? [] });
   const [batchBusy, setBatchBusy] = useState(false);
   const [batchNotice, setBatchNotice] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -69,8 +79,21 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
     .filter(id => loadedConversationIds.has(id)));
   const activeIndex = selection.scope === scope
     ? orderedItems.findIndex((item) => item.document_id === selection.documentId) : -1;
+  const rememberResults = () => queryClient.setQueryData<SearchReturnState>(returnKey, {
+    pages: collection.scope === scope ? collection.pages : {},
+    offset, documentId: selection.scope === scope ? selection.documentId : null,
+    selectedIds: [...selectedConversationIds], disclosures,
+    scrollTop: scrollRef.current?.scrollTop ?? 0,
+  });
+  useLayoutEffect(() => {
+    if (returnState && returnScope.current === scope && scrollRef.current) {
+      scrollRef.current.scrollTop = returnState.scrollTop;
+    }
+    // Restore only the initial layout, never after a user's subsequent gesture.
+  }, []);
   const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo);
-  const filterCount = [statusScope !== "active", documentType !== "all", role !== "all", projectId !== "all", Boolean(dateFrom), Boolean(dateTo), Boolean(tagId)].filter(Boolean).length;
+  const activeFilters = Object.entries({ document_type: documentType, role, project_id: projectId, status_scope: statusScope, date_from: dateFrom, date_to: dateTo, tag_id: tagId }).filter(([key, value]) => activeSearchFilter(key, value));
+  const filterCount = activeFilters.length;
   const result = useQuery({
     queryKey: ["search", query, sort, documentType, role, projectId, statusScope, dateFrom, dateTo, tagId, searchEpoch, offset],
     queryFn: ({ signal }) => searchConversations({
@@ -116,6 +139,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   const openSelected = () => {
     const item = orderedItems[activeIndex];
     if (!item) return;
+    rememberResults();
     router.push(searchResultHref(item));
   };
   const startContinuousReading = () => {
@@ -127,6 +151,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
     try {
       queue.returnHref = sanitizeSearchReturnHref(`${window.location.pathname}${window.location.search}`) ?? "/search";
       window.sessionStorage.setItem(searchReadingQueueStorageKey(queueId, getCurrentOfflineRuntimeUserId()), JSON.stringify(queue));
+      rememberResults();
       router.push(href);
     } catch {
       setBatchNotice(zh
@@ -179,7 +204,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
       document_type: ["内容类型", "Content type"], role: ["角色", "Role"], status_scope: ["状态", "Status"], date_from: ["开始日期", "From"], date_to: ["结束日期", "To"],
       conversation: ["标题", "Title"], message: ["正文", "Message"], heading: ["章节", "Section"], code: ["代码", "Code"],
       annotation: ["批注", "Annotation"], attachment: ["附件", "Attachment"], notebook: ["笔记", "Notebook"], description: ["简介", "Description"],
-      archived: ["已归档", "Archived"], user: ["用户", "User"], assistant: ["助手", "Assistant"],
+      archived: ["已归档", "Archived"], all: ["含归档的全部状态", "All, including archived"], user: ["用户", "User"], assistant: ["助手", "Assistant"],
     };
     const label = (text: string) => labels[text]?.[zh ? 0 : 1] ?? text;
     return `${label(key)}: ${label(value)}`;
@@ -193,7 +218,10 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   const content = (
       <section className="flex min-w-0 flex-1 flex-col">
          <MobilePageHeader title={zh ? "搜索" : "Search"} description={zh ? "搜索对话、正文、章节、代码、批注和附件" : "Search conversations, messages, sections, code, annotations, and attachments"} onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)} />
-        <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl space-y-5 px-[clamp(1rem,2vw,2rem)] py-8">
+        <div ref={scrollRef} data-testid="search-scroll-root" className="min-h-0 flex-1 overflow-y-auto" onClickCapture={event => {
+          const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
+          if (link && new URL(link.href, location.href).pathname.startsWith("/conversations/")) rememberResults();
+        }}><div className="mx-auto max-w-5xl space-y-5 px-[clamp(1rem,2vw,2rem)] py-8">
           <SearchBox initialQuery={query} onSearch={(value) => { if (value === query) restartSearch(); else update({ q: value }); }} hasResults={items.length > 0} onMoveSelection={moveSelection} onOpenSelection={openSelected} />
           <SavedSearchesPanel
             current={{ q: query, sort, document_type: documentType as SavedSearchValue["document_type"], role: role as "all" | "user" | "assistant", project_id: projectId === "all" ? null : projectId, status_scope: statusScope as "active" | "archived" | "all", date_from: dateFrom || null, date_to: dateTo || null, tag_id: tagId || null }}
@@ -215,22 +243,22 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
             {filterCount ? <button type="button" onClick={clearFilters} className="min-h-10 text-sm text-accent">{zh ? "清除筛选" : "Clear filters"}</button> : null}
             <span role="status" className="ml-auto text-xs text-secondary">{query && !invalidDates && !result.isError ? (result.isFetching ? (zh ? "正在搜索…" : "Searching…") : (zh ? `${items.length} / ${total} 个对话` : `${items.length} / ${total} conversations`)) : ""}</span>
           </div>
-          {query && items.length ? (
+          {query && items.length && (selectedConversationIds.size > 0 || readingQueueCandidate) ? (
             <div className="flex flex-wrap items-center gap-3 rounded-lg border border-ui bg-surface px-3 py-2 text-xs text-secondary">
-              <span>{zh ? `已选 ${selectedConversationIds.size} 个对话` : `${selectedConversationIds.size} selected`}</span>
+              {selectedConversationIds.size > 0 ? <span>{zh ? `已选 ${selectedConversationIds.size} 个对话` : `${selectedConversationIds.size} selected`}</span> : null}
               {readingQueueCandidate ? <button type="button" onClick={startContinuousReading} className="min-h-9 rounded-md border border-ui bg-page px-3 font-medium text-primary hover:bg-subtle">
                 {zh ? `连续阅读 · ${readingQueueCandidate.hrefs.length} 个已加载结果` : `Read ${readingQueueCandidate.hrefs.length} loaded results`}
               </button> : null}
-              <button type="button" disabled={selectedConversationIds.size === 0 || batchBusy} onClick={() => void archiveSelected()} className="btn-secondary ml-auto inline-flex min-h-9 items-center px-3 text-xs disabled:opacity-50">
+              {selectedConversationIds.size > 0 ? <button type="button" disabled={batchBusy} onClick={() => void archiveSelected()} className="btn-secondary ml-auto inline-flex min-h-11 items-center px-3 text-xs disabled:opacity-50">
                 {batchBusy ? (zh ? "正在归档…" : "Archiving…") : (zh ? "归档已选对话" : "Archive selected")}
-              </button>
+              </button> : null}
             </div>
           ) : null}
           {batchNotice ? <p role="status" className="text-xs text-secondary">{batchNotice}</p> : null}
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span>{zh ? "搜索范围：" : "Scope: "}{projectId === "all" ? (zh ? "全部对话" : "All conversations") : projects.data?.find(item => item.id === projectId)?.name ?? (zh ? "当前项目" : "Current project")}</span>
             <label>{zh ? "结果排序 " : "Results order "}<select value={sort} onChange={event => update({ sort: event.target.value })} className="min-h-11 rounded border border-ui bg-surface px-2"><option value="relevance">{zh ? "相关性" : "Relevance"}</option><option value="content_updated">{zh ? "内容更新" : "Content updated"}</option><option value="imported">{zh ? "导入时间" : "Imported"}</option></select></label>
-            {Object.entries({ document_type: documentType, role, project_id: projectId, status_scope: statusScope, date_from: dateFrom, date_to: dateTo, tag_id: tagId }).filter(([key, value]) => value && value !== "all" && !(key === "status_scope" && value === "active")).map(([key, value]) => <button key={key} type="button" aria-label={`${zh ? "移除筛选" : "Remove filter"}: ${filterCaption(key, value)}`} className="btn-secondary min-h-11 px-2 text-xs" onClick={() => update({ [key]: key === "status_scope" ? "active" : "all" })}>{filterCaption(key, value)} ×</button>)}
+            {activeFilters.map(([key, value]) => <button key={key} type="button" aria-label={`${zh ? "移除筛选" : "Remove filter"}: ${filterCaption(key, value)}`} className="btn-secondary min-h-11 px-2 text-xs" onClick={() => update({ [key]: key === "status_scope" ? "active" : "all" })}>{filterCaption(key, value)} ×</button>)}
           </div>
           <div id="global-search-filters" hidden={!filtersOpen} className={filtersOpen ? "grid gap-3 border-y border-ui py-4 sm:grid-cols-2 lg:grid-cols-4" : "hidden"}>
             <Filter label={zh ? "范围" : "Status"} value={statusScope} onChange={(value) => update({ status_scope: value })} options={[["active", zh ? "未归档" : "Active"], ["archived", zh ? "已归档" : "Archived"], ["all", zh ? "全部" : "All"]]} />
@@ -257,7 +285,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
           {query && !invalidDates && !result.isError && !result.isFetching && items.length === 0 ? <State text={zh ? "没有找到结果。请清除筛选或修改关键词。" : "No results. Clear filters or try another query."} /> : null}
           <p id="search-selection-status" role="status" className="sr-only">{activeIndex >= 0 && orderedItems[activeIndex] ? `${activeIndex + 1} / ${items.length}: ${orderedItems[activeIndex].conversation_title}` : ""}</p>
           {projectId !== "all" && !result.isFetching && items.length === 0 ? <button type="button" className="btn-secondary min-h-11 px-3" onClick={() => update({ project_id: "all" })}>{zh ? "扩大到全部对话" : "Search all conversations"}</button> : null}
-          <div ref={resultsRef}>{items.length ? <SearchResults items={orderedItems} query={query} activeIndex={activeIndex} onActiveIndexChange={selectIndex} selectedConversationIds={selectedConversationIds} onConversationSelectionChange={toggleConversationSelection} /> : null}</div>
+          <div ref={resultsRef}>{items.length ? <SearchResults items={orderedItems} query={query} activeIndex={activeIndex} onActiveIndexChange={selectIndex} selectedConversationIds={selectedConversationIds} onConversationSelectionChange={toggleConversationSelection} disclosures={disclosures} onDisclosureChange={(key, value) => setDisclosureState(current => ({ scope, values: { ...(current.scope === scope ? current.values : {}), [key]: value } }))} /> : null}</div>
           {!result.isError && result.data && (result.data.has_more ?? result.data.offset + result.data.limit < total) ? <button type="button" onClick={() => setPaging({ scope, offset: result.data.offset + result.data.limit })} disabled={result.isFetching} className="mx-auto block min-h-11 rounded-lg border border-ui bg-surface px-5 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">{result.isFetching ? (zh ? "正在加载…" : "Loading…") : (zh ? "加载更多" : "Load more")}</button> : null}
         </div></div>
       </section>

@@ -52,6 +52,10 @@ class SearchResponse(BaseModel):
     offset: int
     total: int
     has_more: bool = False
+    total_is_exact: bool = True
+    next_offset: int | None = None
+    next_match_offset: int = 0
+    next_document_id: UUID | None = None
 
 
 class SearchReindexRequest(BaseModel):

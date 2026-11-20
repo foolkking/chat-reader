@@ -9,6 +9,8 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.schemas.message import DialogueIndexResponse, LocatorTargetRequest, ReaderTurnResponse, RenderBlockRead, ResolvedLocatorResponse
 from app.schemas.search import MessageWindowResponse
+from app.schemas.search import SearchResponse
+from app.services.sharing.share_find import SharedFindRequest, find_shared_body
 from app.schemas.annotation import AnnotationRead, NotebookRead
 from app.schemas.share import ShareCreate, ShareCreateResponse, SharePreviewResponse, ShareRead, ShareRevokeResponse, ShareUnlockInput, ShareUnlockResponse, ShareUpdate, SharedConversationBootstrap
 from app.schemas.share import OwnedSharePage, ShareBatchResult, ShareBatchRevokeInput, ShareBatchRevokeResponse
@@ -44,6 +46,16 @@ from app.services.reader_locator import resolve_reader_locator
 from app.services.ownership import ownership_scope_from_request
 
 router = APIRouter(tags=["shares"])
+
+
+@router.post("/api/shared/{token}/find", response_model=SearchResponse)
+def find_shared_passages(token: str, payload: SharedFindRequest, request: Request,
+                         response: Response, db: Session = Depends(get_db)) -> SearchResponse:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return find_shared_body(db, token, payload, request.cookies.get(SHARE_UNLOCK_COOKIE_NAME))
+    except ShareError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
 @router.post(

@@ -11,9 +11,10 @@ test("product coverage is additive; frozen scheduling and original skips remain 
   assert.deepEqual(active.settings, base.settings);
   assert.deepEqual(active.web, base.web);
   assert.deepEqual(active.api.allowed_skips, base.api.allowed_skips);
-  assert.equal(active.api.collected_count, base.api.collected_count + 33);
-  assert.equal(active.api.expected_passed, base.api.expected_passed + 33);
+  assert.equal(active.api.collected_count, base.api.collected_count + 39);
+  assert.equal(active.api.expected_passed, base.api.expected_passed + 39);
   assert.equal(active.api.added_file_counts["tests/test_admin_updates.py"], 9);
+  assert.equal(active.api.added_file_counts["tests/test_reader_find.py"], 6);
   for (const [file, shard] of Object.entries(base.api.assignment)) assert.equal(active.api.assignment[file], shard);
   for (const [file, expected] of Object.entries(active.api.source_lf_sha256)) {
     const source = readFileSync(new URL(`../../apps/api/${file}`, import.meta.url), "utf8").replaceAll("\r\n", "\n");
@@ -58,13 +59,16 @@ test("reviewed Settings navigation adaptation preserves all original native case
   const schedule = validateSettingsSources();
   const format = schedule.settings_fixture_revisions["settings-format-health.spec.ts"];
   const help = schedule.settings_fixture_revisions["settings-help-runtime.spec.ts"];
+  const presentation = schedule.settings_fixture_revisions["settings-presentation.spec.ts"];
   assert.equal(format.cases.length, 6);
   assert.equal(help.cases.length, 6);
   assert.equal(help.cases.filter(item => item.timeout === 180_000).length, 4);
-  const cases = () => new Map([...format.cases, ...help.cases].map(identity => [identity.id, { identity: structuredClone(identity) }]));
+  assert.equal(presentation.cases.filter(item => item.timeout === 180_000).length, 6);
+  const cases = () => new Map([...format.cases, ...help.cases, ...presentation.cases].map(identity => [identity.id, { identity: structuredClone(identity) }]));
   validateReviewedSettingsCases(cases(), schedule);
   for (const mutate of [
     value => { value.delete(format.cases[0].id); },
+    value => { value.delete(presentation.cases[0].id); },
     value => { value.get(help.cases.find(item => item.timeout === 180_000).id).identity.timeout = 90_000; },
     value => { const first = value.values().next().value; value.set("extra", structuredClone(first)); },
     value => { value.values().next().value.identity.id = "substitute"; },

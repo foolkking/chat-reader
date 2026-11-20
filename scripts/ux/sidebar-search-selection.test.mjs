@@ -69,6 +69,7 @@ function fixture({ locale = "en-US" } = {}) {
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
     "../../lib/api": { searchConversations: () => { throw new Error("This fixture must not issue a search request"); } },
     "./search-result-target": targetExports,
+    "./search-snippet": { SearchSnippet: "SearchSnippet" },
   };
   const exports = {};
   new Function("require", "exports", "window", compiled)(name => {

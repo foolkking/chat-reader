@@ -67,11 +67,13 @@ export async function searchOffline(query: string, limit = 80, scope?: OfflineSe
   return (await searchOfflinePage(query, limit, 0, scope)).items;
 }
 
-export async function searchOfflinePage(query: string, limit = 80, offset = 0, scope?: OfflineSearchScope): Promise<OfflineSearchPage> {
+/** Bind every candidate batch of one Reader page to the same initialized Worker. */
+export function captureOfflineSearchIndex() { return searchIndex; }
+
+export async function searchOfflinePage(query: string, limit = 80, offset = 0, scope?: OfflineSearchScope, index = searchIndex): Promise<OfflineSearchPage> {
   const access = captureOfflineAccess();
   if (!query.trim()) return { items: [], total: 0, total_is_exact: true, offset, has_more: false };
-  const index = searchIndex;
-  if (!index) throw new Error("Offline search is unavailable.");
+  if (!index || searchIndex !== index) throw new Error("Offline search is unavailable.");
   assertOfflineAccess(index.access);
   // Wait only for an established initialization. Never create a replacement
   // Worker here and mistake its empty index for a successful no-match search.
