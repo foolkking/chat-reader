@@ -1,5 +1,6 @@
 # 文档导航
 
+- [v0.1.2 已发布、生产停服前准入拒绝与修复候选](evidence/search-reading-2026-11-20/v0.1.2-publication-and-host-admission.json)：精确完整 CI、签名/GHCR、阅读证据、6.346 秒生产下载及冷态 Docker 扫描的原失败。当前生产仍以 `PROJECT_STATE.md` 为准。
 - [搜索与阅读：授权边界、分页、返回现场和滚动所有权](system/SEARCH_READING_CONTRACT.md) · [改动前问题表](evidence/search-reading-2026-11-20/ux-audit.md) · [60 项浏览器验证及失败记录](evidence/search-reading-2026-11-20/verification.json)（本轮候选，生产以精确发布回执为准）
 - [后续 CI 44676319339 失败与修复](evidence/search-reading-2026-11-20/ci-44676319339-repair.json)：分页 74px 位移、手机查找关闭焦点及旧弹窗测试适配；后续完整 CI 未通过前不发布。
 - [CI 44728601066 失败与修复候选](evidence/search-reading-2026-11-20/ci-44728601066-repair.json)：附件夹具遗漏回调、原生输入与迟到恢复的分阶段观测；保留 72px 原失败及未复现边界。

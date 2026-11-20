@@ -1,12 +1,85 @@
 import json
+import importlib.util
 import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import publish_update as pub
 from update_distribution import OFFICIAL, full_repository
+
+
+class HostIntegrityReadTest(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location("updater_host_test", pub.ROOT / "deploy/updater/host.py")
+        self.host = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.host)
+
+    def read(self, path, elapsed=0, data=b"[]", status=200):
+        connection = Mock()
+        response = Mock(status=status)
+        response.read.return_value = data
+
+        def request(client, method, endpoint):
+            self.assertEqual(method, "GET")
+            self.assertEqual(endpoint, "/v1.41/" + path)
+            client.connect()
+
+        def receive(client):
+            # Model a complete cold filesystem scan, not an idle/HTTP retry.
+            # Production measured this operation at >20s with no core changes.
+            if elapsed >= connection.settimeout.call_args.args[0]:
+                raise TimeoutError("bounded local scan exceeded its deadline")
+            return response
+
+        with patch.object(self.host.socket, "AF_UNIX", 1, create=True), \
+             patch.object(self.host.socket, "socket", return_value=connection), \
+             patch.object(self.host.http.client.HTTPConnection, "request", request), \
+             patch.object(self.host.http.client.HTTPConnection, "getresponse", receive):
+            try:
+                return self.host.docker_read(path), connection, response
+            finally:
+                connection.close.assert_called_once()
+                connection.connect.assert_called_once_with("/var/run/docker.sock")
+
+    def test_only_exact_container_integrity_scan_gets_a_bounded_cold_scan_budget(self):
+        _, sock, response = self.read("containers/" + "a" * 64 + "/changes", elapsed=21)
+        sock.settimeout.assert_called_once_with(120)
+        response.read.assert_called_once_with((16 << 20) + 1)
+
+    def test_metadata_and_noncanonical_paths_keep_the_original_deadline(self):
+        for path in ("containers/json", "images/sha256:" + "b" * 64 + "/json",
+                     "containers/short/changes", "containers/" + "a" * 64 + "/changes?all=1"):
+            with self.subTest(path=path):
+                _, sock, _ = self.read(path)
+                sock.settimeout.assert_called_once_with(15)
+                with self.assertRaises(TimeoutError):
+                    self.read(path, elapsed=16)
+
+    def test_scan_timeout_bad_status_and_oversized_reply_fail_closed(self):
+        path = "containers/" + "a" * 64 + "/changes"
+        with self.assertRaises(TimeoutError):
+            self.read(path, elapsed=121)
+        with self.assertRaises(ValueError):
+            self.read(path, status=500)
+        with self.assertRaises(ValueError):
+            self.read(path, data=b" " * ((16 << 20) + 1))
+
+    def test_integrity_check_still_rejects_every_protected_core_path(self):
+        host = object.__new__(self.host.Host)
+        for root in ("/app", "/usr", "/etc", "/lib", "/bin", "/opt", "/sbin"):
+            for path in (root, root + "/changed"):
+                with self.subTest(path=path), patch.object(self.host, "docker_read", return_value=[{"Path": path}]):
+                    with self.assertRaises(ValueError):
+                        host.unpatched("a" * 64)
+        with patch.object(self.host, "docker_read", return_value=[{"Path": "/tmp/runtime"}]):
+            host.unpatched("a" * 64)
+        with patch.object(self.host, "docker_read", return_value=None):
+            host.unpatched("a" * 64)
+        with patch.object(self.host, "docker_read", side_effect=TimeoutError):
+            with self.assertRaises(TimeoutError):
+                host.unpatched("a" * 64)
 
 
 class DistributionTest(unittest.TestCase):
