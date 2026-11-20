@@ -243,15 +243,12 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
             {filterCount ? <button type="button" onClick={clearFilters} className="min-h-10 text-sm text-accent">{zh ? "清除筛选" : "Clear filters"}</button> : null}
             <span role="status" className="ml-auto text-xs text-secondary">{query && !invalidDates && !result.isError ? (result.isFetching ? (zh ? "正在搜索…" : "Searching…") : (zh ? `${items.length} / ${total} 个对话` : `${items.length} / ${total} conversations`)) : ""}</span>
           </div>
-          {query && items.length && (selectedConversationIds.size > 0 || readingQueueCandidate) ? (
+          {query && items.length && selectedConversationIds.size > 0 ? (
             <div className="flex flex-wrap items-center gap-3 rounded-lg border border-ui bg-surface px-3 py-2 text-xs text-secondary">
-              {selectedConversationIds.size > 0 ? <span>{zh ? `已选 ${selectedConversationIds.size} 个对话` : `${selectedConversationIds.size} selected`}</span> : null}
-              {readingQueueCandidate ? <button type="button" onClick={startContinuousReading} className="min-h-9 rounded-md border border-ui bg-page px-3 font-medium text-primary hover:bg-subtle">
-                {zh ? `连续阅读 · ${readingQueueCandidate.hrefs.length} 个已加载结果` : `Read ${readingQueueCandidate.hrefs.length} loaded results`}
-              </button> : null}
-              {selectedConversationIds.size > 0 ? <button type="button" disabled={batchBusy} onClick={() => void archiveSelected()} className="btn-secondary ml-auto inline-flex min-h-11 items-center px-3 text-xs disabled:opacity-50">
+              <span>{zh ? `已选 ${selectedConversationIds.size} 个对话` : `${selectedConversationIds.size} selected`}</span>
+              <button type="button" disabled={batchBusy} onClick={() => void archiveSelected()} className="btn-secondary ml-auto inline-flex min-h-11 items-center px-3 text-xs disabled:opacity-50">
                 {batchBusy ? (zh ? "正在归档…" : "Archiving…") : (zh ? "归档已选对话" : "Archive selected")}
-              </button> : null}
+              </button>
             </div>
           ) : null}
           {batchNotice ? <p role="status" className="text-xs text-secondary">{batchNotice}</p> : null}
@@ -286,6 +283,11 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
           <p id="search-selection-status" role="status" className="sr-only">{activeIndex >= 0 && orderedItems[activeIndex] ? `${activeIndex + 1} / ${items.length}: ${orderedItems[activeIndex].conversation_title}` : ""}</p>
           {projectId !== "all" && !result.isFetching && items.length === 0 ? <button type="button" className="btn-secondary min-h-11 px-3" onClick={() => update({ project_id: "all" })}>{zh ? "扩大到全部对话" : "Search all conversations"}</button> : null}
           <div ref={resultsRef}>{items.length ? <SearchResults items={orderedItems} query={query} activeIndex={activeIndex} onActiveIndexChange={selectIndex} selectedConversationIds={selectedConversationIds} onConversationSelectionChange={toggleConversationSelection} disclosures={disclosures} onDisclosureChange={(key, value) => setDisclosureState(current => ({ scope, values: { ...(current.scope === scope ? current.values : {}), [key]: value } }))} /> : null}</div>
+          {/* Eligibility can arrive with a later page. Keep this action after
+              the results, so it cannot displace an already readable/clickable hit. */}
+          {readingQueueCandidate ? <button type="button" onClick={startContinuousReading} className="min-h-11 rounded-md border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle">
+            {zh ? `连续阅读 · ${readingQueueCandidate.hrefs.length} 个已加载结果` : `Read ${readingQueueCandidate.hrefs.length} loaded results`}
+          </button> : null}
           {!result.isError && result.data && (result.data.has_more ?? result.data.offset + result.data.limit < total) ? <button type="button" onClick={() => setPaging({ scope, offset: result.data.offset + result.data.limit })} disabled={result.isFetching} className="mx-auto block min-h-11 rounded-lg border border-ui bg-surface px-5 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">{result.isFetching ? (zh ? "正在加载…" : "Loading…") : (zh ? "加载更多" : "Load more")}</button> : null}
         </div></div>
       </section>

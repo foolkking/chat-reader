@@ -273,10 +273,12 @@ test("mobile home and reader do not overflow", async ({ page }) => {
   const toolsSheet = page.getByRole("dialog", { name: /阅读工具|Reader tools/ });
   await expect(toolsSheet).toBeVisible();
   await toolsSheet.getByRole("button", { name: /搜索|Search/ }).click();
-  const searchSheet = page.getByRole("dialog", { name: /^(搜索|Search)$/ });
+  const searchSheet = page.getByTestId("conversation-find");
   await expect(searchSheet).toBeVisible();
-  await searchSheet.getByPlaceholder(/Search this conversation and its annotations|搜索当前对话/).fill("argparse");
-  await expect(searchSheet.getByText(/共 \d+ 个结果|\d+ results/)).toBeVisible();
+  await expect(searchSheet).toHaveAttribute("data-reader-find", "compact");
+  await searchSheet.getByRole("textbox", { name: /^(搜索当前对话|Search this conversation)$/ }).fill("argparse");
+  await searchSheet.getByRole("button", { name: /^(结果|Results)$/ }).click();
+  await expect(searchSheet.getByText(/已加载 \d+ 条正文结果|\d+ results loaded/)).toBeVisible();
   await searchSheet.getByRole("button", { name: /关闭|Close/ }).click();
 
   await page.getByRole("button", { name: /更多|More/ }).click();

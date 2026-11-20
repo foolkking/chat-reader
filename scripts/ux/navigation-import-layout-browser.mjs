@@ -28,7 +28,18 @@ export function usePreferences(){
  setProjectSort:async mode=>{window.projectMode=mode;publish()}};
 }
 export const authenticationGeneration=()=>1;
+export const AUTH_GENERATION_CHANGED_EVENT="synthetic-auth-generation";
 export const getCurrentOfflineRuntimeUserId=()=>"synthetic-layout";
+const workspace={embedded:true,openMobileSidebar:()=>{}};
+export const useWorkspaceShell=()=>workspace;
+export const useSearchParams=()=>new URLSearchParams(location.search);
+export const useRouter=()=>({push:href=>{window.fixtureDestination=href}});
+export const ProjectSidebar=()=>null;
+export const MobileSidebarTrigger=()=>null;
+export const getUserFeatureEntries=async()=>[];
+export const archiveConversation=async()=>{throw Error("Unexpected archive")};
+export const saveUserFeatureEntry=async()=>{throw Error("Unexpected saved-search write")};
+export const deleteUserFeatureEntry=async()=>{throw Error("Unexpected saved-search delete")};
 export const useInteractionDialog=()=>({confirm:async()=>true});
 export const useImportDialog=()=>({openImportDialog:args=>{window.openedImport=args}});
 export class ApiRequestError extends Error {}
@@ -48,7 +59,14 @@ export const changeConversationOrder=async value=>{window.orderWrite=value};
 export const updateProject=async(id,patch)=>{window.projectWrites??=[];window.projectWrites.push({id,...patch});
  return {id,sort_revision:2,conversation_sort:patch.conversation_sort}};
 export function hydrateProjectOrdering(){window.holdSortedIndex=true;window.projectMode="recent_read";publish()}
-export const searchConversations=async()=>({items:window.hits,has_more:false});
+export const searchConversations=async(options={})=>{
+ if(location.pathname!=="/search-page")return {items:window.hits,has_more:false};
+ const offset=options.offset??0;window.searchOffsets??=[];window.searchOffsets.push(offset);
+ if(offset===1)await new Promise(resolve=>{window.releaseSearchPage=resolve});
+ const rows=window.searchItems.map((item,i)=>({...item,document_type:i?"annotation":"message",hit_count:1}));
+ return {query:options.q,items:rows.slice(offset,offset+1),total:2,limit:1,offset,
+  ...(new URLSearchParams(location.search).get("continuation")==="legacy"?{}:{has_more:offset<1})};
+};
 const forbidden=()=>{throw Error("Unexpected import mutation")};
 export const excludeAdaptiveImportGroup=forbidden,getAdaptiveImportArchive=forbidden,reanalyzeAdaptiveImportSession=forbidden,
 rebuildAdaptiveImportPreview=forbidden,replaceAdaptiveImportArtifact=forbidden,resolveAdaptiveImportGroups=forbidden,
@@ -68,6 +86,7 @@ import {ImportBatchManager} from ${modulePath("features/import/import-batch-mana
 import {ImportSourcePreview} from ${modulePath("features/import/import-source-preview.tsx")};
 import {AdaptiveImportWorkspace} from ${modulePath("features/import/adaptive-import-workspace.tsx")};
 import {SearchResults} from ${modulePath("features/search/search-results.tsx")};
+import {SearchPage} from ${modulePath("features/search/search-page.tsx")};
 const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
 window.refreshBatches=()=>client.invalidateQueries({queryKey:["unfinished-imports"]});
 function ProjectPress(){const p=usePreferences();
@@ -75,6 +94,7 @@ function ProjectPress(){const p=usePreferences();
  window.hydrateProjectOrdering=hydrateProjectOrdering;
  return <ConversationSortMenu scope="project:synthetic-scope" compact hideCustomDirection/>;}
 function Fixture(){const zh=window.fixtureLocale==="zh-CN";const section=location.pathname.slice(1);
+if(section==="search-page")return <main className="flex h-screen min-h-0 flex-col bg-page text-primary"><SearchPage/></main>;
 return <main className="mx-auto max-w-3xl space-y-5 bg-page p-4 text-primary sm:p-6">
 <header className="border-b border-ui pb-4"><h1 className="text-lg font-semibold">{zh?"对话资料库":"Conversation library"}</h1></header>
 {section==="project-press"?<ProjectPress/>:section==="sorting"?<div data-sidebar-settings-scroll className="max-h-[32rem] max-w-72 overflow-y-auto"><NavigationSortSettings/></div>:section==="imports"?<ImportBatchManager/>:section==="overview"||section.startsWith("invalid")?
@@ -93,7 +113,7 @@ await new Promise((yes, no) => webpack({
     alias: { "react$": require.resolve("react"), "react/jsx-runtime$": require.resolve("react/jsx-runtime"), "react-dom/client$": require.resolve("react-dom/client") },
   }, plugins: [
     new webpack.ProvidePlugin({ process: require.resolve("next/dist/build/polyfills/process") }),
-    new webpack.NormalModuleReplacementPlugin(/(?:preferences-provider|interaction-dialog-provider|import-dialog-provider|auth-client|offline-access|\/lib\/api|next\/link|mapping-workspace|format-conversion-guide)$/, resource => { resource.request = adapter; }),
+    new webpack.NormalModuleReplacementPlugin(/(?:preferences-provider|interaction-dialog-provider|import-dialog-provider|workspace-shell|project-sidebar|auth-client|offline-access|\/lib\/api|next\/link|next\/navigation|mapping-workspace|format-conversion-guide)$/, resource => { resource.request = adapter; }),
   ], module: { rules: [{ test: /\.tsx?$/, exclude: /node_modules/, use: join(out, "loader.cjs") }] },
 }, (error, stats) => error || stats.hasErrors() ? no(error ?? Error(stats.toString({ all: false, errors: true }))) : yes()));
 const css = await require("postcss")([require("tailwindcss")({ content: [join(web, "components/*.tsx"), join(web, "features/import/*.tsx"), join(web, "features/search/*.tsx"), join(out, "entry.tsx")] })])
@@ -178,6 +198,38 @@ try {
       id: "synthetic-scope", conversation_sort: { mode: "custom", direction: "asc" }, expected_sort_revision: 1,
     }]);
     results.push({ width, locale, section: "project-sort-native-press-during-index-refresh", pass: true });
+    for(const continuation of ["explicit","legacy"]) {
+      await page.goto(`https://layout.synthetic/search-page?q=排序&continuation=${continuation}`);
+      const first=page.locator('a[data-search-index="0"]');
+      await expect(first).toBeVisible();
+      await expect(page.getByRole("button",{name:/连续阅读|Read \d+ loaded results/})).toHaveCount(0);
+      const input=page.getByRole("textbox",{name:locale==="zh-CN"?"搜索":"Search",exact:true});
+      await input.focus();await input.press("ArrowDown");
+      const destination=await first.getAttribute("href");
+      await page.getByRole("button",{name:locale==="zh-CN"?"加载更多":"Load more",exact:true}).click();
+      await page.waitForFunction(()=>typeof window.releaseSearchPage==="function");
+      const before=await first.boundingBox(), point={x:before.x+before.width/2,y:before.y+before.height-4};
+      await page.mouse.move(point.x,point.y);
+      await page.screenshot({path:join(out,`search-page-before-${width}-${locale}-${continuation}.png`)});
+      await page.evaluate(()=>window.releaseSearchPage());
+      await expect(page.locator("a[data-search-index]")).toHaveCount(2);
+      const after=await first.boundingBox(), drift=Math.abs(after.y-before.y);
+      await page.screenshot({path:join(out,`search-page-after-${width}-${locale}-${continuation}.png`)});
+      const pointerRetained=await first.evaluate((node,p)=>node.contains(document.elementFromPoint(p.x,p.y)),point);
+      writeFileSync(join(out,`search-page-probe-${width}-${locale}-${continuation}.json`),
+        JSON.stringify({before,after,drift,pointerRetained},null,2));
+      assert.ok(pointerRetained,
+        "A late queue action must not move the previously pointed-at hit.");
+      assert.ok(drift<=1,`Previously loaded hit drifted by ${drift}px`);
+      await expect(first).toHaveAttribute("aria-current","true");
+      const queue=page.getByRole("button",{name:/连续阅读|Read \d+ loaded results/}), last=page.locator('a[data-search-index="1"]');
+      await expect(queue).toBeVisible();
+      const qb=await queue.boundingBox(), lb=await last.boundingBox();
+      assert.ok(qb.y>=lb.y+lb.height && qb.height>=44);
+      await input.focus();await input.press("Enter");
+      assert.equal(await page.evaluate(()=>window.fixtureDestination),destination);
+      results.push({width,locale,section:"search-page-paging-stable",continuation,drift,pass:true});
+    }
     for (const section of ["imports", "overview", "preview", "sorting", "search", "invalid-single", "invalid-multiple"]) {
       await page.goto(`https://layout.synthetic/${section}`);
       if (section === "imports") {

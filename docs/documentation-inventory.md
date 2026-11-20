@@ -3,6 +3,8 @@
 2026-11-20：[搜索与阅读合同](system/SEARCH_READING_CONTRACT.md)覆盖全局/正文/分享/离线/管理员范围，
 临时返回缓存、100 处延续游标和物理容器滚动权威；[问题表](evidence/search-reading-2026-11-20/ux-audit.md)是修改前证据，[验证回执及截图](evidence/search-reading-2026-11-20/verification.json)保留源指纹、60 项浏览器门禁、失败和设备边界，不宣称发布。
 
+[CI 44676319339 修复回执](evidence/search-reading-2026-11-20/ci-44676319339-repair.json)记录精确失败 SHA/job、后续未运行门禁、实际源码红绿对照和新一轮验证边界；分页前后截图与手机行内条截图同目录。原失败不被后来的本机通过覆盖。
+
 2026-11-20（本地未发布）：[对话内查找](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#reader-find)与[滚动所有权](system/IMAGE_READING_STABILITY_CONTRACT.md#virtual-reply-offset)记录本轮改动。[脱敏回执](evidence/reader-find-motion-2026-11-20/verification.json)区分真实浏览器、匹配器测量、失败对照与生产；[桌面](evidence/reader-find-motion-2026-11-20/find-1280px.png)／[手机视口](evidence/reader-find-motion-2026-11-20/find-375px.png)截图仅含合成数据。
 
 2026-11-20：[v0.1.1 生产回执](evidence/reader-media-motion-2026-11-19/v0.1.1-production.json)

@@ -1,6 +1,7 @@
 # 文档导航
 
 - [搜索与阅读：授权边界、分页、返回现场和滚动所有权](system/SEARCH_READING_CONTRACT.md) · [改动前问题表](evidence/search-reading-2026-11-20/ux-audit.md) · [60 项浏览器验证及失败记录](evidence/search-reading-2026-11-20/verification.json)（本轮候选，生产以精确发布回执为准）
+- [后续 CI 44676319339 失败与修复](evidence/search-reading-2026-11-20/ci-44676319339-repair.json)：分页 74px 位移、手机查找关闭焦点及旧弹窗测试适配；后续完整 CI 未通过前不发布。
 
 - [本地未发布：单条对话内查找](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#reader-find) · [长对话快速下滑与书签恢复](system/IMAGE_READING_STABILITY_CONTRACT.md#virtual-reply-offset) · [验证回执](evidence/reader-find-motion-2026-11-20/verification.json)
 - [当前生产 v0.1.1：发布、部署、两种耗时与备份边界](deployment.md#v011-production) · [发布回执](evidence/reader-media-motion-2026-11-19/v0.1.1-production.json) · [当前单份备份恢复与清理回执](evidence/online-update-2026-11-18/king-backup-retention-2026-11-20.json)

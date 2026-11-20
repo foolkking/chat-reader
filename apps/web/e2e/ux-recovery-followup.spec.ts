@@ -2004,8 +2004,10 @@ test("a batch with zero confirmed archives offers no empty undo", async ({ page 
   }
 });
 
-for (const continuation of ["explicit", "legacy"] as const) {
-test(`mixed-type search pagination retains the selected document and actual Enter destination (${continuation} continuation)`, async ({ page }, info) => {
+for (const width of [1280, 375]) for (const continuation of ["explicit", "legacy"] as const) {
+test(`mixed-type search pagination retains the selected document and actual Enter destination (${continuation} continuation)${width === 375 ? " on mobile" : ""}`, async ({ page }, info) => {
+  // Preserve the original desktop runner viewport; mobile is added coverage.
+  if (width === 375) await page.setViewportSize({ width, height: 900 });
   await preferences(page, false);
   const created: ConversationCreateResponse[] = [];
   const offsets: number[] = [];
@@ -2038,6 +2040,7 @@ test(`mixed-type search pagination retains the selected document and actual Ente
     });
     await page.goto("/search?q=SyntheticGrouped");
     await expect(page.locator("a[data-search-index]")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /Read \d+ loaded results/ })).toHaveCount(0);
     const input = page.getByRole("textbox", { name: "Search", exact: true });
     await input.focus();
     await page.keyboard.press("ArrowDown");
@@ -2055,12 +2058,19 @@ test(`mixed-type search pagination retains the selected document and actual Ente
     await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
     const first = page.locator('a[data-search-index="0"]');
     expect(await first.evaluate((link, point) => link.contains(document.elementFromPoint(point.x, point.y)), stationaryPoint)).toBe(true);
+    const finalSelectedBox = await first.boundingBox();
+    expect(Math.abs(finalSelectedBox!.y - selectedBox!.y)).toBeLessThanOrEqual(1);
     await expect(selected).toHaveAttribute("href", destination!);
     await expect(selected).toHaveAttribute("data-search-index", "0");
     // Server relevance order is authoritative: a later annotation cannot jump
     // ahead of a better message merely because its content type differs.
     const appended = page.locator('a[data-search-index="1"]');
     await expect(appended).toHaveAttribute("href", new RegExp(created[1].conversation.id));
+    const readQueue = page.getByRole("button", { name: "Read 2 loaded results", exact: true });
+    await expect(readQueue).toBeVisible();
+    const queueBox = await readQueue.boundingBox(), lastBox = await appended.boundingBox();
+    expect(queueBox!.y).toBeGreaterThanOrEqual(lastBox!.y + lastBox!.height);
+    expect(queueBox!.height).toBeGreaterThanOrEqual(44);
     await page.screenshot({ path: info.outputPath("search-stable-selection.png") });
     await appended.scrollIntoViewIfNeeded();
     // Scrolling does not count as pointer intent: only a real mouse movement

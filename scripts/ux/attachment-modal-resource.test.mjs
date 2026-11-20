@@ -156,14 +156,15 @@ test("Viewer registers above the retained Vaul layer without taking child Escape
 
 // Execute the actual window-level Reader handler, not a reimplemented guard.
 const readerSource = ts.createSourceFile("reader.tsx", read("features/conversations/conversation-reader.tsx"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-let readerEscapeEffect;
+let readerEscapeEffect, readerCloseMobileSearch;
 const visitReader = node => {
   if (ts.isCallExpression(node) && node.expression.getText(readerSource) === "useEffect"
     && node.arguments[0]?.getText(readerSource).includes("const closeTopSurface =")) readerEscapeEffect = node;
+  if (ts.isVariableDeclaration(node) && node.name.getText(readerSource) === "closeMobileSearch") readerCloseMobileSearch = node;
   ts.forEachChild(node, visitReader);
 };
-visitReader(readerSource); assert.ok(readerEscapeEffect);
-function readerEscape(event, utilityPanel = "files", desktopPanel = null) {
+visitReader(readerSource); assert.ok(readerEscapeEffect); assert.ok(readerCloseMobileSearch);
+function readerEscape(event, utilityPanel = "files", desktopPanel = null, openerPresent = true) {
   const calls = [];
   let listener, cleanup;
   const window = {
@@ -173,11 +174,15 @@ function readerEscape(event, utilityPanel = "files", desktopPanel = null) {
   new Function("useEffect", "window", "utilityPanel", "setUtilityPanel", "conversationId",
     "releaseExportScope", "showFiles", "setShowFiles", "mobileActionsExpanded", "desktopActionsExpanded",
     "setMobileActionsExpanded", "setDesktopActionsExpanded", "showExport", "showSearch", "showShare",
-    "showTags", "showUpdates", "closeDesktopUtilityPanels",
-    compile(readerEscapeEffect.getText(readerSource)))(
+    "showTags", "showUpdates", "closeDesktopUtilityPanels", "useCallback",
+    "clearSearchNavigation", "restoreMobileUtilityFocus", "scrollContainerRef",
+    compile(`const ${readerCloseMobileSearch.getText(readerSource)};\n${readerEscapeEffect.getText(readerSource)}`))(
     effect => { cleanup = effect(); }, window, utilityPanel, value => calls.push(["panel", value]),
     "synthetic", scope => calls.push(["release", scope]), false, noop, false, false, noop, noop, false, false, false,
     desktopPanel === "tags", desktopPanel === "updates", () => calls.push(["desktop", null]),
+    callback => callback, () => calls.push(["retire-find"]),
+    () => openerPresent ? { focus: options => calls.push(["focus-opener", options]) } : null,
+    { current: { focus: options => calls.push(["focus-reader", options]) } },
   );
   assert.ok(listener);
   listener({ key: "Escape", preventDefault: () => calls.push(["preventDefault"]), ...event });
@@ -195,6 +200,19 @@ for (const [name, event] of [
 test("Reader still closes its own surface on ordinary unhandled Escape", () => {
   assert.deepEqual(readerEscape({}), [["panel", null], ["preventDefault"]]);
   assert.deepEqual(readerEscape({}, "export"), [["release", "export:synthetic"], ["panel", null], ["preventDefault"]]);
+});
+test("inline find Escape retires old targets and restores the opener without scrolling", () => {
+  assert.deepEqual(readerEscape({}, "search"), [
+    ["panel", null], ["retire-find"], ["focus-opener", { preventScroll: true }], ["preventDefault"],
+  ]);
+  for (const event of [{ isComposing: true }, { keyCode: 229 }, { defaultPrevented: true }]) {
+    assert.deepEqual(readerEscape(event, "search"), []);
+  }
+});
+test("inline find Escape uses the reader only when its opener is unavailable", () => {
+  assert.deepEqual(readerEscape({}, "search", null, false), [
+    ["panel", null], ["retire-find"], ["focus-reader", { preventScroll: true }], ["preventDefault"],
+  ]);
 });
 for (const panel of ["tags", "updates"]) {
   test(`Reader Escape closes the ${panel} utility without handling IME`, () => {
