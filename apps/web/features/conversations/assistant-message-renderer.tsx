@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { defaultRangeExtractor, useVirtualizer, useWindowVirtualizer } from "@tanstack/react-virtual";
+import { defaultRangeExtractor, elementScroll, observeElementOffset, observeWindowOffset, useVirtualizer, useWindowVirtualizer, windowScroll } from "@tanstack/react-virtual";
 import { imageFlowHeight, imageTargetSize } from "../../lib/image-display";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { BlockRenderer } from "./block-renderer";
@@ -304,6 +304,18 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
   const virtualizer = useVirtualizer({
     count: units.length,
     getScrollElement: () => containerRef.current?.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? null,
+    // Each message borrows the same physical reader. TanStack attaches its
+    // offset listener, then writes its cached offset (initially zero). A list
+    // appended halfway through a fling must adopt the reader's position, not
+    // initialize it. The container ref isn't available during the first render.
+    observeElementOffset: (instance, notify) => {
+      if (instance.scrollElement) notify(instance.scrollElement.scrollTop, false);
+      return observeElementOffset(instance, notify);
+    },
+    scrollToFn: (offset, options, instance) => {
+      // Even a same-position scrollTo can stop native touch momentum.
+      if (instance.scrollElement?.scrollTop !== offset + (options.adjustments ?? 0)) elementScroll(offset, options, instance);
+    },
     estimateSize: (index) => estimateDisplayUnit(units[index], layoutMetrics),
     getItemKey: (index) => units[index]?.blocks[0]?.id ?? `${messageId}-${index}`,
     measureElement: (element) => element?.getBoundingClientRect().height ?? 0,
@@ -399,6 +411,13 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
     return pinned.length === 0 ? indexes : [...indexes, ...pinned].sort((left, right) => left - right);
   }, [pinnedVirtualIndexes, selectionPinnedIndexes]);
   const virtualizer = useWindowVirtualizer({
+    observeElementOffset: (instance, notify) => {
+      if (instance.scrollElement) notify(instance.scrollElement.scrollY, false);
+      return observeWindowOffset(instance, notify);
+    },
+    scrollToFn: (offset, options, instance) => {
+      if (instance.scrollElement?.scrollY !== offset + (options.adjustments ?? 0)) windowScroll(offset, options, instance);
+    },
     count: units.length,
     estimateSize: (index) => estimateDisplayUnit(units[index], layoutMetrics),
     getItemKey: (index) => units[index]?.blocks[0]?.id ?? `${messageId}-${index}`,

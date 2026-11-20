@@ -836,7 +836,11 @@ export function ConversationReader({
   const [initialPosition, setInitialPosition] = useState<{ key: string; position: import("../../lib/types").ReadingPositionRead | null } | null>(null);
   useEffect(() => {
     if (initialPosition?.key !== positionContext && !positionQuery.isFetching && (positionQuery.isSuccess || positionQuery.isError)) {
-      setInitialPosition({ key: positionContext, position: positionQuery.data?.position ?? null });
+      // A cached first window can already be readable during the fresh GET.
+      // Do not change its query key or the active message behind a reader who
+      // has already panned it or explicitly navigated somewhere else.
+      const takenOver = initialWindowAppliedRef.current && restoreAttemptedRef.current;
+      setInitialPosition({ key: positionContext, position: takenOver ? null : positionQuery.data?.position ?? null });
     }
   }, [initialPosition?.key, positionContext, positionQuery.data, positionQuery.isError, positionQuery.isSuccess, positionQuery.isFetching]);
   const savedPosition = targetMessageId || initialPosition?.key !== positionContext ? null : initialPosition.position;
@@ -899,6 +903,9 @@ export function ConversationReader({
     preferenceStableAnchorRef.current = null;
     setPendingTargetMessageId(null);
     if (direction) {
+      // Early directional input wins over a reading-position request that is
+      // still in flight. Once it completes, do not start a stale auto-restore.
+      if (loadedWindowRef.current.items.length) restoreAttemptedRef.current = true;
       scrollDirectionRef.current = direction;
       if (root) root.dataset.readerIntentDirection = direction;
     }
@@ -914,7 +921,7 @@ export function ConversationReader({
     }
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = scrollContainerRef.current;
     if (!readerSurfaceAvailable || !root) return;
     let lastTouchY: number | null = null;
@@ -1018,7 +1025,11 @@ export function ConversationReader({
   const hasMore = loadedWindow.hasMore;
   const total = loadedWindow.total || windowQuery.data?.total || messages.length;
 
-  useEffect(() => {
+  // Reset the identity-scoped reader session before the new conversation can
+  // accept input. A passive effect can run after the first visible touch:
+  // resetting restoreAttemptedRef then would let a delayed saved-position
+  // response override a position the reader has already chosen.
+  useLayoutEffect(() => {
     windowGenerationRef.current += 1;
     navigationTokenRef.current += 1;
     const emptyWindow = emptyLoadedWindow(windowGenerationRef.current);
@@ -1094,7 +1105,7 @@ export function ConversationReader({
   }, [messages]);
 
   useEffect(() => {
-    if (!targetMessageId && savedPosition?.message_id) {
+    if (!targetMessageId && !restoreAttemptedRef.current && savedPosition?.message_id) {
       setActiveMessageId(savedPosition.message_id);
     }
   }, [savedPosition?.message_id, targetMessageId]);
@@ -2129,6 +2140,7 @@ export function ConversationReader({
     if (
       targetMessageId ||
       restoreAttemptedRef.current ||
+      !canLoadInitialWindow ||
       !positionQuery.isSuccess ||
       !windowQuery.isSuccess
     ) {
@@ -2148,7 +2160,8 @@ export function ConversationReader({
     // Message ids are the only stable mutation authority. An old order key can
     // be reassigned after delete/merge renumbering, so never use it to jump to
     // a different message when the remembered id is gone.
-    const restoreMessage = loadedWindowRef.current.items.find((message) => message.id === position.message_id);
+    const restoreMessage = loadedWindowRef.current.items.find((message) => message.id === position.message_id)
+      ?? windowQuery.data?.items.find((message) => message.id === position.message_id);
     if (!restoreMessage) {
       // The remembered message may have been deleted or absorbed by a merge.
       // The initial window query already fell back to the first turn in this
@@ -2212,7 +2225,7 @@ export function ConversationReader({
         restoreInProgressRef.current = false;
       }
     });
-  }, [navigateToTarget, savedPosition, positionQuery.isError, positionQuery.isSuccess, targetMessageId, windowQuery.isSuccess]);
+  }, [canLoadInitialWindow, navigateToTarget, savedPosition, positionQuery.isError, positionQuery.isSuccess, targetMessageId, windowQuery.data, windowQuery.isSuccess]);
 
   useEffect(() => {
     const sentinel = loadPreviousSentinelRef.current;
