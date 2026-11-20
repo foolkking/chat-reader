@@ -1,13 +1,14 @@
 # 文档导航
 
-- [v0.1.3 标签资格失败与修复](evidence/search-reading-2026-11-20/ci-44757335968-saved-search-placement.json)：冷态检查修复未发版；另定位折叠的已保存搜索晚到造成 32px 位移。[浏览器前后对照](evidence/search-reading-2026-11-20/saved-search-late-read-before-after.png)。
+- [当前生产 v0.1.4：搜索与阅读修复、实测时间及下次升级的容量门槛](deployment.md#v014-production) · [精确 CI、签名、备份与生产回执](evidence/search-reading-2026-11-20/v0.1.4-production.json)。
+- [v0.1.3 标签资格失败与修复](evidence/search-reading-2026-11-20/ci-44757335968-saved-search-placement.json)：该标签未发布；冷态检查修复和折叠的已保存搜索晚到造成的 32px 位移修复随后进入 v0.1.4。[浏览器前后对照](evidence/search-reading-2026-11-20/saved-search-late-read-before-after.png)。
 - [v0.1.2 已发布、生产停服前准入拒绝与修复候选](evidence/search-reading-2026-11-20/v0.1.2-publication-and-host-admission.json)：精确完整 CI、签名/GHCR、阅读证据、6.346 秒生产下载及冷态 Docker 扫描的原失败。当前生产仍以 `PROJECT_STATE.md` 为准。
-- [搜索与阅读：授权边界、分页、返回现场和滚动所有权](system/SEARCH_READING_CONTRACT.md) · [改动前问题表](evidence/search-reading-2026-11-20/ux-audit.md) · [60 项浏览器验证及失败记录](evidence/search-reading-2026-11-20/verification.json)（本轮候选，生产以精确发布回执为准）
+- [搜索与阅读：授权边界、分页、返回现场和滚动所有权](system/SEARCH_READING_CONTRACT.md) · [改动前问题表](evidence/search-reading-2026-11-20/ux-audit.md) · [发布前 60 项浏览器验证及失败记录](evidence/search-reading-2026-11-20/verification.json)
 - [后续 CI 44676319339 失败与修复](evidence/search-reading-2026-11-20/ci-44676319339-repair.json)：分页 74px 位移、手机查找关闭焦点及旧弹窗测试适配；后续完整 CI 未通过前不发布。
 - [CI 44728601066 失败与修复候选](evidence/search-reading-2026-11-20/ci-44728601066-repair.json)：附件夹具遗漏回调、原生输入与迟到恢复的分阶段观测；保留 72px 原失败及未复现边界。
 
-- [本地未发布：单条对话内查找](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#reader-find) · [长对话快速下滑与书签恢复](system/IMAGE_READING_STABILITY_CONTRACT.md#virtual-reply-offset) · [验证回执](evidence/reader-find-motion-2026-11-20/verification.json)
-- [当前生产 v0.1.1：发布、部署、两种耗时与备份边界](deployment.md#v011-production) · [发布回执](evidence/reader-media-motion-2026-11-19/v0.1.1-production.json) · [当前单份备份恢复与清理回执](evidence/online-update-2026-11-18/king-backup-retention-2026-11-20.json)
+- [单条对话内查找](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#reader-find) · [长对话快速下滑与书签恢复](system/IMAGE_READING_STABILITY_CONTRACT.md#virtual-reply-offset) · [早期本机验证回执](evidence/reader-find-motion-2026-11-20/verification.json)
+- [历史 v0.1.1：发布、部署、两种耗时与备份边界](deployment.md#v011-production) · [发布回执](evidence/reader-media-motion-2026-11-19/v0.1.1-production.json) · [当时单份备份的恢复与清理回执](evidence/online-update-2026-11-18/king-backup-retention-2026-11-20.json)
 - [历史：合并前候选的精确 CI 与当时的保护规则阻塞](evidence/reader-media-motion-2026-11-19/release-qualification.md#subsequent-exact-full-ci)
 - [历史：11 月 19 日本机真实恢复与当时单份服务器备份](deployment.md#最新保留状态本机隔离恢复与单份服务器备份--2026-11-19)
 - [Reader 正文媒体滚动复审与逐帧验证](evidence/reader-media-motion-2026-11-19/ux-audit.md)（合成数据、本机真实浏览器；对应修复已部署）
