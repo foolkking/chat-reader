@@ -5,6 +5,8 @@
 
 [CI 44676319339 修复回执](evidence/search-reading-2026-11-20/ci-44676319339-repair.json)记录精确失败 SHA/job、后续未运行门禁、实际源码红绿对照和新一轮验证边界；分页前后截图与手机行内条截图同目录。原失败不被后来的本机通过覆盖。
 
+[第二轮 CI 44728601066 回执](evidence/search-reading-2026-11-20/ci-44728601066-repair.json)保留两项失败、14 项成功及三项下游未执行；附件夹具红绿、24 例实际 Reader 组件诊断和 72px 注入负对照不替代完整 CI。[测试合同](testing.md#reader-native-input-and-late-restore)明确输入到达／静止与响应释放顺序，未降低原位移门槛。
+
 2026-11-20（本地未发布）：[对话内查找](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#reader-find)与[滚动所有权](system/IMAGE_READING_STABILITY_CONTRACT.md#virtual-reply-offset)记录本轮改动。[脱敏回执](evidence/reader-find-motion-2026-11-20/verification.json)区分真实浏览器、匹配器测量、失败对照与生产；[桌面](evidence/reader-find-motion-2026-11-20/find-1280px.png)／[手机视口](evidence/reader-find-motion-2026-11-20/find-375px.png)截图仅含合成数据。
 
 2026-11-20：[v0.1.1 生产回执](evidence/reader-media-motion-2026-11-19/v0.1.1-production.json)

@@ -26,6 +26,12 @@ for (const leaf of ["fast-read.json", "find-navigation.json", "find-remount.json
     } else {
       assert.equal(data.staleRestoreRejected, true); assert.equal(data.restoredWithoutMovement, true);
       assert.ok(data.afterUserMovement > data.initialTop + 80 && data.frames >= 15 && data.max <= 2);
+      assert.equal(data.settledBeforeResponse, true);
+      assert.ok(data.inputSettlement?.quietFrames >= 4);
+      assert.equal(data.inputSettlement.top, data.afterUserMovement);
+      assert.ok(data.mobile ? data.inputSettlement.touchMoves > 0 : data.inputSettlement.wheels > 0);
+      assert.ok(Math.abs(data.afterLateRestore - data.afterUserMovement) <= 1);
+      assert.ok(Array.isArray(data.programmaticScroll), "Retain the actual programmatic scroll calls for diagnosis");
     }
   }
   assert.equal(inputs.size, 0, `Missing real browser evidence: ${leaf}`);
