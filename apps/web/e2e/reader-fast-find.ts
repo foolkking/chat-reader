@@ -1,5 +1,6 @@
 import { expect, type APIRequestContext, type Page, type Route, type TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
+import { watchHeldReaderInput } from "./reader-native-input";
 
 // Start *before* the first virtual message, not inside an already measured one.
 // Offset alone is insufficient: releasing old turns may change the coordinate
@@ -123,17 +124,19 @@ export async function verifyEarlyMovementBeatsLateRestore(mobile: boolean, page:
         message_id: messages[1].id, block_index: 35, scroll_offset: 0, anchor_data: {},
       } });
       expect(saved.ok()).toBe(true);
-      let release!: () => void, received = false;
+      let release!: () => void, received = false, fulfilled = false;
       const held = new Promise<void>(resolve => { release = resolve; });
       const handler = async (route: Route) => {
         if (route.request().method() !== "GET") return route.continue();
         const response = await route.fetch();
         received = true;
         await held;
+        fulfilled = true;
         await route.fulfill({ response });
       };
       await page.route(`**${apiPath}`, handler);
       const cdp = mobile && move ? await page.context().newCDPSession(page) : null;
+      let input: Awaited<ReturnType<typeof watchHeldReaderInput>> | null = null;
       try {
         await open.click();
         await expect(page).toHaveURL(url => url.pathname === path);
@@ -144,6 +147,7 @@ export async function verifyEarlyMovementBeatsLateRestore(mobile: boolean, page:
         await expect(savedBlock).not.toBeInViewport({ timeout: 1500 });
         const box = (await root.boundingBox())!;
         const x = Math.round(box.x + box.width * .55), y = Math.round(box.y + box.height * .55);
+        if (move) input = await watchHeldReaderInput(root);
         if (cdp) {
           await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: y + 130 }] });
           for (let step = 1; step <= 4; step++) {
@@ -160,9 +164,15 @@ export async function verifyEarlyMovementBeatsLateRestore(mobile: boolean, page:
           await expect(root).toHaveAttribute("data-reader-intent-direction", "down", { timeout: 2000 });
           await expect.poll(() => root.evaluate(node => node.scrollTop), { timeout: 2000 }).toBeGreaterThan(initialTop + 80);
         }
+        const queuedInputTop = await root.evaluate(node => node.scrollTop);
+        expect(fulfilled).toBe(false);
+        const inputSettlement = input
+          ? await input.evaluate((probe, lastY) => probe.settle(lastY), cdp ? y + 130 - 4 * 72 : null) : null;
+        expect(fulfilled).toBe(false);
         const afterUserMovement = await root.evaluate(node => node.scrollTop);
         const delivered = page.waitForResponse(r => new URL(r.url()).pathname === apiPath && r.request().method() === "GET",
           { timeout: 3500 });
+        await input?.evaluate(probe => probe.release());
         release();
         const response = await delivered;
         expect(response.ok()).toBe(true);
@@ -180,15 +190,20 @@ export async function verifyEarlyMovementBeatsLateRestore(mobile: boolean, page:
             } while (performance.now() - start < 1000 || frames < 15);
             return { max, frames, afterLateRestore: el.scrollTop };
           }, afterUserMovement);
+          const programmaticScroll = await input!.evaluate(probe => probe.readCalls());
           await writeFile(info.outputPath("early-movement.json"), JSON.stringify({
-            mobile, initialTop, afterUserMovement, ...drift, restoredWithoutMovement,
+            mobile, initialTop, queuedInputTop, inputSettlement, afterUserMovement, ...drift, restoredWithoutMovement,
+            settledBeforeResponse: true, programmaticScroll,
             staleRestoreRejected: drift.max <= 2,
           }));
           expect(drift.max).toBeLessThanOrEqual(2);
+          expect(Math.abs(drift.afterLateRestore - afterUserMovement)).toBeLessThanOrEqual(1);
           await expect(savedBlock).not.toBeInViewport();
         }
       } finally {
         release();
+        await input?.evaluate(probe => probe.dispose());
+        await input?.dispose();
         if (cdp) {
           await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
           await cdp.detach();

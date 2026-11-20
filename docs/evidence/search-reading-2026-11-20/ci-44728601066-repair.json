@@ -1,0 +1,3856 @@
+{
+  "recorded_at": "2026-11-20T20:32:55.162827+08:00",
+  "status": "repair_candidate_full_ci_pending",
+  "base_sha": "9ae0a64fffb3e17a537053d276bacd7d5bd50b13",
+  "failed_run": {
+    "databaseId": 44728601066,
+    "headSha": "9ae0a64fffb3e17a537053d276bacd7d5bd50b13",
+    "attempt": 1,
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "conclusion": "failure",
+    "createdAt": "2026-11-20T11:33:39Z",
+    "updatedAt": "2026-11-20T11:50:25Z"
+  },
+  "jobs": [
+    {
+      "id": 136262257014,
+      "name": "image-preparation",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257336,
+      "name": "settings-quality-shard-1 / matrix",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257391,
+      "name": "api-quality-shard-4 / suite",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257468,
+      "name": "web-quality-shard-1 / gates",
+      "conclusion": "failure",
+      "failed_steps": [
+        "Reading geometry, image snapshots and cross-module recovery"
+      ]
+    },
+    {
+      "id": 136262257481,
+      "name": "web-quality-shard-2 / gates",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257529,
+      "name": "api-quality-shard-2 / suite",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257531,
+      "name": "web-quality-shard-3 / gates",
+      "conclusion": "failure",
+      "failed_steps": [
+        "Mounted Viewer and retained mobile sheet regression"
+      ]
+    },
+    {
+      "id": 136262257532,
+      "name": "api-quality-shard-1 / suite",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257591,
+      "name": "reading-performance-comparison / compare",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257633,
+      "name": "api-quality-shard-3 / suite",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257701,
+      "name": "settings-quality-shard-2 / matrix",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257731,
+      "name": "settings-restore",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257827,
+      "name": "settings-quality-shard-4 / matrix",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136262257940,
+      "name": "settings-quality-shard-3 / matrix",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136268229396,
+      "name": "api-quality",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136269357162,
+      "name": "settings-quality",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136269865373,
+      "name": "web-quality",
+      "conclusion": "skipped",
+      "failed_steps": []
+    },
+    {
+      "id": 136269866459,
+      "name": "build-images",
+      "conclusion": "skipped",
+      "failed_steps": []
+    },
+    {
+      "id": 136269867817,
+      "name": "inspect-release-artifact",
+      "conclusion": "skipped",
+      "failed_steps": []
+    }
+  ],
+  "artifact_identity": [
+    {
+      "id": 14626750361,
+      "name": "web-quality-shard-1-9ae0a64fffb3e17a537053d276bacd7d5bd50b13-1",
+      "size_in_bytes": 20484503,
+      "created_at": "2026-11-20T11:49:42Z",
+      "expired": false
+    },
+    {
+      "id": 14624757994,
+      "name": "web-quality-shard-3-9ae0a64fffb3e17a537053d276bacd7d5bd50b13-1",
+      "size_in_bytes": 2664,
+      "created_at": "2026-11-20T11:36:22Z",
+      "expired": false
+    }
+  ],
+  "failures": [
+    {
+      "job_id": 136262257531,
+      "step": "Mounted Viewer and retained mobile sheet regression",
+      "observed": "First #open-files click timed out at 30000ms because the synthetic React tree failed to mount.",
+      "page_error": [
+        "closeMobileSearch is not defined"
+      ],
+      "cause": "The fixture extracted the actual window Escape effect but omitted its new closeMobileSearch callback dependency.",
+      "repair": "Extract and mount the actual callback too. Its out-of-scope search services throw if incorrectly invoked. Race assertions with actual page errors so a broken render no longer masquerades as an element timeout.",
+      "browser_red_exit": 1,
+      "browser_green_exit": 0,
+      "green_cases": 12
+    },
+    {
+      "job_id": 136262257468,
+      "step": "Reading geometry, image snapshots and cross-module recovery",
+      "gate": {
+        "gate_id": "reading-stability",
+        "status": "failed",
+        "test_count": 60,
+        "result_counts": {
+          "passed": 59,
+          "failed": 1,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      "case": "375px touch input: early wheel/touch intent wins before saved position finishes loading",
+      "ci_observation": {
+        "mobile": true,
+        "initialTop": 69,
+        "afterUserMovement": 270,
+        "max": 72,
+        "frames": 60,
+        "afterLateRestore": 342,
+        "restoredWithoutMovement": true,
+        "staleRestoreRejected": false
+      },
+      "fact": "The initial assertion only required >80px movement. It did not wait for delivery/painting of the last of four 72px touch moves. The failed baseline was 270px and final value 342px.",
+      "hypothesis": "The last native delta was still queued when the baseline was captured. The exact 72px size is consistent, but the old artifact has no frame/input-source trace to prove attribution.",
+      "unknown": "The exact Linux CI 72px failure did not reproduce locally. It is not classified as a proved false positive or a proved product restoration bug.",
+      "repair": "Observe final native input and four unchanged frames while the position response is still held; fail if settling takes >2s or the response has already been released. Capture queued baseline and actual delegated programmatic scroll calls. Keep original peak <=2px and >=1s/>=15-frame observation, add final <=1px.",
+      "scope": "Test instrumentation only; no application timing, scrolling, permissions, workflow sharding or flings were changed."
+    }
+  ],
+  "unexecuted_due_to_failure": {
+    "shard_1": [
+      "Release E production-build PWA negative matrix",
+      "Independent reading-stability verifier (the preceding Playwright command failed)"
+    ],
+    "shard_3": [
+      "Reader table export and recovery controls",
+      "Reading success feedback and explicit copy recovery",
+      "Context files, export and reader recovery",
+      "Focused online browser and security checks",
+      "Source Editor content cleanup browser gate",
+      "PDF.js maintained-line browser checks",
+      "Default PWA baseline",
+      "Single-owner authentication browser gate"
+    ],
+    "downstream_jobs": [
+      "web-quality",
+      "build-images",
+      "inspect-release-artifact"
+    ],
+    "note": "Steps belonging to another shard are intentional skips, not missing execution. Earlier SHA results do not certify these gates for this SHA."
+  },
+  "previous_repair_checks": {
+    "Formula reading, focus tools and timed return regression": "success",
+    "Release H Source Editor and mutation cache checks": "success",
+    "web-quality-shard-2": "success"
+  },
+  "local_checks": [
+    {
+      "command": "ATTACHMENT_MODAL_PHASE=red node scripts/ux/attachment-modal-browser.mjs (before repair)",
+      "exit": 1,
+      "result": "Same closeMobileSearch ReferenceError and locator timeout reproduced."
+    },
+    {
+      "command": "ATTACHMENT_MODAL_PHASE=green node scripts/ux/attachment-modal-browser.mjs",
+      "exit": 0,
+      "passed": 12,
+      "browser": "installed Chrome"
+    },
+    {
+      "command": "PLAYWRIGHT_USE_BUNDLED_CHROMIUM=1 ATTACHMENT_MODAL_PHASE=green-chromium node scripts/ux/attachment-modal-browser.mjs",
+      "exit": 0,
+      "passed": 12,
+      "browser": "Playwright 1.62.0 Chromium build 1234"
+    },
+    {
+      "command": "READER_PROBE_GUARDED=1 node <TASK_TEMP>/reader-restore-probe.mjs",
+      "exit": 0,
+      "cases": 24,
+      "moved_controls": 20,
+      "no_movement_controls": 4,
+      "max_post_response_drift_for_movement": 0,
+      "cpu_throttle_rates": [
+        1,
+        4
+      ],
+      "boundary": "Actual mounted ConversationReader, native wheel/touch, real React Query warm caches and held synthetic data-source response. No server or database; not the real HTTP whole-app gate."
+    },
+    {
+      "command": "READER_PROBE_GUARDED=1 READER_PROBE_NEGATIVE=1 node <TASK_TEMP>/reader-restore-probe.mjs",
+      "exit": 1,
+      "expected_failure": true,
+      "observed_drift": 72,
+      "result": "After release, inject a real 72px scrollTop write in the mounted browser; original <=2px assertion fails. The pre-response barrier does not absorb it."
+    },
+    {
+      "command": "node --test scripts/ux/reader-native-input.test.mjs scripts/ux/attachment-modal-resource.test.mjs",
+      "exit": 0,
+      "passed": 56
+    },
+    {
+      "command": "$tests=@(Get-ChildItem scripts/ux -Filter '*.test.mjs'|% FullName); node --test $tests",
+      "exit": 0,
+      "passed": 2610,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "$tests=@(Get-ChildItem scripts/ci -Filter '*.test.mjs'|% FullName); node --test $tests",
+      "exit": 0,
+      "passed": 162,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "corepack pnpm run lint",
+      "exit": 0
+    },
+    {
+      "command": "corepack pnpm run typecheck",
+      "exit": 0
+    }
+  ],
+  "preserved_other_attempts": [
+    "Native-only HTML probe: 24 installed-Chrome and 48 bundled-Chromium runs (with/without passive input listeners) did not reproduce the CI drift.",
+    "Initial actual-Reader probe API adapter returned an object where the tag list needs an array: two diagnostic attempts failed. Corrected only the temporary synthetic adapter; both logs retained.",
+    "Unmodified observation with actual Reader: 18 probes, 15 movement controls showed 0 drift; this does not prove the old Linux CI passed.",
+    "Two local node --test wildcard commands exited 1 because PowerShell did not expand literal wildcards; explicit file arrays then ran every test. Both invocation failures retained."
+  ],
+  "guarded_browser_trace": [
+    {
+      "run": 0,
+      "moving": false,
+      "mobile": true,
+      "cpu": 1,
+      "initial": 69,
+      "queuedInputTop": 69,
+      "inputSettlement": null,
+      "before": 69,
+      "after": 2498,
+      "frames": [
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498
+      ],
+      "max": 2466,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        },
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 69,
+          "value": 2497.875
+        },
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 2498,
+          "value": 2534.875
+        },
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 2535,
+          "value": 2498
+        }
+      ],
+      "programmatic": null,
+      "errors": []
+    },
+    {
+      "run": 1,
+      "moving": true,
+      "mobile": true,
+      "cpu": 4,
+      "initial": 69,
+      "queuedInputTop": 344,
+      "inputSettlement": {
+        "top": 344,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 344,
+            "touchY": 343
+          },
+          {
+            "top": 344,
+            "touchY": 343
+          },
+          {
+            "top": 344,
+            "touchY": 343
+          },
+          {
+            "top": 344,
+            "touchY": 343
+          },
+          {
+            "top": 344,
+            "touchY": 343
+          },
+          {
+            "top": 344,
+            "touchY": 343
+          },
+          {
+            "top": 344,
+            "touchY": 343
+          },
+          {
+            "top": 344,
+            "touchY": 343
+          },
+          {
+            "top": 344,
+            "touchY": 343
+          },
+          {
+            "top": 344,
+            "touchY": 271
+          },
+          {
+            "top": 344,
+            "touchY": 271
+          },
+          {
+            "top": 344,
+            "touchY": 271
+          },
+          {
+            "top": 344,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 344,
+      "after": 344,
+      "frames": [
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344,
+        344
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 2,
+      "moving": true,
+      "mobile": true,
+      "cpu": 1,
+      "initial": 69,
+      "queuedInputTop": 342,
+      "inputSettlement": {
+        "top": 342,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 342,
+      "after": 342,
+      "frames": [
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 3,
+      "moving": true,
+      "mobile": true,
+      "cpu": 4,
+      "initial": 69,
+      "queuedInputTop": 378,
+      "inputSettlement": {
+        "top": 378,
+        "quietFrames": 4,
+        "touchMoves": 3,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 378,
+      "after": 378,
+      "frames": [
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 4,
+      "moving": true,
+      "mobile": true,
+      "cpu": 1,
+      "initial": 69,
+      "queuedInputTop": 342,
+      "inputSettlement": {
+        "top": 342,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 342,
+      "after": 342,
+      "frames": [
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 5,
+      "moving": true,
+      "mobile": true,
+      "cpu": 4,
+      "initial": 69,
+      "queuedInputTop": 378,
+      "inputSettlement": {
+        "top": 378,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 378,
+      "after": 378,
+      "frames": [
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 6,
+      "moving": false,
+      "mobile": true,
+      "cpu": 1,
+      "initial": 69,
+      "queuedInputTop": 69,
+      "inputSettlement": null,
+      "before": 69,
+      "after": 2498,
+      "frames": [
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498
+      ],
+      "max": 2466,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        },
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 69,
+          "value": 2497.875
+        },
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 2498,
+          "value": 2534.875
+        },
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 2535,
+          "value": 2498
+        }
+      ],
+      "programmatic": null,
+      "errors": []
+    },
+    {
+      "run": 7,
+      "moving": true,
+      "mobile": true,
+      "cpu": 4,
+      "initial": 69,
+      "queuedInputTop": 378,
+      "inputSettlement": {
+        "top": 378,
+        "quietFrames": 4,
+        "touchMoves": 3,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 378,
+      "after": 378,
+      "frames": [
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 8,
+      "moving": true,
+      "mobile": true,
+      "cpu": 1,
+      "initial": 69,
+      "queuedInputTop": 342,
+      "inputSettlement": {
+        "top": 342,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 342,
+      "after": 342,
+      "frames": [
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 9,
+      "moving": true,
+      "mobile": true,
+      "cpu": 4,
+      "initial": 69,
+      "queuedInputTop": 378,
+      "inputSettlement": {
+        "top": 378,
+        "quietFrames": 4,
+        "touchMoves": 3,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 378,
+      "after": 378,
+      "frames": [
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 10,
+      "moving": true,
+      "mobile": true,
+      "cpu": 1,
+      "initial": 69,
+      "queuedInputTop": 342,
+      "inputSettlement": {
+        "top": 342,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 342,
+      "after": 342,
+      "frames": [
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 11,
+      "moving": true,
+      "mobile": true,
+      "cpu": 4,
+      "initial": 69,
+      "queuedInputTop": 378,
+      "inputSettlement": {
+        "top": 378,
+        "quietFrames": 4,
+        "touchMoves": 3,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 378,
+      "after": 378,
+      "frames": [
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 12,
+      "moving": false,
+      "mobile": true,
+      "cpu": 1,
+      "initial": 69,
+      "queuedInputTop": 69,
+      "inputSettlement": null,
+      "before": 69,
+      "after": 2498,
+      "frames": [
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2535,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498,
+        2498
+      ],
+      "max": 2466,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        },
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 69,
+          "value": 2497.875
+        },
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 2498,
+          "value": 2534.875
+        },
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 2535,
+          "value": 2498
+        }
+      ],
+      "programmatic": null,
+      "errors": []
+    },
+    {
+      "run": 13,
+      "moving": true,
+      "mobile": true,
+      "cpu": 4,
+      "initial": 69,
+      "queuedInputTop": 378,
+      "inputSettlement": {
+        "top": 378,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 378,
+      "after": 378,
+      "frames": [
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 14,
+      "moving": true,
+      "mobile": true,
+      "cpu": 1,
+      "initial": 69,
+      "queuedInputTop": 342,
+      "inputSettlement": {
+        "top": 342,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 342,
+      "after": 342,
+      "frames": [
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 15,
+      "moving": true,
+      "mobile": true,
+      "cpu": 4,
+      "initial": 69,
+      "queuedInputTop": 345,
+      "inputSettlement": {
+        "top": 345,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 345,
+            "touchY": 343
+          },
+          {
+            "top": 345,
+            "touchY": 343
+          },
+          {
+            "top": 345,
+            "touchY": 343
+          },
+          {
+            "top": 345,
+            "touchY": 343
+          },
+          {
+            "top": 345,
+            "touchY": 343
+          },
+          {
+            "top": 345,
+            "touchY": 343
+          },
+          {
+            "top": 345,
+            "touchY": 343
+          },
+          {
+            "top": 345,
+            "touchY": 343
+          },
+          {
+            "top": 345,
+            "touchY": 343
+          },
+          {
+            "top": 345,
+            "touchY": 343
+          },
+          {
+            "top": 345,
+            "touchY": 271
+          },
+          {
+            "top": 345,
+            "touchY": 271
+          },
+          {
+            "top": 345,
+            "touchY": 271
+          },
+          {
+            "top": 345,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 345,
+      "after": 345,
+      "frames": [
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345,
+        345
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 16,
+      "moving": true,
+      "mobile": true,
+      "cpu": 1,
+      "initial": 69,
+      "queuedInputTop": 342,
+      "inputSettlement": {
+        "top": 342,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 342,
+      "after": 342,
+      "frames": [
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342,
+        342
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 17,
+      "moving": true,
+      "mobile": true,
+      "cpu": 4,
+      "initial": 69,
+      "queuedInputTop": 378,
+      "inputSettlement": {
+        "top": 378,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 343
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          },
+          {
+            "top": 378,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 378,
+      "after": 378,
+      "frames": [
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378,
+        378
+      ],
+      "max": 0,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        }
+      ],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 18,
+      "moving": false,
+      "mobile": false,
+      "cpu": 1,
+      "initial": 0,
+      "queuedInputTop": 0,
+      "inputSettlement": null,
+      "before": 0,
+      "after": 1375,
+      "frames": [
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375,
+        1375
+      ],
+      "max": 1375,
+      "calls": [
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 1374.59375
+        }
+      ],
+      "programmatic": null,
+      "errors": []
+    },
+    {
+      "run": 19,
+      "moving": true,
+      "mobile": false,
+      "cpu": 4,
+      "initial": 0,
+      "queuedInputTop": 400,
+      "inputSettlement": {
+        "top": 400,
+        "quietFrames": 4,
+        "touchMoves": 0,
+        "wheels": 1,
+        "lastTouchY": null,
+        "frames": [
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          }
+        ]
+      },
+      "before": 400,
+      "after": 400,
+      "frames": [
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400
+      ],
+      "max": 0,
+      "calls": [],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 20,
+      "moving": true,
+      "mobile": false,
+      "cpu": 1,
+      "initial": 0,
+      "queuedInputTop": 400,
+      "inputSettlement": {
+        "top": 400,
+        "quietFrames": 4,
+        "touchMoves": 0,
+        "wheels": 1,
+        "lastTouchY": null,
+        "frames": [
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          }
+        ]
+      },
+      "before": 400,
+      "after": 400,
+      "frames": [
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400
+      ],
+      "max": 0,
+      "calls": [],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 21,
+      "moving": true,
+      "mobile": false,
+      "cpu": 4,
+      "initial": 0,
+      "queuedInputTop": 400,
+      "inputSettlement": {
+        "top": 400,
+        "quietFrames": 4,
+        "touchMoves": 0,
+        "wheels": 1,
+        "lastTouchY": null,
+        "frames": [
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          }
+        ]
+      },
+      "before": 400,
+      "after": 400,
+      "frames": [
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400
+      ],
+      "max": 0,
+      "calls": [],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 22,
+      "moving": true,
+      "mobile": false,
+      "cpu": 1,
+      "initial": 0,
+      "queuedInputTop": 400,
+      "inputSettlement": {
+        "top": 400,
+        "quietFrames": 4,
+        "touchMoves": 0,
+        "wheels": 1,
+        "lastTouchY": null,
+        "frames": [
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          }
+        ]
+      },
+      "before": 400,
+      "after": 400,
+      "frames": [
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400
+      ],
+      "max": 0,
+      "calls": [],
+      "programmatic": [],
+      "errors": []
+    },
+    {
+      "run": 23,
+      "moving": true,
+      "mobile": false,
+      "cpu": 4,
+      "initial": 0,
+      "queuedInputTop": 400,
+      "inputSettlement": {
+        "top": 400,
+        "quietFrames": 4,
+        "touchMoves": 0,
+        "wheels": 1,
+        "lastTouchY": null,
+        "frames": [
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          },
+          {
+            "top": 400,
+            "touchY": null
+          }
+        ]
+      },
+      "before": 400,
+      "after": 400,
+      "frames": [
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400
+      ],
+      "max": 0,
+      "calls": [],
+      "programmatic": [],
+      "errors": []
+    }
+  ],
+  "injected_fault_trace": [
+    {
+      "run": 0,
+      "moving": true,
+      "mobile": true,
+      "cpu": 1,
+      "initial": 69,
+      "queuedInputTop": 342,
+      "inputSettlement": {
+        "top": 342,
+        "quietFrames": 4,
+        "touchMoves": 4,
+        "wheels": 0,
+        "lastTouchY": 271,
+        "frames": [
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 343
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          },
+          {
+            "top": 342,
+            "touchY": 271
+          }
+        ]
+      },
+      "before": 342,
+      "after": 414,
+      "frames": [
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414,
+        414
+      ],
+      "max": 72,
+      "calls": [
+        {
+          "phase": "mount",
+          "method": "set-scrollTop",
+          "before": 0,
+          "value": 69
+        },
+        {
+          "phase": "late-response",
+          "method": "set-scrollTop",
+          "before": 342,
+          "value": 414
+        }
+      ],
+      "programmatic": [
+        {
+          "method": "scrollTop",
+          "released": true,
+          "before": 342,
+          "after": 414
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "source_sha256_lf": {
+    "apps/web/e2e/reader-fast-find.ts": "104717042ffcbe7501f71acb81cdc820ab3d28fbd28a1b167afaa0e305e901be",
+    "apps/web/e2e/reader-native-input.ts": "44e27c682786a31deb6ff1d485742ba0eb737ac5295150570d907c19a66862b2",
+    "scripts/ux/reader-native-input.test.mjs": "662a25e03985e4fdcb9c75c8da6a6c21641fb31229c076ea7c6287d3b3df8204",
+    "scripts/ux/attachment-modal-browser.mjs": "74d5dec38ec36269299958e496abe76a2a00df8ff30302ec100369031af558a5",
+    "scripts/ci/verify-reading-stability.mjs": "50e5784f35804b8f190fb998bd306fe55bb655a98988cef2e3d54e73fac13e77",
+    "apps/web/features/conversations/conversation-reader.tsx": "dff994c4319234d9974ff15280fe3a6160df554443bc1f538f455c6c4643aa93",
+    ".github/workflows/web-quality.yml": "00d96c87007021626f2b27480f46b7bd967fbe1c5c51c5c5eb5cefa3560b9443"
+  },
+  "raw_local_evidence": {
+    "task_directory": "<TASK_TEMP>/search-reading-ci-44728601066",
+    "sha256": {
+      "failed-jobs.log": "74f5f76b2a7e8e03695fb54b311d7378d2dce8cf477307c142279f7a65057f35",
+      "modal-red.log": "b070d07c7ebd3713fa1e0ef414e15e69ab6f27f4b9307e9a4457649c20e4a62a",
+      "modal-green.log": "a02978dd83b1e6be38fad49022d4006fb901d24b08eaeaa51dc316bb266cd233",
+      "modal-green-chromium.log": "a02978dd83b1e6be38fad49022d4006fb901d24b08eaeaa51dc316bb266cd233",
+      "native-touch-probe.log": "8f1853db001979a682d7cd75963a631943e368101d2324c047dc8a4501e1d33e",
+      "native-touch-chromium.log": "8f1853db001979a682d7cd75963a631943e368101d2324c047dc8a4501e1d33e",
+      "native-touch-listeners.log": "8f1853db001979a682d7cd75963a631943e368101d2324c047dc8a4501e1d33e",
+      "reader-restore-probe.log": "735515c53762b62d9daadac47f358069465f7ac5842a0602eeb84a836dc7a534",
+      "reader-restore-probe-2.log": "f9ff475a3366e5097a3754157555d41e921e1df86d0577f13cea97119bc59155",
+      "reader-restore-probe-3.log": "0a0bf0c65abe13d0d62ed7e782b1f3cd7bb6d93b6fc17e418c6bce84606a2238",
+      "reader-restore-guarded.log": "09f8d9611b70b557b18166f37014dc3653e9ce664ef987e2e410136179a0e5b9",
+      "reader-restore-negative.log": "bcf93c137189c897df5a881cc66db7053ae0ff6b9d99441858c48f94404ff5ea",
+      "targeted-node.log": "4119cb61b6deaf1288b1693b99cd34d546eef3a1b32a92b5a6ba0b0b0e479be9",
+      "ux-all.log": "a8af92978b6f133b7355677844febd635849de318bb3ec73e48f361746c8c63a",
+      "ci-tests.log": "7405d213e792be7df2926d2f53fa096aee7ecbec2d0fda501f43f7c77ab3a8bb",
+      "ux-all-final.log": "c4e9bba968c138121d96f03136ee728b9281c8da58d3f9b3a382bda4ec5731e2",
+      "ci-tests-final.log": "f6f17bbd30f255164b2f2cb7a6200dba2dec663231fb144b526cb11ae9641530",
+      "lint.log": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "typecheck.log": "231f3ed2a8636999437e24fd3abfb381918c1c7547d66db9b40fc5e154ab9209",
+      "typecheck-final.log": "231f3ed2a8636999437e24fd3abfb381918c1c7547d66db9b40fc5e154ab9209",
+      "build-reader-restore-probe.mjs": "f7313e1dcb87f4b8434ea9feaae43a4a629ed52f4237f97eb6f85294dbed2198",
+      "reader-restore-runner.txt": "b9b75590253aef4caad4822d5c0e66f862f462fe0a767ade54bb4fb7d258d015"
+    },
+    "privacy": "Only synthetic fixtures were used; no user content, production tokens, authentication credentials or .env values committed."
+  },
+  "not_claimed": [
+    "No current whole-application 60-case rerun locally; server startup was denied in the preceding turn and no workaround was attempted.",
+    "No new API suite or production build locally in this test-only repair; all are required in the new exact full CI.",
+    "No iOS/Android hardware verification; desktop touch emulation is not a device certification.",
+    "No new successful exact full CI, signed artifact, tag, Release, production operation, cleanup or deployment."
+  ]
+}

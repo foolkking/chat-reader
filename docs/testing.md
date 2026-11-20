@@ -1,5 +1,29 @@
 # Testing
 
+## Reader native input and late restore
+
+`reader-fast-find.ts` holds the real saved-position GET across a warm client-side
+visit. A tap/no-movement control must restore the saved block; real wheel/touch
+input must prevent that late restore. CDP dispatch acknowledgement and movement
+of more than 80px alone do not establish that the last native delta has painted.
+
+`reader-native-input.ts` observes the final touch coordinate (or wheel delivery)
+and four unchanged animation frames **before releasing the held response**,
+bounded by 2s. It records pre-release input and delegates/records, rather than
+suppresses, actual `scrollTop`, `scrollTo` and `scrollBy` writes. It cannot settle
+after release. The subsequent original ≥1s / ≥15-frame observation retains
+peak drift ≤2px, requires final drift ≤1px and rejects a visible saved block.
+The separate fast-reading/fling cases are unchanged.
+
+`scripts/ux/reader-native-input.test.mjs` checks queued deltas, missing delivery,
+perpetual movement, cleanup and a post-release 72px fault. The independent
+reading verifier requires the phase evidence. The mounted attachment gate uses
+the actual Reader Escape callback and its actual close dependency; browser
+render errors fail directly rather than becoming misleading locator timeouts.
+
+[CI failure and candidate evidence](evidence/search-reading-2026-11-20/ci-44728601066-repair.json)
+distinguishes observed 72px CI movement from its unconfirmed attribution.
+
 ## Reader offline browser evidence
 
 The reading-stability gate waits for the canonical message **and** the six exact

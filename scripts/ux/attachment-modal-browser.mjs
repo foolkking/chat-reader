@@ -35,14 +35,16 @@ const ts = appRequire("typescript");
 const readerSource = ts.createSourceFile("conversation-reader.tsx",
   readFileSync(join(web, "features/conversations/conversation-reader.tsx"), "utf8"),
   ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-let escapeEffect;
+let escapeEffect, closeMobileSearch;
 const visit = node => {
   if (ts.isCallExpression(node) && node.expression.getText(readerSource) === "useEffect"
     && node.arguments[0]?.getText(readerSource).includes("const closeTopSurface =")) escapeEffect = node;
+  if (ts.isVariableDeclaration(node) && node.name.getText(readerSource) === "closeMobileSearch") closeMobileSearch = node;
   ts.forEachChild(node, visit);
 };
 visit(readerSource);
 assert.ok(escapeEffect, "Use the actual Reader Escape owner, not a parallel implementation");
+assert.ok(closeMobileSearch, "Mount the actual dependency of the Reader Escape owner");
 writeFileSync(join(out, "ts-loader.cjs"), `
 const ts = require(${JSON.stringify(appRequire.resolve("typescript"))});
 module.exports = source => ts.transpileModule(source, { compilerOptions: {
@@ -66,7 +68,7 @@ export const createAttachmentUploadSession=outsideScope,deleteConversationAttach
 export const MarkdownRenderer=outsideScope,ComplexAttachmentViewer=outsideScope;
 export default outsideScope;`);
 writeFileSync(join(out, "entry.tsx"), `
-import React,{useState,useEffect} from "react";
+import React,{useState,useEffect,useCallback} from "react";
 import {createRoot} from "react-dom/client";
 import {QueryClient,QueryClientProvider} from "@tanstack/react-query";
 import {MobileReaderSheet} from ${JSON.stringify(join(web, "components/mobile-reader-sheet.tsx"))};
@@ -90,6 +92,10 @@ function Files(){
   const setShowFiles=()=>{throw Error("Unexpected desktop close");};
   const setDesktopActionsExpanded=()=>{},setMobileActionsExpanded=()=>{};
   const releaseExportScope=()=>{throw Error("Unexpected export close");};
+  const clearSearchNavigation=()=>{throw Error("The files/Viewer gate must not retire search");};
+  const restoreMobileUtilityFocus=()=>{throw Error("The files sheet owns its own focus return");};
+  const scrollContainerRef={current:null};
+  const ${closeMobileSearch.getText(readerSource)};
   ${escapeEffect.getText(readerSource)};
   return <main>
     <button id="open-files" data-reader-focus-fallback onClick={()=>setUtilityPanel("files")}>Open files</button>
@@ -161,7 +167,12 @@ try {
   for (const locale of ["zh-CN", "en-US"]) {
     const page = await browser.newPage({ viewport: { width: 375, height: 900 }, hasTouch: true });
     const errors = [];
-    page.on("pageerror", error => errors.push(error.message));
+    let rejectPageError;
+    const pageFailure = new Promise((_, reject) => { rejectPageError = reject; });
+    // Keep the original error even if it occurs before the first assertion.
+    // A broken fixture must report the render error, not a 30s locator timeout.
+    void pageFailure.catch(() => {});
+    page.on("pageerror", error => { errors.push(error.message); rejectPageError(error); });
     await page.addInitScript(locale => {
       window.gateLocale = locale;
       window.modalEvents = [];
@@ -186,7 +197,7 @@ try {
     const selected = panel.getByRole("checkbox", { name: /^(Select|选择) empty.txt$/ });
     const search = panel.getByPlaceholder(/^(Search files|搜索文件)$/);
     const run = async (name, action) => {
-      try { await action(); }
+      try { await Promise.race([action(), pageFailure]); }
       catch (error) {
         writeFileSync(resultPath, JSON.stringify({ startedAt, phase, sources, status: "failed", passed: results, failed: `${locale}: ${name}`, errors,
           diagnostic: await page.locator("body").innerText(),
