@@ -1,0 +1,362 @@
+{
+  "verified_at_asia_shanghai": "2026-11-20T08:03:47+08:00",
+  "scope": "Uncommitted local worktree only; synthetic data. No remote CI, push, release, production operation or user-data replay.",
+  "source": {
+    "base_sha_not_a_tested_commit": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+    "hash_method": "Sorted repository-relative UTF-8 path, NUL, binary SHA256 of exact file bytes; concatenate entries and SHA256. Web input and runtime-only hashes recomputed independently against the built checkout.",
+    "web_build_snapshot": {
+      "files": 561,
+      "sha256": "f45ef8b3a77d5e21997729bc68711fd8a3e22e199a269ad0b002d80bd4912ce4",
+      "runtime": "542aee88d3ee72fd30dff246949474cfae3c9719b9f30560b6f07d603bd8b203"
+    },
+    "api_runtime": {
+      "files": 379,
+      "sha256": "3894940cd83c1e60f143dbda80718687a590af0db98d5b73efd3caaaad57f531"
+    },
+    "api_test_files": {
+      "files": 5,
+      "sha256": "1d1a60d97bc5462ba87f67070ab3c73e7b8f327513255a8cd7c77c4c0c600f79"
+    },
+    "ux_test_files": {
+      "files": 63,
+      "sha256": "9e262222f2d803262a77f1d49be9e5c210a653373e415260a524f133919a8b63"
+    },
+    "additive_schedule_lf_sha256": "484319245c0ef866c6fe480efbdeaa6e891d1d3521a48617fba6f87b55091d86",
+    "migration_head": "20261117_0062 (no schema/package change)"
+  },
+  "environment": {
+    "os": "Windows",
+    "browser": "Edge Chromium 157.0.4341.60",
+    "playwright": "1.62.0",
+    "node": "20.13.1",
+    "python": "3.11.7",
+    "postgres": "17.10, disposable loopback only",
+    "next": "16.4.5 production webpack build",
+    "react_virtual": "3.14.9",
+    "isolation": "One worker, native wheel and Chromium CDP touch. Build-time same-origin API rewrite checked before server start; isolated DB, API, background worker and storage. Native reports used, no retries. Test-owned services stopped."
+  },
+  "gates": {
+    "bounded-reader-full": {
+      "exit": 0,
+      "started_utc": "2026-11-19T23:56:01.974Z",
+      "completed_utc": "2026-11-20T00:00:46.868Z",
+      "duration_ms": 287330,
+      "result_counts": {
+        "passed": 52,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "retried": 0
+    },
+    "bounded-reader-offline": {
+      "exit": 0,
+      "started_utc": "2026-11-20T00:00:50.285Z",
+      "completed_utc": "2026-11-20T00:01:16.182Z",
+      "duration_ms": 28273,
+      "result_counts": {
+        "passed": 3,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "retried": 0
+    },
+    "bounded-reader-repeat": {
+      "exit": 0,
+      "started_utc": "2026-11-20T00:01:19.389Z",
+      "completed_utc": "2026-11-20T00:01:59.077Z",
+      "duration_ms": 42038,
+      "result_counts": {
+        "passed": 6,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "retried": 0
+    }
+  },
+  "commands": {
+    "build_lint_types": {
+      "commands": [
+        "corepack pnpm run lint",
+        "corepack pnpm run typecheck",
+        "corepack pnpm --filter web build"
+      ],
+      "exit": [
+        0,
+        0,
+        0
+      ]
+    },
+    "api": {
+      "command": "SETTINGS_POSTGRES_INTEGRATION=1 python -m pytest tests/test_reader_find.py tests/test_search_api.py tests/test_search_correctness_postgres.py tests/test_grouped_search.py tests/test_navigation_search_postgres.py",
+      "passed": 35,
+      "exit": 0,
+      "full_collection_only": 7046
+    },
+    "ux": {
+      "command": "node --test --test-concurrency=3 <selected scripts/ux/*.test.mjs>",
+      "filename_regex": "reader|reading|scroll|render|offline|search|virtual|keyboard|shortcut|touch|image-|turn-window|viewer|anchor|highlight",
+      "files": 63,
+      "passed": 844,
+      "skipped": 0,
+      "exit": 0
+    },
+    "ci_controls": [
+      "node --test scripts/ci/quality-coverage-extension.test.mjs scripts/ci/quality-shard-evidence.test.mjs: 65 passed",
+      "python -m unittest test_api_shard_evidence test_quality_scheduling (scripts/ci): 26 passed"
+    ],
+    "browser": [
+      "E2E_READING_STABILITY=1: e2e/reading-stability.spec.ts + e2e/image-natural-flow.spec.ts, unfiltered",
+      "node scripts/ci/verify-reading-stability.mjs <full-results-dir>: exit 0",
+      "e2e/library-offline.spec.ts --grep \"offline conversation search scopes|library search preserves offline body\"",
+      "A separate fresh run repeats the six new wheel/touch, bookmark and exact-find cases."
+    ]
+  },
+  "reproductions_before": {
+    "rapid_reading": {
+      "wheel": {
+        "root_resets": 2,
+        "max_backward_message_ordinals_in_recorded_sequence": 8
+      },
+      "touch": {
+        "root_resets": 2,
+        "max_backward_message_ordinals_in_recorded_sequence": 12
+      }
+    },
+    "warm_cache_bookmark": "Both form factors: correct successful saved-position reply, no directional input, block 35 not restored.",
+    "highlight": "Both form factors: return of the virtual row lost the chosen text highlight.",
+    "offline_false_locations": "Before canonical filtering a phrase assembled from two distinct blocks displaced true matches. After: 3 valid docs out of 125 candidates; 2+1 logical pages and exact final total.",
+    "invalid_earlier_runs": [
+      "Earlier full gate had 37 passes, 9 unexpected and 6 skipped: build-time rewrite pointed at another local backend. Discard as acceptance evidence, keep raw failure.",
+      "A cold query intentionally waits before showing the first window. Late response after a released touch cannot distinguish normal coasting; replaced this diagnostic with real same-document warm revisit, a positive restore control and separate held-touch vs released-fling cases.",
+      "A stale CI-tool unit built only 2 of 3 previously pinned Settings case groups; original failure retained, new test supplies all three including 6 presentation deadlines and refuses a missing native case."
+    ]
+  },
+  "final_behavior": {
+    "fast_forward": [
+      {
+        "mobile": false,
+        "highest": 21,
+        "worstBacktrack": 0,
+        "virtual": true,
+        "lines": 89,
+        "topResets": 0
+      },
+      {
+        "mobile": true,
+        "highest": 15,
+        "worstBacktrack": 0,
+        "virtual": true,
+        "lines": 393,
+        "topResets": 0
+      }
+    ],
+    "fast_forward_independent_repeat": [
+      {
+        "mobile": false,
+        "highest": 21,
+        "worstBacktrack": 0,
+        "virtual": true,
+        "lines": 104,
+        "topResets": 0
+      },
+      {
+        "mobile": true,
+        "highest": 17,
+        "worstBacktrack": 0,
+        "virtual": true,
+        "lines": 398,
+        "topResets": 0
+      }
+    ],
+    "warm_bookmark_revisit": [
+      {
+        "mobile": false,
+        "initialTop": 0,
+        "afterUserMovement": 400,
+        "max": 0,
+        "frames": 76,
+        "afterLateRestore": 400,
+        "restoredWithoutMovement": true,
+        "staleRestoreRejected": true
+      },
+      {
+        "mobile": true,
+        "initialTop": 69,
+        "afterUserMovement": 342,
+        "max": 0,
+        "frames": 76,
+        "afterLateRestore": 342,
+        "restoredWithoutMovement": true,
+        "staleRestoreRejected": true
+      }
+    ],
+    "warm_revisit_repeat": [
+      {
+        "mobile": false,
+        "initialTop": 0,
+        "afterUserMovement": 400,
+        "max": 0,
+        "frames": 76,
+        "afterLateRestore": 400,
+        "restoredWithoutMovement": true,
+        "staleRestoreRejected": true
+      },
+      {
+        "mobile": true,
+        "initialTop": 69,
+        "afterUserMovement": 342,
+        "max": 0,
+        "frames": 76,
+        "afterLateRestore": 342,
+        "restoredWithoutMovement": true,
+        "staleRestoreRejected": true
+      }
+    ],
+    "find": [
+      {
+        "mobile": false,
+        "rowsAtStart": 50,
+        "chosenNumber": 51,
+        "resumedNumber": 52,
+        "virtualRowRemountHighlight": true
+      },
+      {
+        "mobile": true,
+        "rowsAtStart": 50,
+        "chosenNumber": 51,
+        "resumedNumber": 52,
+        "virtualRowRemountHighlight": true
+      }
+    ],
+    "true_virtual_eviction_before_remount": [
+      {
+        "mobile": false,
+        "scrollTop": 7085,
+        "virtualRows": 1,
+        "targetMounted": false
+      },
+      {
+        "mobile": true,
+        "scrollTop": 8635,
+        "virtualRows": 1,
+        "targetMounted": false
+      }
+    ],
+    "media": {
+      "surface_runs": 10,
+      "directional_phases": 40,
+      "blank_frames": 0,
+      "max_unmeasured_gap_px": 0,
+      "stationary_direction_viewer_traces": 64,
+      "fold_traces": 12,
+      "passive_fold_traces": 4,
+      "cold_viewer_shells": 1
+    }
+  },
+  "literal_matcher_microbenchmark": {
+    "input": "261627 Unicode code points: \"synthetic_code statement; \" times 10000, an emoji, two spaces, \"final NeedLe\", five spaces, \"phrase \", then \"trailer \" times 200. Search absent, near-end needle, and whitespace-folded phrase. Not end-to-end request latency.",
+    "measurement": "Python: median of four timings after GC, separately measured tracemalloc peak. JavaScript: median of five timings after explicit GC and median heapUsed delta at return (not peak). Same local host before/after; direct matcher calls on synthetic text.",
+    "results": {
+      "python": {
+        "before": {
+          "codepoints": 261627,
+          "cases": {
+            "absent": {
+              "median_ms": 138.02,
+              "peak_python_bytes": 36004510
+            },
+            "near_end": {
+              "median_ms": 138.29,
+              "peak_python_bytes": 36004510
+            },
+            "whitespace": {
+              "median_ms": 137.91,
+              "peak_python_bytes": 36004510
+            }
+          }
+        },
+        "after": {
+          "codepoints": 261627,
+          "cases": {
+            "absent": {
+              "median_ms": 1.4,
+              "peak_python_bytes": 4186596
+            },
+            "near_end": {
+              "median_ms": 1.48,
+              "peak_python_bytes": 4186595
+            },
+            "whitespace": {
+              "median_ms": 1.39,
+              "peak_python_bytes": 4186650
+            }
+          }
+        }
+      },
+      "javascript": {
+        "before": {
+          "absent": {
+            "median_ms": 32.23,
+            "median_heap_delta_bytes": 43469208
+          },
+          "near_end": {
+            "median_ms": 30.7,
+            "median_heap_delta_bytes": 43465768
+          },
+          "whitespace": {
+            "median_ms": 30.1,
+            "median_heap_delta_bytes": 43466624
+          }
+        },
+        "after": {
+          "absent": {
+            "median_ms": 0.62,
+            "median_heap_delta_bytes": 531976
+          },
+          "near_end": {
+            "median_ms": 4.02,
+            "median_heap_delta_bytes": 637688
+          },
+          "whitespace": {
+            "median_ms": 2.13,
+            "median_heap_delta_bytes": 673312
+          }
+        }
+      }
+    },
+    "unicode_differential": {
+      "python": {
+        "cases": 1600,
+        "with_hits": 1124,
+        "differences": 0
+      },
+      "javascript": {
+        "cases": 1600,
+        "with_hits": 1032,
+        "differences": 0
+      },
+      "seed": 20261120
+    }
+  },
+  "screenshots": {
+    "1280": {
+      "file": "find-1280px.png",
+      "sha256": "6235a9fb090d969824638d4fdfdfe587f236149252da9093513b9e26849b8aa9"
+    },
+    "375": {
+      "file": "find-375px.png",
+      "sha256": "f0499bd900f8252787b348e66588a8326ff3250b7531ff7bdb55a694bd9889a0"
+    }
+  },
+  "limits": [
+    "No physical iOS/Android, Safari or production-user acceptance; CI Linux browser and release are not claimed.",
+    "Fifty documents per page and first 100 occurrences per document; legacy blockless snapshots can only locate the message. No new indexing migration, general full-language casefold guarantee or cross-block phrase matching.",
+    "Full 7046-test API execution and full PWA suite were not run here; collection is not execution."
+  ]
+}

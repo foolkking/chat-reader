@@ -1,0 +1,504 @@
+{
+  "recorded_at": "2026-11-19T15:39:16.432191+00:00",
+  "run": {
+    "conclusion": "success",
+    "created_at": "2026-11-19T15:06:57Z",
+    "event": "workflow_dispatch",
+    "head_branch": "codex/fix-release-project-sort",
+    "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+    "id": 44551142239,
+    "path": ".github/workflows/build-release-images.yml",
+    "repository_id": 1297627534,
+    "run_attempt": 1,
+    "status": "completed",
+    "updated_at": "2026-11-19T15:28:58Z"
+  },
+  "observed": "2026-11-19T15:33:24.7392494+00:00",
+  "actual_command_pause_seconds": 1500.0853296,
+  "jobs": [
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654887515,
+      "name": "settings-restore",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888056,
+      "name": "api-quality-shard-1 / suite",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888071,
+      "name": "settings-quality-shard-4 / matrix",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888081,
+      "name": "api-quality-shard-4 / suite",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888113,
+      "name": "web-quality-shard-3 / gates",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888254,
+      "name": "settings-quality-shard-1 / matrix",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888362,
+      "name": "web-quality-shard-1 / gates",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888365,
+      "name": "api-quality-shard-3 / suite",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888372,
+      "name": "api-quality-shard-2 / suite",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888526,
+      "name": "settings-quality-shard-2 / matrix",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888621,
+      "name": "settings-quality-shard-3 / matrix",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888624,
+      "name": "image-preparation",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888649,
+      "name": "web-quality-shard-2 / gates",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135654888892,
+      "name": "reading-performance-comparison / compare",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135663736439,
+      "name": "api-quality",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135666197065,
+      "name": "settings-quality",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135668476761,
+      "name": "web-quality",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135668785940,
+      "name": "build-images",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "failed_steps": [],
+      "head_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+      "id": 135669157903,
+      "name": "inspect-release-artifact",
+      "status": "completed"
+    }
+  ],
+  "web_shards": [
+    {
+      "shard": 1,
+      "artifact": 14542669062,
+      "digest": "sha256:d75464390969524db8120e1e6178ef7f0e4997030d0fe8ce5ed55601fe881ec0",
+      "gates": [
+        {
+          "gate": "adaptive-import-recovery",
+          "count": 15,
+          "results": {
+            "passed": 14,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 1,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "csp-enforcement",
+          "count": 4,
+          "results": {
+            "passed": 4,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "pwa-negative",
+          "count": 28,
+          "results": {
+            "passed": 28,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "reading-stability",
+          "count": 46,
+          "results": {
+            "passed": 46,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        }
+      ]
+    },
+    {
+      "shard": 2,
+      "artifact": 14542658622,
+      "digest": "sha256:d6965ed2fd1764ccc4c870b332f4ad1ad9266f4324cff64f54978ec6de6e7764",
+      "gates": [
+        {
+          "gate": "markdown-image-viewer",
+          "count": 31,
+          "results": {
+            "passed": 31,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "share-focus",
+          "count": 2,
+          "results": {
+            "passed": 2,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "source-editor-mutation",
+          "count": 121,
+          "results": {
+            "passed": 121,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "upload-token-atomicity",
+          "count": 18,
+          "results": {
+            "passed": 18,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        }
+      ]
+    },
+    {
+      "shard": 3,
+      "artifact": 14543794732,
+      "digest": "sha256:38b521ee457983587ef5c71ae71f8f2ac20061f45942be95ca6ef996ca00e024",
+      "gates": [
+        {
+          "gate": "context-files",
+          "count": 38,
+          "results": {
+            "passed": 38,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "default-pwa",
+          "count": 1114,
+          "results": {
+            "passed": 277,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 837,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "focused-online-security",
+          "count": 132,
+          "results": {
+            "passed": 132,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "pdfjs-maintained-line",
+          "count": 13,
+          "results": {
+            "passed": 13,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "single-owner-auth",
+          "count": 24,
+          "results": {
+            "passed": 24,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        },
+        {
+          "gate": "source-editor-cleanup",
+          "count": 6,
+          "results": {
+            "passed": 6,
+            "failed": 0,
+            "timedOut": 0,
+            "skipped": 0,
+            "interrupted": 0
+          }
+        }
+      ]
+    }
+  ],
+  "artifact": {
+    "utc": "2026-11-19T15:34:44.000757+00:00",
+    "sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+    "run_id": "44551142239",
+    "attempt": 1,
+    "artifact_id": 14545625537,
+    "artifact_sha256": "sha256:2bf3acea7e03aebde944e5000512bc123116c86e8ecfc24b68cab00170de6f58",
+    "artifact_bytes": 177734828,
+    "archive_sha256": "cd1effad1d69dc1fe909b6398985ecd6ec5ab9e6f8e00ad9f8db9eed1c7d25bd",
+    "archive_bytes": 177674617,
+    "expanded_bytes": 178589696,
+    "quality_jobs": 17,
+    "images": {
+      "api": {
+        "config_id": "sha256:06b780784ab4fa301647701c8402f1ee1cf068a838d7c955a729543f84950ffe",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+          "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+          "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+          "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+          "sha256:56e5e20ee52d978058cc98eabde65c725ccabddde45b84fe24f5f42cfac90d26",
+          "sha256:deb80e6c0af1e5f01d6a0d9ef61e0ac61ba324be477448a40b1ba7be0918a570",
+          "sha256:f10649bebfeaad43f68055ec77a00a2db9f829ef1a552332bf1b9240232e7ef2",
+          "sha256:1f0cc977a68ac437b3ef5ae7a4fc36f7a0a86e2c01726d22ab270bfa3e524417",
+          "sha256:a0aab9cc913ed65bc13c94afdab679e0c25ce38cd78782c5b48512868ead3d36",
+          "sha256:3cd5f5488c412e664ab49809ce3fac01cd54cfad129bea84c6848059d1f7918c",
+          "sha256:0ef9c28b426775b3cb72991437829961096b1dbe1b438f22c6c023ca514cb7e5",
+          "sha256:9d7084145ef2533878ad21f808c3a66b509af2286eabcf2557299783ac2bca56",
+          "sha256:f36dd99eec243e839f8ed174e155092e9cc23d3d2be6c500c7a1ad9abdbc5436",
+          "sha256:5b53f61929f21682288f7e37907a91eb4e9495523d87ad1035810ce76119e93a"
+        ],
+        "accepted_engine_ids": [
+          "sha256:06b780784ab4fa301647701c8402f1ee1cf068a838d7c955a729543f84950ffe",
+          "sha256:6f179f95f3ee094359e74cf89a636fd78cda14a758e8fe5ae566326803c24e9e"
+        ]
+      },
+      "import-worker": {
+        "config_id": "sha256:06b780784ab4fa301647701c8402f1ee1cf068a838d7c955a729543f84950ffe",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+          "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+          "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+          "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+          "sha256:56e5e20ee52d978058cc98eabde65c725ccabddde45b84fe24f5f42cfac90d26",
+          "sha256:deb80e6c0af1e5f01d6a0d9ef61e0ac61ba324be477448a40b1ba7be0918a570",
+          "sha256:f10649bebfeaad43f68055ec77a00a2db9f829ef1a552332bf1b9240232e7ef2",
+          "sha256:1f0cc977a68ac437b3ef5ae7a4fc36f7a0a86e2c01726d22ab270bfa3e524417",
+          "sha256:a0aab9cc913ed65bc13c94afdab679e0c25ce38cd78782c5b48512868ead3d36",
+          "sha256:3cd5f5488c412e664ab49809ce3fac01cd54cfad129bea84c6848059d1f7918c",
+          "sha256:0ef9c28b426775b3cb72991437829961096b1dbe1b438f22c6c023ca514cb7e5",
+          "sha256:9d7084145ef2533878ad21f808c3a66b509af2286eabcf2557299783ac2bca56",
+          "sha256:f36dd99eec243e839f8ed174e155092e9cc23d3d2be6c500c7a1ad9abdbc5436",
+          "sha256:5b53f61929f21682288f7e37907a91eb4e9495523d87ad1035810ce76119e93a"
+        ],
+        "accepted_engine_ids": [
+          "sha256:06b780784ab4fa301647701c8402f1ee1cf068a838d7c955a729543f84950ffe",
+          "sha256:6f179f95f3ee094359e74cf89a636fd78cda14a758e8fe5ae566326803c24e9e"
+        ]
+      },
+      "migrate": {
+        "config_id": "sha256:06b780784ab4fa301647701c8402f1ee1cf068a838d7c955a729543f84950ffe",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+          "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+          "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+          "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+          "sha256:56e5e20ee52d978058cc98eabde65c725ccabddde45b84fe24f5f42cfac90d26",
+          "sha256:deb80e6c0af1e5f01d6a0d9ef61e0ac61ba324be477448a40b1ba7be0918a570",
+          "sha256:f10649bebfeaad43f68055ec77a00a2db9f829ef1a552332bf1b9240232e7ef2",
+          "sha256:1f0cc977a68ac437b3ef5ae7a4fc36f7a0a86e2c01726d22ab270bfa3e524417",
+          "sha256:a0aab9cc913ed65bc13c94afdab679e0c25ce38cd78782c5b48512868ead3d36",
+          "sha256:3cd5f5488c412e664ab49809ce3fac01cd54cfad129bea84c6848059d1f7918c",
+          "sha256:0ef9c28b426775b3cb72991437829961096b1dbe1b438f22c6c023ca514cb7e5",
+          "sha256:9d7084145ef2533878ad21f808c3a66b509af2286eabcf2557299783ac2bca56",
+          "sha256:f36dd99eec243e839f8ed174e155092e9cc23d3d2be6c500c7a1ad9abdbc5436",
+          "sha256:5b53f61929f21682288f7e37907a91eb4e9495523d87ad1035810ce76119e93a"
+        ],
+        "accepted_engine_ids": [
+          "sha256:06b780784ab4fa301647701c8402f1ee1cf068a838d7c955a729543f84950ffe",
+          "sha256:6f179f95f3ee094359e74cf89a636fd78cda14a758e8fe5ae566326803c24e9e"
+        ]
+      },
+      "web": {
+        "config_id": "sha256:88e910f9edf7054bae9f7cd0626ea90020c1cc1db8ff8e79dab71b4d09800fa6",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:a0904247e36a7726c03c71ee48f3e64462021c88dafeb13f37fdaf613b27f11c",
+          "sha256:0ac4251d3ceb1f9a47f7a4a2c3f0a11d2170e8f827a9e733e6278473d6c2674e",
+          "sha256:1e154f3abc96911e063658b8bc45e19c5a1a24cd6c68cbf87d8bfa1b28bc74b9",
+          "sha256:74e3c643bad513259e9f5190690801b63fc218d293f228213810f973ee3ae4cd",
+          "sha256:7bed01e46e69312032baee97f46dd8a75b208ca24baac9022bceba0fa1368f6e",
+          "sha256:ef83ec38d8363fea0db6e9657a3e1d9e2000e7177f67196cc4a551b906d3732a",
+          "sha256:83c96b18d2e556c32db440cb7614a518b4bf119e6809fd5e4863fa3bfcf511ae",
+          "sha256:cb2cd8999a5905d29c469959667c23638e48ff4d585fea96368b5aca7056caaf",
+          "sha256:d83761329d22734f6fc4233ac7e7a79412946386200de2619c10b00bf8fdaddb"
+        ],
+        "accepted_engine_ids": [
+          "sha256:88e910f9edf7054bae9f7cd0626ea90020c1cc1db8ff8e79dab71b4d09800fa6",
+          "sha256:b505515d8dc73449b347d538bbe9cfa709e97683c3427de264dbc4945d8e9efb"
+        ]
+      }
+    },
+    "independent_local_materialization": true,
+    "signed_release": false,
+    "production_touched": false
+  },
+  "space_preview": {
+    "observed": "2026-11-19T15:36:39.587845Z",
+    "source": "read-only live database size and actual mounted du; original same-filesystem production formula, including preupload bytes",
+    "database_bytes": 2064407575,
+    "files_kib": 4135128,
+    "archive_bytes": 177674617,
+    "expanded_bytes": 178589696,
+    "backup_headroom_kib": 262144,
+    "image_headroom_kib": 524288,
+    "transfer_headroom_kib": 131072,
+    "required_kib": 7416571,
+    "available_kib": 8267060,
+    "extra_kib": 850489,
+    "arithmetic_passed": true,
+    "transfer_started": false,
+    "maintenance_started": false,
+    "real_admission": false,
+    "sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+    "run": "44551142239",
+    "artifact": 14545625537
+  },
+  "publisher": {
+    "utc": "2026-11-19T15:12:57.568040+00:00",
+    "environment_known": true,
+    "signing_environment_secret_name_present": true,
+    "public_key_valid_shape": true,
+    "dist_matches_repository": true,
+    "environment_reviewer_rule": false,
+    "environment_deployment_policy": {
+      "protected_branches": false,
+      "custom_branch_policies": true
+    },
+    "tag_release_patterns": [
+      "v*"
+    ],
+    "protected_updates_denied_to_all": true,
+    "pr_number": 2,
+    "pr_state": "blocked",
+    "pr_sha": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+    "real_release_count_in_response": 0
+  },
+  "protected_pr": 2,
+  "pr_merge_blocked": true,
+  "ci_is_not_a_signed_release": true,
+  "new_tag_created": false,
+  "production_deployed": false
+}

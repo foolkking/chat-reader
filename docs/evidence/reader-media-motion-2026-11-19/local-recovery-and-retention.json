@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-19T15:24:54.321762+00:00",
+  "scope": "Authorized local isolated recovery and relocation of one explicitly named old host backup; not a release/deployment",
+  "isolated_environment": {
+    "platform": "Windows EFS plus private NTFS ACL; local WSL2 ext4 loop; Docker network none with no published port/logging driver",
+    "database_dump": "16.14",
+    "restore_postgres": "16.15",
+    "minor_versions_not_identical": true,
+    "production_drill": false,
+    "uploaded_to_fool": false,
+    "encrypted_original_archives_preserved": true,
+    "independent_restore_volume_count": 4,
+    "independent_named_docker_volumes": false
+  },
+  "restored_database": {
+    "utc": "2026-11-19T14:28:52.305220+00:00",
+    "phase": "verified_database",
+    "dump_major_minor": "16.14",
+    "restored_server": "16.15",
+    "head": "20261112_0061",
+    "public_tables": 93,
+    "matching_stopped_fingerprints": 91,
+    "foreign_keys_validated": true,
+    "expected_preferences": true
+  },
+  "restored_files": {
+    "utc": "2026-11-19T14:35:47.306886+00:00",
+    "phase": "verified_four_volumes",
+    "components": 4,
+    "files": 4155,
+    "bytes": 4063395697,
+    "source": "manifest-bound tar streams and historical stopped counts"
+  },
+  "source_golden_sha256": "80e688a24dcb30e7d8c382eaba922a6e282cad11a3fcea402ae8ab5e45a3ab4d",
+  "volumes": [
+    {
+      "utc": "2026-11-19T14:32:25.112878+00:00",
+      "phase": "verified_volume",
+      "component": "imports",
+      "files": 999,
+      "bytes": 1274055213,
+      "each_file_sha256_and_archived_metadata": true
+    },
+    {
+      "utc": "2026-11-19T14:32:25.258422+00:00",
+      "phase": "verified_volume",
+      "component": "exports",
+      "files": 0,
+      "bytes": 0,
+      "each_file_sha256_and_archived_metadata": true
+    },
+    {
+      "utc": "2026-11-19T14:34:07.624827+00:00",
+      "phase": "verified_volume",
+      "component": "assets",
+      "files": 3092,
+      "bytes": 1484759608,
+      "each_file_sha256_and_archived_metadata": true
+    },
+    {
+      "utc": "2026-11-19T14:35:47.296855+00:00",
+      "phase": "verified_volume",
+      "component": "offline",
+      "files": 64,
+      "bytes": 1304580876,
+      "each_file_sha256_and_archived_metadata": true
+    }
+  ],
+  "images": [
+    {
+      "utc": "2026-11-19T14:39:56.664102+00:00",
+      "set": "keeper",
+      "phase": "verified_image_set",
+      "revision": "71342129b861925692f5ea587d2f3ab2fa3404f9",
+      "roles": 4,
+      "all_configs_and_uncompressed_layers": true,
+      "unique_layers": 23,
+      "bytes": 198540514,
+      "archive_sha256": "838c5f19853e84cae45a228c830359d7551e926512ad1fb4c433c628903c5b8b",
+      "original_ci_archive": false
+    },
+    {
+      "utc": "2026-11-19T15:01:57.135115+00:00",
+      "set": "older",
+      "phase": "verified_image_set",
+      "revision": "2463f2985c367e681c3443b1b485e57f2925b313",
+      "roles": 4,
+      "all_configs_and_uncompressed_layers": true,
+      "unique_layers": 23,
+      "bytes": 177564226,
+      "archive_sha256": "414df672230d5ccc28c960ab5f42fec983907458d7d44696bec22be18eb3415b",
+      "original_ci_archive": true
+    }
+  ],
+  "transfer": [
+    {
+      "utc": "2026-11-19T14:27:55.608880+00:00",
+      "event": "verified_set",
+      "members": 8,
+      "bytes": 3862124262,
+      "manifest_sha256": "dd693daffa6b1ff1c435be34e1d82ccc4f175f48bb4edc7ed7df84c0e1994287",
+      "production_mutation": false
+    },
+    {
+      "utc": "2026-11-19T15:00:59.850530+00:00",
+      "event": "verified_set",
+      "members": 9,
+      "bytes": 3985264599,
+      "manifest_sha256": "8909c710b3227b6317e8c50cc8df602f180cd753bf681efbefeb8e970e7fd8f2",
+      "production_mutation": false
+    }
+  ],
+  "production_duplicate_removed": {
+    "allocated_bytes": 3807744000,
+    "available_after": 8465985536,
+    "available_before": 4658073600,
+    "independent_images_retained": true,
+    "only_removed": "chat-reader-20261116T124202Z",
+    "remaining_on_host": "chat-reader-20261118T075837Z",
+    "stage": "single_duplicate_relocated",
+    "unchanged_service_and_schema": true,
+    "unlinked_members": 8,
+    "utc": "2026-11-19T15:05:51.224780Z"
+  },
+  "independent_host_check": {
+    "utc": "2026-11-19T15:15:03.902507Z",
+    "remote": "king",
+    "remaining_on_host": "chat-reader-20261118T075837Z",
+    "retained_manifest": true,
+    "available_bytes": 8465829888,
+    "live_images_match": true,
+    "services": {
+      "api": "healthy",
+      "web": "healthy",
+      "import-worker": "running",
+      "postgres": "healthy"
+    },
+    "schema": "20261117_0062",
+    "database_bytes": 2064407575,
+    "worker_heartbeat": "alive",
+    "stopped": false,
+    "exact_new_artifact_admission": false,
+    "pointer_revision_observed_via_current_runtime_images": "26b35501bf7011910a83bb23e8982139f8129b7b"
+  },
+  "local_seal": {
+    "no_drill_container": true,
+    "no_restored_mount": true,
+    "no_attached_private_loop": true,
+    "encrypted_archive_files": true,
+    "utc": "2026-11-19T15:19:42.255430+00:00"
+  },
+  "protected_boundaries": [
+    "No production data, configuration, images or volume removed",
+    "Eight old backup members unlinked using anchored nofollow directory descriptors and the existing exclusive backup-operation lock",
+    "All remaining backup member identities and live containers preserved; read-only PostgreSQL schema/heartbeat rechecked",
+    "No local caches cleared; no background restored database left running",
+    "Old-generation full data+images retained in private encrypted local escrow until a healthy replacement and retention review",
+    "The retained 71342129/0061 program is NOT compatible evidence for live 26b35501/0062; never directly downgrade the live schema"
+  ],
+  "not_verified": [
+    "No new version deployed or published",
+    "New exact artifact capacity admission pending",
+    "No real-account API/browser/worker restore or HTTPS routing exercised against the restored user dataset",
+    "No public/private signed GitHub/GHCR distribution acceptance certified"
+  ],
+  "control_failures_retained": [
+    "Initial local drill refused unsupported BusyBox losetup flags before mkfs; corrected native preflight and explicitly verified the image was empty",
+    "The CI archive inspector refused the native Docker export direct OCI manifest; a separate native-export identity reader verifies every descriptor/config/blob and uncompressed diff_id without changing the CI release validator"
+  ],
+  "operator_source_sha256": {
+    "linux-drill.py": "aa571af1b52900c59b43799e5a931fbf8347be98c65ecb6c5dc12e5eba115ac9",
+    "linux-verify-volumes.py": "bc5f79b0f597c882d4ab1a30557f46e34c438da8cefb87ba522f52ba46e15ab3",
+    "verify-rollback-images.py": "621721b06bee0a1b94de427cd903170e2ea319a34da2fc1237dee30a74ca1f10",
+    "relocate-duplicate-remote.py": "64f2645f9f8610b6153d4185c41ce10d16dda00f414f4f66fcaa5a926a68b87a",
+    "relocate-verified-copy.py": "adcfddd0a6cfaea898df548cf9b9b2219ab70921e9f66373ad5ecc4cb69a52f1"
+  }
+}

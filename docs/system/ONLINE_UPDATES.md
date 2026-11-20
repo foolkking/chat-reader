@@ -12,6 +12,30 @@
 
 进度页由独立进程在 `/__updates/` 提供，停服/刷新不依赖 Next 或 API。它是只读页；必须携带由同源根管理员预先领取、限单个任务的 Secure/HttpOnly/SameSite=Strict Cookie。不要复制 Cookie、URL 参数或日志给其他人。其他管理员重新领取同一任务的票据会替换旧票据。浏览器关闭不取消已提交的任务。
 
+<a id="king-enrollment"></a>
+## `king` 已接入：日常使用与运维边界
+
+2026-11-20 **03:17:15 北京时间**复核：协调器及独立进度服务均为 `active` / `enabled`。实际 API 桥用自己的非 root 身份，经专用 socket 检查了公开源 `foolkking/chat-reader` 的 `stable` 频道；返回的签名清单与现役 **`v0.1.1`** 一致，没有更高版本。根管理员可在上方入口点击 **检查更新**。此次没有使用管理员会话，也没有在生产演练升级；首次登记不凭旧镜像或数据备份虚构网页回滚选项。
+
+| 运维对象 | 此实例的边界 |
+| --- | --- |
+| 配置 | `/srv/chat-reader-online` 是仅 root 可写的生效部署目录。环境文件与原已核验配置字节相同；Compose 保留原部署的 worker 限制和 `pull_policy: never`，程序角色不含构建并要求明确镜像。原 `/opt/chat-reader` 未改权限，不是更新器配置来源。不要在两个目录间手动同步秘密或从旧工作树执行特权命令。 |
+| 一次性变动 | 仅重建同镜像 API，以只读方式挂入控制 socket 目录并加入专属组；worker、Web、PostgreSQL 和另七个容器未重启。只在本站 TLS server 增加一个签名进度/维护片段。没有迁移或重置管理员，三个应用容器均无 Docker socket。 |
+| 备份 | 新在线任务的备份根 `/var/lib/chat-reader-online-backups` 仍为空。旧备份根只留 `/opt/chat-reader/backups/chat-reader-20261119T182358Z`（北京时间 11 月 20 日 02:23:58）；宿主机 Docker 保留对应 `26b35501` 的回滚镜像。最新备份已在隔离环境实际恢复；11 月 18 日的服务器副本经授权删除，本机原有加密留存未动。 |
+| 下次升级的空间 | 03:48:16 清理后复核：可用 **7,507,692 KiB（7.16 GiB）**；正式 `--retained-images` 预检需 **7,100,708 KiB**，退出 0。按 `v0.1.1` 制品计算的完整下载前参考预算为 **7,448,633 KiB**，仅余 **57.7 MiB**。下次必须针对实际制品、数据量和实时可用空间重算；不足则停服前拒绝，不删唯一备份。 |
+
+运维连接 `king` 后，可用以下**只读**命令定位同一组四个容器。后置的已登记镜像指针和 socket override 都不能省略。手动更换镜像或变更配置是独立维护操作；若与登记不再匹配，停止并重新审计，不要编辑更新器状态来解除保护。
+
+```sh
+sudo env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root LANG=C DOCKER_HOST=unix:///var/run/docker.sock \
+  docker compose --project-directory /srv/chat-reader-online -p chat-reader \
+    --env-file /srv/chat-reader-online/.env.production --env-file /etc/chat-reader/release-state/current-images.env \
+    -f /srv/chat-reader-online/docker-compose.production.yml -f /usr/local/lib/chat-reader-updater/api-socket.yml \
+    ps -q api web import-worker postgres
+```
+
+[接入回执](../evidence/online-update-2026-11-18/king-enrollment-2026-11-20.json)保留首次 Nginx 检查拒绝、操作端等待超时后的成功回执及清理前的磁盘拒绝；[后续恢复与清理回执](../evidence/online-update-2026-11-18/king-backup-retention-2026-11-20.json)记录单份保留、空间与健康复核。两次操作都不是生产下载或重启测速。
+
 ## 接入前提和信任根
 
 - Linux/amd64、systemd、Python 3.6+、能运行仓库备份脚本的 GNU 工具、Docker Engine 25+ 与支持 `healthcheck.start_interval` 的 Compose v2。采用仓库生产 Compose、同源 TLS Nginx、PostgreSQL、本机四个命名业务卷。只支持声明的 `local-assets-v1` 和 `reader-jobs-v1`。外置数据库、S3、绕过网关的入口、共享可写卷、源码 bind mount、未证明来源的旧镜像，不接入。

@@ -1,0 +1,127 @@
+{
+  "operation": "One-time enrollment of the independent updater on an existing signed production release, not a version change or rehearsal",
+  "verified_at_utc": "2026-11-19T19:17:15.512605Z",
+  "verified_at_asia_shanghai": "2026-11-20T03:17:15+08:00",
+  "host": "king",
+  "installation": {
+    "version": "v0.1.1",
+    "source_sha": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+    "schema": "20261117_0062",
+    "repository": "foolkking/chat-reader",
+    "repository_id": 1297627534,
+    "channel": "stable",
+    "release_id": 451718210,
+    "release_run": 44568680941,
+    "release_attempt": 2,
+    "published_kit_asset": 768686422,
+    "published_kit_sha256": "b52bb3490abb5c6808a86b9ec67ebabfc23a7348d154bf46099ec4ac3bbc2cdc",
+    "active_release_image_asset": 768686414,
+    "issuer_fingerprint_sha256": "360cc2e019b6e810498993385e6fa3d38ac14295df13967fb066c8f0b9cbdce5",
+    "trust": "Both Ed25519 signatures verified with the independently obtained, previously pinned public issuer. 10 nonbinary payload files matched tagged source; static Linux/amd64 ELF checked. Only the public key was placed on the host. No release token on the public instance.",
+    "release_unchanged": true,
+    "off_host_check": {
+      "exact_signed_archive_admission_off_host": true,
+      "four_role_image_identities_accepted": true,
+      "compressed_bytes": 177685219,
+      "expanded_bytes": 178589184,
+      "elapsed_s": 1.141
+    }
+  },
+  "before_change": {
+    "legacy_work_tree_other_writable": true,
+    "private_production_config_matches_previous_sealed_copy": true,
+    "unrecognized_foreign_rw_volume_clients": 0,
+    "observed_foreign_shared_project_network": 0,
+    "app_rootfs_core_file_changes": {
+      "web": 0,
+      "api": 0,
+      "import-worker": 0
+    },
+    "matching_cron_or_systemd_writer_entries_in_examined_files": 0,
+    "initial_enrollment_present": false
+  },
+  "implementation": {
+    "verified_compose_services_including_optional_profile": 6,
+    "old_legacy_project_modified": false,
+    "trusted_compose_and_env": "/srv/chat-reader-online",
+    "new_backup_root": "/var/lib/chat-reader-online-backups",
+    "four_image_expressions_checked_with_two_different_tag_values": true,
+    "exact_runtime_model_before_socket_override_equal": true,
+    "api_only_mount_ro_and_dedicated_group": true,
+    "nginx_change": "One include in the canonical TLS server. Other effective nginx files were unchanged; checked both upload and separate progress routes.",
+    "other_active_nginx_files_unchanged": 13,
+    "protected_ingress_and_include_files": 11,
+    "before_after_api_env_host_policy_and_four_business_mounts_equal_except_approved_delta": true,
+    "only_api_recreated_same_image": true,
+    "other_containers_not_restarted": 10,
+    "real_onboarding_maintenance_plus_final_probes_seconds": 24.387,
+    "api_replacement_plus_verification_seconds": 22.963,
+    "migration_backup_pruning_or_volume_restore": false
+  },
+  "verification": {
+    "enroll_utc": "2026-11-19T19:14:21.587367Z",
+    "activate_utc": "2026-11-19T19:15:12.932507Z",
+    "coordinator_and_progress_enabled_and_active": true,
+    "service_namespace_validation": {
+      "signed_runtime_admission": true,
+      "live_health": true,
+      "exclusive_writers": true,
+      "read_only_tool_and_trust": true,
+      "writable_only_at_required_targets_checked": true
+    },
+    "actual_api_process_identity_used_for_source_check": true,
+    "signed_stable_manifest_returned_by_real_github_matches_registered_current": true,
+    "check_seconds_including_api_bridge_probe": 4.481,
+    "newer_release": null,
+    "prior_updater_managed_version_available": false,
+    "public_https": {
+      "/api/health": 200,
+      "/login": 200,
+      "/api/admin/updates": 401,
+      "/api/admin/runtime-status": 401,
+      "/__updates/": 404,
+      "/__updates/status": 404
+    },
+    "anonymous_post_check": 401,
+    "no_application_docker_socket": true,
+    "worker_web_have_no_control_socket": true,
+    "worker_heartbeat_idle": true,
+    "no_job_or_maintenance_pending": true,
+    "manual_compose_ps_matches_all_four_running_containers": true,
+    "previous_backup_sets_and_manifests_preserved": 2,
+    "new_backup_created": false
+  },
+  "capacity": {
+    "available_kib": 3798792,
+    "retained_images_required_kib": 7100708,
+    "backup_component_kib": 6445348,
+    "image_headroom_kib": 524288,
+    "transfer_headroom_kib": 131072,
+    "retained_images_probe_exit": 1,
+    "pre_download_estimate_using_v011_kib": 7448633,
+    "shortfall_vs_reference_kib": 3649841,
+    "future_version_specific_admission_required": true
+  },
+  "preserved_non_successes": [
+    {
+      "check": "First graceful nginx enrollment",
+      "reason": "A retiring pre-change worker for an unrelated existing tunnel did not have the newly created status group. The overbroad initial worker test refused activation. The original nginx file was restored and verified; the progress service was stopped.",
+      "investigation": "Verified listeners and group on every accepting worker; a retiring worker had no listeners or Reader upstream. Required an explicitly recognized already established unrelated loopback tunnel or no remaining sockets, and verified scoped HTTPS independently. No force restart of the shared proxy."
+    },
+    {
+      "check": "Supervised same-image API cutover launcher",
+      "reason": "The management call timed out at 15 s waiting for the systemd oneshot start acknowledgment. No replay. Reconciled the host-owned durable completion record, inactive successful oneshot exit 0, no fence, unchanged other containers and healthy service."
+    },
+    {
+      "check": "Unmodified signed preflight --retained-images, no version switch requested",
+      "exit": 1,
+      "reason": "Insufficient disk headroom. Read-only volume sizing; no backup deleted, no maintenance or update intent."
+    }
+  ],
+  "verification_limits": [
+    "No administrator login or production browser action was impersonated. Source check used the installed API bridge as its actual OS user; anonymous production HTTPS boundaries were verified.",
+    "No newer production release was offered; no production prepare/apply/rollback, host reboot, or download/restart SLA measurement. Enabling units is not a reboot test.",
+    "Two existing backup sets and their manifests were checked, not fully restored again. No change to the previous isolated restore evidence.",
+    "Free space and the reference package budget are a snapshot, not future-version admission. No production space expansion or off-host transfer was performed."
+  ]
+}

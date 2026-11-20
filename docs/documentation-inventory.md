@@ -1,5 +1,24 @@
 # Markdown 文档台账
 
+2026-11-20：[搜索与阅读合同](system/SEARCH_READING_CONTRACT.md)覆盖全局/正文/分享/离线/管理员范围，
+临时返回缓存、100 处延续游标和物理容器滚动权威；[问题表](evidence/search-reading-2026-11-20/ux-audit.md)是修改前证据，[验证回执及截图](evidence/search-reading-2026-11-20/verification.json)保留源指纹、60 项浏览器门禁、失败和设备边界，不宣称发布。
+
+2026-11-20（本地未发布）：[对话内查找](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#reader-find)与[滚动所有权](system/IMAGE_READING_STABILITY_CONTRACT.md#virtual-reply-offset)记录本轮改动。[脱敏回执](evidence/reader-find-motion-2026-11-20/verification.json)区分真实浏览器、匹配器测量、失败对照与生产；[桌面](evidence/reader-find-motion-2026-11-20/find-1280px.png)／[手机视口](evidence/reader-find-motion-2026-11-20/find-375px.png)截图仅含合成数据。
+
+2026-11-20：[v0.1.1 生产回执](evidence/reader-media-motion-2026-11-19/v0.1.1-production.json)
+绑定两个发布尝试、真实 25 分钟等待、签名 Release、GHCR 回读、停写备份、恢复边界与生产健康。
+[部署手册](deployment.md#v011-production)区分隔离网页升级测速、首次手动部署和随后单独完成的宿主机接入。
+[更新器接入回执](evidence/online-update-2026-11-18/king-enrollment-2026-11-20.json)记录实际签名源检查、同镜像 API 挂载、两次操作异常的复核、正式空间预检被拒及保留边界；[运维入口](system/ONLINE_UPDATES.md#king-enrollment)给出当前可信路径。
+[后续备份清理回执](evidence/online-update-2026-11-18/king-backup-retention-2026-11-20.json)记录最新备份的实际隔离恢复、唯一保留点、删除范围和清理后的独立健康及容量复核；不改写上述历史拒绝。
+
+2026-11-19：[精确完整CI与发布检查点](evidence/reader-media-motion-2026-11-19/ci-and-publication-checkpoint.json)
+绑定a3512d7、44551142239/1、19个成功job、独立镜像包、原生浏览器门禁与只读容量预算。
+PR保护规则阻塞及正式签名尚未执行见[发布资格记录](evidence/reader-media-motion-2026-11-19/release-qualification.md#subsequent-exact-full-ci)。
+
+2026-11-19：[部署手册](deployment.md#最新保留状态本机隔离恢复与单份服务器备份--2026-11-19)更新为单份服务器备份；
+[脱敏证据](evidence/reader-media-motion-2026-11-19/local-recovery-and-retention.json)记录本机加密 PostgreSQL/四目录恢复、
+两个历史镜像组、指定副本清理和独立健康核对。历史失败、两份保留状态不改写。
+
 2026-11-19：[空项目首次排序点击的精确 CI 证据和本机红绿对照](evidence/reader-media-motion-2026-11-19/release-qualification.md#project-sort-native-press)记录目录展示查询与项目自身排序元数据的边界。
 
 2026-11-19：[首次签名发布的资格失败与短正文红绿对照](evidence/reader-media-motion-2026-11-19/release-qualification.md)，
