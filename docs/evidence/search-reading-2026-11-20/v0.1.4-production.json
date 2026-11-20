@@ -1,0 +1,337 @@
+{
+  "version": "v0.1.4",
+  "source_revision": "8d093ef59a488b3c4820b6a26575f79120c1b8de",
+  "repository": "foolkking/chat-reader",
+  "repository_id": 1297627534,
+  "stable_release": {
+    "id": 452957063,
+    "published_at": "2026-11-20T16:58:22Z",
+    "signed_archives": {
+      "at": "2026-11-20T17:25:57.057154+00:00",
+      "version": "v0.1.4",
+      "revision": "8d093ef59a488b3c4820b6a26575f79120c1b8de",
+      "signatures_verified": [
+        "update-v1.json",
+        "updater-kit.sha256"
+      ],
+      "issuer_fingerprint": "360cc2e019b6e810498993385e6fa3d38ac14295df13967fb066c8f0b9cbdce5",
+      "archive_bytes": 177728609,
+      "archive_sha256": "9fd50d4b308695eb1ac1d37a03ad603d9a1d8dc8a4c7241873cc8bf9979be434",
+      "expanded_bytes": 178637824,
+      "kit_sha256": "3f67b69ddca62680ad8b9a5fa85e234a8961b1cc2627943e31c13a8e13c04fbe",
+      "qualification_run": 44772266798,
+      "attempt": 1,
+      "artifact_id": 14648823853,
+      "artifact_digest": "sha256:d60a4f08ea1709b650ed5e751d0b6a02e2cf27fce8798bc8a70c51cfa909d4c1",
+      "registry": {
+        "api": {
+          "digest": "sha256:ba1d91d27b7df449ea3d0f11d01750866d77163b232131827035922aa21b089c",
+          "config": "sha256:3b1ddcc333b0d1a9bd4543fb0aaf97f6a64fa53eeaeb449b5fe3e557673b8092",
+          "rootfs_matches": true,
+          "tag_matches_digest": true
+        },
+        "web": {
+          "digest": "sha256:d025bec1b4c2ff50de737e03d84c4819c67fdb95a39846259814b6b9ea219ad7",
+          "config": "sha256:1296af9ed39f38466701d7f3cd2a1cb9a2fe0f109ef406f9f7a729033abbcbf6",
+          "rootfs_matches": true,
+          "tag_matches_digest": true
+        }
+      },
+      "all_four_archive_identities_verified": true
+    },
+    "release_assets": [
+      {
+        "name": "chat-reader-images.tar.gz",
+        "bytes": 177728609,
+        "digest": "sha256:9fd50d4b308695eb1ac1d37a03ad603d9a1d8dc8a4c7241873cc8bf9979be434"
+      },
+      {
+        "name": "chat-reader-updater-linux-amd64.tar.gz",
+        "bytes": 7062046,
+        "digest": "sha256:3f67b69ddca62680ad8b9a5fa85e234a8961b1cc2627943e31c13a8e13c04fbe"
+      },
+      {
+        "name": "update-v1.json",
+        "bytes": 3342,
+        "digest": "sha256:aa7d119f544911c9b67e388d4ec8301601dc78767c70669ee01354f7ea4fdd17"
+      },
+      {
+        "name": "update-v1.json.sig",
+        "bytes": 88,
+        "digest": "sha256:02a407d6ee18e31dbce24b2c6b1c54113d9db36be041ddfab98ef63d8288aad1"
+      },
+      {
+        "name": "updater-kit.sha256",
+        "bytes": 105,
+        "digest": "sha256:220c7bd51397373daceaa62e6aa0f8ae7f923023b64157d82f905dde702cf667"
+      },
+      {
+        "name": "updater-kit.sha256.sig",
+        "bytes": 88,
+        "digest": "sha256:7945bfb83a0f4a26d2af485490d246a72b0fd6e28dfec024e44a913b3cc3b814"
+      }
+    ]
+  },
+  "ci": {
+    "original": {
+      "parent": "44765766532/1",
+      "qualification": "44765794702/1",
+      "results": {
+        "success": 15,
+        "failure": 1,
+        "skipped": 3
+      },
+      "failed_job_id": 136389950067,
+      "reading_result": "59 passed; last mobile gesture case failed in synthetic cleanup DELETE following a Next proxy ECONNRESET. Original gate was not relaxed; transport fault is not proven permanently fixed. No release from this attempt.",
+      "failed_log_sha256": "fc1c9d53e0428d3740d603f7b623d744ff20cfcb07e11bfd831a5749857cd036"
+    },
+    "successful": {
+      "parent": "44765766532/2",
+      "publication_job_ids": {
+        "qualify": 136412630309,
+        "rehearse": 136430474345,
+        "publish": 136434656989
+      },
+      "qualification": "44772266798/1",
+      "all_19_jobs": {
+        "settings-restore": 136412743643,
+        "image-preparation": 136412743877,
+        "web-quality-shard-1 / gates": 136412744062,
+        "api-quality-shard-2 / suite": 136412744078,
+        "api-quality-shard-3 / suite": 136412744162,
+        "web-quality-shard-2 / gates": 136412744245,
+        "api-quality-shard-1 / suite": 136412744258,
+        "api-quality-shard-4 / suite": 136412744303,
+        "settings-quality-shard-1 / matrix": 136412744305,
+        "settings-quality-shard-2 / matrix": 136412744488,
+        "settings-quality-shard-3 / matrix": 136412744586,
+        "web-quality-shard-3 / gates": 136412744599,
+        "reading-performance-comparison / compare": 136412744653,
+        "settings-quality-shard-4 / matrix": 136412744668,
+        "api-quality": 136419053193,
+        "settings-quality": 136422055435,
+        "web-quality": 136429126677,
+        "build-images": 136429320384,
+        "inspect-release-artifact": 136429713948
+      },
+      "exact_qualified_image_matches_release": true,
+      "web_gate_counts": {
+        "PASS": 14,
+        "FAIL": 0,
+        "NOT_VERIFIED": 0,
+        "SKIPPED": 0
+      },
+      "reading_stability": {
+        "passed": 60,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "source_editor_mutation": {
+        "passed": 123,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "qualification_sha": "8d093ef59a488b3c4820b6a26575f79120c1b8de"
+    },
+    "fresh_command_waits": [
+      {
+        "started": "2026-11-20T23:44:03.5526867+08:00",
+        "finished": "2026-11-21T00:09:03.5753307+08:00",
+        "elapsedSeconds": 1500.02124,
+        "requestedSeconds": 1500
+      },
+      {
+        "run_id": "44765766532",
+        "requested_attempt": 2,
+        "started": "2026-11-21T00:19:29.7866704+08:00",
+        "finished": "2026-11-21T00:44:29.8026063+08:00",
+        "elapsedSeconds": 1500.0179593,
+        "requestedSeconds": 1500
+      }
+    ]
+  },
+  "isolated_browser_rehearsal": [
+    {
+      "action": "prepare",
+      "archive_bytes": 198036012,
+      "download_ms": 1280,
+      "ready_host_ms": 8669,
+      "click_to_ready_ms": 9349,
+      "continuous_probes": true,
+      "phases_ms": {
+        "admission": 1203,
+        "downloading": 1280,
+        "staging": 6186
+      }
+    },
+    {
+      "action": "apply",
+      "click_to_healthy_ms": 7267,
+      "click_to_confirmed_ms": 7473,
+      "observed_outage_ms": 6292,
+      "maintenance_refresh": true,
+      "phases_ms": {
+        "admission": 801,
+        "backup": 1159,
+        "commit": 548,
+        "draining": 696,
+        "fencing": 95,
+        "health": 2806,
+        "migration": 153,
+        "switching": 627
+      }
+    },
+    {
+      "action": "rollback",
+      "click_to_healthy_ms": 7558,
+      "click_to_confirmed_ms": 7764,
+      "observed_outage_ms": 6203,
+      "maintenance_refresh": true,
+      "phases_ms": {
+        "admission": 1173,
+        "backup": 1112,
+        "commit": 535,
+        "draining": 675,
+        "fencing": 97,
+        "health": 2772,
+        "migration": 148,
+        "switching": 668
+      }
+    }
+  ],
+  "production": {
+    "host": "king",
+    "operator_path": "SSH through the installed application bridge to the fixed host socket; no production browser/admin session or rehearsal.",
+    "source": "stable; repository identity and the independently pinned issuer matched on both sides.",
+    "operator_kit": {
+      "at": "2026-11-20T17:53:24.475810+00:00",
+      "installed_adapter_sha256": "fd0b611c95cb2bcf1015f1c8c0c9a737723111ffd1866f5450af36efe5776df4",
+      "journal_or_configuration_changed": false,
+      "kit_sha256": "3f67b69ddca62680ad8b9a5fa85e234a8961b1cc2627943e31c13a8e13c04fbe",
+      "old_adapter_retained": "/var/lib/chat-reader-updater/host-kit-v014/host.py.before-v014",
+      "old_adapter_sha256": "16af4e4698e44a92c9511003fce77c51870f44cc6741bcaab91360e85087f132",
+      "only_changed": "/usr/local/lib/chat-reader-updater/host.py",
+      "services_restarted": false
+    },
+    "protected_enrollment": "root-owned active deployment directory; old writable deployment tree is not used by the privileged updater. No journal or deployment configuration edit.",
+    "expired_candidate_cleanup": {
+      "only_revision": "c3dbd75728928b859c5fbe4a14fb930eb07cd8ff",
+      "tags": 4,
+      "unused_image_ids": 2,
+      "all_containers_checked": 11,
+      "retained_current_and_rollback_role_tags": 8,
+      "released_kib_observed": 286784,
+      "backup_or_volume_removed": false
+    },
+    "prepare": {
+      "job_id": "0dd0e8e9afb5419a8778205e063cf09a",
+      "download_ms": 6497,
+      "host_ready_ms": 309229,
+      "old_service_online": true,
+      "archive_bytes": 177728609,
+      "before_download_required_kib": 7458931,
+      "before_download_available_kib": 7531308,
+      "before_apply": {
+        "available_kib": 7244184,
+        "backup_kib": 6455556,
+        "required_kib": 7110916
+      },
+      "previously_restore_tested_backup_all_five_hashes_rechecked": true
+    },
+    "apply": {
+      "job_id": "100727445d4846db9da3b5cef9e966a0",
+      "from": "v0.1.1",
+      "to": "v0.1.4",
+      "confirmed_at": "2026-11-21T02:14:08.689+08:00",
+      "first_observed_login_503": "2026-11-21T02:16:06.889+08:00",
+      "first_observed_new_login_200": "2026-11-21T02:23:18.428+08:00",
+      "succeeded_at": "2026-11-21T02:23:18.433+08:00",
+      "request_to_first_reopened_login_ms": 549739,
+      "first_503_to_first_reopened_login_ms": 431539,
+      "request_to_journal_success_ms": 549744,
+      "phase_ms": {
+        "admission": 115730,
+        "backup": 392150,
+        "commit": 2803,
+        "draining": 13517,
+        "fencing": 1095,
+        "health": 19671,
+        "migration": 649,
+        "switching": 4129
+      },
+      "measurement": "Same-origin host samples, approximately two-second polling, not a production browser click. The whitelisted health endpoint returned 200 before public ingress reopened; it is not the restart endpoint.",
+      "download_30s_target_met": true,
+      "restart_15s_target_met": false
+    },
+    "independent_final": {
+      "at": "2026-11-21T02:26:53.946+08:00",
+      "https": {
+        "/__updates/status": 404,
+        "/api/admin/runtime-status": 401,
+        "/api/admin/updates": 401,
+        "/api/app-info": 401,
+        "/api/health": 200,
+        "/library": 200,
+        "/login": 200
+      },
+      "maintenance": false,
+      "same_alembic_head_no_migration": "20261117_0062",
+      "worker_fresh_since_new_start": true,
+      "host_units_active_enabled": true,
+      "current_image_fingerprints": true,
+      "latest_stable_from_api_bridge": "v0.1.4",
+      "previous_from_api_bridge": "v0.1.1",
+      "no_newer_candidate": true,
+      "unchanged_containers_including_postgres": 8,
+      "unchanged_config_seal_and_volume_mounts": true,
+      "unchanged_row_counts_for_tables": [
+        "asset_objects",
+        "attachments",
+        "conversation_annotations",
+        "conversations",
+        "imports",
+        "message_versions",
+        "messages"
+      ],
+      "four_volumes": {
+        "files_unchanged": 4339,
+        "aggregate_bytes_unchanged": 4252428934
+      },
+      "new_stopped_backup": {
+        "bytes": 4050772902,
+        "components": 5,
+        "directory": "chat-reader-20261120T181619Z",
+        "files": 8,
+        "manifest_sha256": "40b9d6913d11bdc0bc269bb02acd709be0f229f4be81b54f928b0afd5c75c4c3",
+        "verified": true
+      },
+      "previous_isolation_restored_legacy_backup_preserved": true,
+      "next_operation": {
+        "at": "2026-11-20T18:28:29.380128+00:00",
+        "backup_sets": {
+          "legacy": 1,
+          "online": 1
+        },
+        "immediate_rollback_pointer_and_four_role_images_verified": true,
+        "next_operation_readonly_retained_preflight": {
+          "available_kib": 3290120,
+          "backup_kib": 6455556,
+          "exit": 1,
+          "margin_kib": -3820796,
+          "required_kib": 7110916
+        },
+        "next_operation_started": false,
+        "program_compatible_with_current_schema": true
+      }
+    }
+  },
+  "limits": [
+    "The new stopped five-component backup was checked by the updater and independently reverified with the original verifier, hashes, archive reads and pg_restore TOC. No isolated full restore of this new backup and no production rollback were attempted.",
+    "The older already isolation-restored data/image pair was not deleted. The next retained-images operation currently fails its disk budget; program compatibility alone is not a guarantee that a rollback can start.",
+    "Observed production aggregate counts, storage sizes, mounts and config seal do not claim a new full business-row or per-file content comparison. No production session, real-device reading acceptance, automatic backup cleanup or backup-volume restore."
+  ]
+}
