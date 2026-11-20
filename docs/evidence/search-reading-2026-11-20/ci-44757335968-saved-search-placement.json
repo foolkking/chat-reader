@@ -1,0 +1,290 @@
+{
+  "status": "failed_release_qualification_repaired_candidate_not_yet_released",
+  "tag": "v0.1.3",
+  "sha": "ed9b1adac88b12bc40c7b8d7354eb8cebf38cf26",
+  "parent_run": 44757284491,
+  "parent_attempt": 1,
+  "qualification": 44757335968,
+  "qualification_attempt": 1,
+  "wait": {
+    "started": "2026-11-20T22:51:19.6142981+08:00",
+    "finished": "2026-11-20T23:16:19.6290965+08:00",
+    "elapsedSeconds": 1500.0135233,
+    "requestedSeconds": 1500
+  },
+  "jobs": [
+    {
+      "id": 136360422265,
+      "name": "image-preparation",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360422559,
+      "name": "settings-restore",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360422560,
+      "name": "api-quality-shard-3 / suite",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360422573,
+      "name": "web-quality-shard-1 / gates",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360422599,
+      "name": "api-quality-shard-4 / suite",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360422770,
+      "name": "api-quality-shard-2 / suite",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360422815,
+      "name": "web-quality-shard-3 / gates",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360422953,
+      "name": "settings-quality-shard-2 / matrix",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360422972,
+      "name": "settings-quality-shard-4 / matrix",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360423044,
+      "name": "settings-quality-shard-1 / matrix",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360423078,
+      "name": "api-quality-shard-1 / suite",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360423221,
+      "name": "web-quality-shard-2 / gates",
+      "conclusion": "failure"
+    },
+    {
+      "id": 136360423228,
+      "name": "settings-quality-shard-3 / matrix",
+      "conclusion": "success"
+    },
+    {
+      "id": 136360423326,
+      "name": "reading-performance-comparison / compare",
+      "conclusion": "success"
+    },
+    {
+      "id": 136366785532,
+      "name": "api-quality",
+      "conclusion": "success"
+    },
+    {
+      "id": 136368893010,
+      "name": "settings-quality",
+      "conclusion": "success"
+    },
+    {
+      "id": 136372285851,
+      "name": "web-quality",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 136372287824,
+      "name": "build-images",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 136372290094,
+      "name": "inspect-release-artifact",
+      "conclusion": "skipped"
+    }
+  ],
+  "failed_step": {
+    "job": 136360423221,
+    "number": 45,
+    "name": "Release H Source Editor and mutation cache checks",
+    "tests_passed": 122,
+    "failed": 1,
+    "case": "mixed-type search pagination retains the selected document and actual Enter destination (legacy continuation)",
+    "measurement": {
+      "actual_drift_css_px": 32,
+      "max_allowed_css_px": 1
+    },
+    "artifact_id": 14641182155,
+    "trace_sha256": "881a05050a9171bc30f7187b5e49f6a82dae12714fd4c5a6586e263dc4bafda1"
+  },
+  "diagnosis": "The original screen trace shows the 20px loading status and 12px margin in the closed Saved searches section disappearing after the second result arrived. Reproduced by delaying only that independent read in the mounted actual search components. It is not the earlier 74px queue action issue.",
+  "fix": "Collapsed pending state is announced without a layout row. Collapsed read failure reuses the unavailable Save slot for a named Retry; expanded pending/error and direct recovery remain. No fixed blank space, scroll correction, test skips or changed thresholds.",
+  "local": {
+    "before": {
+      "before": {
+        "x": 81,
+        "y": 497,
+        "width": 265,
+        "height": 48
+      },
+      "after": {
+        "x": 81,
+        "y": 465,
+        "width": 265,
+        "height": 48
+      },
+      "drift": 32,
+      "pointerRetained": false
+    },
+    "after": [
+      {
+        "case": "search-page-probe-1440-en-US-explicit.json",
+        "before": {
+          "x": 313.796875,
+          "y": 465,
+          "width": 868.40625,
+          "height": 44
+        },
+        "after": {
+          "x": 313.796875,
+          "y": 465,
+          "width": 868.40625,
+          "height": 44
+        },
+        "drift": 0,
+        "pointerRetained": true
+      },
+      {
+        "case": "search-page-probe-1440-en-US-legacy.json",
+        "before": {
+          "x": 313.796875,
+          "y": 465,
+          "width": 868.40625,
+          "height": 44
+        },
+        "after": {
+          "x": 313.796875,
+          "y": 465,
+          "width": 868.40625,
+          "height": 44
+        },
+        "drift": 0,
+        "pointerRetained": true
+      },
+      {
+        "case": "search-page-probe-1440-zh-CN-explicit.json",
+        "before": {
+          "x": 313.796875,
+          "y": 465,
+          "width": 868.40625,
+          "height": 44
+        },
+        "after": {
+          "x": 313.796875,
+          "y": 465,
+          "width": 868.40625,
+          "height": 44
+        },
+        "drift": 0,
+        "pointerRetained": true
+      },
+      {
+        "case": "search-page-probe-1440-zh-CN-legacy.json",
+        "before": {
+          "x": 313.796875,
+          "y": 465,
+          "width": 868.40625,
+          "height": 44
+        },
+        "after": {
+          "x": 313.796875,
+          "y": 465,
+          "width": 868.40625,
+          "height": 44
+        },
+        "drift": 0,
+        "pointerRetained": true
+      },
+      {
+        "case": "search-page-probe-375-en-US-explicit.json",
+        "before": {
+          "x": 81,
+          "y": 493,
+          "width": 265,
+          "height": 48
+        },
+        "after": {
+          "x": 81,
+          "y": 493,
+          "width": 265,
+          "height": 48
+        },
+        "drift": 0,
+        "pointerRetained": true
+      },
+      {
+        "case": "search-page-probe-375-en-US-legacy.json",
+        "before": {
+          "x": 81,
+          "y": 493,
+          "width": 265,
+          "height": 48
+        },
+        "after": {
+          "x": 81,
+          "y": 493,
+          "width": 265,
+          "height": 48
+        },
+        "drift": 0,
+        "pointerRetained": true
+      },
+      {
+        "case": "search-page-probe-375-zh-CN-explicit.json",
+        "before": {
+          "x": 81,
+          "y": 465,
+          "width": 265,
+          "height": 48
+        },
+        "after": {
+          "x": 81,
+          "y": 465,
+          "width": 265,
+          "height": 48
+        },
+        "drift": 0,
+        "pointerRetained": true
+      },
+      {
+        "case": "search-page-probe-375-zh-CN-legacy.json",
+        "before": {
+          "x": 81,
+          "y": 465,
+          "width": 265,
+          "height": 48
+        },
+        "after": {
+          "x": 81,
+          "y": 465,
+          "width": 265,
+          "height": 48
+        },
+        "drift": 0,
+        "pointerRetained": true
+      }
+    ],
+    "browser_cases": 52,
+    "errors": [],
+    "lint_exit": 0,
+    "typecheck_exit": 0,
+    "scope": "Real mounted components and real Chromium on synthetic transport; not a full local deployment or physical phone."
+  },
+  "production": "v0.1.1; no new application cutover or backup removal. v0.1.3 tag immutable, no published Release."
+}

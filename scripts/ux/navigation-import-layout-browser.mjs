@@ -36,7 +36,11 @@ export const useSearchParams=()=>new URLSearchParams(location.search);
 export const useRouter=()=>({push:href=>{window.fixtureDestination=href}});
 export const ProjectSidebar=()=>null;
 export const MobileSidebarTrigger=()=>null;
-export const getUserFeatureEntries=async()=>[];
+export const getUserFeatureEntries=async(collection)=>{
+ if(location.pathname==="/search-page"&&collection==="saved-search")
+  await new Promise((resolve,reject)=>{window.releaseSavedSearches=resolve;window.failSavedSearches=()=>reject(Error("Synthetic saved-search read failed"))});
+ return [];
+};
 export const archiveConversation=async()=>{throw Error("Unexpected archive")};
 export const saveUserFeatureEntry=async()=>{throw Error("Unexpected saved-search write")};
 export const deleteUserFeatureEntry=async()=>{throw Error("Unexpected saved-search delete")};
@@ -208,11 +212,25 @@ try {
       const destination=await first.getAttribute("href");
       await page.getByRole("button",{name:locale==="zh-CN"?"加载更多":"Load more",exact:true}).click();
       await page.waitForFunction(()=>typeof window.releaseSearchPage==="function");
+      await page.waitForFunction(()=>typeof window.releaseSavedSearches==="function");
       const before=await first.boundingBox(), point={x:before.x+before.width/2,y:before.y+before.height-4};
       await page.mouse.move(point.x,point.y);
       await page.screenshot({path:join(out,`search-page-before-${width}-${locale}-${continuation}.png`)});
       await page.evaluate(()=>window.releaseSearchPage());
       await expect(page.locator("a[data-search-index]")).toHaveCount(2);
+      if(continuation==="explicit"){
+        await page.evaluate(()=>window.failSavedSearches());
+        const retry=page.getByRole("button",{name:locale==="zh-CN"?"重试读取已保存的搜索":"Retry loading saved searches"});
+        await expect(retry).toBeVisible();
+        const failedBox=await first.boundingBox();
+        assert.ok(Math.abs(failedBox.y-before.y)<=1,"A collapsed background failure must not move the hit");
+        await page.evaluate(()=>{delete window.releaseSavedSearches;});
+        await retry.click();
+        await page.waitForFunction(()=>typeof window.releaseSavedSearches==="function");
+        await page.mouse.move(point.x,point.y);
+      }
+      await page.evaluate(()=>window.releaseSavedSearches());
+      await expect(page.getByRole("button",{name:locale==="zh-CN"?"保存当前搜索":"Save current search",exact:true})).toBeEnabled();
       const after=await first.boundingBox(), drift=Math.abs(after.y-before.y);
       await page.screenshot({path:join(out,`search-page-after-${width}-${locale}-${continuation}.png`)});
       const pointerRetained=await first.evaluate((node,p)=>node.contains(document.elementFromPoint(p.x,p.y)),point);

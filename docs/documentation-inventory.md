@@ -1,5 +1,6 @@
 # Markdown 文档台账
 
+2026-11-20：[标签资格 44757335968/1 原失败及修复](evidence/search-reading-2026-11-20/ci-44757335968-saved-search-placement.json)区分已保存搜索晚到（32px）与之前分页工具条（74px）。[前后截图](evidence/search-reading-2026-11-20/saved-search-late-read-before-after.png)只含合成数据。
 2026-11-20：[v0.1.2 发布与宿主机准入回执](evidence/search-reading-2026-11-20/v0.1.2-publication-and-host-admission.json)绑定两个精确全绿 CI、签名/GHCR、生产下载和两次停服前拒绝；[更新器边界](system/ONLINE_UPDATES.md#king-enrollment)解释固定冷态扫描的独立有界期限及签名工具包升级要求。没有改写旧失败、宣布生产切换或自动删除备份。
 
 2026-11-20：[搜索与阅读合同](system/SEARCH_READING_CONTRACT.md)覆盖全局/正文/分享/离线/管理员范围，
