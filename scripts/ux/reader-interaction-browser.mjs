@@ -258,15 +258,23 @@ try {
     await expect(helpTrigger).toBeFocused();
     const search=page.locator('[data-reader-focus-controls] button[data-reader-header-action="search"]');
     await search.click();
-    const dialog=page.getByRole("dialog",{name:locale==="zh-CN"?"搜索":"Search",exact:true});
+    // Mobile find is intentionally inline: keep the focus-mode/navigation
+    // assertions, but exercise the approved disclosure rather than an old sheet.
+    const dialog=width<768?page.getByTestId("conversation-find"):page.getByRole("dialog",{name:locale==="zh-CN"?"搜索":"Search",exact:true});
     await expect(dialog).toBeVisible();
+    if(width<768) {
+      await expect(dialog).toHaveAttribute("data-reader-find","compact");
+      await expect(page.getByRole("dialog",{name:locale==="zh-CN"?"搜索":"Search",exact:true})).toHaveCount(0);
+    }
     await page.screenshot({path:join(out,`focus-search-${width}-${locale}-${theme}.png`)});
     await dialog.getByRole("textbox").fill("formula");
+    if(width<768) await dialog.getByRole("button",{name:locale==="zh-CN"?"结果":"Results",exact:true}).click();
     const match=dialog.getByRole("button",{name:/Synthetic formula/});
     await expect(match).toBeVisible();
     await match.click();
     await expect(scroller).toHaveAttribute("data-navigation-stage",/^settled/,{timeout:15000});
     await expect(focus).toBeVisible();
+    if(width<768) await expect(dialog).toBeVisible(); // Find remains available while reading.
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
     await expect(search).toBeFocused();

@@ -2984,6 +2984,12 @@ export function ConversationReader({
       ? opener : Array.from(readerMainSectionRef.current?.querySelectorAll<HTMLElement>("[data-reader-more-actions='true']") ?? []).find(node => node.getClientRects().length) ?? null;
   }, []);
 
+  const closeMobileSearch = useCallback(() => {
+    setUtilityPanel(null);
+    clearSearchNavigation();
+    (restoreMobileUtilityFocus() ?? scrollContainerRef.current)?.focus({ preventScroll: true });
+  }, [clearSearchNavigation, restoreMobileUtilityFocus, setUtilityPanel]);
+
   const restoreNavigationFocus = useCallback(() => {
     const opener = navigationOpenerRef.current;
     if (opener?.isConnected && !opener.closest("[aria-hidden='true']")) return opener;
@@ -3110,6 +3116,7 @@ export function ConversationReader({
   useEffect(() => {
     const closeTopSurface = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
+      if (utilityPanel === "search") { closeMobileSearch(); event.preventDefault(); return; }
       if (utilityPanel !== null) { if (utilityPanel === "export") releaseExportScope(`export:${conversationId}`); setUtilityPanel(null); event.preventDefault(); return; }
       if (showShare || showExport || showSearch || showTags || showUpdates) { closeDesktopUtilityPanels(); event.preventDefault(); return; }
       if (showFiles) { setShowFiles(false); event.preventDefault(); return; }
@@ -3117,7 +3124,7 @@ export function ConversationReader({
     };
     window.addEventListener("keydown", closeTopSurface);
     return () => window.removeEventListener("keydown", closeTopSurface);
-  }, [closeDesktopUtilityPanels, conversationId, desktopActionsExpanded, mobileActionsExpanded, setUtilityPanel, showExport, showFiles, showSearch, showShare, showTags, showUpdates, utilityPanel]);
+  }, [closeDesktopUtilityPanels, closeMobileSearch, conversationId, desktopActionsExpanded, mobileActionsExpanded, setUtilityPanel, showExport, showFiles, showSearch, showShare, showTags, showUpdates, utilityPanel]);
 
   async function openNavigation(tab: "dialogue" | "sections", opener?: HTMLElement | null) {
     if (!(await closeSourceEditorForWorkspace())) return;
@@ -3561,7 +3568,7 @@ export function ConversationReader({
             </div>
           ) : null}
           {utilityPanel === "search" && !sourceEditorTarget ? <div className="shrink-0 border-t border-ui md:hidden">
-            <ConversationSearchPanel compact showHeader={false} conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onPrepareRetry={onPrepareSearchRetry} onClose={() => { setUtilityPanel(null); clearSearchNavigation(); (restoreMobileUtilityFocus() ?? scrollContainerRef.current)?.focus({ preventScroll: true }); }} />
+            <ConversationSearchPanel compact showHeader={false} conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onPrepareRetry={onPrepareSearchRetry} onClose={closeMobileSearch} />
           </div> : null}
           {searchNavigation && utilityPanel !== "search" ? <div className="flex min-w-0 items-center gap-2 border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-primary" role="status">
             <span className="min-w-0 flex-1 truncate font-medium">{searchNavigation.query}</span>

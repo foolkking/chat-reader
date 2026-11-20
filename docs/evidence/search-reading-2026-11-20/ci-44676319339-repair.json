@@ -1,0 +1,334 @@
+{
+  "recorded_at_utc": "2026-11-20T11:32:47.825220+00:00",
+  "failed_run": {
+    "databaseId": 44676319339,
+    "headSha": "60c431ada8d443746203e980cd2106bcbdfafb21",
+    "status": "completed",
+    "conclusion": "failure",
+    "attempt": 1,
+    "event": "workflow_dispatch",
+    "createdAt": "2026-11-20T04:43:39Z",
+    "updatedAt": "2026-11-20T05:00:42Z"
+  },
+  "jobs": [
+    {
+      "id": 136088904055,
+      "name": "settings-restore",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904267,
+      "name": "web-quality-shard-3 / gates",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904277,
+      "name": "settings-quality-shard-1 / matrix",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904281,
+      "name": "reading-performance-comparison / compare",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904304,
+      "name": "image-preparation",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904362,
+      "name": "api-quality-shard-3 / suite",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904505,
+      "name": "api-quality-shard-2 / suite",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904546,
+      "name": "settings-quality-shard-3 / matrix",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904554,
+      "name": "api-quality-shard-4 / suite",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904564,
+      "name": "settings-quality-shard-4 / matrix",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904570,
+      "name": "web-quality-shard-2 / gates",
+      "conclusion": "failure",
+      "failed_steps": [
+        "Release H Source Editor and mutation cache checks"
+      ]
+    },
+    {
+      "id": 136088904571,
+      "name": "web-quality-shard-1 / gates",
+      "conclusion": "failure",
+      "failed_steps": [
+        "Formula reading, focus tools and timed return regression",
+        "Preserve navigation and import component evidence"
+      ]
+    },
+    {
+      "id": 136088904743,
+      "name": "api-quality-shard-1 / suite",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136088904803,
+      "name": "settings-quality-shard-2 / matrix",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136092877752,
+      "name": "api-quality",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136094564831,
+      "name": "web-quality",
+      "conclusion": "skipped",
+      "failed_steps": []
+    },
+    {
+      "id": 136094635781,
+      "name": "settings-quality",
+      "conclusion": "success",
+      "failed_steps": []
+    },
+    {
+      "id": 136094833419,
+      "name": "build-images",
+      "conclusion": "skipped",
+      "failed_steps": []
+    },
+    {
+      "id": 136094834230,
+      "name": "inspect-release-artifact",
+      "conclusion": "skipped",
+      "failed_steps": []
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 14603540440,
+      "name": "web-quality-shard-2-60c431ada8d443746203e980cd2106bcbdfafb21-1",
+      "digest": "sha256:bb3f2085ee902eea98e07c727afed28fea9d73f17b7d9a89d6cfc27cfacdb837",
+      "bytes": 12186672
+    },
+    {
+      "id": 14602966607,
+      "name": "web-quality-shard-3-60c431ada8d443746203e980cd2106bcbdfafb21-1",
+      "digest": "sha256:4fc026310911fe446bb8c88a3d38512fc0d541dfb497ac2119f97c877449dcc4",
+      "bytes": 8867533
+    },
+    {
+      "id": 14602875681,
+      "name": "web-quality-shard-1-60c431ada8d443746203e980cd2106bcbdfafb21-1",
+      "digest": "sha256:91d507f43f8e62759a27c17016b45e61be3ee70a0132e6439d9dd07de3f298b0",
+      "bytes": 1416359
+    }
+  ],
+  "failures": [
+    {
+      "job": 136088904570,
+      "cases": [
+        "mixed-type search pagination, explicit continuation",
+        "mixed-type search pagination, legacy continuation"
+      ],
+      "gate": "source-editor-mutation",
+      "passed": 119,
+      "failed": 2,
+      "root_cause": "Later page first makes two-item reading queue eligible; conditional toolbar inserted before results moves already pointed-at hit.",
+      "fix": "Keep conditional queue action after results, no permanent empty placeholder, no altered keyboard destination.",
+      "red": {
+        "before": {
+          "x": 81,
+          "y": 465,
+          "width": 265,
+          "height": 48
+        },
+        "after": {
+          "x": 81,
+          "y": 539,
+          "width": 265,
+          "height": 48
+        },
+        "drift": 74,
+        "pointerRetained": false
+      },
+      "green": [
+        {
+          "width": 375,
+          "locale": "zh-CN",
+          "section": "search-page-paging-stable",
+          "continuation": "explicit",
+          "drift": 0,
+          "pass": true
+        },
+        {
+          "width": 375,
+          "locale": "zh-CN",
+          "section": "search-page-paging-stable",
+          "continuation": "legacy",
+          "drift": 0,
+          "pass": true
+        },
+        {
+          "width": 375,
+          "locale": "en-US",
+          "section": "search-page-paging-stable",
+          "continuation": "explicit",
+          "drift": 0,
+          "pass": true
+        },
+        {
+          "width": 375,
+          "locale": "en-US",
+          "section": "search-page-paging-stable",
+          "continuation": "legacy",
+          "drift": 0,
+          "pass": true
+        },
+        {
+          "width": 1440,
+          "locale": "zh-CN",
+          "section": "search-page-paging-stable",
+          "continuation": "explicit",
+          "drift": 0,
+          "pass": true
+        },
+        {
+          "width": 1440,
+          "locale": "zh-CN",
+          "section": "search-page-paging-stable",
+          "continuation": "legacy",
+          "drift": 0,
+          "pass": true
+        },
+        {
+          "width": 1440,
+          "locale": "en-US",
+          "section": "search-page-paging-stable",
+          "continuation": "explicit",
+          "drift": 0,
+          "pass": true
+        },
+        {
+          "width": 1440,
+          "locale": "en-US",
+          "section": "search-page-paging-stable",
+          "continuation": "legacy",
+          "drift": 0,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "job": 136088904571,
+      "gate": "reader-interaction-browser",
+      "root_cause": "Old mobile fixture awaited Search dialog although approved UI is inline. Updating the selector additionally exposed missing opener focus when Escape bubbles from body after successful selection.",
+      "fix": "Exercise inline disclosure and retain original navigation/focus assertions; one actual close callback retires find and restores focus preventScroll.",
+      "red_focus_reproduced": true,
+      "green_case_count": 46,
+      "green_errors": []
+    }
+  ],
+  "local_checks": {
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": "passed",
+    "component_browser_navigation_import_layout": {
+      "passed": 52,
+      "adapters": "Synthetic API/routing; actual SearchPage, SearchBox, SavedSearchesPanel, results and styles."
+    },
+    "component_browser_reader_interaction": {
+      "passed": 46,
+      "adapters": "Existing fixture routing/data; actual Reader/Markdown/KaTeX/virtualizer/focus/search."
+    },
+    "ci_node": {
+      "passed": 162,
+      "failed": 0
+    },
+    "ux_full": {
+      "passed": 2604,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "regression_additions": [
+    "Existing explicit/legacy whole-app pagination assertions retained; mobile variants added; <=1px and queue below results/44px assertions added.",
+    "Eight same-source mounted SearchPage cases:375/1440 x zh/en x explicit/legacy.",
+    "Two actual close-callback tests cover opener/fallback and IME/handled-event exclusion.",
+    "Optional reader-layout scenario also updated for approved mobile inline find; not claimed executed locally."
+  ],
+  "source_sha256_lf": {
+    "apps/web/e2e/reader-layout.spec.ts": "dfc795622a45823ab82c8fb04ea639d78d147ff4f4d355a23dfcdb8c9e27818c",
+    "apps/web/e2e/ux-recovery-followup.spec.ts": "be15d98326db615838b214be9875f3d0e3098406d4c29fe14f050953204e8446",
+    "apps/web/features/conversations/conversation-reader.tsx": "dff994c4319234d9974ff15280fe3a6160df554443bc1f538f455c6c4643aa93",
+    "apps/web/features/search/search-page.tsx": "a0875dc3f2ac1561bba5649245da8beb75198bf22cff0fd12f39258674c739f8",
+    "scripts/ux/attachment-modal-resource.test.mjs": "fbf3e8a72d8adc84207782c466a09e37ec66d3c320a72b4ea580b052119a4632",
+    "scripts/ux/navigation-import-layout-browser.mjs": "28ebc6c2f0e5bbcf28dea04cb4b06045cd4fdea69f86c4758b9e35cf3b1136cb",
+    "scripts/ux/reader-interaction-browser.mjs": "7cfce2dba285a7a951442bacdf10b2586a04a6433e6f8765d12a15552ceef188"
+  },
+  "retained_failed_local_attempts": [
+    "UX first2595 passed/7 failed: actual-handler extraction omitted new close callback. Updated harness to execute real callback and added two assertions; no skips.",
+    "Incorrect CI control test filename selected: exit1/no tests; corrected full directory selection162 passed.",
+    "Local production server startup rejected by tool execution policy twice. No alternate launcher used; disposable synthetic PG/API/worker stopped."
+  ],
+  "not_claimed": [
+    "New exact-SHA Linux complete CI success",
+    "New local full-app regression; prior60-case result belongs to prior candidate",
+    "Physical mobile devices or production acceptance"
+  ],
+  "skipped_ci_after_failures": "Reading stability, CSP/PWA negative and later shard1 gates; upload-token/Markdown Viewer and later shard2 gates did not execute, not pass. Original gates remain required on full fresh run.",
+  "screenshots": [
+    "ci-pagination-before.png",
+    "ci-pagination-after.png",
+    "ci-focus-mobile-dark.png"
+  ],
+  "evidence_root": "E:\\chat-reader-temp\\search-reading-ci-44676319339",
+  "logs": {
+    "build.log": "0d0899b513a14d611398197ec5f65f8b8ee8f65ac9d8ecaf15478439ff918021",
+    "ci-controls-full.log": "a0d38530a320b0f0c6b1b78013caa073202a62195af8658df99ec1c2c988edc7",
+    "ci-controls.log": "81a548064264036cdd66a35258829676550e2f8a7437b62151362f3414807378",
+    "escape-unit.log": "7f9bcda669a820807276d0701c08463cba48032ad381a679c44e1257098aed1f",
+    "failed-jobs.log": "c30161835a9ef4ea1d5b469b65685aee256f732331a4548f185bcf5ef56e2002",
+    "green-focus.log": "04bad5e571025d74756ac5d9f810f17a243ba656111887f2cc233d4425dbce46",
+    "green-layout-final.log": "2cc3c04c5b7de89eb7e3bb10b691f788dedf3b490f70eeb0918e7e872f31a9f3",
+    "green-layout.log": "fb7af82f1ef492ffdbe2b234027f73ee4501d4a190c3063b39f49ddcc7178f8a",
+    "integration-stack.log": "fed4585f40b49f4c0b400f5dbf1206dba7af36c42de290c8069d2589a497f11c",
+    "lint-final.log": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+    "lint.log": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+    "red-focus.log": "660b487a9503f1172bdb4e4936d8374a5b485b5db562d1407bbeb994485ca5c0",
+    "red-pagination-measured.log": "dcf6a6f9c603ddb57d559d478fb576c0cd74cf07396c47aeac1bf55d35bc5fce",
+    "red-pagination.log": "13b07f3d80d8cf3f1bd4634203a56c5f445f7ed2a34fd2e234959e3e167520ac",
+    "typecheck-final.log": "231f3ed2a8636999437e24fd3abfb381918c1c7547d66db9b40fc5e154ab9209",
+    "typecheck.log": "231f3ed2a8636999437e24fd3abfb381918c1c7547d66db9b40fc5e154ab9209",
+    "ux-final.log": "c2e780506ed8ae62c3100c66fd52cbf51dea5911cf6f3efbd99cb7feda20a196",
+    "ux.log": "a6162d50a5949c9218e68d9819386740c0f52379aeda67b813f84e63b9220b43"
+  },
+  "production": "v0.1.1 unchanged; no backup deletion, tag, release or deploy."
+}
