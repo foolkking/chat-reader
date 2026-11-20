@@ -1,0 +1,163 @@
+{
+  "operation": "User-authorized deletion of only the superseded production data backup after proving the immediate pre-v0.1.1 recovery set. No deployment or production restore.",
+  "host": "king",
+  "running_version": "v0.1.1",
+  "running_revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+  "schema": "20261117_0062",
+  "completed_at_utc": "2026-11-19T19:46:56.858528Z",
+  "completed_at_asia_shanghai": "2026-11-20T03:46:56+08:00",
+  "independently_rechecked_at_utc": "2026-11-19T19:48:16.810867Z",
+  "independently_rechecked_at_asia_shanghai": "2026-11-20T03:48:16+08:00",
+  "remaining": {
+    "backup_name": "chat-reader-20261119T182358Z",
+    "snapshot_time_asia_shanghai": "2026-11-20T02:23:58+08:00",
+    "rollback_revision": "26b35501bf7011910a83bb23e8982139f8129b7b",
+    "manifest_sha256": "26665b39254e2de37eeb381834c009505de2c43b29b5d93fe2bf2a0b092ce023",
+    "retained_data_files": 8,
+    "retained_data_bytes": 4045672750,
+    "paired_program_archive_sha256": "a6ba372bd86f545e3abe9a207056c2a410b4520a0e5cc9f3567cec2c49c8ff8d",
+    "paired_program_archive_bytes": 177673424,
+    "host_tags_matching_archived_config_and_layer_order": [
+      "api",
+      "import-worker",
+      "migrate",
+      "web"
+    ],
+    "distinct_uncompressed_image_layers_rehashed": 23,
+    "legacy_sets": 1,
+    "online_updater_sets": 0
+  },
+  "removed": {
+    "backup_name": "chat-reader-20261118T075837Z",
+    "snapshot_time_asia_shanghai": "2026-11-18T15:58:37+08:00",
+    "members": 8,
+    "logical_bytes": 3862124262,
+    "allocated_file_bytes": 3862163456,
+    "manifest_sha256": "dd693daffa6b1ff1c435be34e1d82ccc4f175f48bb4edc7ed7df84c0e1994287",
+    "older_offhost_encrypted_escrow_and_image_reverified_and_preserved": true
+  },
+  "isolated_restore": {
+    "environment": "Local Linux, network-isolated PostgreSQL with no published port or container log; new no-swap temporary filesystems; not production and not fool. Each of the four gzip archives was streamed directly from the retained set on king, extracted into a fresh directory and read back. The four filesystem restores were sequential.",
+    "postgres_dump_tool": "16.14",
+    "postgres_restore_exit": 0,
+    "matching_archived_TOC": true,
+    "postgres": {
+      "restored_server": "16.15",
+      "head": "20261117_0062",
+      "public_tables": 93,
+      "full_business_fingerprints": 91,
+      "include_all_columns": true,
+      "validated_foreign_keys": 154,
+      "database_bytes": 1519934487,
+      "utc": "2026-11-19T19:35:51.827264+00:00"
+    },
+    "stopped_baseline_receipt_sha256": "1a4d278406f7b88e6b4db7d594babd26761996559cee4a3045b2ff7a786d6766",
+    "volumes": {
+      "imports": {
+        "directories": 149,
+        "files": 984,
+        "bytes": 1360900169,
+        "original_compressed_bytes": 892964504,
+        "complete_gzip_sha256_and_crc": true,
+        "each_file_sha256_and_archived_posix_metadata": true,
+        "utc": "2026-11-19T19:38:05.779818+00:00"
+      },
+      "exports": {
+        "directories": 187,
+        "files": 0,
+        "bytes": 0,
+        "original_compressed_bytes": 6435,
+        "complete_gzip_sha256_and_crc": true,
+        "each_file_sha256_and_archived_posix_metadata": true,
+        "utc": "2026-11-19T19:35:57.271138+00:00"
+      },
+      "assets": {
+        "directories": 299,
+        "files": 3241,
+        "bytes": 1583605956,
+        "original_compressed_bytes": 1498760547,
+        "complete_gzip_sha256_and_crc": true,
+        "each_file_sha256_and_archived_posix_metadata": true,
+        "utc": "2026-11-19T19:41:04.270440+00:00"
+      },
+      "offline": {
+        "directories": 1,
+        "files": 64,
+        "bytes": 1304580876,
+        "original_compressed_bytes": 1302720418,
+        "complete_gzip_sha256_and_crc": true,
+        "each_file_sha256_and_archived_posix_metadata": true,
+        "utc": "2026-11-19T19:44:14.655634+00:00"
+      }
+    },
+    "file_count": 4289,
+    "uncompressed_file_bytes": 4249087001,
+    "archive_comparison": "Paths, entry sets, file bytes (SHA-256), mode, uid, gid and archived mtimes. Newly allocated inode numbers are not expected to equal those of the production volumes.",
+    "local_fixture_mounts_and_containers_remaining": 0,
+    "after_evidence_capture": "Removed only the 16 newly created encrypted private staging files (603066095 bytes); the historical local recovery sets were not cleaned."
+  },
+  "guards": [
+    "The dry run and apply matched the same production runtime, updater state, backup inodes, member metadata and sealed hashes.",
+    "Both eight-member sets were fully rehashed. The older set matched a separate encrypted local copy; the keeper also matched its stop-time manifest and its paired image archive.",
+    "Pinned legacy directory descriptors, no symlinks/hard links, mount and open-handle checks, exact operation lock and same-filesystem quarantine. No recursive removal or pruning.",
+    "A separate SSH connection after deletion rehashed all eight remaining files, verified the four image tags, TLS, database, live worker heartbeat, updater units and disk gate."
+  ],
+  "production_recheck": {
+    "healthy_api_web_postgres": true,
+    "live_worker_heartbeat": true,
+    "https_health": 200,
+    "https_library": 200,
+    "updater_control_and_status_active_enabled": true,
+    "no_new_job_or_gate": true,
+    "live_containers_checked": 11
+  },
+  "existing_containers_or_services_restarted": false,
+  "preflight": {
+    "dry_run_before_deletion": {
+      "available_kib": 3736152,
+      "backup_kib": 6445348,
+      "image_headroom_kib": 524288,
+      "margin_vs_reference_kib": -3712481,
+      "retained_probe_exit": 1,
+      "retained_required_kib": 7100708,
+      "transfer_headroom_kib": 131072,
+      "v011_reference_full_kib": 7448633
+    },
+    "immediate_before": {
+      "available_kib": 3736068,
+      "backup_kib": 6445348,
+      "image_headroom_kib": 524288,
+      "margin_vs_reference_kib": -3712565,
+      "retained_probe_exit": 1,
+      "retained_required_kib": 7100708,
+      "transfer_headroom_kib": 131072,
+      "v011_reference_full_kib": 7448633
+    },
+    "immediate_after": {
+      "available_kib": 7507552,
+      "backup_kib": 6445348,
+      "image_headroom_kib": 524288,
+      "margin_vs_reference_kib": 58919,
+      "retained_probe_exit": 0,
+      "retained_required_kib": 7100708,
+      "transfer_headroom_kib": 131072,
+      "v011_reference_full_kib": 7448633
+    },
+    "independent_final": {
+      "available_kib": 7507692,
+      "retained_required_kib": 7100708,
+      "retained_probe_exit": 0,
+      "backup_kib": 6445348,
+      "image_headroom_kib": 524288,
+      "transfer_headroom_kib": 131072,
+      "v011_reference_full_kib": 7448633,
+      "margin_vs_reference_kib": 59059
+    },
+    "command": "Verified production preflight_release_space.sh --retained-images. The v0.1.1 full reference adds ceil(archive bytes/1024) plus ceil(expanded bytes/1024), each rounded independently.",
+    "future_admission": "Always recompute for the specific signed release, current data size and free space; the current reference margin is not a guarantee."
+  },
+  "limits": [
+    "No live rollback, application relaunch, update job, version release or database restore on king.",
+    "No changes to production volumes, runtime images, deployment configuration or earlier local recovery copies."
+  ]
+}

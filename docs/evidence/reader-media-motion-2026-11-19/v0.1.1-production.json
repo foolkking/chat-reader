@@ -1,0 +1,762 @@
+{
+  "as_of": "2026-11-19T18:41:11.256047+00:00",
+  "version": "v0.1.1",
+  "revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+  "repository": "foolkking/chat-reader",
+  "repository_id": 1297627534,
+  "tag_object": "9485e69bee15daae2a011cfc4bbc62896e91b491",
+  "previous_tag_v0_1_0_unchanged": true,
+  "pr": {
+    "number": 2,
+    "qualified_head": "a3512d7103fd8d5f2b9fc3941ba206cf50313f1c",
+    "merge_method": "rebase",
+    "tree_on_both": "9c9cce7d6629b4ddf769f33521a907d4e377f5c8",
+    "merged_at": "2026-11-19T16:35:58Z"
+  },
+  "release": {
+    "id": 451718210,
+    "url": "https://github.com/foolkking/chat-reader/releases/tag/v0.1.1",
+    "published_at": "2026-11-19T17:57:41Z",
+    "channel": "stable",
+    "assets": [
+      {
+        "id": 768686414,
+        "name": "chat-reader-images.tar.gz",
+        "size": 177685219,
+        "digest": "sha256:f53f1c36f6e2017904df0dd07a27928bb02d408d3d6fafb6c62a9a11449d0bdd"
+      },
+      {
+        "id": 768686422,
+        "name": "chat-reader-updater-linux-amd64.tar.gz",
+        "size": 7061566,
+        "digest": "sha256:b52bb3490abb5c6808a86b9ec67ebabfc23a7348d154bf46099ec4ac3bbc2cdc"
+      },
+      {
+        "id": 768686418,
+        "name": "update-v1.json",
+        "size": 3453,
+        "digest": "sha256:a657179a18a2eb88c94367fcdb03cba827094d53f3805fd255206e069835d75d"
+      },
+      {
+        "id": 768686419,
+        "name": "update-v1.json.sig",
+        "size": 88,
+        "digest": "sha256:31f6b64914f2713ef20ada914ec0acd2523d551eb239a8ae857074de3748c05b"
+      },
+      {
+        "id": 768686417,
+        "name": "updater-kit.sha256",
+        "size": 105,
+        "digest": "sha256:95138ef0cee2dd976e20c3e917524432f848883d05425bddeb4866d923c097bf"
+      },
+      {
+        "id": 768686444,
+        "name": "updater-kit.sha256.sig",
+        "size": 88,
+        "digest": "sha256:e6d71adc7cde31a4700ee78203f238f330ba456992600062f9bccb4edc448ebf"
+      }
+    ],
+    "ed25519_verified": [
+      "update-v1.json",
+      "updater-kit.sha256"
+    ],
+    "public_key_fingerprint_sha256": "360cc2e019b6e810498993385e6fa3d38ac14295df13967fb066c8f0b9cbdce5",
+    "issuer_verification": "Trusted repository signed-releases environment public key, read through the separately authorized local GitHub CLI, not from the release assets. No signing private key read.",
+    "signed_archive_matches_exact_qualified_artifact": true,
+    "archive_sha256": "f53f1c36f6e2017904df0dd07a27928bb02d408d3d6fafb6c62a9a11449d0bdd",
+    "archive_bytes": 177685219,
+    "expanded_bytes": 178589184,
+    "registry": {
+      "status": "anonymous_GHCR_both_tags_and_immutable_digests_match_signed_archive",
+      "at": "2026-11-19T18:13:58.417219+00:00",
+      "images": {
+        "api": {
+          "registry_digest": "sha256:2b1bc5dfdf5568d5a9c27adb67ca3b8a404dc7c81bbb46787c232339a7c49333",
+          "amd64_manifest": "sha256:28120781db1f87b60ff4e312fdc7a82138c6056811998672d942fead50ef851a",
+          "config": "sha256:9215aef23c480dc72a9a36b9bffc5b54f64fab925e426dbd29f51284fe7a95db",
+          "rootfs_layers": 14
+        },
+        "web": {
+          "registry_digest": "sha256:b96717ba9e23ec7496b48ba47674afd27e347f536558128367de1bc81a52ce94",
+          "amd64_manifest": "sha256:131c467b88c3ab1e2b57046bc1ef69d4c89385e0edbee60ed4d0b45d207dedc1",
+          "config": "sha256:436a473aaa7fee14c81b76eb5069970c0f5f062b9fa5d8bc6def35b9a3e3015a",
+          "rootfs_layers": 9
+        }
+      }
+    }
+  },
+  "ci": {
+    "parent_run": 44568680941,
+    "parent_attempt": 2,
+    "parent_jobs": [
+      {
+        "name": "qualify",
+        "id": 135746156065,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:23:59Z",
+        "completed_at": "2026-11-19T17:49:12Z"
+      },
+      {
+        "name": "rehearse",
+        "id": 135762124223,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:49:16Z",
+        "completed_at": "2026-11-19T17:56:44Z"
+      },
+      {
+        "name": "publish",
+        "id": 135766756013,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:56:50Z",
+        "completed_at": "2026-11-19T17:57:44Z"
+      }
+    ],
+    "qualification_run": 44576778073,
+    "qualification_attempt": 1,
+    "jobs": [
+      {
+        "name": "settings-restore",
+        "id": 135746282222,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:11Z",
+        "completed_at": "2026-11-19T17:27:28Z"
+      },
+      {
+        "name": "api-quality-shard-3 / suite",
+        "id": 135746282367,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:12Z",
+        "completed_at": "2026-11-19T17:31:26Z"
+      },
+      {
+        "name": "api-quality-shard-2 / suite",
+        "id": 135746282372,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:12Z",
+        "completed_at": "2026-11-19T17:34:16Z"
+      },
+      {
+        "name": "api-quality-shard-1 / suite",
+        "id": 135746282455,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:11Z",
+        "completed_at": "2026-11-19T17:35:48Z"
+      },
+      {
+        "name": "web-quality-shard-2 / gates",
+        "id": 135746282568,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:12Z",
+        "completed_at": "2026-11-19T17:40:49Z"
+      },
+      {
+        "name": "api-quality-shard-4 / suite",
+        "id": 135746282600,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:11Z",
+        "completed_at": "2026-11-19T17:35:53Z"
+      },
+      {
+        "name": "settings-quality-shard-2 / matrix",
+        "id": 135746282659,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:12Z",
+        "completed_at": "2026-11-19T17:39:57Z"
+      },
+      {
+        "name": "image-preparation",
+        "id": 135746282693,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:11Z",
+        "completed_at": "2026-11-19T17:30:18Z"
+      },
+      {
+        "name": "settings-quality-shard-1 / matrix",
+        "id": 135746282805,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:12Z",
+        "completed_at": "2026-11-19T17:38:49Z"
+      },
+      {
+        "name": "web-quality-shard-3 / gates",
+        "id": 135746282825,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:11Z",
+        "completed_at": "2026-11-19T17:44:57Z"
+      },
+      {
+        "name": "settings-quality-shard-3 / matrix",
+        "id": 135746282828,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:12Z",
+        "completed_at": "2026-11-19T17:40:22Z"
+      },
+      {
+        "name": "reading-performance-comparison / compare",
+        "id": 135746282859,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:12Z",
+        "completed_at": "2026-11-19T17:34:22Z"
+      },
+      {
+        "name": "web-quality-shard-1 / gates",
+        "id": 135746282962,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:12Z",
+        "completed_at": "2026-11-19T17:46:52Z"
+      },
+      {
+        "name": "settings-quality-shard-4 / matrix",
+        "id": 135746283126,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:24:12Z",
+        "completed_at": "2026-11-19T17:39:09Z"
+      },
+      {
+        "name": "api-quality",
+        "id": 135753788665,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:35:56Z",
+        "completed_at": "2026-11-19T17:36:07Z"
+      },
+      {
+        "name": "settings-quality",
+        "id": 135756648590,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:40:26Z",
+        "completed_at": "2026-11-19T17:44:08Z"
+      },
+      {
+        "name": "web-quality",
+        "id": 135760687901,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:46:56Z",
+        "completed_at": "2026-11-19T17:47:18Z"
+      },
+      {
+        "name": "build-images",
+        "id": 135760946565,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:47:21Z",
+        "completed_at": "2026-11-19T17:47:51Z"
+      },
+      {
+        "name": "inspect-release-artifact",
+        "id": 135761283164,
+        "conclusion": "success",
+        "started_at": "2026-11-19T17:47:54Z",
+        "completed_at": "2026-11-19T17:48:24Z"
+      }
+    ],
+    "artifact_id": 14557834595,
+    "artifact_digest": "sha256:47c4fed6a4f8dee4fb152a8e63520a924c072399895a140a1d4986f4dd63010a",
+    "web_native_gates": [
+      {
+        "gate_id": "adaptive-import-recovery",
+        "test_count": 15,
+        "result_counts": {
+          "passed": 14,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 1,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "pwa-negative",
+        "test_count": 28,
+        "result_counts": {
+          "passed": 28,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "csp-enforcement",
+        "test_count": 4,
+        "result_counts": {
+          "passed": 4,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "reading-stability",
+        "test_count": 46,
+        "result_counts": {
+          "passed": 46,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "markdown-image-viewer",
+        "test_count": 31,
+        "result_counts": {
+          "passed": 31,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "share-focus",
+        "test_count": 2,
+        "result_counts": {
+          "passed": 2,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "source-editor-mutation",
+        "test_count": 121,
+        "result_counts": {
+          "passed": 121,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "upload-token-atomicity",
+        "test_count": 18,
+        "result_counts": {
+          "passed": 18,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "context-files",
+        "test_count": 38,
+        "result_counts": {
+          "passed": 38,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "default-pwa",
+        "test_count": 1114,
+        "result_counts": {
+          "passed": 277,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 837,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "focused-online-security",
+        "test_count": 132,
+        "result_counts": {
+          "passed": 132,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "pdfjs-maintained-line",
+        "test_count": 13,
+        "result_counts": {
+          "passed": 13,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "single-owner-auth",
+        "test_count": 24,
+        "result_counts": {
+          "passed": 24,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      {
+        "gate_id": "source-editor-cleanup",
+        "test_count": 6,
+        "result_counts": {
+          "passed": 6,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      }
+    ],
+    "real_memory_cases": 5,
+    "historical_image_only_reuse": false,
+    "pauses": [
+      {
+        "operation": "post-v0.1.1-ci-submission-pause",
+        "parent_run_id": 44568680941,
+        "parent_attempt": 1,
+        "sha": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+        "requested_seconds": 1500,
+        "started_at": "2026-11-20T00:40:57.7012829+08:00",
+        "finished_at": "2026-11-20T01:05:57.9710567+08:00",
+        "elapsed_seconds": 1500.2607812
+      },
+      {
+        "operation": "post-complete-workflow-rerun-pause",
+        "parent_run_id": 44568680941,
+        "requested_parent_attempt": 2,
+        "sha": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+        "requested_seconds": 1500,
+        "started_at": "2026-11-20T01:24:31.4673324+08:00",
+        "finished_at": "2026-11-20T01:49:31.6878469+08:00",
+        "elapsed_seconds": 1500.2141263
+      }
+    ],
+    "failed_parent_attempt": {
+      "run": {
+        "id": 44568680941,
+        "run_attempt": 1,
+        "head_sha": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+        "conclusion": "failure"
+      },
+      "jobs": [
+        {
+          "id": 135717422010,
+          "name": "qualify",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-19T16:40:11Z",
+          "completed_at": "2026-11-19T17:01:43Z"
+        },
+        {
+          "id": 135731628432,
+          "name": "rehearse",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-19T17:01:46Z",
+          "completed_at": "2026-11-19T17:09:29Z"
+        },
+        {
+          "id": 135736757050,
+          "name": "publish",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-19T17:09:36Z",
+          "completed_at": "2026-11-19T17:10:50Z"
+        }
+      ],
+      "qualification_run": 44568722029,
+      "all_19_qualification_jobs_passed": true,
+      "failure": {
+        "job_id": 135736757050,
+        "location": "scripts/ci/publish_update.py:241 docker push",
+        "raw_subprocess_error": "unavailable: publisher suppresses captured stderr/stdout",
+        "root_cause": "not established",
+        "packages_write_granted": true,
+        "api_registry_v011_exists": true,
+        "api_registry_index_digest": "sha256:a0d7df056a90d8959c29ed58bdfa689ba8064af5dd0812d3de9c1c879687e2d3",
+        "web_registry_v011_status": 404
+      },
+      "independent_api_tag_vs_first_qualified_artifact": {
+        "observation": "first-attempt CI vs observed registry API tag",
+        "run": 44568722029,
+        "artifact_id": 14554867397,
+        "index_match": true,
+        "api_config": "sha256:916ca29590bba493cff7363abac2c21d6b7cabde8e94f717de950f4109478d1f",
+        "index_seen": "sha256:a0d7df056a90d8959c29ed58bdfa689ba8064af5dd0812d3de9c1c879687e2d3",
+        "web_config": "sha256:1ccac676c1ddc57b9011d943428057c5437f186550a427cfa32e291d4cb0b0a8"
+      },
+      "boundary": "API tag was readable and matched the original exact OCI index. Web tag was absent; the wrapper did not retain role-specific output or Docker stderr. Cannot establish the underlying registry or transport error."
+    }
+  },
+  "isolated_rehearsal": {
+    "timing_artifact_id": 14558099650,
+    "timing_artifact_sha256": "299812a86168452d71bfa2a78576dc699e0138620775598432db712e8c58372b",
+    "measured_synthetic": [
+      {
+        "action": "prepare",
+        "archive_bytes": 197980294,
+        "download_ms": 670,
+        "ready_host_ms": 10297,
+        "click_to_ready_ms": 10890,
+        "continuous_probes": true,
+        "phases_ms": {
+          "admission": 2068,
+          "downloading": 670,
+          "staging": 7559
+        }
+      },
+      {
+        "action": "apply",
+        "click_to_healthy_ms": 11756,
+        "click_to_confirmed_ms": 11988,
+        "observed_outage_ms": 9990,
+        "maintenance_refresh": true,
+        "phases_ms": {
+          "admission": 1573,
+          "backup": 1620,
+          "commit": 823,
+          "draining": 969,
+          "fencing": 153,
+          "health": 4936,
+          "migration": 223,
+          "switching": 881
+        }
+      },
+      {
+        "action": "rollback",
+        "click_to_healthy_ms": 12240,
+        "click_to_confirmed_ms": 12468,
+        "observed_outage_ms": 9928,
+        "maintenance_refresh": true,
+        "phases_ms": {
+          "admission": 2103,
+          "backup": 1664,
+          "commit": 827,
+          "draining": 902,
+          "fencing": 144,
+          "health": 4935,
+          "migration": 224,
+          "switching": 840
+        }
+      }
+    ]
+  },
+  "production": {
+    "receipt_sha256": {
+      "admit": "0441db078827cdc9bacc31ccda919263c4f6d91ba433e23f07a39b0a078dc62c",
+      "preload": "1174a5d3d5058fe816317c5fe057aa62e726af4a4ff90c6effc683e18348b23b",
+      "maintenance-start": "49b5182e4b7697f6a7656f202fd1caaaef2d8d99f04c5447dc806fea20b09f57",
+      "stopped-data": "1a4d278406f7b88e6b4db7d594babd26761996559cee4a3045b2ff7a786d6766",
+      "attachment-audit": "b69b5b0dbb57b0fd6694de3448efa6a6467a580c949b9a143b2b0a8b970a8cf7",
+      "backup": "a43e15e5c55320a512e70306925a7a09752c952cb39164919527ca959b9d44eb",
+      "prepare": "945a5f5733f1080473629edc30bbe9f79c251026e531421981d9e80fc08aded5",
+      "schema_verify": "8fb008522a7145f3db280367cc8b7ed496b7b43acb7ffc9d7edd21f92c89708d",
+      "switch-start": "aa0107416c98e64461d990a45541a7e2f490baad1a54b4eb178deefafbc6c36f",
+      "rollout": "1c8342a20ec54b5b0bbbfd6f79fc0ed277be1c17c94fe0b7e0d285636dd4fc5f",
+      "finalize": "22c9398d4e62994046c75e8a0b6a16bca0665a0301430ac2a4a8a1e6653f9e51",
+      "verify": "5d8783bcb555bebe0b6384d8398749dcbf07d3c1a7c3be7b59c12e16ed58bb3a",
+      "postverify": "fdbd6ad9328c7e723cb18670c0d757406c54c7d04b6aba8ed1d652c8b72bb1fd"
+    },
+    "times_utc": {
+      "admit": "2026-11-19T18:17:39.782968Z",
+      "preload": "2026-11-19T18:19:43.932280Z",
+      "maintenance-start": "2026-11-19T18:21:51.514789Z",
+      "stopped-data": "2026-11-19T18:23:38.692251Z",
+      "attachment-audit": "2026-11-19T18:23:58.525451Z",
+      "backup": "2026-11-19T18:30:17.083832Z",
+      "prepare": "2026-11-19T18:30:17.532659Z",
+      "schema_verify": "2026-11-19T18:32:12.484345Z",
+      "switch-start": "2026-11-19T18:32:16.168054Z",
+      "rollout": "2026-11-19T18:34:23.280617Z",
+      "finalize": "2026-11-19T18:34:30.168660Z",
+      "verify": "2026-11-19T18:36:43.513512Z",
+      "postverify": "2026-11-19T18:36:50.241028Z"
+    },
+    "maintenance_start_to_three_services_healthy_s": 751.765828,
+    "switch_start_to_three_services_verified_healthy_s": 127.112563,
+    "config_fingerprints_and_mounts_unchanged": true,
+    "unchanged_containers_including_postgres": 8,
+    "protected_files_unchanged": 18,
+    "new_services": {
+      "api": {
+        "image_id": "sha256:9215aef23c480dc72a9a36b9bffc5b54f64fab925e426dbd29f51284fe7a95db",
+        "health": "healthy",
+        "running": true,
+        "restarts": 0,
+        "oom": false
+      },
+      "import-worker": {
+        "image_id": "sha256:9215aef23c480dc72a9a36b9bffc5b54f64fab925e426dbd29f51284fe7a95db",
+        "health": null,
+        "running": true,
+        "restarts": 0,
+        "oom": false
+      },
+      "postgres": {
+        "image_id": "sha256:de3a4eab8fdfa507ea92aac488b916b08089e515db49b055fe71dfa271ba3a28",
+        "health": "healthy",
+        "running": true,
+        "restarts": 0,
+        "oom": false
+      },
+      "web": {
+        "image_id": "sha256:436a473aaa7fee14c81b76eb5069970c0f5f062b9fa5d8bc6def35b9a3e3015a",
+        "health": "healthy",
+        "running": true,
+        "restarts": 0,
+        "oom": false
+      }
+    },
+    "database": {
+      "active_executions": 0,
+      "active_imports": 0,
+      "active_jobs": 0,
+      "head": [
+        "20261117_0062"
+      ],
+      "locks": 0,
+      "worker": [
+        {
+          "age": 26.511473,
+          "state": "idle"
+        }
+      ]
+    },
+    "public_statuses": {
+      "/": 307,
+      "/api/admin/runtime-status": 401,
+      "/api/admin/updates": 401,
+      "/api/app-info": 401,
+      "/api/capabilities": 401,
+      "/api/conversations": 401,
+      "/api/health": 200,
+      "/api/internal/diagnostics": 404,
+      "/api/projects": 401,
+      "/library": 200,
+      "/search": 307
+    },
+    "https_validated": true,
+    "http_upgrades_to_same_https_origin": true,
+    "worker_heartbeat_postdates_replacement": true,
+    "kernel_oom_unchanged": true,
+    "startup_error_keyword_counts": {
+      "api": 0,
+      "import-worker": 0,
+      "web": 0
+    },
+    "volumes": {
+      "/data/assets": {
+        "files": 3241,
+        "bytes": 1583605956
+      },
+      "/data/exports": {
+        "files": 0,
+        "bytes": 0
+      },
+      "/data/imports": {
+        "files": 984,
+        "bytes": 1360900169
+      },
+      "/data/offline": {
+        "files": 64,
+        "bytes": 1304580876
+      }
+    },
+    "all_business_columns_compared_while_stopped": true,
+    "matching_business_tables": 91,
+    "all_four_volumes_unchanged_while_stopped": true,
+    "attachment_audit": {
+      "clean": true,
+      "complete": true,
+      "read_only": true,
+      "issue_count": 0,
+      "sha256_verified_count": 3237
+    },
+    "migration_executed": false,
+    "reset_admin": false,
+    "backup": "chat-reader-20261119T182358Z",
+    "backup_independent": true,
+    "backup_source": "26b35501bf7011910a83bb23e8982139f8129b7b",
+    "backup_schema": "20261117_0062",
+    "retained_backups": [
+      {
+        "five_checksums": true,
+        "four_tar_streams": true,
+        "manifest_sha256": "dd693daffa6b1ff1c435be34e1d82ccc4f175f48bb4edc7ed7df84c0e1994287",
+        "name": "chat-reader-20261118T075837Z",
+        "pg_toc": true
+      },
+      {
+        "five_checksums": true,
+        "four_tar_streams": true,
+        "manifest_sha256": "26665b39254e2de37eeb381834c009505de2c43b29b5d93fe2bf2a0b092ce023",
+        "name": "chat-reader-20261119T182358Z",
+        "pg_toc": true
+      }
+    ],
+    "available_kib_after_independent_verify": 3837784,
+    "backup_count": 2,
+    "additional_backup_deletions": false,
+    "latest_backup_full_isolated_restore": false,
+    "final_runtime_pointer": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+    "failures": [],
+    "host": "king",
+    "stage": {
+      "status": "secure_stage_prepared",
+      "schema": "20261117_0062",
+      "available_before_transfer_kib": 8224480,
+      "required_including_exact_transfer_kib": 7448625,
+      "archive_bytes": 177685219,
+      "expanded_bytes": 178589184,
+      "live_configuration_bound_to_prior_evidence": true,
+      "service_stopped": false
+    },
+    "transfer": {
+      "status": "exact_archive_staged",
+      "bytes": 177685219,
+      "sha256": "f53f1c36f6e2017904df0dd07a27928bb02d408d3d6fafb6c62a9a11449d0bdd",
+      "stream_fsync_seconds": 326.9413799569011
+    },
+    "deployed_using": "manual original-compose path, preloaded exact signed archive; no builds",
+    "operator_sha256": "e7a42e5689809d3b699888613bfa79baf1e562e0293d53b10bddbea26760d481",
+    "retained_old_image_archive": {
+      "source": "26b35501bf7011910a83bb23e8982139f8129b7b",
+      "archive_sha256": "a6ba372bd86f545e3abe9a207056c2a410b4520a0e5cc9f3567cec2c49c8ff8d",
+      "bytes": 177673424,
+      "roles": {
+        "api": {
+          "config": "sha256:1921da78e76bd78550bbd4d361f7a607db28d0dc9be7be6493a687012bce0e09",
+          "layer_count": 14
+        },
+        "import-worker": {
+          "config": "sha256:1921da78e76bd78550bbd4d361f7a607db28d0dc9be7be6493a687012bce0e09",
+          "layer_count": 14
+        },
+        "migrate": {
+          "config": "sha256:1921da78e76bd78550bbd4d361f7a607db28d0dc9be7be6493a687012bce0e09",
+          "layer_count": 14
+        },
+        "web": {
+          "config": "sha256:5c557032e61de48a2ff523cb001bd3d2f456c097b7c148f65d762ab36a934577",
+          "layer_count": 9
+        }
+      },
+      "full_archive_blobs_and_graph_verified": true
+    },
+    "optional_host_updater": {
+      "api_loopback_only": true,
+      "web_loopback_only": true,
+      "engine": "26.1.3",
+      "compose": "2.27.0",
+      "project_directory_other_writable": true,
+      "source_enrolled": false,
+      "updater_binary_installed": false,
+      "no_docker_socket_on_apps": true
+    }
+  },
+  "limits": [
+    "No production rehearsal, private test namespace, or real authenticated end-user/device acceptance.",
+    "Technical deployment complete; optional privileged updater enrollment is separate. The legacy project directory permits writes by other users; no root updater was attached.",
+    "Fresh 26b35501/0062 backup passed all five checksums, four archive reads, and pg_restore TOC; no full isolated restore of this NEW set. The previously restored 11/18 recovery point remains; no automatic pruning.",
+    "Production SSH archive transfer and conservative manual maintenance are not the synthetic Web-update time measurements."
+  ]
+}

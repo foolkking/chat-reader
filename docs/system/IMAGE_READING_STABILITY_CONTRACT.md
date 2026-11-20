@@ -1,5 +1,11 @@
 # Natural image sizing and reading viewport stability
 
+**2026-11-20 candidate:** the [search/reading contract](SEARCH_READING_CONTRACT.md)
+adds the scroll-writer inventory and removes obsolete post-refresh restoration.
+The [60-case browser receipt](../evidence/search-reading-2026-11-20/verification.json)
+also tracks actual character ranges through small reverse gestures, including
+pure text. Earlier dated checks below remain historical; they do not certify a new release.
+
 Source contract updated **2026-11-07**; exact `897ba78` passed CI `42371615326`
 and was subsequently authorized for deployment and independently rechecked.
 It supersedes the previous fixed-cell geometry, not its reading-stability gates.
@@ -7,6 +13,14 @@ The preceding `9cf235f` / CI `42217357688` remains a historical acceptance;
 see the [current release receipt](../execution/IMAGE_NATURAL_FLOW_RELEASE_2026-11-07.md).
 Synthetic CI and runtime checks are not authenticated production UI or
 physical-device acceptance. This contract does not authorize a future rollout.
+
+<a id="virtual-reply-offset"></a>
+## New virtual replies and late reading positions (local worktree, 2026-11-20)
+
+- A newly mounted virtual message borrows the Reader’s existing scroll element (or window); it does not own its initial offset. Report the real offset before virtual-core synchronizes, and do not issue a same-position `scrollTo` that interrupts a native fling. Real measurement adjustments, virtual row eviction, and intentional navigation still run.
+- On a warm revisit, cached turns can already be visible while the fresh reading-position request is in flight. Never consume the initial restore decision merely because the disabled turn query has cached success. If the reader has not moved, honor the saved block in the correct initial window. Directional input on visible content or explicit navigation takes ownership; a late bookmark must not replace that position or switch the window underneath it. A tap without panning does not veto restoration.
+- The regression traverses newly mounted long replies with native wheel and CDP touch **including release and inertia**, sampling the canonical message at the reading line, not just `scrollTop`. A separate real client-side revisit delays a successful bookmark response: first prove restoration without scrolling; then hold the finger still or stop the wheel and measure a full second after delivery. This distinguishes application-driven pullback from continued native momentum. The original media, fold, Viewer, Share, Offline and Compare gates are unchanged.
+- [Source fingerprint, red/green controls, full browser matrix and independent repeat](../evidence/reader-find-motion-2026-11-20/verification.json). Synthetic Chromium evidence does not certify physical Safari or the unreleased production experience.
 
 ## Complete-turn removal during quiet reading
 

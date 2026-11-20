@@ -1,10 +1,16 @@
 # 文档导航
 
-- [Reader 正文媒体滚动复审与逐帧验证](evidence/reader-media-motion-2026-11-19/ux-audit.md)（未发布工作树；合成数据、本机真实浏览器）
-- [网页升级：安全接入、Fork 发布、回滚与故障恢复](system/ONLINE_UPDATES.md)（工作树功能，非生产部署声明）
+- [搜索与阅读：授权边界、分页、返回现场和滚动所有权](system/SEARCH_READING_CONTRACT.md) · [改动前问题表](evidence/search-reading-2026-11-20/ux-audit.md) · [60 项浏览器验证及失败记录](evidence/search-reading-2026-11-20/verification.json)（本轮候选，生产以精确发布回执为准）
+
+- [本地未发布：单条对话内查找](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#reader-find) · [长对话快速下滑与书签恢复](system/IMAGE_READING_STABILITY_CONTRACT.md#virtual-reply-offset) · [验证回执](evidence/reader-find-motion-2026-11-20/verification.json)
+- [当前生产 v0.1.1：发布、部署、两种耗时与备份边界](deployment.md#v011-production) · [发布回执](evidence/reader-media-motion-2026-11-19/v0.1.1-production.json) · [当前单份备份恢复与清理回执](evidence/online-update-2026-11-18/king-backup-retention-2026-11-20.json)
+- [历史：合并前候选的精确 CI 与当时的保护规则阻塞](evidence/reader-media-motion-2026-11-19/release-qualification.md#subsequent-exact-full-ci)
+- [历史：11 月 19 日本机真实恢复与当时单份服务器备份](deployment.md#最新保留状态本机隔离恢复与单份服务器备份--2026-11-19)
+- [Reader 正文媒体滚动复审与逐帧验证](evidence/reader-media-motion-2026-11-19/ux-audit.md)（合成数据、本机真实浏览器；对应修复已部署）
+- [网页升级：安全接入、Fork 发布、回滚与故障恢复](system/ONLINE_UPDATES.md) · [`king` 已接入；下一次升级的容量条件](system/ONLINE_UPDATES.md#king-enrollment)
 - [侧栏前后截图与在线升级隔离验收](evidence/online-update-2026-11-18/verification.md)
 
-## 当前生产：排序、搜索与导入管理，26b35501 / 0062 — 2026-11-18
+## 历史生产：排序、搜索与导入管理，26b35501 / 0062 — 2026-11-18
 
 [实现合同、界面规则和验证边界](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md)：
 导入来源可信度／停止放弃、分范围排序0062、服务端对话聚合搜索及精简布局。

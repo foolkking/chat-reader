@@ -38,3 +38,41 @@
   press opened the menu and only choosing manual order produced one project-scoped write.
   The full mounted navigation/import matrix passed 44 cases; 83 focused tests, lint and
   typecheck passed. This is not a claim that the original failing end-to-end gate has rerun.
+
+## Subsequent exact full CI
+
+`a3512d7103fd8d5f2b9fc3941ba206cf50313f1c`, ordinary full run `44551142239/1`,
+finished successfully at **2026-11-19 15:28:58 UTC**. All 19 exact jobs succeeded,
+including the original Reader and Source Editor/mutation gates. Read after a real
+`Start-Sleep -Seconds 1500` (1500.085 seconds); no prior-run reuse or weakened tests.
+
+Artifact `14545625537`, ZIP digest
+`2bf3acea7e03aebde944e5000512bc123116c86e8ecfc24b68cab00170de6f58`,
+was actually downloaded. The unmodified candidate/quality/archive verifiers checked
+the contained proofs, five memory controls, config/layer graph and exact source/run/attempt.
+Image archive: 177,674,617 bytes, SHA-256
+`cd1effad1d69dc1fe909b6398985ecd6ec5ab9e6f8e00ad9f8db9eed1c7d25bd`.
+This unsigned CI archive is **not a signed Release package**.
+
+PR #2 includes both fixes; PR #1 was closed only after verifying its commit was an
+ancestor. Ruleset `br` prohibits updates to all branches, with no bypass actor; the
+existing branch could not accept a normal fast-forward, and the replacement PR is
+blocked despite having no merge conflict. No rule was changed or release-history
+tag rewritten. Publishing/signing are still untested beyond their configuration
+checks, and no new tag or production deployment was attempted. Fresh capacity
+arithmetic for these exact bytes is positive but does not constitute deployment
+admission. [Machine-readable checkpoint](ci-and-publication-checkpoint.json).
+
+## Signed v0.1.1 and production deployment — 2026-11-20
+
+PR #2 subsequently merged. The merge has the same tree but a different SHA, so it was qualified again.
+For `44568680941/1`, all 19 exact-source jobs and the isolated rehearsal passed. The publisher failed
+at `docker push`; the original API tag matched that attempt's independently verified OCI index and the
+Web tag was absent. Docker's raw diagnostic was not retained: a network, registry or authorization root
+cause cannot be inferred from that trace alone. No Release was published from that attempt.
+
+After a complete rerun with a fresh qualification (`44576778073/1`), both the rehearsal and
+`44568680941/2` publication passed. Both Ed25519 signatures, the exact archive, and both public GHCR
+digest readbacks matched. `king` was then deployed via its manual path; the optional host updater was
+not enrolled. See the [deployment and timings](../../deployment.md#v011-production) and the
+[exact redacted receipt](v0.1.1-production.json).
