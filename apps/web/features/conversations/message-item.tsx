@@ -186,21 +186,6 @@ function MessageItemComponent({
     };
   }, [mobileActionsOpen]);
 
-  function scrollBy(delta: number) {
-    if (!Number.isFinite(delta) || Math.abs(delta) < 0.5) return;
-    if (scrollRootMode === "window") {
-      window.scrollBy({ top: delta, behavior: "auto" });
-      return;
-    }
-    const root = articleRef.current?.closest<HTMLElement>("[data-reader-scroll-root]");
-    if (root) root.scrollTop += delta;
-  }
-
-  async function afterLayout() {
-    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-  }
-
   function visibleBlockAnchor(): HTMLElement | null {
     const candidates = Array.from(articleRef.current?.querySelectorAll<HTMLElement>("[id^='block-']") ?? []);
     return candidates.find((element) => {
@@ -211,15 +196,11 @@ function MessageItemComponent({
 
   async function replaceMessagePreservingAnchor(nextMessage: MessageListItem, conversationRevision?: number, isCurrent: () => boolean = () => true) {
     if (!isCurrent()) return;
-    const anchor = visibleBlockAnchor();
-    const anchorId = anchor?.id;
-    const anchorTop = anchor?.getBoundingClientRect().top ?? 96;
+    // The rendered message is already observed by reading-viewport. That
+    // physical-scroller owner subtracts intervening native scrolling from
+    // actual layout displacement. A second, delayed old-top correction here
+    // cancels a wheel/fling even when the refreshed content has the same size.
     await onChanged?.(nextMessage, conversationRevision);
-    if (!isCurrent()) return;
-    await afterLayout();
-    if (!isCurrent()) return;
-    const nextAnchor = (anchorId ? document.getElementById(anchorId) : null) ?? articleRef.current;
-    if (nextAnchor) scrollBy(nextAnchor.getBoundingClientRect().top - anchorTop);
   }
 
   async function handleTaskToggle(taskKey: string, checked: boolean) {
