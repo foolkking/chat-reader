@@ -36,13 +36,18 @@ def docker_read(path):
     """Local host only. Avoid launching dozens of CLI processes for small read
     probes in the cutover window. No URL, verb or socket path is an API input."""
 
+    # Without native overlay diff, Docker walks the complete filesystem before
+    # replying. A cold scan on a small host can exceed the metadata RPC budget.
+    # Keep this one read bounded and fail closed; never skip the core-file check.
+    timeout = 120 if re.fullmatch(r"containers/[a-f0-9]{64}/changes", path) else 15
+
     class Local(http.client.HTTPConnection):
         def connect(self):
             self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.sock.settimeout(15)
+            self.sock.settimeout(timeout)
             self.sock.connect("/var/run/docker.sock")
 
-    conn = Local("localhost", timeout=15)
+    conn = Local("localhost", timeout=timeout)
     try:
         conn.request("GET", "/v1.41/" + path)
         response = conn.getresponse()

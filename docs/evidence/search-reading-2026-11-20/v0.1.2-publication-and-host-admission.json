@@ -1,0 +1,487 @@
+{
+  "status": "published_not_deployed",
+  "tag": "v0.1.2",
+  "revision": "c3dbd75728928b859c5fbe4a14fb930eb07cd8ff",
+  "pr": {
+    "mergeCommit": {
+      "oid": "c3dbd75728928b859c5fbe4a14fb930eb07cd8ff"
+    },
+    "mergedAt": "2026-11-20T13:32:55Z",
+    "number": 3,
+    "state": "MERGED"
+  },
+  "candidate": {
+    "sha": "35023d8f06ce6cbb9880c374f68469ec96277739",
+    "run": 44737396351,
+    "attempt": 1,
+    "jobs_successful": 19
+  },
+  "tag_qualification": {
+    "run": 44745323215,
+    "attempt": 1,
+    "jobs": [
+      {
+        "id": 136319027402,
+        "name": "settings-restore",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319027732,
+        "name": "image-preparation",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319027751,
+        "name": "settings-quality-shard-2 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319027810,
+        "name": "web-quality-shard-1 / gates",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319027881,
+        "name": "web-quality-shard-2 / gates",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319027992,
+        "name": "settings-quality-shard-3 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319028052,
+        "name": "api-quality-shard-2 / suite",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319028055,
+        "name": "api-quality-shard-4 / suite",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319028080,
+        "name": "settings-quality-shard-4 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319028102,
+        "name": "settings-quality-shard-1 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319028261,
+        "name": "api-quality-shard-1 / suite",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319028369,
+        "name": "api-quality-shard-3 / suite",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319028426,
+        "name": "web-quality-shard-3 / gates",
+        "conclusion": "success"
+      },
+      {
+        "id": 136319028797,
+        "name": "reading-performance-comparison / compare",
+        "conclusion": "success"
+      },
+      {
+        "id": 136325093662,
+        "name": "api-quality",
+        "conclusion": "success"
+      },
+      {
+        "id": 136328310525,
+        "name": "settings-quality",
+        "conclusion": "success"
+      },
+      {
+        "id": 136330435332,
+        "name": "web-quality",
+        "conclusion": "success"
+      },
+      {
+        "id": 136330712901,
+        "name": "build-images",
+        "conclusion": "success"
+      },
+      {
+        "id": 136331004978,
+        "name": "inspect-release-artifact",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "publication": {
+    "run": 44745297688,
+    "attempt": 1,
+    "jobs": [
+      {
+        "id": 136318932635,
+        "name": "qualify",
+        "conclusion": "success"
+      },
+      {
+        "id": 136331384379,
+        "name": "rehearse",
+        "conclusion": "success"
+      },
+      {
+        "id": 136338513666,
+        "name": "publish",
+        "conclusion": "success"
+      }
+    ],
+    "release_id": 452772698,
+    "published_at_utc": "2026-11-20T14:11:54Z"
+  },
+  "command_wait": {
+    "started": "2026-11-20T21:33:29.7031790+08:00",
+    "finished": "2026-11-20T21:58:29.8067693+08:00",
+    "elapsedSeconds": 1500.0963422,
+    "requestedSeconds": 1500
+  },
+  "independent_verification": {
+    "at": "2026-11-20T14:13:43.567088+00:00",
+    "version": "v0.1.2",
+    "revision": "c3dbd75728928b859c5fbe4a14fb930eb07cd8ff",
+    "signatures_verified": [
+      "update-v1.json",
+      "updater-kit.sha256"
+    ],
+    "issuer_fingerprint": "360cc2e019b6e810498993385e6fa3d38ac14295df13967fb066c8f0b9cbdce5",
+    "archive_bytes": 177722596,
+    "archive_sha256": "1f1118969608969a489ab95b5383c13fa6f855d62d128d076c78d66fdecdc7d4",
+    "expanded_bytes": 178637312,
+    "kit_sha256": "c6899d3a25051311c8a2aa4295090fb67bb1237359ab734f2b805039bf08596d",
+    "qualification_run": 44745323215,
+    "attempt": 1,
+    "artifact_id": 14633388991,
+    "artifact_digest": "sha256:7a0738a571d8e00e3062d2ee0d407ba2ca353474c99d7e0c9c938d64ee537088",
+    "registry": {
+      "api": {
+        "digest": "sha256:2c914eaf0ce3caa3cb6f269220d9479676ff3f0953330408ae96ee77c3cfe569",
+        "config": "sha256:b352e19cf74931b44433323476f9a29dfbba6c1b317fab7e1f8383f745e76a89",
+        "rootfs_matches": true,
+        "tag_matches_digest": true
+      },
+      "web": {
+        "digest": "sha256:7454297f6adf6226fb3f08d03c8437f0b78fdbf2cc69eed9adae6bafdaf97890",
+        "config": "sha256:bfa15455ffbe903bc3601dc500a97c5aacc9d8984321a65185d2de669358b888",
+        "rootfs_matches": true,
+        "tag_matches_digest": true
+      }
+    },
+    "all_four_archive_identities_verified": true
+  },
+  "isolated_rehearsal": [
+    {
+      "action": "prepare",
+      "archive_bytes": 198020951,
+      "download_ms": 1292,
+      "ready_host_ms": 10943,
+      "click_to_ready_ms": 11382,
+      "continuous_probes": true,
+      "phases_ms": {
+        "admission": 1559,
+        "downloading": 1292,
+        "staging": 8092
+      }
+    },
+    {
+      "action": "apply",
+      "click_to_healthy_ms": 10485,
+      "click_to_confirmed_ms": 10703,
+      "observed_outage_ms": 9237,
+      "maintenance_refresh": true,
+      "phases_ms": {
+        "admission": 1069,
+        "backup": 1506,
+        "commit": 751,
+        "draining": 955,
+        "fencing": 139,
+        "health": 4548,
+        "migration": 198,
+        "switching": 783
+      }
+    },
+    {
+      "action": "rollback",
+      "click_to_healthy_ms": 11100,
+      "click_to_confirmed_ms": 11322,
+      "observed_outage_ms": 9343,
+      "maintenance_refresh": true,
+      "phases_ms": {
+        "admission": 1568,
+        "backup": 1504,
+        "commit": 764,
+        "draining": 873,
+        "fencing": 134,
+        "health": 4627,
+        "migration": 208,
+        "switching": 832
+      }
+    }
+  ],
+  "reading": {
+    "schema_version": 2,
+    "gate_id": "reading-stability",
+    "status": "passed",
+    "started_at": "2026-11-20T13:47:24.893Z",
+    "test_count": 60,
+    "completed_at": "2026-11-20T13:52:57.181Z",
+    "duration_ms": 334023,
+    "result_counts": {
+      "passed": 60,
+      "failed": 0,
+      "timedOut": 0,
+      "skipped": 0,
+      "interrupted": 0
+    }
+  },
+  "production": {
+    "before": {
+      "at": "2026-11-20T13:36:09.554219+00:00",
+      "current": {
+        "revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+        "schema": "20261117_0062",
+        "version": "v0.1.1"
+      },
+      "disk": "Filesystem     1024-blocks     Used Available Capacity Mounted on\n/dev/vda3         40900288 32743804   7305400      82% /\n",
+      "exclusive_writers": true,
+      "fingerprint_matches": true,
+      "job": null,
+      "prepared": false,
+      "previous": null,
+      "retained_preflight": {
+        "error": "",
+        "exit_code": 0,
+        "output": "filesystem=/dev/vda3 available=7305400KiB required=7101972KiB components=backup=6446612KiB, images=524288KiB, transfer_headroom=131072KiB\nrelease_archive=--retained-images staged=0KiB expanded=0KiB\nRelease disk-space preflight passed; no files, images, containers, or volumes were removed.\n"
+      },
+      "runtime_health": true,
+      "schema": "20261117_0062"
+    },
+    "retained_backup_verified": {
+      "at": "2026-11-20T13:41:41.186756+00:00",
+      "backup": "chat-reader-20261119T182358Z",
+      "checksums_sha256": "09a92841ad097d8243b8ee8714b01e9917d29fbc35b048e578bfd4d011732407",
+      "error": "",
+      "manifest_sha256": "26665b39254e2de37eeb381834c009505de2c43b29b5d93fe2bf2a0b092ce023",
+      "verification": "postgres.dump: OK\nimports.tar.gz: OK\nexports.tar.gz: OK\noffline.tar.gz: OK\nassets.tar.gz: OK\nVerified backup: /opt/chat-reader/backups/chat-reader-20261119T182358Z\n",
+      "verification_exit": 0
+    },
+    "retained_programs": {
+      "retained_programs_match_verified_archive": {
+        "api": true,
+        "import-worker": true,
+        "migrate": true,
+        "web": true
+      }
+    },
+    "cache_cleanup": {
+      "at": "2026-11-20T14:03:02.100602+00:00",
+      "available_after_kib": 7526820,
+      "available_before_kib": 7304816,
+      "backup_image_or_data_deleted": false,
+      "cache_after_kib": 4968,
+      "cache_before_kib": 227004,
+      "error": "",
+      "exit_code": 0,
+      "operation": "dnf clean all; all repositories disabled",
+      "output": "",
+      "scope": "/var/cache/dnf only; no packages removed or installed"
+    },
+    "prepare_attempts": [
+      {
+        "at": "2026-11-20T14:21:21.299156+00:00",
+        "current": "v0.1.1",
+        "current_revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+        "https_health": 200,
+        "job": {
+          "action": "prepare",
+          "expected": "f53f1c36f6e2017904df0dd07a27928bb02d408d3d6fafb6c62a9a11449d0bdd",
+          "id": "ec27894236464474acb08c0ae844add5",
+          "phase": "refused",
+          "phase_ms": 1795184478144,
+          "reason": "configuration_or_runtime",
+          "started_ms": 1795184452755,
+          "target": "1f1118969608969a489ab95b5383c13fa6f855d62d128d076c78d66fdecdc7d4",
+          "timings_ms": {
+            "admission": 25389
+          },
+          "updated": 1795184478
+        },
+        "maintenance": false,
+        "previous": null
+      },
+      {
+        "at": "2026-11-20T14:32:29.313668+00:00",
+        "current": "v0.1.1",
+        "current_revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+        "https_health": 200,
+        "job": {
+          "action": "prepare",
+          "expected": "f53f1c36f6e2017904df0dd07a27928bb02d408d3d6fafb6c62a9a11449d0bdd",
+          "id": "97e41c31b43040be9c9a9276a2cef7f8",
+          "phase": "prepared",
+          "phase_ms": 1795185148011,
+          "started_ms": 1795184892445,
+          "target": "1f1118969608969a489ab95b5383c13fa6f855d62d128d076c78d66fdecdc7d4",
+          "timings_ms": {
+            "admission": 43426,
+            "downloading": 6346,
+            "staging": 205794
+          },
+          "updated": 1795185148
+        },
+        "maintenance": false,
+        "previous": null
+      }
+    ],
+    "restart_preflight": {
+      "at": "2026-11-20T14:33:22.691388+00:00",
+      "download_ms": 6346,
+      "error": "",
+      "output": "filesystem=/dev/vda3 available=7231144KiB required=7101980KiB components=backup=6446620KiB, images=524288KiB, transfer_headroom=131072KiB\nrelease_archive=--retained-images staged=0KiB expanded=0KiB\nRelease disk-space preflight passed; no files, images, containers, or volumes were removed.\n",
+      "preflight_exit": 0,
+      "prepared_until_unix": 1795186948,
+      "ready_ms": 255561,
+      "schema_unchanged": true
+    },
+    "apply_attempts": [
+      {
+        "at": "2026-11-20T14:35:31.702871+00:00",
+        "current": "v0.1.1",
+        "current_revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+        "https_health": 200,
+        "job": {
+          "action": "apply",
+          "expected": "f53f1c36f6e2017904df0dd07a27928bb02d408d3d6fafb6c62a9a11449d0bdd",
+          "id": "517505c8a57b46fe975203220ede425d",
+          "phase": "refused",
+          "phase_ms": 1795185331092,
+          "reason": "capacity_or_images",
+          "started_ms": 1795185303936,
+          "target": "1f1118969608969a489ab95b5383c13fa6f855d62d128d076c78d66fdecdc7d4",
+          "timings_ms": {
+            "admission": 27156
+          },
+          "updated": 1795185331
+        },
+        "maintenance": false,
+        "previous": null
+      },
+      {
+        "at": "2026-11-20T14:41:49.997457+00:00",
+        "current": "v0.1.1",
+        "current_revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+        "https_health": 200,
+        "job": {
+          "action": "apply",
+          "expected": "f53f1c36f6e2017904df0dd07a27928bb02d408d3d6fafb6c62a9a11449d0bdd",
+          "id": "1434fc0f80644f8a84763a48d652d630",
+          "phase": "refused",
+          "phase_ms": 1795185707666,
+          "reason": "capacity_or_images",
+          "started_ms": 1795185673956,
+          "target": "1f1118969608969a489ab95b5383c13fa6f855d62d128d076c78d66fdecdc7d4",
+          "timings_ms": {
+            "admission": 33710
+          },
+          "updated": 1795185707
+        },
+        "maintenance": false,
+        "previous": null
+      }
+    ],
+    "diagnosis": [
+      {
+        "at": "2026-11-20T14:37:42.988353+00:00",
+        "fixed_restart_preflight_passed": false,
+        "seconds": 19.016454292461276,
+        "error_type": "timeout",
+        "frames": [
+          {
+            "file": "<stdin>",
+            "line": 7,
+            "function": "<module>"
+          },
+          {
+            "file": "host.py",
+            "line": 735,
+            "function": "do"
+          },
+          {
+            "file": "host.py",
+            "line": 672,
+            "function": "admission_for_restart"
+          },
+          {
+            "file": "host.py",
+            "line": 509,
+            "function": "unpatched"
+          },
+          {
+            "file": "host.py",
+            "line": 48,
+            "function": "docker_read"
+          },
+          {
+            "file": "client.py",
+            "line": 1365,
+            "function": "getresponse"
+          },
+          {
+            "file": "client.py",
+            "line": 320,
+            "function": "begin"
+          },
+          {
+            "file": "client.py",
+            "line": 281,
+            "function": "_read_status"
+          },
+          {
+            "file": "socket.py",
+            "line": 586,
+            "function": "readinto"
+          }
+        ]
+      },
+      {
+        "disk": "Filesystem     1024-blocks     Used Available Capacity Mounted on\n/dev/vda3         40900288 32818272   7230932      82% /\n"
+      }
+    ],
+    "cold_scan_measurements": [
+      {
+        "diagnostic_only": true,
+        "round": 1,
+        "role": "api",
+        "seconds": 20.09054454229772,
+        "critical_changes": false
+      }
+    ],
+    "no_fence_no_migration_no_switch": true,
+    "unchanged_configuration": true,
+    "sole_existing_backup_retained": true
+  },
+  "repair": {
+    "scope": "Fixed Docker GET containers/<64hex>/changes read timeout only: 15 to 120 seconds. Other metadata stays 15; no retries or weakening of content/status/size/critical-path checks.",
+    "local_mock_regression_before": "8 pass / 1 TimeoutError after fixing Windows AF_UNIX mock portability",
+    "local_mock_regression_after": "9/9 pass",
+    "python36_syntax": "pass",
+    "go_local": "not run: executable unavailable; signed release CI still requires Go tests and actual isolated upgrade",
+    "still_required": "Full exact CI, signed repaired host kit, immutable verification, then operator host-only installation and fixed-operation deployment.",
+    "failures_preserved": [
+      "Windows AF_UNIX missing in first mock test; harness fixed without skip",
+      "Initial bridge request without monitor was rejected and created no task",
+      "Diagnostic empty Docker changes null response handled; it created no task",
+      "GitHub local TLS status-query timeouts are transport failures, not CI failures"
+    ]
+  }
+}
