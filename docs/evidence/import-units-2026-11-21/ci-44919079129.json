@@ -1,0 +1,306 @@
+{
+  "at": "2026-11-21T15:52:40.916884+00:00",
+  "source_sha": "160bff27f91ca4645514356371e64aece6592e50",
+  "run_id": 44919079129,
+  "attempt": 1,
+  "jobs": [
+    {
+      "id": 136890938491,
+      "name": "image-preparation",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890938681,
+      "name": "settings-restore",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890938720,
+      "name": "api-quality-shard-1 / suite",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890938724,
+      "name": "settings-quality-shard-4 / matrix",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890938770,
+      "name": "web-quality-shard-1 / gates",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890938800,
+      "name": "api-quality-shard-3 / suite",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890938803,
+      "name": "api-quality-shard-4 / suite",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890938894,
+      "name": "web-quality-shard-2 / gates",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890938924,
+      "name": "web-quality-shard-3 / gates",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890938965,
+      "name": "reading-performance-comparison / compare",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890938976,
+      "name": "settings-quality-shard-3 / matrix",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890939009,
+      "name": "settings-quality-shard-2 / matrix",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890939038,
+      "name": "settings-quality-shard-1 / matrix",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136890939142,
+      "name": "api-quality-shard-2 / suite",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136894194360,
+      "name": "api-quality",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136895224640,
+      "name": "settings-quality",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136897748039,
+      "name": "web-quality",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136897827548,
+      "name": "build-images",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 136897969454,
+      "name": "inspect-release-artifact",
+      "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "wait": {
+    "requested_seconds": 1500,
+    "mono_seconds": 1500.2030000000086,
+    "started_at": "2026-11-21T15:25:17.720353+00:00",
+    "finished_at": "2026-11-21T15:50:17.922209+00:00",
+    "run": 44919079129,
+    "sha": "160bff27f91ca4645514356371e64aece6592e50"
+  },
+  "artifact_id": 14713837055,
+  "transport_sha256": "sha256:e3a1d2c5a047a00f9722ea452e0acdaaed9a5f06ef57d03a764082a56a9532c1",
+  "archive_bytes": 177768620,
+  "archive_sha256": "3f74cb1151a45e2906243c1cae11bb84314af403929831fcd47025040da67b34",
+  "expanded_bytes": 178676736,
+  "images": {
+    "api": {
+      "config_id": "sha256:84e51b50e3c75a10acab83102034e1f9b77bfc314c9eb88780a4e12d1db2ebca",
+      "platform": "linux/amd64",
+      "rootfs": [
+        "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+        "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+        "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+        "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+        "sha256:158b7cd33ed753e043d6d0fd439e1d22812a8bf26f5d42e493efb04ba98da3f5",
+        "sha256:d57a256a0924c2a6f929d62eb819f8a9f8ef214dbf2d77129355535cabe341b6",
+        "sha256:911c4b08341ba9a4a246a7f474acaabb729dc654edc312baa08807665c95f68e",
+        "sha256:5598b9e5fc06e515bba088f201ee0066c074ca3003bd174b1e553132804553e6",
+        "sha256:895f505868d7718752fb0e6830764792b7210fbd817241799ffac52b45b15e3e",
+        "sha256:f3a081eb984bc236e2de6c9f725cc160dc355d005562f0c573aa0fb2b7386a6d",
+        "sha256:17de31dac5b9b7708ce82d7940b0f51a204255a97634793948c54df6717a8c2e",
+        "sha256:707676cf0f2252f0edf4bebeead52a7f6057428f867818fc2ea0318492de0210",
+        "sha256:dfedb3d5a7f8167c9e831ebd19b0de5bfc69f12fbd27cc029dd7d295180ba2e8",
+        "sha256:49a929e0ea7ba264df116292d701df1096d60aced156e07d0ad6399f727ff0b8"
+      ],
+      "accepted_engine_ids": [
+        "sha256:636af72f6a2ca0ee32f4d9ad3ac5985de435b2dc26499bcf4c36bba333980c6c",
+        "sha256:84e51b50e3c75a10acab83102034e1f9b77bfc314c9eb88780a4e12d1db2ebca"
+      ]
+    },
+    "import-worker": {
+      "config_id": "sha256:84e51b50e3c75a10acab83102034e1f9b77bfc314c9eb88780a4e12d1db2ebca",
+      "platform": "linux/amd64",
+      "rootfs": [
+        "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+        "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+        "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+        "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+        "sha256:158b7cd33ed753e043d6d0fd439e1d22812a8bf26f5d42e493efb04ba98da3f5",
+        "sha256:d57a256a0924c2a6f929d62eb819f8a9f8ef214dbf2d77129355535cabe341b6",
+        "sha256:911c4b08341ba9a4a246a7f474acaabb729dc654edc312baa08807665c95f68e",
+        "sha256:5598b9e5fc06e515bba088f201ee0066c074ca3003bd174b1e553132804553e6",
+        "sha256:895f505868d7718752fb0e6830764792b7210fbd817241799ffac52b45b15e3e",
+        "sha256:f3a081eb984bc236e2de6c9f725cc160dc355d005562f0c573aa0fb2b7386a6d",
+        "sha256:17de31dac5b9b7708ce82d7940b0f51a204255a97634793948c54df6717a8c2e",
+        "sha256:707676cf0f2252f0edf4bebeead52a7f6057428f867818fc2ea0318492de0210",
+        "sha256:dfedb3d5a7f8167c9e831ebd19b0de5bfc69f12fbd27cc029dd7d295180ba2e8",
+        "sha256:49a929e0ea7ba264df116292d701df1096d60aced156e07d0ad6399f727ff0b8"
+      ],
+      "accepted_engine_ids": [
+        "sha256:636af72f6a2ca0ee32f4d9ad3ac5985de435b2dc26499bcf4c36bba333980c6c",
+        "sha256:84e51b50e3c75a10acab83102034e1f9b77bfc314c9eb88780a4e12d1db2ebca"
+      ]
+    },
+    "migrate": {
+      "config_id": "sha256:84e51b50e3c75a10acab83102034e1f9b77bfc314c9eb88780a4e12d1db2ebca",
+      "platform": "linux/amd64",
+      "rootfs": [
+        "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+        "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+        "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+        "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+        "sha256:158b7cd33ed753e043d6d0fd439e1d22812a8bf26f5d42e493efb04ba98da3f5",
+        "sha256:d57a256a0924c2a6f929d62eb819f8a9f8ef214dbf2d77129355535cabe341b6",
+        "sha256:911c4b08341ba9a4a246a7f474acaabb729dc654edc312baa08807665c95f68e",
+        "sha256:5598b9e5fc06e515bba088f201ee0066c074ca3003bd174b1e553132804553e6",
+        "sha256:895f505868d7718752fb0e6830764792b7210fbd817241799ffac52b45b15e3e",
+        "sha256:f3a081eb984bc236e2de6c9f725cc160dc355d005562f0c573aa0fb2b7386a6d",
+        "sha256:17de31dac5b9b7708ce82d7940b0f51a204255a97634793948c54df6717a8c2e",
+        "sha256:707676cf0f2252f0edf4bebeead52a7f6057428f867818fc2ea0318492de0210",
+        "sha256:dfedb3d5a7f8167c9e831ebd19b0de5bfc69f12fbd27cc029dd7d295180ba2e8",
+        "sha256:49a929e0ea7ba264df116292d701df1096d60aced156e07d0ad6399f727ff0b8"
+      ],
+      "accepted_engine_ids": [
+        "sha256:636af72f6a2ca0ee32f4d9ad3ac5985de435b2dc26499bcf4c36bba333980c6c",
+        "sha256:84e51b50e3c75a10acab83102034e1f9b77bfc314c9eb88780a4e12d1db2ebca"
+      ]
+    },
+    "web": {
+      "config_id": "sha256:b25b02e97ecfc78b7463462610535bf0e4b6cd76bcdab619eba788c132ad424c",
+      "platform": "linux/amd64",
+      "rootfs": [
+        "sha256:a0904247e36a7726c03c71ee48f3e64462021c88dafeb13f37fdaf613b27f11c",
+        "sha256:0ac4251d3ceb1f9a47f7a4a2c3f0a11d2170e8f827a9e733e6278473d6c2674e",
+        "sha256:1e154f3abc96911e063658b8bc45e19c5a1a24cd6c68cbf87d8bfa1b28bc74b9",
+        "sha256:74e3c643bad513259e9f5190690801b63fc218d293f228213810f973ee3ae4cd",
+        "sha256:0863cd3870f0a61a250fcbcda59fa578dbd42fd4eaf75dbc8c1284849bb6a791",
+        "sha256:f424cccb309acc8074cf9ca2d3cbb6cff5acf47517e41d1e974a73b94e185ffd",
+        "sha256:9e00148f40fe521ff55dc7e9f18c1fb7c9a55a15d2657f492ff5409f6f3a034a",
+        "sha256:c4b8f3a9c3ab95a09ed804a48135b4406954545747ffe766b8da1a788929c155",
+        "sha256:0469bf62c5aeff8622ef5731ae7befc7d7f6213a6223aea2149293e150510286"
+      ],
+      "accepted_engine_ids": [
+        "sha256:9b92151a49f69d442127f6a66998f905c4dbc519026ab7aafc89899eb6034e8a",
+        "sha256:b25b02e97ecfc78b7463462610535bf0e4b6cd76bcdab619eba788c132ad424c"
+      ]
+    }
+  },
+  "original_five_real_memory_gates_verified": true,
+  "native_api": {
+    "schema_version": 1,
+    "source_sha": "160bff27f91ca4645514356371e64aece6592e50",
+    "run_id": "44919079129",
+    "run_attempt": "1",
+    "schedule_sha256": "7a7b3aa3025f19d88d36f7f2e5dacc7635945d842186ac95347d75187b0b67ab",
+    "collected": 7089,
+    "passed": 7086,
+    "skips": [
+      "tests/test_exporter_markdown_parser.py::test_real_paired_fixture_uses_bounded_fast_path",
+      "tests/test_import_preview_exporter_combo.py::test_real_exporter_pair_preview_commit_and_retry",
+      "tests/test_import_preview_exporter_combo.py::test_response_only_real_pair_preview"
+    ],
+    "shard_counts": [
+      1162,
+      4148,
+      1018,
+      761
+    ],
+    "native_junit_and_lifecycle_match": true,
+    "native_input_sha256": [
+      {
+        "api-execution.json": "608828380c2e6ee48fe01e85fa4581eec9b0fcde816a2a06edfb90be774736e3",
+        "api-junit.xml": "957e44dbad74c5e2a1483b98ce5759f49ca4a03f1a324cf8fef04d7ee2a56122"
+      },
+      {
+        "api-execution.json": "a809cac19be13c7a5d883f805303b22f92e5d34259b06da984e0669e01558a45",
+        "api-junit.xml": "3dc4bac3c8caab3c0097f3646d37f38ee186eef34f80f962ab5eb5eaea3d98a5"
+      },
+      {
+        "api-execution.json": "6a0861b41b6c9925bea8ebde8443209a3908f9295123b2318dd5bf771cf91b7f",
+        "api-junit.xml": "0eec132350e939bdbcd83f67c6a3bd944869c42c0f1e1c4c4d814e4d54cf2c12"
+      },
+      {
+        "api-execution.json": "2bd74a9c78308853db0508f67ce126e44af33e2f48b9593ddf2c6054fe94628c",
+        "api-junit.xml": "ee7fb8d058bdc0ab0e88b64062109b570a02b87c728d800e715ac6da10423f15"
+      }
+    ]
+  },
+  "no_tag_or_release": true,
+  "no_production_deployment": true,
+  "readback": "First exact result after 1500.203 seconds was still in progress; the same run and attempt subsequently completed.",
+  "merge_observation": {
+    "pr": 7,
+    "checked_at_utc": "2026-11-21T15:57:56.724459+00:00",
+    "base_sha": "8d093ef59a488b3c4820b6a26575f79120c1b8de",
+    "head_sha": "160bff27f91ca4645514356371e64aece6592e50",
+    "draft": false,
+    "normal_rebase_merge": "refused by base branch policy",
+    "server_merge_state": "blocked",
+    "server_conflict_flag": false,
+    "default_ref_ruleset_id": 27639846,
+    "restrict_updates": true,
+    "allowed_exception_mode": "pull_request",
+    "repository_auto_merge": false,
+    "no_admin_or_rule_change": true,
+    "no_tag_or_deployment": true
+  }
+}
