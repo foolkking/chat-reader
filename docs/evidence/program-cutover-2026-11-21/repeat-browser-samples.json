@@ -1,0 +1,1232 @@
+[
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 6264,
+      "click_to_target_ms": 5041,
+      "max_observed_gap_ms": 3736,
+      "observed_outage_upper_ms": 3736,
+      "phases_ms": {
+        "admission": 884,
+        "program-commit": 570,
+        "program-health": 3124,
+        "program-switch": 1499
+      },
+      "probe_samples": 29,
+      "scope": "web",
+      "thermal": "cold"
+    },
+    "at_unix": 1795244520,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 18499,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 5950,
+      "click_to_target_ms": 4372,
+      "max_observed_gap_ms": 2964,
+      "observed_outage_upper_ms": 2964,
+      "phases_ms": {
+        "admission": 866,
+        "program-commit": 781,
+        "program-health": 2701,
+        "program-switch": 1442
+      },
+      "probe_samples": 28,
+      "scope": "web",
+      "thermal": "cold"
+    },
+    "sample": 1,
+    "scope": "web",
+    "transfer_ms": 1261
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 10214,
+      "click_to_target_ms": 8926,
+      "max_observed_gap_ms": 7696,
+      "observed_outage_upper_ms": 7696,
+      "phases_ms": {
+        "admission": 817,
+        "program-commit": 471,
+        "program-health": 6521,
+        "program-switch": 2284
+      },
+      "probe_samples": 66,
+      "scope": "api",
+      "thermal": "cold"
+    },
+    "at_unix": 1795244568,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 18395,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 8046,
+      "click_to_target_ms": 6715,
+      "max_observed_gap_ms": 5326,
+      "observed_outage_upper_ms": 5326,
+      "phases_ms": {
+        "admission": 843,
+        "program-commit": 508,
+        "program-health": 4210,
+        "program-switch": 2283
+      },
+      "probe_samples": 57,
+      "scope": "api",
+      "thermal": "cold"
+    },
+    "sample": 1,
+    "scope": "api",
+    "transfer_ms": 1061
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 10519,
+      "click_to_target_ms": 9624,
+      "max_observed_gap_ms": 8299,
+      "observed_outage_upper_ms": 8299,
+      "phases_ms": {
+        "admission": 825,
+        "program-commit": 539,
+        "program-health": 2219,
+        "program-switch": 6815
+      },
+      "probe_samples": 63,
+      "scope": "api+web",
+      "thermal": "cold"
+    },
+    "at_unix": 1795244619,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 17866,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 10659,
+      "click_to_target_ms": 9239,
+      "max_observed_gap_ms": 8004,
+      "observed_outage_upper_ms": 8004,
+      "phases_ms": {
+        "admission": 808,
+        "program-commit": 742,
+        "program-health": 1919,
+        "program-switch": 7041
+      },
+      "probe_samples": 71,
+      "scope": "api+web",
+      "thermal": "cold"
+    },
+    "sample": 1,
+    "scope": "api+web",
+    "transfer_ms": 1328
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 6111,
+      "click_to_target_ms": 4480,
+      "max_observed_gap_ms": 3220,
+      "observed_outage_upper_ms": 3220,
+      "phases_ms": {
+        "admission": 825,
+        "program-commit": 836,
+        "program-health": 2895,
+        "program-switch": 1411
+      },
+      "probe_samples": 22,
+      "scope": "web",
+      "thermal": "warm"
+    },
+    "at_unix": 1795244662,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 16044,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 5238,
+      "click_to_target_ms": 4111,
+      "max_observed_gap_ms": 2682,
+      "observed_outage_upper_ms": 2682,
+      "phases_ms": {
+        "admission": 909,
+        "program-commit": 547,
+        "program-health": 2084,
+        "program-switch": 1483
+      },
+      "probe_samples": 25,
+      "scope": "web",
+      "thermal": "warm"
+    },
+    "sample": 1,
+    "scope": "web",
+    "transfer_ms": 1058
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 7228,
+      "click_to_target_ms": 6073,
+      "max_observed_gap_ms": 4813,
+      "observed_outage_upper_ms": 4813,
+      "phases_ms": {
+        "admission": 773,
+        "program-commit": 527,
+        "program-health": 3811,
+        "program-switch": 1967
+      },
+      "probe_samples": 47,
+      "scope": "api",
+      "thermal": "warm"
+    },
+    "at_unix": 1795244714,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 19723,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 7205,
+      "click_to_target_ms": 5930,
+      "max_observed_gap_ms": 4707,
+      "observed_outage_upper_ms": 4707,
+      "phases_ms": {
+        "admission": 837,
+        "program-commit": 524,
+        "program-health": 3836,
+        "program-switch": 1867
+      },
+      "probe_samples": 52,
+      "scope": "api",
+      "thermal": "warm"
+    },
+    "sample": 1,
+    "scope": "api",
+    "transfer_ms": 944
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 10339,
+      "click_to_target_ms": 9416,
+      "max_observed_gap_ms": 8183,
+      "observed_outage_upper_ms": 8183,
+      "phases_ms": {
+        "admission": 785,
+        "program-commit": 436,
+        "program-health": 1977,
+        "program-switch": 6942
+      },
+      "probe_samples": 63,
+      "scope": "api+web",
+      "thermal": "warm"
+    },
+    "at_unix": 1795244768,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 15135,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 9632,
+      "click_to_target_ms": 8638,
+      "max_observed_gap_ms": 7394,
+      "observed_outage_upper_ms": 7394,
+      "phases_ms": {
+        "admission": 802,
+        "program-commit": 465,
+        "program-health": 1815,
+        "program-switch": 6400
+      },
+      "probe_samples": 63,
+      "scope": "api+web",
+      "thermal": "warm"
+    },
+    "sample": 1,
+    "scope": "api+web",
+    "transfer_ms": 1119
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 5434,
+      "click_to_target_ms": 4405,
+      "max_observed_gap_ms": 3027,
+      "observed_outage_upper_ms": 3027,
+      "phases_ms": {
+        "admission": 833,
+        "program-commit": 471,
+        "program-health": 2519,
+        "program-switch": 1446
+      },
+      "probe_samples": 20,
+      "scope": "web",
+      "thermal": "cold"
+    },
+    "at_unix": 1795244804,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 17061,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 4983,
+      "click_to_target_ms": 3794,
+      "max_observed_gap_ms": 2483,
+      "observed_outage_upper_ms": 2483,
+      "phases_ms": {
+        "admission": 924,
+        "program-commit": 581,
+        "program-health": 1981,
+        "program-switch": 1333
+      },
+      "probe_samples": 26,
+      "scope": "web",
+      "thermal": "cold"
+    },
+    "sample": 2,
+    "scope": "web",
+    "transfer_ms": 1651
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 7796,
+      "click_to_target_ms": 6728,
+      "max_observed_gap_ms": 5459,
+      "observed_outage_upper_ms": 5459,
+      "phases_ms": {
+        "admission": 804,
+        "program-commit": 481,
+        "program-health": 4317,
+        "program-switch": 2040
+      },
+      "probe_samples": 52,
+      "scope": "api",
+      "thermal": "cold"
+    },
+    "at_unix": 1795244843,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 14844,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 7056,
+      "click_to_target_ms": 5850,
+      "max_observed_gap_ms": 4661,
+      "observed_outage_upper_ms": 4661,
+      "phases_ms": {
+        "admission": 761,
+        "program-commit": 552,
+        "program-health": 3687,
+        "program-switch": 1923
+      },
+      "probe_samples": 52,
+      "scope": "api",
+      "thermal": "cold"
+    },
+    "sample": 2,
+    "scope": "api",
+    "transfer_ms": 572
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 10042,
+      "click_to_target_ms": 9078,
+      "max_observed_gap_ms": 7910,
+      "observed_outage_upper_ms": 7910,
+      "phases_ms": {
+        "admission": 796,
+        "program-commit": 452,
+        "program-health": 2259,
+        "program-switch": 6424
+      },
+      "probe_samples": 60,
+      "scope": "api+web",
+      "thermal": "cold"
+    },
+    "at_unix": 1795244887,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 14520,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 10166,
+      "click_to_target_ms": 8813,
+      "max_observed_gap_ms": 7678,
+      "observed_outage_upper_ms": 7678,
+      "phases_ms": {
+        "admission": 793,
+        "program-commit": 668,
+        "program-health": 2163,
+        "program-switch": 6428
+      },
+      "probe_samples": 65,
+      "scope": "api+web",
+      "thermal": "cold"
+    },
+    "sample": 2,
+    "scope": "api+web",
+    "transfer_ms": 554
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 4525,
+      "click_to_target_ms": 3505,
+      "max_observed_gap_ms": 2276,
+      "observed_outage_upper_ms": 2276,
+      "phases_ms": {
+        "admission": 784,
+        "program-commit": 503,
+        "program-health": 1793,
+        "program-switch": 1310
+      },
+      "probe_samples": 20,
+      "scope": "web",
+      "thermal": "warm"
+    },
+    "at_unix": 1795244923,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 14112,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 5385,
+      "click_to_target_ms": 4463,
+      "max_observed_gap_ms": 2696,
+      "observed_outage_upper_ms": 2696,
+      "phases_ms": {
+        "admission": 1046,
+        "program-commit": 446,
+        "program-health": 2098,
+        "program-switch": 1647
+      },
+      "probe_samples": 26,
+      "scope": "web",
+      "thermal": "warm"
+    },
+    "sample": 2,
+    "scope": "web",
+    "transfer_ms": 596
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 7138,
+      "click_to_target_ms": 5850,
+      "max_observed_gap_ms": 4627,
+      "observed_outage_upper_ms": 4627,
+      "phases_ms": {
+        "admission": 818,
+        "program-commit": 541,
+        "program-health": 3601,
+        "program-switch": 2036
+      },
+      "probe_samples": 47,
+      "scope": "api",
+      "thermal": "warm"
+    },
+    "at_unix": 1795244971,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 17756,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 7026,
+      "click_to_target_ms": 5804,
+      "max_observed_gap_ms": 4483,
+      "observed_outage_upper_ms": 4483,
+      "phases_ms": {
+        "admission": 798,
+        "program-commit": 525,
+        "program-health": 3613,
+        "program-switch": 1949
+      },
+      "probe_samples": 52,
+      "scope": "api",
+      "thermal": "warm"
+    },
+    "sample": 2,
+    "scope": "api",
+    "transfer_ms": 1242
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 9578,
+      "click_to_target_ms": 8507,
+      "max_observed_gap_ms": 7298,
+      "observed_outage_upper_ms": 7298,
+      "phases_ms": {
+        "admission": 752,
+        "program-commit": 504,
+        "program-health": 1852,
+        "program-switch": 6325
+      },
+      "probe_samples": 58,
+      "scope": "api+web",
+      "thermal": "warm"
+    },
+    "at_unix": 1795245025,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 15907,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 10095,
+      "click_to_target_ms": 9044,
+      "max_observed_gap_ms": 7832,
+      "observed_outage_upper_ms": 7832,
+      "phases_ms": {
+        "admission": 786,
+        "program-commit": 510,
+        "program-health": 1782,
+        "program-switch": 6854
+      },
+      "probe_samples": 68,
+      "scope": "api+web",
+      "thermal": "warm"
+    },
+    "sample": 2,
+    "scope": "api+web",
+    "transfer_ms": 529
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 5723,
+      "click_to_target_ms": 4307,
+      "max_observed_gap_ms": 3033,
+      "observed_outage_upper_ms": 3033,
+      "phases_ms": {
+        "admission": 832,
+        "program-commit": 718,
+        "program-health": 2800,
+        "program-switch": 1268
+      },
+      "probe_samples": 25,
+      "scope": "web",
+      "thermal": "cold"
+    },
+    "at_unix": 1795245060,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 15987,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 4486,
+      "click_to_target_ms": 3415,
+      "max_observed_gap_ms": 2203,
+      "observed_outage_upper_ms": 2203,
+      "phases_ms": {
+        "admission": 782,
+        "program-commit": 526,
+        "program-health": 1775,
+        "program-switch": 1273
+      },
+      "probe_samples": 25,
+      "scope": "web",
+      "thermal": "cold"
+    },
+    "sample": 3,
+    "scope": "web",
+    "transfer_ms": 1301
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 8609,
+      "click_to_target_ms": 7583,
+      "max_observed_gap_ms": 6377,
+      "observed_outage_upper_ms": 6377,
+      "phases_ms": {
+        "admission": 785,
+        "program-commit": 471,
+        "program-health": 5035,
+        "program-switch": 2158
+      },
+      "probe_samples": 58,
+      "scope": "api",
+      "thermal": "cold"
+    },
+    "at_unix": 1795245099,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 14226,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 7035,
+      "click_to_target_ms": 5638,
+      "max_observed_gap_ms": 4442,
+      "observed_outage_upper_ms": 4442,
+      "phases_ms": {
+        "admission": 793,
+        "program-commit": 566,
+        "program-health": 3630,
+        "program-switch": 1867
+      },
+      "probe_samples": 51,
+      "scope": "api",
+      "thermal": "cold"
+    },
+    "sample": 3,
+    "scope": "api",
+    "transfer_ms": 987
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 10068,
+      "click_to_target_ms": 9077,
+      "max_observed_gap_ms": 7879,
+      "observed_outage_upper_ms": 7879,
+      "phases_ms": {
+        "admission": 787,
+        "program-commit": 466,
+        "program-health": 2240,
+        "program-switch": 6475
+      },
+      "probe_samples": 60,
+      "scope": "api+web",
+      "thermal": "cold"
+    },
+    "at_unix": 1795245148,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 15779,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 10527,
+      "click_to_target_ms": 9316,
+      "max_observed_gap_ms": 8091,
+      "observed_outage_upper_ms": 8091,
+      "phases_ms": {
+        "admission": 811,
+        "program-commit": 536,
+        "program-health": 2039,
+        "program-switch": 7014
+      },
+      "probe_samples": 70,
+      "scope": "api+web",
+      "thermal": "cold"
+    },
+    "sample": 3,
+    "scope": "api+web",
+    "transfer_ms": 956
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 5019,
+      "click_to_target_ms": 3589,
+      "max_observed_gap_ms": 2378,
+      "observed_outage_upper_ms": 2378,
+      "phases_ms": {
+        "admission": 766,
+        "program-commit": 660,
+        "program-health": 2206,
+        "program-switch": 1221
+      },
+      "probe_samples": 21,
+      "scope": "web",
+      "thermal": "warm"
+    },
+    "at_unix": 1795245190,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 17323,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 4370,
+      "click_to_target_ms": 3416,
+      "max_observed_gap_ms": 2184,
+      "observed_outage_upper_ms": 2184,
+      "phases_ms": {
+        "admission": 803,
+        "program-commit": 467,
+        "program-health": 1765,
+        "program-switch": 1244
+      },
+      "probe_samples": 24,
+      "scope": "web",
+      "thermal": "warm"
+    },
+    "sample": 3,
+    "scope": "web",
+    "transfer_ms": 1263
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 7232,
+      "click_to_target_ms": 5944,
+      "max_observed_gap_ms": 4739,
+      "observed_outage_upper_ms": 4739,
+      "phases_ms": {
+        "admission": 792,
+        "program-commit": 586,
+        "program-health": 3747,
+        "program-switch": 1960
+      },
+      "probe_samples": 47,
+      "scope": "api",
+      "thermal": "warm"
+    },
+    "at_unix": 1795245235,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 14739,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 7059,
+      "click_to_target_ms": 5775,
+      "max_observed_gap_ms": 4561,
+      "observed_outage_upper_ms": 4561,
+      "phases_ms": {
+        "admission": 809,
+        "program-commit": 511,
+        "program-health": 3579,
+        "program-switch": 2022
+      },
+      "probe_samples": 52,
+      "scope": "api",
+      "thermal": "warm"
+    },
+    "sample": 3,
+    "scope": "api",
+    "transfer_ms": 1041
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 11392,
+      "click_to_target_ms": 9979,
+      "max_observed_gap_ms": 8697,
+      "observed_outage_upper_ms": 8697,
+      "phases_ms": {
+        "admission": 860,
+        "program-commit": 763,
+        "program-health": 2624,
+        "program-switch": 6977
+      },
+      "probe_samples": 66,
+      "scope": "api+web",
+      "thermal": "warm"
+    },
+    "at_unix": 1795245298,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 18861,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 10411,
+      "click_to_target_ms": 9399,
+      "max_observed_gap_ms": 8142,
+      "observed_outage_upper_ms": 8142,
+      "phases_ms": {
+        "admission": 830,
+        "program-commit": 498,
+        "program-health": 1935,
+        "program-switch": 7028
+      },
+      "probe_samples": 68,
+      "scope": "api+web",
+      "thermal": "warm"
+    },
+    "sample": 3,
+    "scope": "api+web",
+    "transfer_ms": 1197
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 5324,
+      "click_to_target_ms": 4238,
+      "max_observed_gap_ms": 2914,
+      "observed_outage_upper_ms": 2914,
+      "phases_ms": {
+        "admission": 841,
+        "program-commit": 494,
+        "program-health": 2468,
+        "program-switch": 1327
+      },
+      "probe_samples": 22,
+      "scope": "web",
+      "thermal": "cold"
+    },
+    "at_unix": 1795245334,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 17805,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 4695,
+      "click_to_target_ms": 3654,
+      "max_observed_gap_ms": 2411,
+      "observed_outage_upper_ms": 2411,
+      "phases_ms": {
+        "admission": 856,
+        "program-commit": 504,
+        "program-health": 1904,
+        "program-switch": 1265
+      },
+      "probe_samples": 26,
+      "scope": "web",
+      "thermal": "cold"
+    },
+    "sample": 4,
+    "scope": "web",
+    "transfer_ms": 623
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 8002,
+      "click_to_target_ms": 6992,
+      "max_observed_gap_ms": 5811,
+      "observed_outage_upper_ms": 5811,
+      "phases_ms": {
+        "admission": 782,
+        "program-commit": 436,
+        "program-health": 4619,
+        "program-switch": 2000
+      },
+      "probe_samples": 55,
+      "scope": "api",
+      "thermal": "cold"
+    },
+    "at_unix": 1795245375,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 16171,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 7233,
+      "click_to_target_ms": 5936,
+      "max_observed_gap_ms": 4724,
+      "observed_outage_upper_ms": 4724,
+      "phases_ms": {
+        "admission": 809,
+        "program-commit": 513,
+        "program-health": 3799,
+        "program-switch": 1957
+      },
+      "probe_samples": 54,
+      "scope": "api",
+      "thermal": "cold"
+    },
+    "sample": 4,
+    "scope": "api",
+    "transfer_ms": 1245
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 10076,
+      "click_to_target_ms": 9027,
+      "max_observed_gap_ms": 7809,
+      "observed_outage_upper_ms": 7809,
+      "phases_ms": {
+        "admission": 762,
+        "program-commit": 454,
+        "program-health": 2244,
+        "program-switch": 6443
+      },
+      "probe_samples": 57,
+      "scope": "api+web",
+      "thermal": "cold"
+    },
+    "at_unix": 1795245421,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 15476,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 10165,
+      "click_to_target_ms": 9121,
+      "max_observed_gap_ms": 7881,
+      "observed_outage_upper_ms": 7881,
+      "phases_ms": {
+        "admission": 863,
+        "program-commit": 457,
+        "program-health": 1742,
+        "program-switch": 6894
+      },
+      "probe_samples": 69,
+      "scope": "api+web",
+      "thermal": "cold"
+    },
+    "sample": 4,
+    "scope": "api+web",
+    "transfer_ms": 835
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 5097,
+      "click_to_target_ms": 4065,
+      "max_observed_gap_ms": 2394,
+      "observed_outage_upper_ms": 2394,
+      "phases_ms": {
+        "admission": 1025,
+        "program-commit": 454,
+        "program-health": 1867,
+        "program-switch": 1558
+      },
+      "probe_samples": 25,
+      "scope": "web",
+      "thermal": "warm"
+    },
+    "at_unix": 1795245458,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 14994,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 4548,
+      "click_to_target_ms": 3529,
+      "max_observed_gap_ms": 2327,
+      "observed_outage_upper_ms": 2327,
+      "phases_ms": {
+        "admission": 771,
+        "program-commit": 501,
+        "program-health": 1767,
+        "program-switch": 1349
+      },
+      "probe_samples": 25,
+      "scope": "web",
+      "thermal": "warm"
+    },
+    "sample": 4,
+    "scope": "web",
+    "transfer_ms": 1219
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 7221,
+      "click_to_target_ms": 5949,
+      "max_observed_gap_ms": 4821,
+      "observed_outage_upper_ms": 4821,
+      "phases_ms": {
+        "admission": 775,
+        "program-commit": 561,
+        "program-health": 3725,
+        "program-switch": 1976
+      },
+      "probe_samples": 50,
+      "scope": "api",
+      "thermal": "warm"
+    },
+    "at_unix": 1795245503,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 14149,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 7129,
+      "click_to_target_ms": 5807,
+      "max_observed_gap_ms": 4557,
+      "observed_outage_upper_ms": 4557,
+      "phases_ms": {
+        "admission": 832,
+        "program-commit": 530,
+        "program-health": 3640,
+        "program-switch": 1984
+      },
+      "probe_samples": 52,
+      "scope": "api",
+      "thermal": "warm"
+    },
+    "sample": 4,
+    "scope": "api",
+    "transfer_ms": 1084
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 9619,
+      "click_to_target_ms": 8628,
+      "max_observed_gap_ms": 7429,
+      "observed_outage_upper_ms": 7429,
+      "phases_ms": {
+        "admission": 803,
+        "program-commit": 468,
+        "program-health": 1793,
+        "program-switch": 6381
+      },
+      "probe_samples": 58,
+      "scope": "api+web",
+      "thermal": "warm"
+    },
+    "at_unix": 1795245557,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 16940,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 9896,
+      "click_to_target_ms": 8948,
+      "max_observed_gap_ms": 7274,
+      "observed_outage_upper_ms": 7274,
+      "phases_ms": {
+        "admission": 1092,
+        "program-commit": 441,
+        "program-health": 1792,
+        "program-switch": 6455
+      },
+      "probe_samples": 65,
+      "scope": "api+web",
+      "thermal": "warm"
+    },
+    "sample": 4,
+    "scope": "api+web",
+    "transfer_ms": 1318
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 5218,
+      "click_to_target_ms": 4234,
+      "max_observed_gap_ms": 2763,
+      "observed_outage_upper_ms": 2763,
+      "phases_ms": {
+        "admission": 867,
+        "program-commit": 471,
+        "program-health": 2342,
+        "program-switch": 1321
+      },
+      "probe_samples": 21,
+      "scope": "web",
+      "thermal": "cold"
+    },
+    "at_unix": 1795245591,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 15986,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 4648,
+      "click_to_target_ms": 3598,
+      "max_observed_gap_ms": 2359,
+      "observed_outage_upper_ms": 2359,
+      "phases_ms": {
+        "admission": 808,
+        "program-commit": 493,
+        "program-health": 1854,
+        "program-switch": 1359
+      },
+      "probe_samples": 26,
+      "scope": "web",
+      "thermal": "cold"
+    },
+    "sample": 5,
+    "scope": "web",
+    "transfer_ms": 566
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 7618,
+      "click_to_target_ms": 6555,
+      "max_observed_gap_ms": 5274,
+      "observed_outage_upper_ms": 5274,
+      "phases_ms": {
+        "admission": 852,
+        "program-commit": 438,
+        "program-health": 4111,
+        "program-switch": 2127
+      },
+      "probe_samples": 53,
+      "scope": "api",
+      "thermal": "cold"
+    },
+    "at_unix": 1795245630,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 15192,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 7124,
+      "click_to_target_ms": 5819,
+      "max_observed_gap_ms": 4536,
+      "observed_outage_upper_ms": 4536,
+      "phases_ms": {
+        "admission": 806,
+        "program-commit": 501,
+        "program-health": 3713,
+        "program-switch": 1921
+      },
+      "probe_samples": 53,
+      "scope": "api",
+      "thermal": "cold"
+    },
+    "sample": 5,
+    "scope": "api",
+    "transfer_ms": 1013
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 10021,
+      "click_to_target_ms": 9226,
+      "max_observed_gap_ms": 7918,
+      "observed_outage_upper_ms": 7918,
+      "phases_ms": {
+        "admission": 803,
+        "program-commit": 490,
+        "program-health": 2212,
+        "program-switch": 6401
+      },
+      "probe_samples": 57,
+      "scope": "api+web",
+      "thermal": "cold"
+    },
+    "at_unix": 1795245674,
+    "cache": "cold",
+    "exit": 0,
+    "prepare_ms": 14560,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 9551,
+      "click_to_target_ms": 8596,
+      "max_observed_gap_ms": 7355,
+      "observed_outage_upper_ms": 7355,
+      "phases_ms": {
+        "admission": 811,
+        "program-commit": 491,
+        "program-health": 1777,
+        "program-switch": 6350
+      },
+      "probe_samples": 63,
+      "scope": "api+web",
+      "thermal": "cold"
+    },
+    "sample": 5,
+    "scope": "api+web",
+    "transfer_ms": 1098
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 4460,
+      "click_to_target_ms": 3489,
+      "max_observed_gap_ms": 2337,
+      "observed_outage_upper_ms": 2337,
+      "phases_ms": {
+        "admission": 765,
+        "program-commit": 480,
+        "program-health": 1798,
+        "program-switch": 1314
+      },
+      "probe_samples": 22,
+      "scope": "web",
+      "thermal": "warm"
+    },
+    "at_unix": 1795245711,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 14396,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 5018,
+      "click_to_target_ms": 3568,
+      "max_observed_gap_ms": 2319,
+      "observed_outage_upper_ms": 2319,
+      "phases_ms": {
+        "admission": 802,
+        "program-commit": 702,
+        "program-health": 2039,
+        "program-switch": 1370
+      },
+      "probe_samples": 27,
+      "scope": "web",
+      "thermal": "warm"
+    },
+    "sample": 5,
+    "scope": "web",
+    "transfer_ms": 636
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 7967,
+      "click_to_target_ms": 6306,
+      "max_observed_gap_ms": 5163,
+      "observed_outage_upper_ms": 5163,
+      "phases_ms": {
+        "admission": 794,
+        "program-commit": 668,
+        "program-health": 4461,
+        "program-switch": 1933
+      },
+      "probe_samples": 51,
+      "scope": "api",
+      "thermal": "warm"
+    },
+    "at_unix": 1795245755,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 13888,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 7113,
+      "click_to_target_ms": 5815,
+      "max_observed_gap_ms": 4483,
+      "observed_outage_upper_ms": 4483,
+      "phases_ms": {
+        "admission": 790,
+        "program-commit": 531,
+        "program-health": 3653,
+        "program-switch": 1969
+      },
+      "probe_samples": 53,
+      "scope": "api",
+      "thermal": "warm"
+    },
+    "sample": 5,
+    "scope": "api",
+    "transfer_ms": 1009
+  },
+  {
+    "apply": {
+      "action": "apply",
+      "click_to_confirmed_ms": 9691,
+      "click_to_target_ms": 8649,
+      "max_observed_gap_ms": 7456,
+      "observed_outage_upper_ms": 7456,
+      "phases_ms": {
+        "admission": 805,
+        "program-commit": 454,
+        "program-health": 1825,
+        "program-switch": 6423
+      },
+      "probe_samples": 59,
+      "scope": "api+web",
+      "thermal": "warm"
+    },
+    "at_unix": 1795245807,
+    "cache": "warm",
+    "exit": 0,
+    "prepare_ms": 16133,
+    "rollback": {
+      "action": "rollback",
+      "click_to_confirmed_ms": 9584,
+      "click_to_target_ms": 8623,
+      "max_observed_gap_ms": 7372,
+      "observed_outage_upper_ms": 7372,
+      "phases_ms": {
+        "admission": 816,
+        "program-commit": 463,
+        "program-health": 1779,
+        "program-switch": 6420
+      },
+      "probe_samples": 63,
+      "scope": "api+web",
+      "thermal": "warm"
+    },
+    "sample": 5,
+    "scope": "api+web",
+    "transfer_ms": 1225
+  }
+]
