@@ -1,6 +1,6 @@
 # Project State
 
-**2026-11-21 导入低内存候选（未部署）：** 普通 Markdown 可逐条分析，符合有界条件的旧 v1 JSON 草稿可逐条提交；内存充足保留原批量路径，不降低全局预留或增加 worker 并发。`54d6764` / `44909530739/1` 完整 CI 19/19、API 7086 通过／原 3 跳过、五项内存门禁及精确制品核验通过。相同 800 条合成消息，CI worker 的 640 MiB 实测 JSON／Markdown 为 29.7／28.5 秒、峰值约 139／140 MiB；1280 MiB 独立对照为 5.0／9.3 秒；正文和来源引用完整。不是任意 JSON 原始格式的流式分析。1900 MiB 升级验收首轮夹具错层、精确镜像第 26 组的进度页导航冲突分别记录，未以不完整样本放行。[合同](docs/system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [回执与边界](docs/evidence/import-units-2026-11-21/README.md)。
+**2026-11-22 导入低内存候选（未部署）：** 普通 Markdown 可逐条分析，符合条件的旧 v1 canonical 草稿可逐条提交，余量充足保留原批量路径。相同 800 条合成消息，640 MiB worker 的 JSON／Markdown 为 29.7／28.5 秒、峰值约 139／140 MiB；1280 MiB 独立对照为 5.0／9.3 秒。正文及来源完整，未下调全局预留或增加 worker 并发；不等于任意原始 JSON 均能流式分析。1900 MiB 整机、640 MiB worker 的导入提交及慢上传均已通过，30 对选择性升级／回滚全部重新实测，原两次演练失败保留。最终分支 `160bff27` / `44919079129/1` 的完整 CI 19/19、API 7086 通过／原 3 跳过，镜像包与原生报告独立核验通过。PR #7 已转为待合并，普通 rebase 合并被 `master` 的更新规则拒绝；未绕过、未打标签、未变更生产。[导入合同](docs/system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [计量及发布边界](docs/evidence/import-units-2026-11-21/README.md#最终复核与交接)。
 
 **2026-11-21 22:23（北京时间）备份保留：** 新的五组件恢复证据已核对，删除旧 `chat-reader-20261119T182358Z`（约 3.77 GiB）及两份过期程序备份归档（约 339 MiB）。只留 `chat-reader-20261120T181619Z` 和配套 v0.1.1 回滚程序；未删 Docker 镜像/用户数据。服务、配置、八个保留文件和 v0.1.4 实况独立复核通过。候选包传输前预算余 181,766 KiB；正式准备／确认时仍须再核。[恢复方法、原失败与清理回执](docs/evidence/import-units-2026-11-21/backup-retention.json)。
 

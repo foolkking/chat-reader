@@ -1,6 +1,6 @@
 # Markdown 文档台账
 
-2026-11-21：[导入消息级工作单元](system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21)记录普通 Markdown 和旧 canonical 草稿的低内存路径、原子性与明确排除项；[脱敏实测](evidence/import-units-2026-11-21/README.md)区分边界探针测试、真实 640 MiB worker 和未复测的整机升级门禁。同步 ZIP 合同和入口，不改写历史失败或生产资格。
+2026-11-22：[导入消息级工作单元](system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21)记录普通 Markdown 和旧 canonical 草稿的低内存路径、原子性与明确排除项；[最终复核](evidence/import-units-2026-11-21/README.md#最终复核与交接)分别绑定独立 worker 计量、默认 1900/640 MiB 的 30 对浏览器演练、最终分支 CI 与 PR 合并阻塞。保留最初失败；未冒充正式标签资格或生产计时。
 
 2026-11-21 21:53：[单份恢复点及授权清理](evidence/import-units-2026-11-21/backup-retention.json)记录独立恢复／内容一致性证明、旧备份删除、配套回滚镜像保留和另一次 SSH 核验。可用空间与新候选完整预算不同，未据此发布部署。
 
