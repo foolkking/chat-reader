@@ -1,6 +1,8 @@
 # Project State
 
-**2026-11-21 导入低内存候选（未部署）：** 普通 Markdown 可逐条分析，符合有界条件的旧 v1 JSON 草稿可逐条提交；内存充足保留原批量路径，不降低全局预留或增加 worker 并发。真实 640 MiB／禁额外 swap 容器中，800 条 JSON 草稿由旧版内存拒绝变为成功，800 条 Markdown 也成功，正文及来源引用核对一致；不是任意 JSON 原始格式的流式分析。新增 39 项和原 ZIP 兼容回归通过。完整 CI 与原 1900 MiB 升级演练尚未重验；备份恢复核验／清理进行中，生产仍为下述 v0.1.4。[合同与限制](docs/system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [实测、失败记录](docs/evidence/import-units-2026-11-21/README.md)。
+**2026-11-21 导入低内存候选（未部署）：** 普通 Markdown 可逐条分析，符合有界条件的旧 v1 JSON 草稿可逐条提交；内存充足保留原批量路径，不降低全局预留或增加 worker 并发。`54d6764` / `44909530739/1` 完整 CI 19/19、API 7086 通过／原 3 跳过、五项内存门禁及精确制品核验通过。相同 800 条合成消息，CI worker 的 640 MiB 实测 JSON／Markdown 为 29.7／28.5 秒、峰值约 139／140 MiB；1280 MiB 独立对照为 5.0／9.3 秒；正文和来源引用完整。不是任意 JSON 原始格式的流式分析。1900 MiB 升级验收首轮夹具错层、精确镜像第 26 组的进度页导航冲突分别记录，未以不完整样本放行。[合同](docs/system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [回执与边界](docs/evidence/import-units-2026-11-21/README.md)。
+
+**2026-11-21 22:23（北京时间）备份保留：** 新的五组件恢复证据已核对，删除旧 `chat-reader-20261119T182358Z`（约 3.77 GiB）及两份过期程序备份归档（约 339 MiB）。只留 `chat-reader-20261120T181619Z` 和配套 v0.1.1 回滚程序；未删 Docker 镜像/用户数据。服务、配置、八个保留文件和 v0.1.4 实况独立复核通过。候选包传输前预算余 181,766 KiB；正式准备／确认时仍须再核。[恢复方法、原失败与清理回执](docs/evidence/import-units-2026-11-21/backup-retention.json)。
 
 **工作分支候选（不是生产版本）：** 在线升级区分签名版本对的「仅换程序」与「完整维护」，按角色保留真实镜像；老实例默认仍走完整备份。见[管理员及运维接入边界](docs/system/ONLINE_UPDATES.md#首次启用仅换程序独立维护窗口)及[隔离验证记录](docs/evidence/program-cutover-2026-11-21/README.md)。`king` 不作为性能演练环境。
 

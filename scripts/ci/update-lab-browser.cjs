@@ -26,7 +26,7 @@ async function main(){
   let versionReads=0, checkedSystem=false;
   p.on("request",r=>{if(new URL(r.url()).pathname==="/api/admin/updates")versionReads++;});
   const open=async()=>{const before=versionReads;
-    await p.goto(origin+"/");await p.getByRole("button",{name:/^(Settings|设置)$/}).click();
+    if(p.url()!==origin+"/")await p.goto(origin+"/");await p.getByRole("button",{name:/^(Settings|设置)$/}).click();
     const admin=p.locator('[aria-labelledby="settings-administration-heading"]');
     if(!checkedSystem){
       await admin.getByRole("button",{name:/^(System|系统)$/}).click();
@@ -41,6 +41,18 @@ async function main(){
     await show.click();
     return runtime.getByRole("region",{name:/Version updates|版本更新/});};
   const measured=[];
+  // The status API can confirm success while the visible progress document
+  // still has a scheduled refresh. Observe its actual terminal render and use
+  // the user-facing return link, rather than racing that refresh with goto("/").
+  // Record display latency separately; never move the original timing start
+  // or accept a refresh, a generic 200, or a stale success as host readiness.
+  const returnFromSuccess=async(start)=>{
+    await p.getByRole("status").filter({hasText:/^(Update complete|更新完成)$/}).waitFor();
+    assert.equal(await p.locator('meta[http-equiv="refresh" i]').count(),0);
+    measured.at(-1).click_to_rendered_success_ms=Math.round(performance.now()-start);
+    await p.getByRole("link",{name:/^(Return to Chat Reader|返回 Chat Reader)$/}).click();
+    await p.waitForURL(origin+"/");
+  };
   let revisions,writeIds=[];
   const write=async(label)=>{
     const title="program verification "+label+" "+crypto.randomUUID();
@@ -120,6 +132,7 @@ async function main(){
       for(const id of writeIds)assert.equal((await ctx.request.get(origin+"/api/conversations/"+id)).status(),200);
       console.log("program metrics: "+JSON.stringify(measured.at(-1)));
     } finally {stop=true;await probe;await anon.close();}
+    await returnFromSuccess(start);
     continue;
    }
    const start=performance.now();await panel.getByRole("button",{name:/Confirm restart and view progress|确认重启并查看进度/}).click();
@@ -143,6 +156,7 @@ async function main(){
    assert.notEqual(returnedAt,null);
    measured.push({action,click_to_healthy_ms:Math.round(returnedAt-start),click_to_confirmed_ms:Math.round(performance.now()-start),observed_outage_ms:Math.round(returnedAt-downAt),maintenance_refresh:refreshed,phases_ms:status.timings_ms});
    console.log(action+" metrics: "+JSON.stringify(measured.at(-1)));
+   await returnFromSuccess(start);
   }
   if(scope)operator("verify",scope);
   if(process.env.UPDATE_LAB_METRICS)fs.writeFileSync(process.env.UPDATE_LAB_METRICS,JSON.stringify(measured,null,2));

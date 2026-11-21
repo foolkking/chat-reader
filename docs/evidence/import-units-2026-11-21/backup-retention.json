@@ -1,0 +1,247 @@
+{
+  "host": "king",
+  "authorization": "User allowed obsolete backup cleanup; retain current runtime plus one verified data/program rollback set.",
+  "restore": {
+    "started_at": "2026-11-21T12:24:50.519280+00:00",
+    "backup": "/var/lib/chat-reader-online-backups/update-100727445d4846db9da3b5cef9e966a0/chat-reader-20261120T181619Z",
+    "manifest_sha256": "40b9d6913d11bdc0bc269bb02acd709be0f229f4be81b54f928b0afd5c75c4c3",
+    "environment": "Local private Linux tmpfs, no network/ports/logs or production mount, no extra swap",
+    "files": {
+      "imports": {
+        "files": 1020,
+        "directories": 155,
+        "bytes": 1362955320,
+        "compressed_bytes": 894273340,
+        "complete_gzip_sha256": true,
+        "crc": true,
+        "each_file_read_back": true,
+        "metadata_restored": true
+      },
+      "exports": {
+        "files": 0,
+        "directories": 189,
+        "bytes": 0,
+        "compressed_bytes": 6510,
+        "complete_gzip_sha256": true,
+        "crc": true,
+        "each_file_read_back": true,
+        "metadata_restored": true
+      }
+    },
+    "postgres": {
+      "schema": "20261117_0062",
+      "public_tables": 93,
+      "validated_foreign_keys": 154,
+      "database_bytes": 1545182231,
+      "compressed_bytes": 353821338,
+      "sha256_verified": true,
+      "restore_exit": 0
+    },
+    "completed_at": "2026-11-21T13:43:39.325308+00:00",
+    "restore_passed": true,
+    "production_changed": false,
+    "evidence_method": "Fresh PG/imports/exports and changed assets restored locally; exact unchanged file bytes/metadata and offline gzip rehashed against the manifest-bound 2026-11-20 successful restore. Not claimed to be a second full extraction.",
+    "prior_restore_evidence": "docs/evidence/online-update-2026-11-18/king-backup-retention-2026-11-20.json",
+    "content_addressed_proof": {
+      "read_only": true,
+      "offline_current_and_previously_restored_sha256": "4e2394188335bdf9185e8990a8f6bd163dce9e7f5a37a4de609b6d45dc82c5d6",
+      "old_asset_archive_sha256": "a5238f50b33f571f52e08d1fdcfeb0e66ed7d926e88d23138e1e4becf6eb9457",
+      "new_asset_archive_sha256": "0a115e196146efd6c14582686ccafb9143680c634c6d22f8a86f677a952b722a",
+      "asset_complete_gzip_sha256_and_crc": true,
+      "old_asset_files": 3241,
+      "new_asset_files": 3255,
+      "new_asset_directories": 299,
+      "new_asset_file_bytes": 1584892738,
+      "unchanged_entries_match_old_restore_bytes_and_posix_metadata": 3524,
+      "changed_files": 14,
+      "changed_directories": 16,
+      "changed_file_bytes": 1286782,
+      "old_only_entries_not_required_by_new": 0
+    },
+    "changed_assets_local_restore": {
+      "files": 14,
+      "directories": 16,
+      "bytes": 1286782,
+      "compressed_bytes": 1134079,
+      "gzip_sha256": "76d4550edfc67c167120438629f4fa9bbde443fb621b6fb82a223eac65da1a3b",
+      "complete_gzip_sha256": true,
+      "crc": true,
+      "each_file_read_back": true,
+      "metadata_restored": true
+    },
+    "earlier_attempts": [
+      "Two full PG temp restores exceeded fixture tmpfs due to WAL; optimized only temporary PG settings.",
+      "Third PG/imports/exports passed; repeated offline download stopped because actual SSH throughput ~114KiB/s. No incomplete component claimed restored."
+    ]
+  },
+  "pre_delete_readonly": {
+    "mode": "inspect",
+    "started_at": "2026-11-21T13:48:02.667051+00:00",
+    "completed_at": "2026-11-21T13:49:20.569053+00:00",
+    "removed": false,
+    "remaining_backup": "chat-reader-20261120T181619Z",
+    "remaining_manifest_sha256": "40b9d6913d11bdc0bc269bb02acd709be0f229f4be81b54f928b0afd5c75c4c3",
+    "remaining_files": 8,
+    "remaining_logical_bytes": 4050772902,
+    "verified_previous_revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+    "running_revision": "8d093ef59a488b3c4820b6a26575f79120c1b8de",
+    "free_before_bytes": 3422949376,
+    "free_after_bytes": 3422883840,
+    "runtime_and_protected_files_unchanged": true,
+    "updater_phase_unchanged": true,
+    "paired_image_ids_and_rootfs_matched": true,
+    "healthy": true,
+    "obsolete_backup": "chat-reader-20261119T182358Z",
+    "obsolete_logical_bytes": 4045672750,
+    "obsolete_allocated_bytes": 4045705216,
+    "obsolete_manifest_sha256": "26665b39254e2de37eeb381834c009505de2c43b29b5d93fe2bf2a0b092ce023"
+  },
+  "delete": {
+    "mode": "apply",
+    "started_at": "2026-11-21T13:49:47.416822+00:00",
+    "completed_at": "2026-11-21T13:51:40.942515+00:00",
+    "removed": true,
+    "remaining_backup": "chat-reader-20261120T181619Z",
+    "remaining_manifest_sha256": "40b9d6913d11bdc0bc269bb02acd709be0f229f4be81b54f928b0afd5c75c4c3",
+    "remaining_files": 8,
+    "remaining_logical_bytes": 4050772902,
+    "verified_previous_revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+    "running_revision": "8d093ef59a488b3c4820b6a26575f79120c1b8de",
+    "free_before_bytes": 3422756864,
+    "free_after_bytes": 7468593152,
+    "runtime_and_protected_files_unchanged": true,
+    "updater_phase_unchanged": true,
+    "paired_image_ids_and_rootfs_matched": true,
+    "healthy": true,
+    "obsolete_backup": "chat-reader-20261119T182358Z",
+    "obsolete_logical_bytes": 4045672750,
+    "obsolete_allocated_bytes": 4045705216,
+    "obsolete_manifest_sha256": "26665b39254e2de37eeb381834c009505de2c43b29b5d93fe2bf2a0b092ce023"
+  },
+  "independent_postcheck": {
+    "mode": "postcheck",
+    "started_at": "2026-11-21T13:52:14.671674+00:00",
+    "completed_at": "2026-11-21T13:53:37.658338+00:00",
+    "removed": false,
+    "remaining_backup": "chat-reader-20261120T181619Z",
+    "remaining_manifest_sha256": "40b9d6913d11bdc0bc269bb02acd709be0f229f4be81b54f928b0afd5c75c4c3",
+    "remaining_files": 8,
+    "remaining_logical_bytes": 4050772902,
+    "verified_previous_revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+    "running_revision": "8d093ef59a488b3c4820b6a26575f79120c1b8de",
+    "free_before_bytes": 7468478464,
+    "free_after_bytes": 7468515328,
+    "runtime_and_protected_files_unchanged": true,
+    "updater_phase_unchanged": true,
+    "paired_image_ids_and_rootfs_matched": true,
+    "healthy": true
+  },
+  "space": {
+    "at": "2026-11-21T13:53:54.903786+00:00",
+    "mode": "retained-images-reference-not-new-release",
+    "exit": 0,
+    "available_kib": 7293572,
+    "required_kib": 7110160,
+    "backup_required_kib": 6454800,
+    "pending_candidate_archive": true,
+    "legacy_backup_sets": 0,
+    "online_backup_sets": 1
+  },
+  "guards": [
+    "Two manifest identities, source revisions, complete eight-member inventory and all five compressed payload checksums",
+    "Actual local PG/imports/exports restore; unchanged assets and offline bound to full prior restore by hashes/metadata; 14 changed files separately extracted and re-read",
+    "Image IDs and ordered RootFS for current v0.1.4 and retained v0.1.1 matched installed state",
+    "Exact eight-file unlinks with pinned directory descriptors and no symlinks/hard links; same adapter lock and backup operation locks; no open handles/mounts",
+    "Independent fresh SSH rehash of remaining eight files plus TLS, runtime identities, heartbeats, config hashes and updater state"
+  ],
+  "no_production_data_deleted": true,
+  "no_images_deleted": true,
+  "no_services_restarted": true,
+  "no_release_or_deployment": true,
+  "earlier_refusals": [
+    {
+      "stage": "readonly retirement inspection",
+      "reason": "Full stat comparison included read atime; corrected comparison to identity/size/mode/uid/gid/links/mtime/ctime, without ignoring write timestamps"
+    },
+    {
+      "stage": "readonly delta verification",
+      "reason": "100 MiB virtual-address cap was below host Python baseline; capped growth at 80 MiB above actual baseline instead. Bounded 64 KiB file reads unchanged."
+    }
+  ],
+  "reproducibility": {
+    "retirement_control_sha256": "775938c602873c7a8afbd03cb1bd6debbb3f014ba122462cbb1dd616729c2fcf",
+    "delta_control_sha256": "0b5799e156bdcf6f4a088f40e86207a04b339c16038af88f118c001e5b457fb2"
+  },
+  "additional_program_archives_inspection": {
+    "mode": "inspect",
+    "at": "2026-11-21T14:17:39.566830+00:00",
+    "candidate_files": 2,
+    "removed": [],
+    "free_before_bytes": 7468007424,
+    "free_after_bytes": 7468232704,
+    "running_and_previous_image_ids_rootfs_unchanged": true,
+    "retained_data_backup_manifest": "40b9d6913d11bdc0bc269bb02acd709be0f229f4be81b54f928b0afd5c75c4c3",
+    "protected_files_and_runtime_unchanged": true,
+    "production_images_deleted": false,
+    "production_data_deleted": false
+  },
+  "additional_program_archives_cleanup": {
+    "mode": "apply",
+    "at": "2026-11-21T14:18:32.820080+00:00",
+    "candidate_files": 2,
+    "removed": [
+      {
+        "revision": "26b35501bf7011910a83bb23e8982139f8129b7b",
+        "bytes": 177673424,
+        "allocated_bytes": 177680384,
+        "sha256": "a6ba372bd86f545e3abe9a207056c2a410b4520a0e5cc9f3567cec2c49c8ff8d"
+      },
+      {
+        "revision": "2463f2985c367e681c3443b1b485e57f2925b313",
+        "bytes": 177564226,
+        "allocated_bytes": 177569792,
+        "sha256": "414df672230d5ccc28c960ab5f42fec983907458d7d44696bec22be18eb3415b"
+      }
+    ],
+    "free_before_bytes": 7468154880,
+    "free_after_bytes": 7823405056,
+    "running_and_previous_image_ids_rootfs_unchanged": true,
+    "retained_data_backup_manifest": "40b9d6913d11bdc0bc269bb02acd709be0f229f4be81b54f928b0afd5c75c4c3",
+    "protected_files_and_runtime_unchanged": true,
+    "production_images_deleted": false,
+    "production_data_deleted": false
+  },
+  "independent_final_state_and_capacity": [
+    {
+      "mode": "postcheck",
+      "started_at": "2026-11-21T14:22:19.603843+00:00",
+      "completed_at": "2026-11-21T14:23:35.315813+00:00",
+      "removed": false,
+      "remaining_backup": "chat-reader-20261120T181619Z",
+      "remaining_manifest_sha256": "40b9d6913d11bdc0bc269bb02acd709be0f229f4be81b54f928b0afd5c75c4c3",
+      "remaining_files": 8,
+      "remaining_logical_bytes": 4050772902,
+      "verified_previous_revision": "1d1a3c759e11c82f02865bd0c3359c9fbeaa2eba",
+      "running_revision": "8d093ef59a488b3c4820b6a26575f79120c1b8de",
+      "free_before_bytes": 7823216640,
+      "free_after_bytes": 7823155200,
+      "runtime_and_protected_files_unchanged": true,
+      "updater_phase_unchanged": true,
+      "paired_image_ids_and_rootfs_matched": true,
+      "healthy": true
+    },
+    {
+      "kind": "full-candidate-before-transfer-budget-reference",
+      "source_sha": "54d67649057e4dfc98e45364d6438cfbdf74a329",
+      "archive_bytes": 177762784,
+      "expanded_bytes": 178676224,
+      "retained_probe_exit": 0,
+      "available_kib": 7640012,
+      "retained_required_kib": 7110160,
+      "candidate_required_kib": 7458246,
+      "margin_kib": 181766,
+      "actual_staging_and_stop_admission_still_required": true
+    }
+  ],
+  "clarification": "Two obsolete transfer archives, NOT Docker images, were removed after resolving current and previous program/data recovery pairs. No container image tag, layer, user data or remaining data backup was deleted."
+}
