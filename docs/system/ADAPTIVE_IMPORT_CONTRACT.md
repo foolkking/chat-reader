@@ -1,5 +1,51 @@
 # Adaptive Import Contract
 
+## Message-sized work under fixed memory — candidate 2026-11-21
+
+An import still has one serialized worker and one atomic canonical commit.
+Smaller internal units do **not** publish Markdown first and leave attachments
+missing while another task finishes. Low memory uses the existing disk spool,
+per-message writer and bounded file I/O; ample headroom retains the bulk parser.
+No dependency, schema, source format or production memory setting changes.
+
+- Standalone `.md` / `.markdown` adaptive sources use the existing streamed
+  Markdown parser when live headroom cannot satisfy normal admission. It reads
+  bounded lines/messages and publishes the already-supported v2 internal draft.
+  Format detection and mapping remain authoritative; a suffix does not make
+  invalid content acceptable. Replacement admission uses the replacement's
+  actual extension, not the previous source's parser.
+- A server-created v1 canonical JSONL draft normally stores an entire
+  conversation on one line. Under low headroom, non-ZIP commit first validates
+  the whole file, checksum, constructors and exact preview counts, indexing
+  message byte spans and SHA-256 on disk. It then reuses the v2 message writer
+  without copying all bodies. Each encoded message is at most 2 MiB, cumulative
+  conversation headers at most 64 KiB, and nesting at most 64. Temporary indices
+  are task-owned and removed on completion or failure; reviewed sources/drafts
+  are not rewritten.
+- Nonempty conversation-level annotations, notebooks, source references or
+  attachments, and oversized units, return to the **unchanged** whole-record
+  admission before any canonical write. The new stream writer preserves the
+  bulk writer's fallback source positions/metadata as well as explicit v2 refs.
+  It does not silently strip private content to qualify for a lower budget.
+- This bounded lane reuses the existing effective-capacity reserve
+  `min(512 MiB, max(128 MiB, capacity / 8))`, plus a 64 MiB workspace for
+  admission, continuous live-headroom checks and a 64 MiB process-RSS growth
+  limit. The global 512 MiB materialization reserve is **not** lowered.
+  Unavailable probes, pressure during processing, cancellation and disk failure
+  fail closed; late failure rolls back canonical writes, retaining the source.
+  Storage exhaustion remains `IMPORT_STORAGE_FULL`, not a misleading 500.
+
+**Boundaries:** arbitrary source JSON/mixed-format analysis still needs its
+original materialization budget; optimizing an already-generated JSON draft is
+not a streaming JSON source parser. `.cr`, rich private-content v1 drafts and
+the source-qualified legacy ZIP lane do not borrow this admission. Existing ZIP
+attachment transfers already stream in 64 KiB chunks; no attachment thread pool,
+shared-session concurrency or partial-publication protocol was added.
+
+[640 MiB Linux measurements, semantic/rollback tests and failed attempts](../evidence/import-units-2026-11-21/README.md)
+are candidate evidence, not a production deployment or the 1900 MiB nested
+online-update acceptance gate.
+
 ## Auxiliary heartbeat must not wait for canonical work — worktree 2026-11-12
 
 Task heartbeat updates now lock only the matching task ID with

@@ -11,8 +11,10 @@ test("product coverage is additive; frozen scheduling and original skips remain 
   assert.deepEqual(active.settings, base.settings);
   assert.deepEqual(active.web, base.web);
   assert.deepEqual(active.api.allowed_skips, base.api.allowed_skips);
-  assert.equal(active.api.collected_count, base.api.collected_count + 39);
-  assert.equal(active.api.expected_passed, base.api.expected_passed + 39);
+  assert.equal(active.api.collected_count, base.api.collected_count + 79);
+  assert.equal(active.api.expected_passed, base.api.expected_passed + 79);
+  assert.equal(active.api.added_file_counts["tests/test_import_message_units.py"], 39);
+  assert.equal(active.api.added_file_counts["tests/test_program_update_confirmation.py"], 1);
   assert.equal(active.api.added_file_counts["tests/test_admin_updates.py"], 9);
   assert.equal(active.api.added_file_counts["tests/test_reader_find.py"], 6);
   for (const [file, shard] of Object.entries(base.api.assignment)) assert.equal(active.api.assignment[file], shard);

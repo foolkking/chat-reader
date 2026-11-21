@@ -132,6 +132,34 @@ def iter_import_draft(record: ImportRecord, *, db=None):
     actual_messages = 0
     max_line_bytes = max(1, get_settings().max_import_file_size_mb * 1024 * 1024 * 2)
 
+    # Legacy ZIP drafts have their own source-qualified small-ZIP policy.
+    # Do not intercept it with the capacity-scaled generic unit lane.
+    if db is not None and not any(
+        item.source_type == "adaptive_archive" for item in record.artifacts
+    ):
+        from app.services import uploads
+        available = uploads.available_memory_bytes()
+        required = uploads._required_analysis_memory_bytes(
+            [min(path.stat().st_size, max_line_bytes)], get_settings(),
+        )
+        if available is not None and available < required:
+            from app.services.import_pipeline.draft_units import NotUnitCompatible, indexed_drafts
+            try:
+                with indexed_drafts(path, record, db, max_line_bytes) as drafts:
+                    yield from drafts
+                return
+            except NotUnitCompatible:
+                # No canonical write has occurred. Keep the original parser's
+                # admission and errors for unsupported/oversized unit shapes.
+                pass
+            except (KeyError, TypeError, ValueError, OSError) as exc:
+                if isinstance(exc, (ImportDraftError, UploadLimitError)):
+                    raise
+                from app.services.adaptive_import.bounded_io import storage_error
+                # Keep the established route/worker exception boundary while
+                # retaining the storage failure code through its causal chain.
+                raise ImportDraftError("Import draft unit validation failed.") from storage_error(exc)
+
     with path.open("rb") as handle, closing(
         _admitted_draft_lines(handle, max_line_bytes, record=record, db=db)
     ) as lines:

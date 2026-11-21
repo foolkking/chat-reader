@@ -1,8 +1,9 @@
-"""Disk-backed ZIP and legacy small-ZIP policies; not a general memory bypass.
+"""Bounded parser policies, never a general materialization-memory bypass.
 
-JSON/mixed and legacy v1 drafts keep their existing admission. Bounded ZIPs
-use effective capacity, real headroom and a checked 64 MiB workspace delta.
-Owned sources and directory bounds are checked before allocating ZipFile.
+Source JSON/mixed parsers keep their existing admission. ZIPs, standalone
+Markdown and separately qualified canonical draft units use effective capacity,
+live headroom and a checked 64 MiB workspace delta. A whole v1 JSONL reader
+never inherits this budget merely because its source was small.
 """
 from __future__ import annotations
 
@@ -148,6 +149,61 @@ def bounded_zip_session(record) -> bool:
     return bool(originals) and all(item.source_type == "adaptive_archive" for item in originals)
 
 
+def bounded_markdown_session(record) -> bool:
+    """Only standalone Markdown uses the existing message-level text parser.
+
+    JSON and mixed mappings still need their original materialization guard.
+    This selects a parser, not permission to trust filenames as valid content.
+    """
+    originals = list(record.artifacts)
+    return bool(originals) and all(
+        item.source_type == "adaptive_source"
+        and (getattr(item, "file_extension", None) or "").casefold() in {".md", ".markdown"}
+        for item in originals
+    )
+
+
+def prefer_bounded_markdown(record) -> bool:
+    if not bounded_markdown_session(record):
+        return False
+    available = uploads.available_memory_bytes()
+    required = uploads._required_analysis_memory_bytes(
+        [max((int(item.byte_size or 0) for item in record.artifacts), default=0)], get_settings(),
+    )
+    return available is not None and available < required
+
+
+@contextmanager
+def bounded_unit_admission(db, record, *, stage):
+    """For callers that actually enforce bounded message records and disk IO.
+
+    Reuse the ZIP lane's live 64-MiB delta, capacity-based reserve and database
+    serialization. Never apply this context around a materializing parser.
+    """
+    if current_budget() is not None:
+        checkpoint()
+        yield
+        return
+    reserve = adaptive_reserve_bytes()
+    baseline = process_resident_memory_bytes()
+    if baseline is None:
+        raise uploads._memory_pressure_error()
+    with uploads.bounded_analysis_admission_sync(
+        [0], force_memory_check=True, db=db, wait_for_slot=False,
+        required_memory_bytes=reserve + WORKSPACE_BYTES,
+    ):
+        token = _active.set(SmallImportBudget(
+            baseline, stage, streaming=True, reserve_bytes=reserve,
+            scratch_directory=Path(get_settings().import_storage_dir).resolve() / str(record.id),
+        ))
+        try:
+            checkpoint()
+            yield
+            checkpoint()
+        finally:
+            _active.reset(token)
+
+
 @contextmanager
 def sequential_analysis_admission(db, record, *, archive_changes=None):
     """Hold one parser lane; admit only bytes of the unit actually being read.
@@ -156,6 +212,10 @@ def sequential_analysis_admission(db, record, *, archive_changes=None):
     JSON/mixed imports retain the normal reserve and factor, but do not charge
     independent, unopened sources as though they were all resident together.
     """
+    if prefer_bounded_markdown(record):
+        with bounded_unit_admission(db, record, stage="analysis"):
+            yield
+        return
     originals = [item for item in record.artifacts if item.source_type != "adaptive_archive_document"]
     if bounded_zip_session(record) or (
         len(originals) == 1 and originals[0].source_type == "adaptive_archive"
@@ -407,6 +467,12 @@ def import_analysis_admission(
     if current_budget() is not None:
         checkpoint()
         yield
+        return
+    if (replacement is None and bounded_markdown_session(record)
+            and ((stage != "commit" and prefer_bounded_markdown(record))
+                 or (stage == "commit" and (record.draft_summary or {}).get("format_version") == 2))):
+        with bounded_unit_admission(db, record, stage=stage):
+            yield
         return
     # A legacy v1 JSONL line contains an entire conversation. Merely enabling
     # the new parser must not grant that reader the new low-memory admission.

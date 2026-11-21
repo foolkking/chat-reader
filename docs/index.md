@@ -1,5 +1,6 @@
 # 文档导航
 
+- [固定内存下的消息级导入](system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [640 MiB 实测与保留边界](evidence/import-units-2026-11-21/README.md)：候选改动，非生产部署；原始 JSON/混合分析仍有原内存门槛。
 - [当前生产 v0.1.4：搜索与阅读修复、实测时间及下次升级的容量门槛](deployment.md#v014-production) · [精确 CI、签名、备份与生产回执](evidence/search-reading-2026-11-20/v0.1.4-production.json)。
 - [v0.1.3 标签资格失败与修复](evidence/search-reading-2026-11-20/ci-44757335968-saved-search-placement.json)：该标签未发布；冷态检查修复和折叠的已保存搜索晚到造成的 32px 位移修复随后进入 v0.1.4。[浏览器前后对照](evidence/search-reading-2026-11-20/saved-search-late-read-before-after.png)。
 - [v0.1.2 已发布、生产停服前准入拒绝与修复候选](evidence/search-reading-2026-11-20/v0.1.2-publication-and-host-admission.json)：精确完整 CI、签名/GHCR、阅读证据、6.346 秒生产下载及冷态 Docker 扫描的原失败。当前生产仍以 `PROJECT_STATE.md` 为准。

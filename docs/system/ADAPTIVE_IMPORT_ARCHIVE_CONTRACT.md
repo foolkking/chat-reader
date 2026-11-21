@@ -1,5 +1,10 @@
 # Adaptive Import ZIP Contract
 
+The [non-ZIP message-unit optimization](ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21)
+does not replace the source-qualified v1 small-ZIP lane or its 128 MiB reserve.
+ZIP media retain sequential 64 KiB I/O, integrity/scanner checks and atomic
+publication; no unbounded attachment concurrency was introduced.
+
 ## Markdown resource selection — source candidate 2026-11-16
 
 Generic ZIP inspection selects only the outermost Markdown layer after safe

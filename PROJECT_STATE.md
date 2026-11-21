@@ -1,5 +1,7 @@
 # Project State
 
+**2026-11-21 导入低内存候选（未部署）：** 普通 Markdown 可逐条分析，符合有界条件的旧 v1 JSON 草稿可逐条提交；内存充足保留原批量路径，不降低全局预留或增加 worker 并发。真实 640 MiB／禁额外 swap 容器中，800 条 JSON 草稿由旧版内存拒绝变为成功，800 条 Markdown 也成功，正文及来源引用核对一致；不是任意 JSON 原始格式的流式分析。新增 39 项和原 ZIP 兼容回归通过。完整 CI 与原 1900 MiB 升级演练尚未重验；备份恢复核验／清理进行中，生产仍为下述 v0.1.4。[合同与限制](docs/system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [实测、失败记录](docs/evidence/import-units-2026-11-21/README.md)。
+
 **工作分支候选（不是生产版本）：** 在线升级区分签名版本对的「仅换程序」与「完整维护」，按角色保留真实镜像；老实例默认仍走完整备份。见[管理员及运维接入边界](docs/system/ONLINE_UPDATES.md#首次启用仅换程序独立维护窗口)及[隔离验证记录](docs/evidence/program-cutover-2026-11-21/README.md)。`king` 不作为性能演练环境。
 
 **2026-11-21 16:28（北京时间）候选资格：** `508dae710086e607613cb63f1fbef19c786fc7a4` / `44883010518/1` 完整 CI **19/19**；命令等待 1500.011 秒后读取精确运行，下载制品与实际镜像身份再次独立核验。两轮各 30 次隔离浏览器升级最慢分别为 11.46 / 11.392 秒，不代表生产或 GitHub CDN 耗时。**未发布、未部署：** 默认 640 MiB worker 的导入提交验收仍因内存预留拒绝；768 MiB 独立对照通过，不替代默认门禁。首次接入仍需完整维护，而生产备份盘尚不足。见[精确 CI 与制品回执](docs/evidence/program-cutover-2026-11-21/ci-44883010518-qualified.json)及[验收边界](docs/evidence/program-cutover-2026-11-21/README.md#最终资格与交付边界)；本条之后的证据文档提交不冒充该 SHA 的代码资格。

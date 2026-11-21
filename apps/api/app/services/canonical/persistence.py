@@ -755,23 +755,7 @@ def _persist_messages(
                     for block_index, block in enumerate(version_blocks)
                 )
             if not draft.source_message_id or draft.source_message_id not in preserved_source_message_ids:
-                source_ref_rows.append(
-                    {
-                        "id": uuid.uuid4(),
-                        "message_id": message_id,
-                        "source_type": conversation.source_type,
-                        "source_profile": conversation.source_profile,
-                        "source_conversation_id": draft.source_conversation_id or conversation.external_source_id,
-                        "source_node_id": draft.source_node_id,
-                        "source_message_id": draft.source_message_id,
-                        "source_json_index": draft.source_json_index,
-                        "source_markdown_index": draft.source_markdown_index,
-                        "parent_node_id": draft.parent_node_id,
-                        "child_node_ids": draft.child_node_ids,
-                        "is_primary_path": draft.is_primary_path,
-                        "raw_metadata": {"warnings": draft.warnings, **draft.raw_metadata},
-                    }
-                )
+                source_ref_rows.append(_default_source_ref(conversation, draft, message_id))
 
         db.execute(insert(Message), message_rows)
         db.execute(insert(MessageVersion), version_rows)
@@ -784,6 +768,20 @@ def _persist_messages(
         progress = 10 + round(65 * processed / max(total_messages, 1))
         _report(progress_callback, "persisting", min(progress, 75), processed, total_messages)
     return identity_map
+
+
+def _default_source_ref(conversation, draft, message_id):
+    """Identical origin metadata for bulk and message-level canonical writers."""
+    return {
+        "id": uuid.uuid4(), "message_id": message_id,
+        "source_type": conversation.source_type, "source_profile": conversation.source_profile,
+        "source_conversation_id": draft.source_conversation_id or conversation.external_source_id,
+        "source_node_id": draft.source_node_id, "source_message_id": draft.source_message_id,
+        "source_json_index": draft.source_json_index, "source_markdown_index": draft.source_markdown_index,
+        "parent_node_id": draft.parent_node_id, "child_node_ids": draft.child_node_ids,
+        "is_primary_path": draft.is_primary_path,
+        "raw_metadata": {"warnings": draft.warnings, **draft.raw_metadata},
+    }
 
 
 def _persist_canjson_private_content(

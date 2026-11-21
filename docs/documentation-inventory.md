@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-21：[导入消息级工作单元](system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21)记录普通 Markdown 和旧 canonical 草稿的低内存路径、原子性与明确排除项；[脱敏实测](evidence/import-units-2026-11-21/README.md)区分边界探针测试、真实 640 MiB worker 和未复测的整机升级门禁。同步 ZIP 合同和入口，不改写历史失败或生产资格。
+
 2026-11-21：[快速/完整升级及恢复合同](system/ONLINE_UPDATES.md)记录签名版本对、只读程序接入、已恢复备份封存、磁盘临时目录和按角色回滚；[隔离证据](evidence/program-cutover-2026-11-21/README.md)区分真实浏览器计时、合成分发与生产结果。
 
 2026-11-21 16:28：[候选精确资格](evidence/program-cutover-2026-11-21/ci-44883010518-qualified.json)保存 `508dae7` 的 19/19 CI、命令等待及独立镜像身份；[768 MiB 对照](evidence/program-cutover-2026-11-21/alternative-768m-not-default.json)只说明独立资源配置，不替代默认 640 MiB 导入失败或生产首次接入容量门禁。工作分支未发布部署。
