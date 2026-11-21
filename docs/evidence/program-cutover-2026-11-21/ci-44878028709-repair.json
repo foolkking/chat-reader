@@ -1,0 +1,147 @@
+{
+  "sha": "00d9738425eb1bcd2a812d202c455b8f87544ea4",
+  "branch": "codex/verified-fast-cutover",
+  "run": 44878028709,
+  "attempt": 1,
+  "status": "completed",
+  "conclusion": "failure",
+  "wait_seconds": 1500.0080794,
+  "read_at": "2026-11-21T15:25:54.6492700+08:00",
+  "jobs": [
+    {
+      "name": "image-preparation",
+      "id": 136766975249,
+      "status": "completed",
+      "conclusion": "success",
+      "finished": "2026-11-21T07:03:12Z"
+    },
+    {
+      "name": "settings-restore",
+      "id": 136766975370,
+      "status": "completed",
+      "conclusion": "success",
+      "finished": "2026-11-21T07:01:51Z"
+    },
+    {
+      "name": "api-quality-shard-4 / suite",
+      "id": 136766975416,
+      "status": "completed",
+      "conclusion": "failure",
+      "finished": "2026-11-21T06:59:04Z"
+    },
+    {
+      "name": "settings-quality-shard-4 / matrix",
+      "id": 136766975418,
+      "status": "completed",
+      "conclusion": "success",
+      "finished": "2026-11-21T07:14:23Z"
+    },
+    {
+      "name": "settings-quality-shard-1 / matrix",
+      "id": 136766975447,
+      "status": "completed",
+      "conclusion": "success",
+      "finished": "2026-11-21T07:12:55Z"
+    },
+    {
+      "name": "settings-quality-shard-2 / matrix",
+      "id": 136766975495,
+      "status": "completed",
+      "conclusion": "success",
+      "finished": "2026-11-21T07:14:20Z"
+    },
+    {
+      "name": "web-quality-shard-1 / gates",
+      "id": 136766975596,
+      "status": "completed",
+      "conclusion": "failure",
+      "finished": "2026-11-21T07:00:17Z"
+    },
+    {
+      "name": "api-quality-shard-2 / suite",
+      "id": 136766975615,
+      "status": "completed",
+      "conclusion": "failure",
+      "finished": "2026-11-21T06:59:06Z"
+    },
+    {
+      "name": "web-quality-shard-2 / gates",
+      "id": 136766975630,
+      "status": "completed",
+      "conclusion": "success",
+      "finished": "2026-11-21T07:15:53Z"
+    },
+    {
+      "name": "api-quality-shard-3 / suite",
+      "id": 136766975643,
+      "status": "completed",
+      "conclusion": "failure",
+      "finished": "2026-11-21T06:59:08Z"
+    },
+    {
+      "name": "web-quality-shard-3 / gates",
+      "id": 136766975690,
+      "status": "completed",
+      "conclusion": "success",
+      "finished": "2026-11-21T07:16:23Z"
+    },
+    {
+      "name": "api-quality-shard-1 / suite",
+      "id": 136766975736,
+      "status": "completed",
+      "conclusion": "failure",
+      "finished": "2026-11-21T06:59:24Z"
+    },
+    {
+      "name": "reading-performance-comparison / compare",
+      "id": 136766975738,
+      "status": "completed",
+      "conclusion": "success",
+      "finished": "2026-11-21T07:06:45Z"
+    },
+    {
+      "name": "settings-quality-shard-3 / matrix",
+      "id": 136766975845,
+      "status": "completed",
+      "conclusion": "success",
+      "finished": "2026-11-21T07:12:32Z"
+    },
+    {
+      "name": "api-quality",
+      "id": 136767186135,
+      "status": "completed",
+      "conclusion": "skipped",
+      "finished": "2026-11-21T06:59:24Z"
+    },
+    {
+      "name": "settings-quality",
+      "id": 136770857157,
+      "status": "completed",
+      "conclusion": "success",
+      "finished": "2026-11-21T07:15:08Z"
+    },
+    {
+      "name": "web-quality",
+      "id": 136771355087,
+      "status": "completed",
+      "conclusion": "skipped",
+      "finished": "2026-11-21T07:16:23Z"
+    },
+    {
+      "name": "inspect-release-artifact",
+      "id": 136771355181,
+      "status": "completed",
+      "conclusion": "skipped",
+      "finished": "2026-11-21T07:16:23Z"
+    },
+    {
+      "name": "build-images",
+      "id": 136771355314,
+      "status": "completed",
+      "conclusion": "skipped",
+      "finished": "2026-11-21T07:16:23Z"
+    }
+  ],
+  "cause": "Pinned API source changed: tests/test_admin_updates.py. Four API shards and the web scheduling contract stop before test execution. Missing downstream evidence is a consequence, not permission to skip it.",
+  "repair": "Restore original nine-test source/digest. Add the new one-case file to the append-only coverage registry; keep all previous pins, assignments, and allowed skips. Both schedule consumers now require 7050 collected, 7047 passed, three pre-existing allowed skips."
+}

@@ -167,22 +167,6 @@ def test_update_intent_is_audited_before_the_fixed_host_operation(
         assert audit.event_metadata == {}
 
 
-def test_program_confirmation_forwards_only_one_fixed_preparation_id(
-    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _root(auth_client)
-    calls = []
-    monkeypatch.setattr("app.api.routes.admin_updates._call",
-                        lambda op, body: calls.append((op, body)) or {"accepted": True})
-    intent = {"id": "1" * 32, "expected": "2" * 64, "target": "3" * 64}
-    for invalid in ("not-a-preparation", "a" * 33):
-        assert auth_client.post("/api/admin/updates/apply", json={**intent, "preparation": invalid}).status_code == 422
-    assert not calls
-    body = {**intent, "preparation": "4" * 32}
-    assert auth_client.post("/api/admin/updates/apply", json=body).status_code == 202
-    assert calls == [("apply", body)]
-
-
 def test_update_monitor_ticket_is_short_lived_cookie_not_response_data(
     auth_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

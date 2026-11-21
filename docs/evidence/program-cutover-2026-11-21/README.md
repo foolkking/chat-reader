@@ -31,3 +31,5 @@
 ## 如何复测
 
 Linux 运行 `go test ./...`（`deploy/updater`）与 `python -m unittest discover -s scripts/ci -p 'test_update*.py'`。发布的 `program-acceptance` 使用独立、受限的嵌套引擎，跑 `update-rehearsal.sh … program`；`program-benchmark.py` 写逐次 JSON，不用均值掩盖超时。随后 `update-program-negative.py` 跑同一配置的对照和故障。独立签名必须等完整 19 项资格、旧完整演练、程序演练全过。正式 SHA/运行回执与本地工作树测量是不同证据。
+
+**完整 CI 首次运行及复测：** `00d9738425eb1bcd2a812d202c455b8f87544ea4` / `44878028709` / attempt 1，命令等待 1500.008 秒后按精确 SHA 和 job 读取。5 项失败源于在锁定摘要的测试文件追加用例；其余 10 项成功、4 项下游跳过。修复将新增测试独立登记，原九例源码及摘要完全恢复，未更改任何跳过、超时或原有守卫。新合同要求 7050 项收集、7047 项通过、三个原有允许跳过；本地实际收集 7050，新增/原管理员用例 10/10。[各项 CI 回执及修复](ci-44878028709-repair.json)。另用最终宿主机执行器独立重跑[30 次升级和回滚](repeat-browser-samples.json)：升级最慢 11.392 秒，回滚最慢 10.659 秒。重复计时未改变 640 MiB 导入门禁的失败结论。

@@ -28,6 +28,11 @@
       "shard": 1,
       "source_lf_sha256": "52ffecfa8d2b18ecc4f15e2728e0658982316f71897036c2fb762ce6668cbb51"
     },
+    "tests/test_program_update_confirmation.py": {
+      "count": 1,
+      "shard": 3,
+      "source_lf_sha256": "66199ff64a34f8c5b6c19cb96f8eebbfabebeaeec42b0f0276a319b01749e9ac"
+    },
     "tests/test_reader_find.py": {
       "count": 6,
       "shard": 3,
