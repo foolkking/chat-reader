@@ -105,12 +105,16 @@ func (e *engine) commands(w http.ResponseWriter, r *http.Request) {
 }
 
 var messages = map[string][2]string{
-	"staging":   {"核验并预装镜像；旧服务在线", "Verifying and loading images; the existing service is online"},
-	"prepared":  {"下载和验证完成。返回管理后台，准备好后再确认重启。", "Download and verification complete. Return to administration to confirm the restart when ready."},
-	"admission": {"检查更新条件", "Checking prerequisites"}, "downloading": {"下载并校验镜像", "Verifying download"}, "fencing": {"暂停访问，保护写入", "Closing ingress"}, "draining": {"等待后台任务完成", "Draining worker"}, "backup": {"备份数据库和文件", "Backing up database and files"}, "migration": {"检查并迁移数据库", "Verifying database schema"}, "switching": {"切换应用镜像", "Switching images"}, "health": {"验证应用和后台任务", "Checking services and worker"}, "commit": {"确认版本", "Confirming version"}, "succeeded": {"更新完成", "Update complete"}, "restored": {"已恢复原版本", "Previous version restored"}, "refused": {"未更新，旧服务不变", "Update refused; previous version unchanged"}, "recovery_required": {"需人工恢复，已保留数据和备份。请在隔离实例中验证恢复，切勿降库或删除卷。", "Recovery required. Keep the backup and journal; restore only into an isolated instance. Do not downgrade or delete volumes."},
+	"staging":        {"核验并预装镜像；旧服务在线", "Verifying and loading images; the existing service is online"},
+	"program-switch": {"仅切换变化的程序；不停止数据库和后台任务。", "Switching changed programs only; database and worker stay online."},
+	"program-health": {"正从站点入口核验实际网页、API 和后台任务。", "Checking the deployed builds at the public ingress and the worker."},
+	"program-commit": {"入口已验证，正在记录各服务实际版本。", "Ingress verified; recording the actual service versions."},
+	"prepared":       {"下载和验证完成。返回管理后台，准备好后再确认重启。", "Download and verification complete. Return to administration to confirm the restart when ready."},
+	"admission":      {"检查更新条件", "Checking prerequisites"}, "downloading": {"下载并校验镜像", "Verifying download"}, "fencing": {"暂停访问，保护写入", "Closing ingress"}, "draining": {"等待后台任务完成", "Draining worker"}, "backup": {"备份数据库和文件", "Backing up database and files"}, "migration": {"检查并迁移数据库", "Verifying database schema"}, "switching": {"切换应用镜像", "Switching images"}, "health": {"验证应用和后台任务", "Checking services and worker"}, "commit": {"确认版本", "Confirming version"}, "succeeded": {"更新完成", "Update complete"}, "restored": {"已恢复原版本", "Previous version restored"}, "refused": {"未更新，旧服务不变", "Update refused; previous version unchanged"}, "recovery_required": {"需人工恢复，已保留数据和备份。请在隔离实例中验证恢复，切勿降库或删除卷。", "Recovery required. Keep the backup and journal; restore only into an isolated instance. Do not downgrade or delete volumes."},
 }
 var reasons = map[string][2]string{
-	"job_storage": {"无法写入任务目录。", "Cannot write job directory."}, "configuration_or_runtime": {"来源、挂载、运行版本或配置与接入基线不一致。", "Source, mounts, active release or configuration differs from the enrolled baseline."}, "configuration_changed": {"停服前配置发生变化。", "Configuration changed during staging."}, "source_changed": {"发行版本或来源已变化，请重新检查。", "Release changed; check again."}, "insufficient_space": {"磁盘空间不足；没有删除备份。", "Insufficient disk space. No backups were deleted."}, "capacity_or_images": {"空间或镜像身份校验未通过。", "Capacity or image verification failed."}, "download_verification": {"下载失败或文件校验不符。", "Download or archive verification failed."}, "unsafe_rollback": {"无法证明回滚安全。", "Rollback safety could not be established."}, "old_version_verified": {"原版本和数据库已重新核验。", "The original version and database were checked."}, "preserve_and_recover": {"保留现场；参照宿主机隔离恢复手册。", "Keep the host state and follow the isolated recovery runbook."}, "interrupted_before_maintenance": {"维护前中断，可重新检查。", "Interrupted before maintenance. Check again."},
+	"recovery_or_profile": {"恢复点、只读配置或运行版本无法确认。旧服务未切换；请重新准备。", "Could not verify the recovery point, read-only profile or current build. No switch was started; prepare again."},
+	"job_storage":         {"无法写入任务目录。", "Cannot write job directory."}, "configuration_or_runtime": {"来源、挂载、运行版本或配置与接入基线不一致。", "Source, mounts, active release or configuration differs from the enrolled baseline."}, "configuration_changed": {"停服前配置发生变化。", "Configuration changed during staging."}, "source_changed": {"发行版本或来源已变化，请重新检查。", "Release changed; check again."}, "insufficient_space": {"磁盘空间不足；没有删除备份。", "Insufficient disk space. No backups were deleted."}, "capacity_or_images": {"空间或镜像身份校验未通过。", "Capacity or image verification failed."}, "download_verification": {"下载失败或文件校验不符。", "Download or archive verification failed."}, "unsafe_rollback": {"无法证明回滚安全。", "Rollback safety could not be established."}, "old_version_verified": {"原版本和数据库已重新核验。", "The original version and database were checked."}, "preserve_and_recover": {"保留现场；参照宿主机隔离恢复手册。", "Keep the host state and follow the isolated recovery runbook."}, "interrupted_before_maintenance": {"维护前中断，可重新检查。", "Interrupted before maintenance. Check again."},
 }
 var progressPage = template.Must(template.New("progress").Parse(`<!doctype html><html lang="{{.Lang}}"><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">{{if .Refresh}}<meta http-equiv=refresh content=4>{{end}}<title>{{.Title}}</title><style>body{font:1rem/1.6 system-ui;margin:10vh auto;padding:0 1.25rem;max-width:36rem;color:#302f2b;background:#f6f4ef}h1{font-size:1.25rem}a{color:#166957}</style><main><h1>{{.Title}}</h1><p role=status>{{.Message}}</p><p>{{.Detail}}</p><a href="/">{{.Back}}</a></main></html>`))
 
@@ -224,7 +228,7 @@ func run() error {
 		e.st.Fingerprint = fp
 		return e.save()
 	}
-	if os.Args[1] != "control" {
+	if os.Args[1] != "control" && os.Args[1] != "audit-hardening" && os.Args[1] != "enroll-hardening" && os.Args[1] != "refresh-recovery" {
 		return errors.New("unknown command")
 	}
 	if err = readJSON(stateRoot+"/state.json", &e.st); err != nil {
@@ -232,6 +236,25 @@ func run() error {
 	}
 	if e.st.Current.Repository != c.Repository || e.st.Current.RepoID != c.RepoID {
 		return errors.New("enrolled source changed")
+	}
+	if os.Args[1] != "control" {
+		if blocked(e.st.Job) {
+			return errors.New("unresolved update")
+		}
+		fp, x := e.h.perform(os.Args[1], e.st.Current, e.st.Current, e.st.Fingerprint, "")
+		if x != nil {
+			return x
+		}
+		if os.Args[1] == "enroll-hardening" || os.Args[1] == "refresh-recovery" {
+			if !hashRE.MatchString(fp) {
+				return errors.New("invalid enrollment")
+			}
+			e.st.Fingerprint = fp
+			e.st.Prepared = nil
+			e.st.Candidate = nil
+			return e.save()
+		}
+		return nil
 	}
 	if err = e.reconcile(); err != nil {
 		return err

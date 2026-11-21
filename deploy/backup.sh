@@ -50,6 +50,14 @@ work_dir="$(mktemp -d "$BACKUP_DIR/.chat-reader-backup.XXXXXX")"
 final_dir="$BACKUP_DIR/chat-reader-$STAMP"
 dump_path="$work_dir/postgres.dump"
 postgres_tool_version="$(compose exec -T postgres pg_dump --version | tr -d '\r')"
+if [ "${UPDATER_BATCH_READER:-0}" = 1 ]; then
+  backup_stream_to postgres.dump compose exec -T postgres sh -c 'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc'
+  for component in imports exports offline assets; do
+    backup_stream_to "$component.tar.gz" backup_volume_read "$component" archive
+  done
+  compose exec -T postgres pg_restore --list < "$dump_path" > "$work_dir/postgres.toc"
+  test -s "$work_dir/postgres.toc"
+else
 compose exec -T postgres \
   sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
   > "$dump_path"
@@ -65,6 +73,7 @@ done
 
 (cd "$work_dir" && sha256sum postgres.dump imports.tar.gz exports.tar.gz offline.tar.gz assets.tar.gz) \
   > "$work_dir/SHA256SUMS"
+fi
 
 {
   printf 'schema_version=1\n'
@@ -76,6 +85,12 @@ done
   cat "$work_dir/SHA256SUMS"
 } > "$work_dir/MANIFEST"
 
+if [ "${UPDATER_BATCH_READER:-0}" = 1 ]; then
+  # Independent disk read and PG check, before this set becomes visible or a
+  # migration can run. Keep the original verifier available to the operator.
+  sh "$SCRIPT_DIR/verify_backup.sh" "$work_dir"
+  "$PYTHON" "$SCRIPT_DIR/backup_stream.py" seal "$work_dir"
+fi
 if [ "$BACKUP_DEDUPLICATE" = 1 ]; then
   "$PYTHON" "$SCRIPT_DIR/backup_housekeeping.py" deduplicate --backup-dir "$BACKUP_DIR" \
     --staging "$work_dir" --postgres-image "${POSTGRES_IMAGE:-postgres:16-alpine}"
@@ -85,6 +100,7 @@ fi
 test ! -e "$final_dir"
 mv -T -n "$work_dir" "$final_dir"
 test ! -d "$work_dir"
+if [ "${UPDATER_BATCH_READER:-0}" = 1 ]; then "$PYTHON" "$SCRIPT_DIR/backup_stream.py" sync "$BACKUP_DIR"; fi
 work_dir=""
 
 echo "Verified five-component backup written to $final_dir"

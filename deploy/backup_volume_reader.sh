@@ -1,6 +1,15 @@
 #!/usr/bin/env sh
 # Sourced by backup/preflight. Never start application code or Compose one-offs.
 
+# POSIX sh has no pipefail: verify both the producer and the disk writer.
+# work_dir is private per backup; the sentinel never leaves the staging folder.
+backup_stream_to() {
+  part="$1"; shift
+  ( "$@" && : > "$work_dir/.producer-ok" ) |
+    "$PYTHON" "$SCRIPT_DIR/backup_stream.py" write "$work_dir/$part" >> "$work_dir/SHA256SUMS" || return 1
+  test -f "$work_dir/.producer-ok" && rm "$work_dir/.producer-ok" || return 1
+}
+
 backup_require_integer() {
   case "$2" in
     ''|*[!0-9]*)

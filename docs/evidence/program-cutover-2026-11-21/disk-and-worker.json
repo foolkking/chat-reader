@@ -1,0 +1,32 @@
+{
+  "isolated_comparison": [
+    {
+      "commit": "UPLOAD_MEMORY_PRESSURE",
+      "min_available_bytes": 510361600,
+      "peak_measured_bytes": 160727040,
+      "reserve_mib": 512,
+      "source_verified": true,
+      "worker_cap_mib": 640
+    },
+    {
+      "commit": "succeeded",
+      "min_available_bytes": 635084800,
+      "peak_measured_bytes": 170221568,
+      "reserve_mib": 512,
+      "source_verified": true,
+      "worker_cap_mib": 768
+    }
+  ],
+  "live_capacity": {
+    "backup_free_kib": 3307960,
+    "deficit_before_db_images_and_reserves_kib": 856644,
+    "four_business_volumes_allocated_kib": 4164604,
+    "utc": "2026-11-21T06:08:26Z",
+    "version": "v0.1.4"
+  },
+  "live_limits": {
+    "host_mem_total_kib": 1915900,
+    "upload_reserve_mib": 512,
+    "worker_limit_bytes": 671088640
+  }
+}

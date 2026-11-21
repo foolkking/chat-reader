@@ -63,6 +63,9 @@ type Release struct {
 	ABI            string           `json:"provider_abi"`
 	JobABI         string           `json:"job_abi"`
 	MinUpdater     int              `json:"min_updater"`
+	// Private journal/host envelope only; never accepted from a v1 manifest.
+	Layout     map[string]installedRole `json:"installed_roles,omitempty"`
+	Transition *transition              `json:"transition,omitempty"`
 }
 
 func strict(b []byte, v any) error {
@@ -96,7 +99,9 @@ func verified(c Config, tag string, raw, sig []byte) (Release, error) {
 	if e != nil || se != nil || len(key) != 32 || !ed25519.Verify(key, raw, s) || strict(raw, &r) != nil {
 		return r, errors.New("signature_or_manifest")
 	}
-	if r.Repository != c.Repository || r.RepoID != c.RepoID || r.Version != tag || !tagRE.MatchString(tag) || r.Format != 1 || !shaRE.MatchString(r.Revision) || !hashRE.MatchString(r.ArchiveSHA) || r.Bytes <= 0 || r.Bytes > 8<<30 || r.Run < 1 || r.Attempt < 1 || r.Artifact < 1 || !digest(r.ArtifactDigest) || !schemaRE.MatchString(r.Schema) || r.MinUpdater < 1 || r.MinUpdater > protocol || len(r.Notes) > 24000 || len(r.Images) != 2 || len(r.From) == 0 || len(r.From) > 128 || r.ABI != "local-assets-v1" || r.JobABI != "reader-jobs-v1" {
+	var keys map[string]json.RawMessage
+	if json.Unmarshal(raw, &keys) != nil || keys["installed_roles"] != nil || keys["transition"] != nil ||
+		r.Repository != c.Repository || r.RepoID != c.RepoID || r.Version != tag || !tagRE.MatchString(tag) || r.Format != 1 || !shaRE.MatchString(r.Revision) || !hashRE.MatchString(r.ArchiveSHA) || r.Bytes <= 0 || r.Bytes > 8<<30 || r.Run < 1 || r.Attempt < 1 || r.Artifact < 1 || !digest(r.ArtifactDigest) || !schemaRE.MatchString(r.Schema) || r.MinUpdater < 1 || r.MinUpdater > protocol || len(r.Notes) > 24000 || len(r.Images) != 2 || len(r.From) == 0 || len(r.From) > 128 || r.ABI != "local-assets-v1" || r.JobABI != "reader-jobs-v1" {
 		return r, errors.New("incompatible_manifest")
 	}
 	if _, e = time.Parse(time.RFC3339, r.BuiltAt); e != nil {
@@ -269,14 +274,14 @@ func (s *source) check() (candidate, error) {
 	}
 	files := map[string]asset{}
 	for _, a := range best.Assets {
-		if a.Name == manifestName || a.Name == manifestName+".sig" || a.Name == archiveName {
+		if a.Name == manifestName || a.Name == manifestName+".sig" || a.Name == archiveName || a.Name == transitionName || a.Name == transitionName+".sig" {
 			if _, ok := files[a.Name]; ok || a.ID < 1 {
 				return result, errors.New("release_assets")
 			}
 			files[a.Name] = a
 		}
 	}
-	if len(files) != 3 {
+	if files[manifestName].ID == 0 || files[manifestName+".sig"].ID == 0 || files[archiveName].ID == 0 {
 		return result, errors.New("incomplete_release")
 	}
 	raw, e := s.read(s.asset(files[manifestName].ID), "application/octet-stream", 128<<10)
@@ -290,6 +295,23 @@ func (s *source) check() (candidate, error) {
 	r, e := verified(s.c, best.Tag, raw, sig)
 	if e != nil || r.Bytes != files[archiveName].Size {
 		return result, errors.New("release_verification")
+	}
+	if files[transitionName].ID != 0 || files[transitionName+".sig"].ID != 0 {
+		if files[transitionName].ID == 0 || files[transitionName+".sig"].ID == 0 {
+			return result, errors.New("incomplete_transition")
+		}
+		side, x := s.read(s.asset(files[transitionName].ID), "application/octet-stream", 16384)
+		if x != nil {
+			return result, x
+		}
+		auth, x := s.read(s.asset(files[transitionName+".sig"].ID), "application/octet-stream", 512)
+		if x != nil {
+			return result, x
+		}
+		r.Transition, x = verifyTransition(s.c, r, raw, side, auth)
+		if x != nil {
+			return result, x
+		}
 	}
 	return candidate{r, files[archiveName].ID}, nil
 }

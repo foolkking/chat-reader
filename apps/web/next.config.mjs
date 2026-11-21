@@ -1,5 +1,6 @@
 import process from "node:process";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -91,6 +92,7 @@ const nextConfig = {
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
+      ...(buildRevision ? [{ source: "/login", headers: [{ key: "X-Chat-Reader-Build", value: createHash("sha256").update("reader:web:" + buildRevision).digest("hex") }] }] : []),
       { source: "/skills/:path*", headers: staticSkillHeaders },
       { source: "/skills/:file*.zip", headers: [
         ...staticSkillHeaders.filter((header) => header.key !== "Content-Type"),

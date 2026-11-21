@@ -6,7 +6,8 @@ import { readAppInfo, type AppInfo } from "../lib/auth-client";
 import { buildRevision } from "../lib/help-diagnostics";
 
 type Job = { id: string; phase: string; action: string; reason?: string };
-type State = { source: string; channel: string; current: string; revision: string; target?: string; target_id?: string; previous?: string; previous_id?: string; notes?: string; blocked?: string; job?: Job; archive_bytes?: number; prepared?: boolean; download_ms?: number; ready_ms?: number };
+type Plan = { mode: "program" | "full"; roles?: ("api"|"web")[]; reason?: string; recovery_at?: string };
+type State = { source: string; channel: string; current: string; revision: string; target?: string; target_id?: string; previous?: string; previous_id?: string; notes?: string; blocked?: string; job?: Job; archive_bytes?: number; prepared?: boolean; download_ms?: number; ready_ms?: number; preparation?: string; plan?: Plan; rollback_plan?: Plan; last_full_ms?: number };
 type Action = "prepare" | "apply" | "rollback";
 const finished = new Set(["prepared", "succeeded", "restored", "refused", "recovery_required"]);
 const base = "/api/admin/updates";
@@ -53,7 +54,7 @@ export function VersionUpdatePanel() {
     const id = crypto.randomUUID().replaceAll("-", "");
     await follow(id); // Cookie receipt must reach the browser before the host may fence the application.
     let result: State;
-    try { result = await request<State>("/" + operation, { id, expected: state.revision, target }); }
+    try { result = await request<State>("/" + operation, { id, expected: state.revision, target, ...(operation==="apply" && state.preparation ? {preparation:state.preparation} : {}) }); }
     catch (e) {
       if (e instanceof Error && (e.message === "UPDATE_STATE_CHANGED" || e.message === "FRESH_LOGIN_REQUIRED")) {
         setMonitor(false); setAction(null); setState(await request<State>(""));
@@ -69,6 +70,11 @@ export function VersionUpdatePanel() {
   const cls = "btn-secondary min-h-11 px-3 text-sm";
   const webRevision = buildRevision(process.env.NEXT_PUBLIC_BUILD_REVISION)?.slice(0, 12);
   const apiRevision = buildRevision(app?.revision)?.slice(0, 12);
+  const plan = action === "rollback" ? state?.rollback_plan : state?.plan;
+  const reason = plan?.reason === "schema_change" ? copy("数据库结构需要迁移。","The database schema must be migrated.") :
+    plan?.reason === "mutable_host" ? copy("实例尚未启用只读程序配置。","This instance has not enrolled its read-only program layout.") :
+    plan?.reason === "different_baseline" ? copy("本实例不是兼容性测试的起始版本。","This is not the tested starting version.") :
+    copy("此版本组合没有只改程序的验证记录。","There is no program-only proof for this version pair.");
   return <section aria-label={copy("版本更新", "Version updates")} className="grid min-w-0 gap-2 pb-4">
     <p className="break-words text-xs text-secondary">{copy("网页构建","Web build")} {webRevision ?? "—"} · API {app?.api_version ?? "—"}{apiRevision ? ` · ${apiRevision}` : ""}</p>
     {state && <p className="break-words text-xs text-secondary">{copy("当前", "Installed")}: {state.current === "legacy" ? state.revision.slice(0,12) : state.current} · {state.source} · {state.channel === "stable" ? copy("稳定版","Stable") : copy("含预览版","Includes previews")}</p>}
@@ -81,7 +87,11 @@ export function VersionUpdatePanel() {
     {error && <p role="alert" className="text-sm text-[var(--danger)]">{error === "FRESH_LOGIN_REQUIRED" ? copy("请重新登录根管理员账户，再确认此操作。","Sign in again as the root administrator before confirming.") : error === "UPDATER_UNAVAILABLE" ? copy("宿主机更新器未接入或暂不可用。现有部署不受影响。","The host updater is not connected or is unavailable. Your existing deployment is unaffected.") : monitor ? copy("操作结果未确认。先查看进度，不要再次提交。","Outcome unconfirmed. Check progress before submitting again.") : copy("无法确认更新状态，请重新检查。","Could not verify the update state. Check again.")}</p>}
     {monitor && <a href={progress} className="min-h-11 py-2 text-sm text-accent underline">{copy("查看独立更新进度","View independent update progress")}</a>}
     {action ? <div className="grid gap-2 rounded-md border border-ui p-3">
-      <p className="text-sm">{action === "apply" ? copy("重启并切换到","Restart into") : copy("确认回滚到","Roll back to")} <strong>{action === "apply" ? state?.target : state?.previous}</strong>？{copy("将暂时停服并备份；不会还原旧数据库。"," Service will pause for a backup. The database will not be restored to an older copy.")}</p>
+      <p className="text-sm">{action === "apply" ? copy("重启并切换到","Restart into") : copy("确认回滚到","Roll back to")} <strong>{action === "apply" ? state?.target : state?.previous}</strong>？</p>
+      {plan?.mode === "program" ? <>
+        <p className="text-sm"><strong>{copy("仅换程序","Program-only update")}</strong> · {plan.roles?.map(r => r === "api" ? "API" : "Web").join(" + ")}{copy("。不做本次全量备份，不停后台任务。进行中的请求可能延长切换时间。",". No new full backup and no worker restart. In-flight requests may extend the switch.")}</p>
+        <p className="text-xs text-secondary">{copy("已验证的数据恢复点（不是此刻的副本）","Verified data recovery point (not a copy as of this click)")}: <time dateTime={plan.recovery_at}>{plan.recovery_at && new Date(plan.recovery_at).toLocaleString(zh ? "zh-CN":"en-US",{timeZoneName:"short"})}</time></p>
+      </> : <p className="text-sm"><strong>{copy("完整维护","Full maintenance")}</strong> · {reason} {copy("将暂时停服并备份；不会还原旧数据库。","Service will pause for a backup. The database will not be restored to an older copy.")} {state?.last_full_ms ? copy(`上次完整操作约 ${Math.ceil(state.last_full_ms/60000)} 分钟，本次取决于数据量。`,`Last full operation: about ${Math.ceil(state.last_full_ms/60000)} min. This depends on data size.`) : copy("没有本机可比计时，请预留维护窗口。","No comparable host timing yet; allow a maintenance window.")}</p>}
       <div className="flex flex-wrap gap-2"><button disabled={busy || monitor} className="btn-primary min-h-11 px-3 text-sm" onClick={() => start(action)}>{copy("确认重启并查看进度","Confirm restart and view progress")}</button><button disabled={busy} className={cls} onClick={() => setAction(null)}>{copy("取消","Cancel")}</button></div>
     </div> : <div className="flex flex-wrap gap-2">
       <button className={cls} disabled={busy || !!ongoing || recovery} onClick={check}>{busy ? copy("正在核对…","Checking…") : copy("检查更新","Check for updates")}</button>

@@ -29,6 +29,7 @@ class Ticket(BaseModel):
 class Intent(Ticket):
     expected: str = Field(pattern=r"^(?:[a-f0-9]{40}|[a-f0-9]{64})$")
     target: str = Field(pattern=r"^(?:[a-f0-9]{40}|[a-f0-9]{64})$")
+    preparation: str | None = Field(None, pattern=r"^[a-f0-9]{32}$")
 
 
 class _Host(http.client.HTTPConnection):
@@ -133,4 +134,4 @@ def start_update(
         resource_id=body.id,
     )
     db.commit()
-    return _call(action, body.model_dump())
+    return _call(action, body.model_dump(exclude_none=True))

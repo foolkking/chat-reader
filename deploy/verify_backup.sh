@@ -9,11 +9,16 @@ for required in MANIFEST SHA256SUMS postgres.dump postgres.toc imports.tar.gz ex
   test -f "$BACKUP_DIR/$required"
 done
 
+if [ "${UPDATER_BATCH_READER:-0}" = 1 ]; then
+  SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+  "${PYTHON:-python3}" "$SCRIPT_DIR/backup_stream.py" verify "$BACKUP_DIR"
+else
 (cd "$BACKUP_DIR" && sha256sum -c SHA256SUMS)
-test -s "$BACKUP_DIR/postgres.toc"
 for archive in imports.tar.gz exports.tar.gz offline.tar.gz assets.tar.gz; do
   tar -tzf "$BACKUP_DIR/$archive" >/dev/null
 done
+fi
+test -s "$BACKUP_DIR/postgres.toc"
 
 # pg_restore reads only the dump stream; no database, volume, or network is used.
 toc_path="$(mktemp "$BACKUP_DIR/.postgres-verify.XXXXXX")"

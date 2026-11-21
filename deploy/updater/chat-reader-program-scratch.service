@@ -1,0 +1,14 @@
+[Unit]
+Description=Prepare the Chat Reader disk-backed program scratch mount
+After=local-fs.target
+Before=docker.service
+RequiresMountsFor=/var/lib
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I /usr/local/lib/chat-reader-updater/program_scratch.py
+RemainAfterExit=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

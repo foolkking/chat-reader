@@ -1,0 +1,33 @@
+{
+  "first_round_max_confirm_ms": 11587,
+  "full_suite_pass": [
+    "PASS: real non-root and expired root confirmation",
+    "PASS: correctly signed foreign fork refused",
+    "PASS: damaged download and duplicate submit; no outage",
+    "PASS: bounded disk before maintenance; existing backups retained",
+    "PASS: actual coordinator restart during preparation",
+    "PASS: signed broken startup safely restored old app; no database rollback",
+    "PASS: signed failed migration stayed quarantined across daemon restart; five-component backup and original pointer retained"
+  ],
+  "hard_failure": "RuntimeError: exporter commit gate: control=UPLOAD_MEMORY_PRESSURE cutover=UPLOAD_MEMORY_PRESSURE",
+  "program_checks": [
+    "Control (no update) exporter commit: UPLOAD_MEMORY_PRESSURE",
+    "PASS: active upload and exact bytes survived program rollback; no backup or fence. Exporter commit: UPLOAD_MEMORY_PRESSURE",
+    "PASS: coordinator restarted mid-cutover; reconciled actual old programs",
+    "PASS: broken Web startup restored program only; newer data survived",
+    "PASS: invalid pair signature and bounded fast staging disk refused without fencing",
+    "PASS: changed recovery point refused before stop; no slow fallback",
+    "PASS: all four post-restore-point volumes reread and matched"
+  ],
+  "program_suite_exit": 1,
+  "working_files": {
+    "deploy/updater/engine.go": "e8d2c49771049aded4383dfe7fc130839e5d4981a2a50b26d9bb1b4f8321cb19",
+    "deploy/updater/host.py": "64775e36efe0186ae995d8b5be84b125437b7d143cac0524874d6c6da30f4214",
+    "deploy/updater/main.go": "9fd69f79c9f93d23cf647abf996355bd15bf2b25d02f6ff796e018a9b63cc055",
+    "deploy/updater/program-profile.yml": "a1052ef673a555d3adae020a20bc5f580baae0bd900e9914c716ddcce2413f3b",
+    "deploy/updater/program.go": "8bc3f43c8e854deed5cdb3f14ae5bdc21c0732ce522fab78ed257a38db349f67",
+    "deploy/updater/transition.go": "e38036e0b250359174b651c145ee3d0dfe72a81f0cfdac85562cdc251f12a311",
+    "scripts/ci/program_proof.py": "e6fc99678394ce75379addd04c8b8ac4c5b7a9cec5f53d3f17fb5226e3088733",
+    "scripts/ci/update-program-negative.py": "868486aff0d79301defc1908df8dd243294b635cb397d7bef8c3eda6786d0872"
+  }
+}

@@ -1,4 +1,5 @@
 """Protected tag dispatch, exact-run qualification and publication of already tested bytes."""
+
 import argparse
 import base64
 import hashlib
@@ -15,6 +16,7 @@ import zipfile
 
 from image_archive_identity import identities
 from update_distribution import full_repository
+import program_proof
 
 ROOT = Path(__file__).resolve().parents[2]
 TAG = re.compile(r"v(?:0|[1-9]\d{0,8})\.(?:0|[1-9]\d{0,8})\.(?:0|[1-9]\d{0,8})(?:-rc\.[1-9]\d{0,8})?")
@@ -215,7 +217,9 @@ def fetch_kit(repo, sha, work):
     pack = work / "bootstrap.zip"
     with pack.open("xb") as f:
         p = subprocess.run(
-            ["gh", "api", f"repos/{repo}/actions/artifacts/{kid}/zip"], stdout=f, stderr=subprocess.DEVNULL
+            ["gh", "api", f"repos/{repo}/actions/artifacts/{kid}/zip"],
+            stdout=f,
+            stderr=subprocess.DEVNULL,
         )
     need(not p.returncode and checksum(pack) == wanted and pack.stat().st_size == a["size_in_bytes"])
     tar = work / "chat-reader-updater-linux-amd64.tar.gz"
@@ -313,6 +317,17 @@ def publish(run_id, work):
     need(len(notes.encode()) <= 24000)
     raw = work / "update-v1.json"
     raw.write_bytes(json.dumps(data, ensure_ascii=False, sort_keys=True).encode())
+    evidence, transition = program_proof.for_signer(
+        kit,
+        data,
+        raw.read_bytes(),
+        int(os.environ["GITHUB_RUN_ID"]),
+        int(os.environ["GITHUB_RUN_ATTEMPT"]),
+        base64.b64decode(os.environ["RELEASE_PUBLIC_KEY"], validate=True),
+    )
+    receipt = work / "program-evidence.json"
+    receipt.write_bytes(evidence)
+    extra = [receipt]
     key = work / "signing.pem"
     try:
         with os.fdopen(os.open(key, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "wb") as f:
@@ -327,7 +342,16 @@ def publish(run_id, work):
         boot.write_text(checksum(kit) + "  " + kit.name + "\n", encoding="ascii")
 
         def sign(file):
-            signature = run("openssl", "pkeyutl", "-sign", "-rawin", "-inkey", str(key), "-in", str(file))
+            signature = run(
+                "openssl",
+                "pkeyutl",
+                "-sign",
+                "-rawin",
+                "-inkey",
+                str(key),
+                "-in",
+                str(file),
+            )
             need(len(signature) == 64)
             sig = work / (file.name + ".sig")
             sig.write_bytes(base64.b64encode(signature))
@@ -335,6 +359,10 @@ def publish(run_id, work):
 
         sig = sign(raw)
         boot_sig = sign(boot)
+        if transition is not None:
+            pair = work / "program-transition-v1.json"
+            pair.write_bytes(transition)
+            extra.extend([pair, sign(pair)])
     finally:
         key.unlink(missing_ok=True)
     ctx()
@@ -360,7 +388,7 @@ def publish(run_id, work):
         )
     )
     need(draft["tag_name"] == tag and draft["draft"] and isinstance(draft["id"], int))
-    assets = (arc, raw, sig, kit, boot, boot_sig)
+    assets = (arc, raw, sig, kit, boot, boot_sig, *extra)
     run("gh", "release", "upload", tag, *map(str, assets), "--repo", repo)
     endpoint = f"repos/{repo}/releases/{draft['id']}"
     release = api(endpoint)
@@ -382,13 +410,17 @@ def publish(run_id, work):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["dispatch", "wait", "publish", "materialize"])
+    parser.add_argument("mode", choices=["dispatch", "wait", "publish", "materialize", "program-proof"])
     parser.add_argument("run", nargs="?")
     args = parser.parse_args()
     if args.mode == "dispatch":
         dispatch()
     elif args.mode == "wait":
         artifact(args.run, True)
+    elif args.mode == "program-proof":
+        work = Path(os.environ["RUNNER_TEMP"]) / "verified-release"
+        with (work / "program-evidence.json").open("xb") as f:
+            f.write(program_proof.packed(program_proof.qualify(work, *ctx())))
     else:
         work = Path(os.environ["RUNNER_TEMP"]) / "verified-release"
         work.mkdir(mode=0o700)
