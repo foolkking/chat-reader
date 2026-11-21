@@ -1,0 +1,1201 @@
+{
+  "version": "v0.1.5",
+  "source_sha": "b824ee949f03ec403e7e60beb677731c2fcff9c4",
+  "repository": "foolkking/chat-reader",
+  "repository_id": 1297627534,
+  "merge": {
+    "at": "2026-11-21T16:34:47.950862+00:00",
+    "pr": 7,
+    "source": "160bff27f91ca4645514356371e64aece6592e50",
+    "base": "8d093ef59a488b3c4820b6a26575f79120c1b8de",
+    "merged": "b824ee949f03ec403e7e60beb677731c2fcff9c4",
+    "merged_at": "2026-11-21T16:34:27Z",
+    "tree": "3d1de1316d8df8137357aad2ff9028f096c5ccea",
+    "ruleset_unchanged": true,
+    "no_direct_push": true
+  },
+  "tag": {
+    "tag": "v0.1.5",
+    "at": "2026-11-21T16:36:44.351102+00:00",
+    "target": "b824ee949f03ec403e7e60beb677731c2fcff9c4",
+    "tag_object": "b219b5ec6dc70fe395cc5fb1bd641fc2ccd7ed25",
+    "previous_latest_release_id": 452957063,
+    "protected_tag_rules": [
+      27639656,
+      27639732
+    ]
+  },
+  "qualification": {
+    "at": "2026-11-21T17:05:16.138368+00:00",
+    "tag": "v0.1.5",
+    "sha": "b824ee949f03ec403e7e60beb677731c2fcff9c4",
+    "run": 44925538355,
+    "attempt": 1,
+    "jobs": [
+      {
+        "id": 136910677736,
+        "name": "image-preparation",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:41:19Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910677859,
+        "name": "web-quality-shard-1 / gates",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T17:02:05Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910677865,
+        "name": "settings-quality-shard-1 / matrix",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:50:48Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910677876,
+        "name": "api-quality-shard-4 / suite",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:48:48Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910677885,
+        "name": "web-quality-shard-2 / gates",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:53:18Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910677887,
+        "name": "api-quality-shard-1 / suite",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:47:59Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910677905,
+        "name": "settings-restore",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:40:16Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910677935,
+        "name": "settings-quality-shard-2 / matrix",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:52:26Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910677941,
+        "name": "web-quality-shard-3 / gates",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:54:47Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910677947,
+        "name": "api-quality-shard-3 / suite",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:47:33Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910678008,
+        "name": "api-quality-shard-2 / suite",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:47:33Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910678046,
+        "name": "settings-quality-shard-4 / matrix",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:49:11Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910678079,
+        "name": "settings-quality-shard-3 / matrix",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:52:34Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136910678125,
+        "name": "reading-performance-comparison / compare",
+        "started_at": "2026-11-21T16:36:58Z",
+        "completed_at": "2026-11-21T16:47:47Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136913949774,
+        "name": "api-quality",
+        "started_at": "2026-11-21T16:48:54Z",
+        "completed_at": "2026-11-21T16:49:06Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136914991829,
+        "name": "settings-quality",
+        "started_at": "2026-11-21T16:52:37Z",
+        "completed_at": "2026-11-21T16:53:27Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136917629875,
+        "name": "web-quality",
+        "started_at": "2026-11-21T17:02:08Z",
+        "completed_at": "2026-11-21T17:02:25Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136917720591,
+        "name": "build-images",
+        "started_at": "2026-11-21T17:02:28Z",
+        "completed_at": "2026-11-21T17:03:09Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136917936777,
+        "name": "inspect-release-artifact",
+        "started_at": "2026-11-21T17:03:13Z",
+        "completed_at": "2026-11-21T17:03:47Z",
+        "conclusion": "success"
+      }
+    ],
+    "artifact_id": 14716004117,
+    "transport_digest": "sha256:6e340d47f252b602b8017228cdba09ad29b29934be09546e0266ae94f31856c4",
+    "native_artifact": 14716600026,
+    "native": {
+      "schema_version": 1,
+      "source_sha": "b824ee949f03ec403e7e60beb677731c2fcff9c4",
+      "run_id": "44925538355",
+      "run_attempt": "1",
+      "schedule_sha256": "7a7b3aa3025f19d88d36f7f2e5dacc7635945d842186ac95347d75187b0b67ab",
+      "collected": 7089,
+      "passed": 7086,
+      "skips": [
+        "tests/test_exporter_markdown_parser.py::test_real_paired_fixture_uses_bounded_fast_path",
+        "tests/test_import_preview_exporter_combo.py::test_real_exporter_pair_preview_commit_and_retry",
+        "tests/test_import_preview_exporter_combo.py::test_response_only_real_pair_preview"
+      ],
+      "shard_counts": [
+        1162,
+        4148,
+        1018,
+        761
+      ],
+      "native_junit_and_lifecycle_match": true,
+      "native_input_sha256": [
+        {
+          "api-execution.json": "67320d35f384989a8b89159dbad46d73c0c0d63be247ea126b6fa9ca1443fb05",
+          "api-junit.xml": "fd83080f7ee3d743b3e235dcf9b9f95d12b4a82eb403830a60450113a8357bb8"
+        },
+        {
+          "api-execution.json": "63009e55ebe354407b89de43824969ff624997c709dc90c508955c295b4c5738",
+          "api-junit.xml": "3039335a3289942f5a89a564d341dff4a4243e9f5314c2fd97f7e298d7e895dc"
+        },
+        {
+          "api-execution.json": "16930fd0537dc2f7d11980a512297b6be8b86896abfdd1d453f265e4265c006b",
+          "api-junit.xml": "95f008879d73fdf3cac92fa701b959ca052d98f26a2117ba7a88602f905490b6"
+        },
+        {
+          "api-execution.json": "fcc369203a1983b50140208a301d99aa358ffad2c8e6a0c715ac508ef7a8d172",
+          "api-junit.xml": "f5f953d76c50166687e42e6e47efa71f1dbe40d2bb1e2b4ddeb59a65d4696eaa"
+        }
+      ]
+    },
+    "archive_bytes": 177760094,
+    "archive_sha256": "af0ee0fc3c37aed7186c8c0e07820037204fa1721d7abc34ad7c158599915bd5",
+    "expanded_bytes": 178676736,
+    "memory_gates_verified": true
+  },
+  "four_verified_role_configs": {
+    "api": {
+      "config": "sha256:612c26821eacbd9020335757aa12565f375fedd472b980b19f0bca3768071660",
+      "rootfs_digest_count": 14
+    },
+    "import-worker": {
+      "config": "sha256:612c26821eacbd9020335757aa12565f375fedd472b980b19f0bca3768071660",
+      "rootfs_digest_count": 14
+    },
+    "migrate": {
+      "config": "sha256:612c26821eacbd9020335757aa12565f375fedd472b980b19f0bca3768071660",
+      "rootfs_digest_count": 14
+    },
+    "web": {
+      "config": "sha256:cc011fc01ff66a6b5b0b31b4d5cff48d7b3ec4de484a8ed2ebcc70d1c45afa00",
+      "rootfs_digest_count": 9
+    }
+  },
+  "command_wait": {
+    "requested_seconds": 1500,
+    "monotonic_seconds": 1500.25,
+    "started": "2026-11-21T16:37:26.199435+00:00",
+    "ended": "2026-11-21T17:02:26.450253+00:00",
+    "parent": 44925521786,
+    "child": 44925538355,
+    "tag": "v0.1.5",
+    "sha": "b824ee949f03ec403e7e60beb677731c2fcff9c4"
+  },
+  "publish": {
+    "at": "2026-11-21T17:33:43.710970+00:00",
+    "tag": "v0.1.5",
+    "sha": "b824ee949f03ec403e7e60beb677731c2fcff9c4",
+    "repo": "foolkking/chat-reader",
+    "release_id": 453859808,
+    "published_at": "2026-11-21T17:30:32Z",
+    "parent": 44925521786,
+    "attempt": 1,
+    "qualification": 44925538355,
+    "jobs": [
+      {
+        "id": 136910620535,
+        "name": "qualify",
+        "started_at": "2026-11-21T16:36:46Z",
+        "completed_at": "2026-11-21T17:04:14Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136918245095,
+        "name": "program-acceptance",
+        "started_at": "2026-11-21T17:04:16Z",
+        "completed_at": "2026-11-21T17:29:40Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136918245139,
+        "name": "rehearse",
+        "started_at": "2026-11-21T17:04:17Z",
+        "completed_at": "2026-11-21T17:12:57Z",
+        "conclusion": "success"
+      },
+      {
+        "id": 136925349950,
+        "name": "publish",
+        "started_at": "2026-11-21T17:29:44Z",
+        "completed_at": "2026-11-21T17:30:34Z",
+        "conclusion": "success"
+      }
+    ],
+    "signatures": [
+      "update-v1.json",
+      "updater-kit.sha256"
+    ],
+    "issuer": "360cc2e019b6e810498993385e6fa3d38ac14295df13967fb066c8f0b9cbdce5",
+    "assets": {
+      "chat-reader-images.tar.gz": {
+        "id": 776325486,
+        "size": 177760094,
+        "digest": "sha256:af0ee0fc3c37aed7186c8c0e07820037204fa1721d7abc34ad7c158599915bd5"
+      },
+      "chat-reader-updater-linux-amd64.tar.gz": {
+        "id": 776325484,
+        "size": 7092800,
+        "digest": "sha256:405982cdefd3f81bf02792f089db51bbbe33e79f8c38c9e52dfd68736a0beb79"
+      },
+      "program-evidence.json": {
+        "id": 776325505,
+        "size": 321,
+        "digest": "sha256:25f0e97d24a7fa2ec4d6b1b0d797571381866339d0c2497480f2b6f36ee68757"
+      },
+      "update-v1.json": {
+        "id": 776325488,
+        "size": 3321,
+        "digest": "sha256:fb85dfcac546f6555fb3eee1213f1a5af64ab677805f1cd80a215e5004b2ea4f"
+      },
+      "update-v1.json.sig": {
+        "id": 776325487,
+        "size": 88,
+        "digest": "sha256:cb8b5a3b98828088370d29583fafc9d77a2aa9f959f87465c54cc1d0370fa3e1"
+      },
+      "updater-kit.sha256": {
+        "id": 776325483,
+        "size": 105,
+        "digest": "sha256:e5095fb3500881437eb3d4745b554144bd770703ef8311bdcdfbcc196d887580"
+      },
+      "updater-kit.sha256.sig": {
+        "id": 776325507,
+        "size": 88,
+        "digest": "sha256:26d0ba1d6772a64c834b6df1fcd1fd8d7fcf2e682f4828854ad5de4db1044362"
+      }
+    },
+    "kit_contents_sha256": {
+      "deploy/backup_stream.py": "fe33ea4b67220243df59e90d3eadedd2339d52a2bf5fcfdf6a5400bcd2783925",
+      "deploy/updater/chat-reader-update-status.service": "dc7e7f107807b4cdd1c20eed6cadae83d5a8dc281c6ec145b1b67bdfe75f5b8b",
+      "deploy/updater/chat-reader-updater.service": "090a09d53223ee29cec5e35795e87609958267d47eb6ca80023f3d422a8721d8",
+      "deploy/updater/program-evidence.json": "25f0e97d24a7fa2ec4d6b1b0d797571381866339d0c2497480f2b6f36ee68757",
+      "deploy/updater/install.sh": "f6e53e1112507d9fb65b2ce85f4ab56213cbff6e937a5ec1283f31c48b711501",
+      "deploy/updater/host.py": "64775e36efe0186ae995d8b5be84b125437b7d143cac0524874d6c6da30f4214",
+      "deploy/updater/program-profile.yml": "a1052ef673a555d3adae020a20bc5f580baae0bd900e9914c716ddcce2413f3b",
+      "deploy/updater/updater-linux-amd64": "e34b36483313a113226fa1bcff35119efda9eebb1fa62db94eb798cae4747d21",
+      "deploy/updater/prove_recovery.py": "a4a1663a6d4037b87c3629723e85cde6aa97d681ddeccc0c82ddddee6f8b87bf",
+      "deploy/updater/api-socket.yml": "9b1a30142230428871026e88a2f59194bdadb567d25b32066079e4650b37e8e8",
+      "deploy/updater/nginx.conf": "904a77f214af6894fe5e0a5c87af3b9ba1611cfa5531cb3379af521b7e7d3391",
+      "deploy/updater/chat-reader-program-scratch.service": "4a904a69d8f09ca34bfb71dfa9ccc5e7f4ffa909b1e876a7dbcf33851e410f61",
+      "deploy/updater/program_scratch.py": "5cf53c61be211c6146ff5f7de1bda26bb9ec0d5ec490a9e21313a7bf57097dd3",
+      "deploy/verify_backup.sh": "ce01b4bf3a25c53df735300b36d5a9c8f76bfc5ec4174e093bbcbe5b35c24523",
+      "deploy/backup_volume_reader.sh": "cecdf0a2c6749a49d1a36f4c061e54aa55dbddd0a7bb26f9fdb1614e552d1c01",
+      "deploy/preflight_release_space.sh": "34c8df1640bf579ec789ce46f5326eb3966ed68d1f7b8d63a5a165bdc46e1495",
+      "deploy/backup.sh": "ec590253bb6efc60221d46777bacd41915799a96710e42493102e0a5bde4f384"
+    },
+    "archive_matches_qualification": true,
+    "registry": {
+      "api": {
+        "pinned_digest": "sha256:74833f4de9c97585ddf458c04bc9779e72bc46a4c7976bdff09499e3860ade31",
+        "config": "sha256:612c26821eacbd9020335757aa12565f375fedd472b980b19f0bca3768071660",
+        "rootfs_reread": true
+      },
+      "web": {
+        "pinned_digest": "sha256:8e98ce73a590e944208478cf9d824b036fd9182f003f3c6526df30f81b9a75af",
+        "config": "sha256:cc011fc01ff66a6b5b0b31b4d5cff48d7b3ec4de484a8ed2ebcc70d1c45afa00",
+        "rootfs_reread": true
+      }
+    },
+    "accepted": 30,
+    "program_max_ms": {
+      "confirmed": 9560,
+      "rollback": 9406,
+      "download": 1010,
+      "visible": 12753,
+      "online_preparation": 13220
+    },
+    "full_fixture": [
+      {
+        "action": "prepare",
+        "archive_bytes": 198093583,
+        "download_ms": 559,
+        "ready_host_ms": 10525,
+        "click_to_ready_ms": 11394,
+        "continuous_probes": true,
+        "phases_ms": {
+          "admission": 2059,
+          "downloading": 559,
+          "staging": 7907
+        }
+      },
+      {
+        "action": "apply",
+        "click_to_healthy_ms": 12089,
+        "click_to_confirmed_ms": 12311,
+        "observed_outage_ms": 10364,
+        "maintenance_refresh": true,
+        "phases_ms": {
+          "admission": 1547,
+          "backup": 1750,
+          "commit": 818,
+          "draining": 981,
+          "fencing": 168,
+          "health": 5214,
+          "migration": 227,
+          "switching": 817
+        },
+        "click_to_rendered_success_ms": 14129
+      },
+      {
+        "action": "rollback",
+        "click_to_healthy_ms": 12634,
+        "click_to_confirmed_ms": 12856,
+        "observed_outage_ms": 10312,
+        "maintenance_refresh": true,
+        "phases_ms": {
+          "admission": 2122,
+          "backup": 1798,
+          "commit": 825,
+          "draining": 849,
+          "fencing": 166,
+          "health": 5105,
+          "migration": 232,
+          "switching": 975
+        },
+        "click_to_rendered_success_ms": 14673
+      }
+    ],
+    "program_scope": "full",
+    "program_reason": "unproven_changes"
+  },
+  "observations": [
+    "The first 25-minute exact snapshot was in progress. One later read-only CLI monitor returned a transport/API error; the same run and attempt were reread, without rerunning or substituting any job.",
+    "Qualification, release distribution, hosted test timings, host preparation, and actual service availability are separate. No performance rehearsal was performed on the production host."
+  ],
+  "host": {
+    "kit": {
+      "at": "2026-11-21T17:34:54.942084+00:00",
+      "changed": [
+        "updater-linux-amd64",
+        "host.py",
+        "program_scratch.py",
+        "program-profile.yml",
+        "prove_recovery.py",
+        "backup.sh",
+        "backup_volume_reader.sh",
+        "verify_backup.sh",
+        "backup_stream.py",
+        "chat-reader-program-scratch.service"
+      ],
+      "control_and_status_only_restarted": true,
+      "enrolled_fingerprint_verified": true,
+      "installed_adapter": "64775e36efe0186ae995d8b5be84b125437b7d143cac0524874d6c6da30f4214",
+      "installed_updater": "e34b36483313a113226fa1bcff35119efda9eebb1fa62db94eb798cae4747d21",
+      "old_application_unchanged": true,
+      "prior_retained": true,
+      "profile_enabled": false
+    },
+    "prepare": {
+      "at": "2026-11-21T17:40:23.072953+00:00",
+      "budget": {
+        "available_kib": 7619580,
+        "backup_kib": 6454800,
+        "candidate_required_kib": 7458243,
+        "margin_kib": 161337,
+        "retained_required_kib": 7110160
+      },
+      "download_ms": 6725,
+      "first_new_web_ms": null,
+      "first_submit_at": "2026-11-21T17:36:21.473090+00:00",
+      "first_unavailable_ms": null,
+      "host_elapsed_observation_ms": 241602,
+      "job": {
+        "action": "prepare",
+        "expected": "9fd50d4b308695eb1ac1d37a03ad603d9a1d8dc8a4c7241873cc8bf9979be434",
+        "id": "db69b2d29326bd6ff2463f9a5ce9d33c",
+        "phase": "prepared",
+        "started_ms": 1795282584031,
+        "target": "af0ee0fc3c37aed7186c8c0e07820037204fa1721d7abc34ad7c158599915bd5",
+        "timings_ms": {
+          "admission": 35427,
+          "downloading": 6725,
+          "staging": 194876
+        },
+        "updated": 1795282821
+      },
+      "login_http_counts": {
+        "200": 104
+      },
+      "mode": "full",
+      "observed_old_login_online_while_preparing": true,
+      "phase_path": [
+        [
+          "admission",
+          2935
+        ],
+        [
+          "downloading",
+          39376
+        ],
+        [
+          "staging",
+          46455
+        ],
+        [
+          "prepared",
+          241541
+        ]
+      ],
+      "private_phases": {
+        "admission": 16,
+        "downloading": 3,
+        "prepared": 1,
+        "staging": 84
+      },
+      "progress_samples": 104,
+      "ready_ms": 237019,
+      "reason": "no_pair_proof",
+      "reopened_ms": null,
+      "samples": 104
+    },
+    "apply": {
+      "at": "2026-11-21T17:48:57.276145+00:00",
+      "budget": {
+        "available_kib": 7332396,
+        "backup_kib": 6454800,
+        "candidate_required_kib": 7110160,
+        "margin_kib": 222236,
+        "retained_required_kib": 7110160
+      },
+      "committed_version": "v0.1.5",
+      "first_new_web_ms": 452871,
+      "first_submit_at": "2026-11-21T17:41:24.333891+00:00",
+      "first_unavailable_ms": 104143,
+      "host_elapsed_observation_ms": 452943,
+      "job": {
+        "action": "apply",
+        "expected": "9fd50d4b308695eb1ac1d37a03ad603d9a1d8dc8a4c7241873cc8bf9979be434",
+        "id": "c16eee5af7bf84d9852a57103a21b95e",
+        "phase": "succeeded",
+        "started_ms": 1795282886833,
+        "target": "af0ee0fc3c37aed7186c8c0e07820037204fa1721d7abc34ad7c158599915bd5",
+        "timings_ms": {
+          "admission": 99662,
+          "backup": 308497,
+          "commit": 2817,
+          "draining": 11081,
+          "fencing": 318,
+          "health": 22054,
+          "migration": 553,
+          "switching": 4202
+        },
+        "updated": 1795283336
+      },
+      "login_http_counts": {
+        "200": 45,
+        "503": 169
+      },
+      "observed_old_login_online_while_preparing": null,
+      "phase_path": [
+        [
+          "admission",
+          3189
+        ],
+        [
+          "draining",
+          104143
+        ],
+        [
+          "backup",
+          115251
+        ],
+        [
+          "switching",
+          423447
+        ],
+        [
+          "health",
+          427576
+        ],
+        [
+          "commit",
+          450783
+        ],
+        [
+          "succeeded",
+          452871
+        ]
+      ],
+      "private_phases": {
+        "admission": 44,
+        "backup": 150,
+        "commit": 1,
+        "draining": 5,
+        "health": 11,
+        "succeeded": 1,
+        "switching": 2
+      },
+      "progress_samples": 214,
+      "reopened_ms": 452871,
+      "samples": 214
+    },
+    "verification": {
+      "at": "2026-11-21T17:50:05.588576+00:00",
+      "version": "v0.1.5",
+      "sha": "b824ee949f03ec403e7e60beb677731c2fcff9c4",
+      "previous": "v0.1.4",
+      "immutable_fields_unchanged": [
+        "schema",
+        "other_container_count",
+        "other_container_set_hash",
+        "mounts_hash",
+        "protected_config_hash",
+        "postgres_unchanged_identifier"
+      ],
+      "aggregate": {
+        "row_counts_digest": true,
+        "four_volume_totals": true
+      },
+      "worker_memory": 671088640,
+      "heartbeat": true,
+      "live_roles": {
+        "api": {
+          "engine": "sha256:612c26821eacbd9020335757aa12565f375fedd472b980b19f0bca3768071660",
+          "memory_limit": 0,
+          "readonly_root": false,
+          "started": "2026-11-21T17:48:28.925069822Z"
+        },
+        "import-worker": {
+          "engine": "sha256:612c26821eacbd9020335757aa12565f375fedd472b980b19f0bca3768071660",
+          "memory_limit": 671088640,
+          "readonly_root": false,
+          "started": "2026-11-21T17:48:29.402419059Z"
+        },
+        "web": {
+          "engine": "sha256:cc011fc01ff66a6b5b0b31b4d5cff48d7b3ec4de484a8ed2ebcc70d1c45afa00",
+          "memory_limit": 0,
+          "readonly_root": false,
+          "started": "2026-11-21T17:48:30.53958557Z"
+        }
+      },
+      "origin_checks": {
+        "/__updates/status": 404,
+        "/api/admin/updates": 401,
+        "/api/health": 200,
+        "/login": 200
+      },
+      "backup": {
+        "bytes": 4049871933,
+        "components": 5,
+        "id": "chat-reader-20261121T174318Z",
+        "independent_integrity_and_pg_toc_ms": 57600,
+        "old_validated_set_still_present": true,
+        "relative": "update-c16eee5af7bf84d9852a57103a21b95e/chat-reader-20261121T174318Z",
+        "sha256": "7f14a500dc8222650afd4b30c6f8435d4f1ba178ea3ecec0f200bd0b8e09aacc",
+        "sums": {
+          "assets.tar.gz": "32982a8407e723784a1f069fe21b926f3b8557c5670354e87096151eecb72f51",
+          "exports.tar.gz": "55e7cbd3eaf77d881f7d62c9f448d65a447927d1914926668d731307dba196cf",
+          "imports.tar.gz": "124a144c20d6783d742a774ae25e64ec6867b734ff0169a5e3c0bc8879c563e3",
+          "offline.tar.gz": "4e2394188335bdf9185e8990a8f6bd163dce9e7f5a37a4de609b6d45dc82c5d6",
+          "postgres.dump": "6b014d9116e3b489c084021afe3e939c8e5d2e0055d13b8060729b05ad523b95"
+        }
+      },
+      "public_stable_recheck": true,
+      "schema": "20261117_0062"
+    },
+    "retention": {
+      "at": "2026-11-21T17:57:10.095182+00:00",
+      "available_after_bytes": 7510765568,
+      "exact_regular_files_deleted": 8,
+      "freed_allocated_bytes": 4050821120,
+      "images_or_volumes_deleted": false,
+      "journal_unchanged": true,
+      "kept": "chat-reader-20261121T174318Z",
+      "kept_manifest": "7f14a500dc8222650afd4b30c6f8435d4f1ba178ea3ecec0f200bd0b8e09aacc",
+      "old_manifest": "40b9d6913d11bdc0bc269bb02acd709be0f229f4be81b54f928b0afd5c75c4c3",
+      "old_only": "chat-reader-20261120T181619Z"
+    },
+    "retention_independent": {
+      "at": "2026-11-21T17:57:18.187554+00:00",
+      "available_bytes": 7510761472,
+      "config_unchanged": true,
+      "heartbeat": true,
+      "http": {
+        "/__updates/status": 404,
+        "/api/admin/updates": 401,
+        "/api/health": 200,
+        "/login": 200
+      },
+      "manifest": "7f14a500dc8222650afd4b30c6f8435d4f1ba178ea3ecec0f200bd0b8e09aacc",
+      "only_backup": "chat-reader-20261121T174318Z",
+      "previous": "v0.1.4",
+      "source": "b824ee949f03ec403e7e60beb677731c2fcff9c4",
+      "version": "v0.1.5"
+    },
+    "pretransfer": {
+      "available_kib": 7619436,
+      "backup_kib": 6454800,
+      "candidate_required_kib": 7458243,
+      "margin_kib": 161193,
+      "retained_required_kib": 7110160
+    },
+    "backup_reread_before_staging": true,
+    "recovery": {
+      "at": "2026-11-21T17:55:47.172343+00:00",
+      "new_dir": "update-c16eee5af7bf84d9852a57103a21b95e/chat-reader-20261121T174318Z",
+      "new_manifest": "7f14a500dc8222650afd4b30c6f8435d4f1ba178ea3ecec0f200bd0b8e09aacc",
+      "previous_dir": "update-100727445d4846db9da3b5cef9e966a0/chat-reader-20261120T181619Z",
+      "previous_manifest": "40b9d6913d11bdc0bc269bb02acd709be0f229f4be81b54f928b0afd5c75c4c3",
+      "revision": "8d093ef59a488b3c4820b6a26575f79120c1b8de",
+      "pg": {
+        "at": "2026-11-21T17:54:45.213503+00:00",
+        "source_sha256": "6b014d9116e3b489c084021afe3e939c8e5d2e0055d13b8060729b05ad523b95",
+        "compressed_bytes": 353739186,
+        "schema": "20261117_0062",
+        "tables": 93,
+        "validated_foreign_keys": 154,
+        "fresh_tmpfs_postgres": true
+      },
+      "files": {
+        "imports": {
+          "method": "exact gzip digest tied to prior isolated restoration",
+          "sha256": "124a144c20d6783d742a774ae25e64ec6867b734ff0169a5e3c0bc8879c563e3",
+          "verified_current_full_disk_read": true
+        },
+        "exports": {
+          "method": "two complete archive SHA/CRC + every member content/metadata; changed entries extracted and independently reread locally",
+          "sha256": "55e7cbd3eaf77d881f7d62c9f448d65a447927d1914926668d731307dba196cf",
+          "prior_sha256": "e540875f3b3f75608e647c1e49305c2b3981022718c0b96b90c70e26a004f9ea",
+          "local": {
+            "files": 0,
+            "directories": 2,
+            "bytes": 0,
+            "compressed_bytes": 167,
+            "gzip_sha256": "630275758c4b09745190d3925ff22a64ac679faabf1875a093b8282d5ad5d663",
+            "complete_gzip_sha256": true,
+            "crc": true,
+            "each_file_read_back": true,
+            "metadata_restored": true
+          },
+          "difference": {
+            "old_entries": 189,
+            "new_entries": 190,
+            "unchanged": 188,
+            "changed_files": 0,
+            "changed_dirs": 2,
+            "changed_bytes": 0,
+            "old_only": 0,
+            "two_source_checksums_verified": true
+          }
+        },
+        "offline": {
+          "method": "exact gzip digest tied to prior isolated restoration",
+          "sha256": "4e2394188335bdf9185e8990a8f6bd163dce9e7f5a37a4de609b6d45dc82c5d6",
+          "verified_current_full_disk_read": true
+        },
+        "assets": {
+          "method": "two complete archive SHA/CRC + every member content/metadata; changed entries extracted and independently reread locally",
+          "sha256": "32982a8407e723784a1f069fe21b926f3b8557c5670354e87096151eecb72f51",
+          "prior_sha256": "0a115e196146efd6c14582686ccafb9143680c634c6d22f8a86f677a952b722a",
+          "local": {
+            "files": 0,
+            "directories": 6,
+            "bytes": 0,
+            "compressed_bytes": 180,
+            "gzip_sha256": "f4916d4e370258ec29f36daefd82124a50237dc2a5061feab7ffa82366876c81",
+            "complete_gzip_sha256": true,
+            "crc": true,
+            "each_file_read_back": true,
+            "metadata_restored": true
+          },
+          "difference": {
+            "old_entries": 3554,
+            "new_entries": 3548,
+            "unchanged": 3542,
+            "changed_files": 0,
+            "changed_dirs": 6,
+            "changed_bytes": 0,
+            "old_only": 6,
+            "two_source_checksums_verified": true
+          }
+        }
+      },
+      "recovery_method": "Content-addressed retention check, not a full fresh program-enrollment recovery credential.",
+      "complete": true
+    },
+    "independent_live_import_source": {
+      "at": "2026-11-21T17:52:03.638915+00:00",
+      "files": {
+        "app/services/adaptive_import/memory_budget.py": "b4a31faf0edf644a1212324c436ed72a88052922b84b8eb1b50f0bece6c66a92",
+        "app/services/adaptive_import/operations.py": "bb9aaa816a76dbaef10cc87edc3073b5a7ff11e3d9676ed0725040ea5e924758",
+        "app/services/adaptive_import/service.py": "18d8ca3795dc28db62972d8f099e05f792ea1341148b34d0c6f905b692fcb2c9",
+        "app/services/canonical/persistence.py": "225467d11641e3c4a5c6e2b15c4a1e5c60c1d9c946052a0aba7622ba776bf247",
+        "app/services/canonical/stream_persistence.py": "cbf701ba6643f645dc31b19f37c9da3c864f9bc83a7d511e2ab9af443a9b341c",
+        "app/services/import_pipeline/draft_store.py": "49f769386ea5a30b05994b5108b988885dfa8dfe677b7d03f66b96fb880884cf",
+        "app/services/import_pipeline/draft_units.py": "8bc4f6dbc008f4a147badf6d8b7c8d43a37144b8d632659d26fe37cdb2075efb"
+      },
+      "no_production_import_or_rehearsal": true,
+      "roles": {
+        "api": {
+          "files_verified": 7,
+          "oom_killed": false,
+          "restart_count": 0,
+          "worker_limit_bytes": null
+        },
+        "import-worker": {
+          "files_verified": 7,
+          "oom_killed": false,
+          "restart_count": 0,
+          "worker_limit_bytes": 671088640
+        }
+      },
+      "sha": "b824ee949f03ec403e7e60beb677731c2fcff9c4"
+    },
+    "exact_restore_image": {
+      "at": "2026-11-21T17:43:56.850605+00:00",
+      "registry_ref": "postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "remote_engine": "sha256:de3a4eab8fdfa507ea92aac488b916b08089e515db49b055fe71dfa271ba3a28",
+      "actual_config": "sha256:de3a4eab8fdfa507ea92aac488b916b08089e515db49b055fe71dfa271ba3a28",
+      "local_engine": "sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "rootfs_same": true,
+      "role": "isolated restore only"
+    },
+    "post_retention_budget": {
+      "at": "2026-11-21T17:59:37.697512+00:00",
+      "current": "v0.1.5",
+      "maintenance_started": false,
+      "no_future_release_admitted": true,
+      "real_retained_images_budget": {
+        "available_kib": 7334508,
+        "backup_kib": 6454800,
+        "candidate_required_kib": 7110160,
+        "margin_kib": 224348,
+        "retained_required_kib": 7110160
+      },
+      "same_size_hypothetical_margin_kib": -123735
+    },
+    "measured_public_unavailable_ms": 348728,
+    "full_maintenance_reason": "Worker and persistence changed, signed proof mode full. Local plan no_pair_proof. No force-skip."
+  },
+  "operator_notes": {
+    "scope": "PR #7 only, matched head; signed distribution and full production deployment. No production rehearsal, new trust roots, global branch-rule change or fast-profile enrollment.",
+    "verification_corrections": [
+      "An early local check for the server PostgreSQL engine ID returned not-found. Resolved the already-registered production image digest and independently verified manifest, exact amd64 config and all 11 RootFS layers before the fresh isolated restore; never substituted a mutable tag.",
+      "A read-only post-wait CI poll once failed; the same authenticated parent and attempt were recovered, and no failed or skipped release job was substituted."
+    ],
+    "measurement": "Production intervals use same-origin two-second approximate samples and host operation phases, not browser click measurements. First new login response and API build marker were independently validated.",
+    "program_enrollment": "Recovery checks for safe retention are not a five-component fresh-restore program-profile certificate. Existing repo-level verification pin was not set and no additional maintenance window was used."
+  },
+  "last_recorded_at": "2026-11-21T18:01:58.756982+00:00",
+  "hosted_program_samples": {
+    "artifact_id": 14717816079,
+    "samples_json_sha256": "fa596c797bea33bc4ac34f745cf455d50cd187274bac817ef9fe0e75598ee707",
+    "columns": [
+      "repetition",
+      "scope",
+      "cache",
+      "download_ms",
+      "online_preparation_ms",
+      "apply_confirmed_ms",
+      "rollback_confirmed_ms",
+      "apply_visible_success_ms",
+      "rollback_visible_success_ms"
+    ],
+    "rows": [
+      [
+        1,
+        "web",
+        "cold",
+        835,
+        11906,
+        3614,
+        3534,
+        4600,
+        4587
+      ],
+      [
+        1,
+        "api",
+        "cold",
+        713,
+        10228,
+        7307,
+        5827,
+        8624,
+        8199
+      ],
+      [
+        1,
+        "api+web",
+        "cold",
+        611,
+        10022,
+        9172,
+        8651,
+        12578,
+        12554
+      ],
+      [
+        1,
+        "web",
+        "warm",
+        643,
+        10495,
+        3648,
+        3690,
+        4206,
+        4265
+      ],
+      [
+        1,
+        "api",
+        "warm",
+        585,
+        11118,
+        6726,
+        6708,
+        8616,
+        8570
+      ],
+      [
+        1,
+        "api+web",
+        "warm",
+        573,
+        13220,
+        8719,
+        9406,
+        12596,
+        12491
+      ],
+      [
+        2,
+        "web",
+        "cold",
+        668,
+        12155,
+        3775,
+        3580,
+        4239,
+        4584
+      ],
+      [
+        2,
+        "api",
+        "cold",
+        623,
+        10187,
+        6638,
+        6354,
+        8503,
+        8264
+      ],
+      [
+        2,
+        "api+web",
+        "cold",
+        623,
+        12126,
+        8682,
+        9012,
+        12612,
+        12402
+      ],
+      [
+        2,
+        "web",
+        "warm",
+        597,
+        10357,
+        4424,
+        3686,
+        8460,
+        4229
+      ],
+      [
+        2,
+        "api",
+        "warm",
+        614,
+        10589,
+        7773,
+        6232,
+        8350,
+        8633
+      ],
+      [
+        2,
+        "api+web",
+        "warm",
+        593,
+        12262,
+        8588,
+        8622,
+        12516,
+        12509
+      ],
+      [
+        3,
+        "web",
+        "cold",
+        743,
+        11102,
+        3883,
+        3788,
+        4341,
+        4273
+      ],
+      [
+        3,
+        "api",
+        "cold",
+        590,
+        12088,
+        6803,
+        6239,
+        8208,
+        8601
+      ],
+      [
+        3,
+        "api+web",
+        "cold",
+        674,
+        10657,
+        8922,
+        8704,
+        12322,
+        12597
+      ],
+      [
+        3,
+        "web",
+        "warm",
+        640,
+        12303,
+        3776,
+        3765,
+        4220,
+        4246
+      ],
+      [
+        3,
+        "api",
+        "warm",
+        645,
+        12502,
+        6627,
+        8041,
+        8507,
+        8619
+      ],
+      [
+        3,
+        "api+web",
+        "warm",
+        598,
+        12327,
+        9560,
+        8521,
+        12597,
+        12434
+      ],
+      [
+        4,
+        "web",
+        "cold",
+        588,
+        12783,
+        3718,
+        3616,
+        4267,
+        4664
+      ],
+      [
+        4,
+        "api",
+        "cold",
+        610,
+        10766,
+        8446,
+        6283,
+        12360,
+        8666
+      ],
+      [
+        4,
+        "api+web",
+        "cold",
+        606,
+        10210,
+        8863,
+        8789,
+        12753,
+        12661
+      ],
+      [
+        4,
+        "web",
+        "warm",
+        1010,
+        12904,
+        3643,
+        3667,
+        4651,
+        4685
+      ],
+      [
+        4,
+        "api",
+        "warm",
+        659,
+        12523,
+        6769,
+        6307,
+        8177,
+        8673
+      ],
+      [
+        4,
+        "api+web",
+        "warm",
+        554,
+        12057,
+        8577,
+        8722,
+        12445,
+        12599
+      ],
+      [
+        5,
+        "web",
+        "cold",
+        641,
+        12172,
+        4393,
+        3499,
+        8330,
+        4493
+      ],
+      [
+        5,
+        "api",
+        "cold",
+        702,
+        12180,
+        7579,
+        5986,
+        8214,
+        8347
+      ],
+      [
+        5,
+        "api+web",
+        "cold",
+        579,
+        11740,
+        8851,
+        8232,
+        12697,
+        12657
+      ],
+      [
+        5,
+        "web",
+        "warm",
+        906,
+        12382,
+        3538,
+        3446,
+        4517,
+        4445
+      ],
+      [
+        5,
+        "api",
+        "warm",
+        625,
+        12690,
+        6193,
+        5920,
+        8556,
+        8294
+      ],
+      [
+        5,
+        "api+web",
+        "warm",
+        599,
+        11144,
+        8137,
+        8601,
+        8705,
+        12461
+      ]
+    ],
+    "faults": [
+      "Control (no update) exporter commit: succeeded",
+      "PASS: active upload and exact bytes survived program rollback; no backup or fence. Exporter commit: succeeded",
+      "PASS: coordinator restarted mid-cutover; reconciled actual old programs",
+      "PASS: broken Web startup restored program only; newer data survived",
+      "PASS: invalid pair signature and bounded fast staging disk refused without fencing",
+      "PASS: changed recovery point refused before stop; no slow fallback",
+      "PASS: all four post-restore-point volumes reread and matched"
+    ]
+  },
+  "future_fast_publishing": {
+    "at": "2026-11-21T17:54:02.354702+00:00",
+    "release_source_pin_present": false,
+    "release_source_pin_matches_enrolled_issuer": null,
+    "repository_settings_changed": false
+  }
+}
