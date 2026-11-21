@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-22：[v0.1.5 生产部署](deployment.md#v015-production)及[精确回执](evidence/import-units-2026-11-21/v0.1.5-production.json)绑定 PR #7 授权、保护标签、独立资格与签名分发、现役程序和五组件备份。隔离快路径和实际完整维护分别计时；没有在 `king` 做性能演练。
+
 2026-11-22：[导入消息级工作单元](system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21)记录普通 Markdown 和旧 canonical 草稿的低内存路径、原子性与明确排除项；[最终复核](evidence/import-units-2026-11-21/README.md#最终复核与交接)分别绑定独立 worker 计量、默认 1900/640 MiB 的 30 对浏览器演练、最终分支 CI 与 PR 合并阻塞。保留最初失败；未冒充正式标签资格或生产计时。
 
 2026-11-21 21:53：[单份恢复点及授权清理](evidence/import-units-2026-11-21/backup-retention.json)记录独立恢复／内容一致性证明、旧备份删除、配套回滚镜像保留和另一次 SSH 核验。可用空间与新候选完整预算不同，未据此发布部署。

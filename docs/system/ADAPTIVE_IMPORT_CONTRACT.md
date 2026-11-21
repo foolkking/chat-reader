@@ -1,6 +1,7 @@
 # Adaptive Import Contract
 
-## Message-sized work under fixed memory — candidate 2026-11-21
+<a id="message-sized-work-under-fixed-memory--candidate-2026-11-21"></a>
+## Message-sized work under fixed memory — shipped in v0.1.5
 
 An import still has one serialized worker and one atomic canonical commit.
 Smaller internal units do **not** publish Markdown first and leave attachments
@@ -43,8 +44,8 @@ attachment transfers already stream in 64 KiB chunks; no attachment thread pool,
 shared-session concurrency or partial-publication protocol was added.
 
 [640 MiB Linux measurements, semantic/rollback tests and failed attempts](../evidence/import-units-2026-11-21/README.md)
-are candidate evidence, not a production deployment or the 1900 MiB nested
-online-update acceptance gate.
+are isolated tests. The [v0.1.5 production receipt](../deployment.md#v015-production) independently
+binds the installed API and worker to the qualified release; no synthetic production import was run.
 
 ## Auxiliary heartbeat must not wait for canonical work — worktree 2026-11-12
 
