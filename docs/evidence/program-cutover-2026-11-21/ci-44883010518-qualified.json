@@ -1,0 +1,270 @@
+{
+  "sha": "508dae710086e607613cb63f1fbef19c786fc7a4",
+  "branch": "codex/verified-fast-cutover",
+  "run": 44883010518,
+  "attempt": 1,
+  "status": "completed",
+  "conclusion": "success",
+  "wait_seconds": 1500.0112891,
+  "read_at": "2026-11-21T16:28:14.2315020+08:00",
+  "jobs": [
+    {
+      "name": "settings-restore",
+      "id": 136782200317,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:06:26Z"
+    },
+    {
+      "name": "web-quality-shard-2 / gates",
+      "id": 136782200526,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:21:29Z"
+    },
+    {
+      "name": "api-quality-shard-2 / suite",
+      "id": 136782200560,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:10:25Z"
+    },
+    {
+      "name": "api-quality-shard-4 / suite",
+      "id": 136782200579,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:15:51Z"
+    },
+    {
+      "name": "settings-quality-shard-2 / matrix",
+      "id": 136782200588,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:20:09Z"
+    },
+    {
+      "name": "web-quality-shard-1 / gates",
+      "id": 136782200590,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:24:47Z"
+    },
+    {
+      "name": "settings-quality-shard-4 / matrix",
+      "id": 136782200595,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:16:44Z"
+    },
+    {
+      "name": "api-quality-shard-1 / suite",
+      "id": 136782200596,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:13:29Z"
+    },
+    {
+      "name": "api-quality-shard-3 / suite",
+      "id": 136782200599,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:09:54Z"
+    },
+    {
+      "name": "web-quality-shard-3 / gates",
+      "id": 136782200661,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:23:36Z"
+    },
+    {
+      "name": "settings-quality-shard-1 / matrix",
+      "id": 136782200671,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:17:19Z"
+    },
+    {
+      "name": "settings-quality-shard-3 / matrix",
+      "id": 136782200706,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:16:35Z"
+    },
+    {
+      "name": "reading-performance-comparison / compare",
+      "id": 136782200751,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:10:44Z"
+    },
+    {
+      "name": "image-preparation",
+      "id": 136782200993,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:07:24Z"
+    },
+    {
+      "name": "api-quality",
+      "id": 136785367997,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:16:08Z"
+    },
+    {
+      "name": "settings-quality",
+      "id": 136786405303,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:20:43Z"
+    },
+    {
+      "name": "web-quality",
+      "id": 136787529320,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:25:06Z"
+    },
+    {
+      "name": "build-images",
+      "id": 136787601043,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:25:31Z"
+    },
+    {
+      "name": "inspect-release-artifact",
+      "id": 136787707836,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-11-21T08:26:04Z"
+    }
+  ],
+  "access": {
+    "git": "locally configured SSH; remote branch ref matched",
+    "actions": "previously authorized gh, exact run/attempt; no browser, no credentials emitted"
+  },
+  "wait": {
+    "command": "Start-Sleep -Seconds 1500",
+    "elapsed_seconds": 1500.0112891,
+    "finished_at": "2026-11-21T16:27:40.2915407+08:00"
+  },
+  "artifact_verification": {
+    "source_sha": "508dae710086e607613cb63f1fbef19c786fc7a4",
+    "run": 44883010518,
+    "attempt": 1,
+    "artifact_id": 14700035052,
+    "transport_sha256": "1d7ac04a8cf6edf55ac6d2f8693599e67505c0ded2d39b31c3d2b55c34139462",
+    "archive_sha256": "4b6c570b11d499e210bb09c0a3b9e5a83f322bf06bfa60235257309d40c19675",
+    "archive_bytes": 177730728,
+    "images": {
+      "web": {
+        "config_id": "sha256:0162797f140650f73606c85ad8ce22169e005e39450cfed87b8732c5406ec3bc",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:a0904247e36a7726c03c71ee48f3e64462021c88dafeb13f37fdaf613b27f11c",
+          "sha256:0ac4251d3ceb1f9a47f7a4a2c3f0a11d2170e8f827a9e733e6278473d6c2674e",
+          "sha256:1e154f3abc96911e063658b8bc45e19c5a1a24cd6c68cbf87d8bfa1b28bc74b9",
+          "sha256:74e3c643bad513259e9f5190690801b63fc218d293f228213810f973ee3ae4cd",
+          "sha256:d5b6fe840375cbf7352ddd6e71cac2c0047b24ed1b497983d18e26e40e4c4645",
+          "sha256:3fa8ff9aaedffa5eaa0edc0e1f6a92b1ebece732f6a49c61bdc9b93b61d23519",
+          "sha256:9621c9425ceaace4d7e718f296ecd4cdb5d64332a190239d0fb42309e2ac0944",
+          "sha256:f070328b431bd6d86a958f5770ffd8ab402357221cfc64e551e69d32b1dc6641",
+          "sha256:41b87c299d70edd55d3ff3286e89ef78f4cd28323dd6d1d890fecd8a8dda7e35"
+        ],
+        "accepted_engine_ids": [
+          "sha256:0162797f140650f73606c85ad8ce22169e005e39450cfed87b8732c5406ec3bc",
+          "sha256:0e2a974d594dfbe64bbcf413d856f29e793cfa0b39749ce623592ddf27845a17"
+        ]
+      },
+      "api": {
+        "config_id": "sha256:418afd9ae325d87cb8fc70095a170d4fb8601867eca548840ab5e452fe9de114",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+          "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+          "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+          "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+          "sha256:1408c769c44bcff5c88ec855c904d7852a3142be80e196e74e4bf9fdc5782b28",
+          "sha256:ee429b1e7ab808ac0e6efde17344aa92f9ff4f17d813066c743502afec428022",
+          "sha256:f4b664b0a58999733dc79f8699d18d1a0068b0d530325f09a2b5a9f96c3266a1",
+          "sha256:e45b7f67155cc40b8417eca1e7954b813ce33f77b246d5695b69aef6a7539403",
+          "sha256:e50f286d3b905a15a7ad2f1f64ba0f6b783de0b12852df82bc8dabe24cbd6fda",
+          "sha256:3b6533762ab72b7d7a9ea28f5f93ed550026b3f8c5cd6a47bbcb086faacd7bb4",
+          "sha256:3b575db903b40fc736e3bfb45721718ad930d012e9e40a116bee92f36269c8e0",
+          "sha256:f0d82b153ad1a102afc1dcdad8ee8405ab6ba4eac6789e14ae4abf8a65448dda",
+          "sha256:6c69c1115076467938b7b78caa284a072b81e7838af112930ba219bb4d177e70",
+          "sha256:e13ee8d5263bf826b08adf9c853f876fc422654ab92318fb39bb53737f16a55c"
+        ],
+        "accepted_engine_ids": [
+          "sha256:418afd9ae325d87cb8fc70095a170d4fb8601867eca548840ab5e452fe9de114",
+          "sha256:9825c537b5119f299c6dea37eb6bd96ac1392e81cae330fed00308474fcfa32a"
+        ]
+      },
+      "import-worker": {
+        "config_id": "sha256:418afd9ae325d87cb8fc70095a170d4fb8601867eca548840ab5e452fe9de114",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+          "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+          "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+          "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+          "sha256:1408c769c44bcff5c88ec855c904d7852a3142be80e196e74e4bf9fdc5782b28",
+          "sha256:ee429b1e7ab808ac0e6efde17344aa92f9ff4f17d813066c743502afec428022",
+          "sha256:f4b664b0a58999733dc79f8699d18d1a0068b0d530325f09a2b5a9f96c3266a1",
+          "sha256:e45b7f67155cc40b8417eca1e7954b813ce33f77b246d5695b69aef6a7539403",
+          "sha256:e50f286d3b905a15a7ad2f1f64ba0f6b783de0b12852df82bc8dabe24cbd6fda",
+          "sha256:3b6533762ab72b7d7a9ea28f5f93ed550026b3f8c5cd6a47bbcb086faacd7bb4",
+          "sha256:3b575db903b40fc736e3bfb45721718ad930d012e9e40a116bee92f36269c8e0",
+          "sha256:f0d82b153ad1a102afc1dcdad8ee8405ab6ba4eac6789e14ae4abf8a65448dda",
+          "sha256:6c69c1115076467938b7b78caa284a072b81e7838af112930ba219bb4d177e70",
+          "sha256:e13ee8d5263bf826b08adf9c853f876fc422654ab92318fb39bb53737f16a55c"
+        ],
+        "accepted_engine_ids": [
+          "sha256:418afd9ae325d87cb8fc70095a170d4fb8601867eca548840ab5e452fe9de114",
+          "sha256:9825c537b5119f299c6dea37eb6bd96ac1392e81cae330fed00308474fcfa32a"
+        ]
+      },
+      "migrate": {
+        "config_id": "sha256:418afd9ae325d87cb8fc70095a170d4fb8601867eca548840ab5e452fe9de114",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+          "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+          "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+          "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+          "sha256:1408c769c44bcff5c88ec855c904d7852a3142be80e196e74e4bf9fdc5782b28",
+          "sha256:ee429b1e7ab808ac0e6efde17344aa92f9ff4f17d813066c743502afec428022",
+          "sha256:f4b664b0a58999733dc79f8699d18d1a0068b0d530325f09a2b5a9f96c3266a1",
+          "sha256:e45b7f67155cc40b8417eca1e7954b813ce33f77b246d5695b69aef6a7539403",
+          "sha256:e50f286d3b905a15a7ad2f1f64ba0f6b783de0b12852df82bc8dabe24cbd6fda",
+          "sha256:3b6533762ab72b7d7a9ea28f5f93ed550026b3f8c5cd6a47bbcb086faacd7bb4",
+          "sha256:3b575db903b40fc736e3bfb45721718ad930d012e9e40a116bee92f36269c8e0",
+          "sha256:f0d82b153ad1a102afc1dcdad8ee8405ab6ba4eac6789e14ae4abf8a65448dda",
+          "sha256:6c69c1115076467938b7b78caa284a072b81e7838af112930ba219bb4d177e70",
+          "sha256:e13ee8d5263bf826b08adf9c853f876fc422654ab92318fb39bb53737f16a55c"
+        ],
+        "accepted_engine_ids": [
+          "sha256:418afd9ae325d87cb8fc70095a170d4fb8601867eca548840ab5e452fe9de114",
+          "sha256:9825c537b5119f299c6dea37eb6bd96ac1392e81cae330fed00308474fcfa32a"
+        ]
+      }
+    },
+    "quality_mode": "full-exact",
+    "independent_local_image_archive_check": true,
+    "signed_release": false,
+    "deployed": false
+  },
+  "boundaries": {
+    "code_qualification": "full-exact 19 jobs; does not replace independent release rehearsals",
+    "performance": "isolated synthetic signed versions, not this formal release or production timing",
+    "program_release_acceptance": "default worker 640 MiB import commit gate still fails; no waiver",
+    "release_created": false,
+    "tag_created": false,
+    "production_changed": false,
+    "production_version": "v0.1.4",
+    "production_sha": "8d093ef59a488b3c4820b6a26575f79120c1b8de"
+  }
+}
