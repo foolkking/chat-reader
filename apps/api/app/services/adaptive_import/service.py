@@ -1403,7 +1403,11 @@ def _group_documents(record: ImportRecord, group: ImportInputGroup) -> list[Sour
                                       action="replace_source", details=failure.get("details"))
         path = _source_path(record, artifact)
         from app.services.adaptive_import.memory_budget import streaming_budget
-        streamed = streaming_budget() and artifact.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE
+        streamed = streaming_budget() and (
+            artifact.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE
+            or (artifact.source_type == "adaptive_source"
+                and (artifact.file_extension or "").casefold() in {".md", ".markdown"})
+        )
         result.append(SourceDocument(
             artifact_id=str(artifact.id), filename=artifact.filename, extension=artifact.file_extension or _extension(artifact.filename),
             content=b"" if streamed else path.read_bytes(), path=path if streamed else None,

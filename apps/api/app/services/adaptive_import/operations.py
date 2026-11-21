@@ -58,7 +58,8 @@ def prospective_record(record, payload):
                  if item.source_type != "adaptive_archive_document" and str(item.id) != arguments["artifact_id"]]
     source_type = "adaptive_archive" if Path(arguments["filename"]).suffix.casefold() == ".zip" else "adaptive_source"
     source = SimpleNamespace(source_type=source_type, byte_size=replacement["byte_size"],
-                             safe_filename=replacement["safe_filename"])
+                             safe_filename=replacement["safe_filename"],
+                             file_extension=Path(arguments["filename"]).suffix.casefold())
     return SimpleNamespace(id=record.id, artifacts=[*originals, source], draft_summary={})
 
 

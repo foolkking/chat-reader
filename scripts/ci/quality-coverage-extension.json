@@ -13,6 +13,11 @@
       "shard": 3,
       "source_lf_sha256": "28295dcb23b7387120375a15546bb1d13bbf8158cd259172cda73fa59f733cee"
     },
+    "tests/test_import_message_units.py": {
+      "count": 39,
+      "shard": 3,
+      "source_lf_sha256": "e52248badeeb23593366864d03d4444de575b1d8bb84ff08b9c9733f7e3619f3"
+    },
     "tests/test_import_batch_experience.py": {
       "count": 7,
       "shard": 4,

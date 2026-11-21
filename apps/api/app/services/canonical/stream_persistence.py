@@ -10,6 +10,7 @@ from sqlalchemy import insert
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
+from app.models.source_message_ref import SourceMessageRef
 from app.services.adaptive_import.bounded_io import checkpoint
 from app.services.canonical.block_builder import iter_basic_render_blocks
 from app.services.database.bulk_insert import insert_rows
@@ -51,7 +52,7 @@ def conversation_hash(messages):
 
 def persist_stream_messages(db, conversation, draft, attachment_map, report, processed_before, total):
     from app.services.canonical.persistence import (
-        _persist_canjson_private_content, _rewrite_persistable_attachment_ids, _report,
+        _default_source_ref, _persist_canjson_private_content, _rewrite_persistable_attachment_ids, _report,
     )
     for index, (message, record) in enumerate(zip(draft.messages, draft.stream_records, strict=True)):
         checkpoint()
@@ -59,6 +60,11 @@ def persist_stream_messages(db, conversation, draft, attachment_map, report, pro
         identity = _persist_one(db, conversation, message)
         unit = replace(draft, messages=[message], source_refs=record.get("source_refs", []),
                        attachments=record.get("attachments", []), annotations=[], notebooks=[], stream_records=None)
+        preserved = {str(ref["message_id"]) for ref in unit.source_refs
+                     if isinstance(ref, dict) and ref.get("message_id")}
+        if not message.source_message_id or message.source_message_id not in preserved:
+            message_id = identity[message.source_message_id][0]
+            db.execute(insert(SourceMessageRef), [_default_source_ref(conversation, message, message_id)])
         _persist_canjson_private_content(db, conversation, unit, identity, attachment_map)
         db.flush()
         completed = processed_before + index + 1
