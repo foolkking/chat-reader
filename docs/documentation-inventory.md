@@ -2,6 +2,8 @@
 
 2026-11-21：[快速/完整升级及恢复合同](system/ONLINE_UPDATES.md)记录签名版本对、只读程序接入、已恢复备份封存、磁盘临时目录和按角色回滚；[隔离证据](evidence/program-cutover-2026-11-21/README.md)区分真实浏览器计时、合成分发与生产结果。
 
+2026-11-21 16:28：[候选精确资格](evidence/program-cutover-2026-11-21/ci-44883010518-qualified.json)保存 `508dae7` 的 19/19 CI、命令等待及独立镜像身份；[768 MiB 对照](evidence/program-cutover-2026-11-21/alternative-768m-not-default.json)只说明独立资源配置，不替代默认 640 MiB 导入失败或生产首次接入容量门禁。工作分支未发布部署。
+
 2026-11-21：[v0.1.4 正式发布与生产回执](evidence/search-reading-2026-11-20/v0.1.4-production.json)保留首次资格失败、全量重跑、签名核对、真实生产耗时、数据核对及下次容量拒绝。[部署手册](deployment.md#v014-production)区分已成功切换与后续回滚条件。
 
 2026-11-20：[标签资格 44757335968/1 原失败及修复](evidence/search-reading-2026-11-20/ci-44757335968-saved-search-placement.json)区分已保存搜索晚到（32px）与之前分页工具条（74px）。[前后截图](evidence/search-reading-2026-11-20/saved-search-late-read-before-after.png)只含合成数据。

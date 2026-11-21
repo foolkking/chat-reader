@@ -1,0 +1,21 @@
+{
+  "source_revision": "508dae710086e607613cb63f1fbef19c786fc7a4",
+  "kind": "counterfactual-isolated-fixture-only",
+  "worker_memory_mib": 768,
+  "outer_memory_mib": 1900,
+  "reserve_memory_mib": 512,
+  "synthetic_volume_gib": 4.25,
+  "production_configuration_changed": false,
+  "production_gate_640m_waived": false,
+  "exit_code": 0,
+  "checks": [
+    "Control (no update) exporter commit: succeeded",
+    "PASS: active upload and exact bytes survived program rollback; no backup or fence. Exporter commit: succeeded",
+    "PASS: coordinator restarted mid-cutover; reconciled actual old programs",
+    "PASS: broken Web startup restored program only; newer data survived",
+    "PASS: invalid pair signature and bounded fast staging disk refused without fencing",
+    "PASS: changed recovery point refused before stop; no slow fallback",
+    "PASS: all four post-restore-point volumes reread and matched"
+  ],
+  "boundary": "The committed mandatory release rehearsal continues to use the original 640 MiB default and must fail until the independent resource issue is resolved. This alternative configuration does NOT certify the default or authorize changing production."
+}
