@@ -8,7 +8,37 @@
 
 先点 **下载并验证**，期间旧服务继续提供读写。准备成功后 30 分钟内可选择 **重启并升级**。未确认、包损坏、盘满、来源改变、发现定制挂载或不支持的 Provider 均不会触发准备阶段停服。过期需重新准备。下载时间是流式传输、落盘和 SHA-256 的时间；“含验证总计”还包含运行态准入、签名复核、解包检查和镜像预装。不是倒计时或服务时限。
 
-确认重启不联网、不再 `docker load`、不编译。执行器重新核对本地不可变镜像、当前版本、配置、可用空间。随后关闭入口、等待空闲、停写备份、迁移至指定 revision、切换 API/worker/Web，待真实健康检查通过才重新开放。回滚也会先备份当前数据，只切回旧程序，不降库。最近登录超过 10 分钟需要重新登录根管理员。状态不明先看独立进度页，不重复提交。
+确认重启不再访问发布源、不再 `docker load`、不编译。**确认框会区分「仅换程序」和「完整维护」。** 前者列出需要替换的角色和已恢复验证的数据备份时间；后者说明不能走快路径的原因，并显示本机上一次完整操作耗时（如有）。旧实例/旧发布仍走完整维护。最近登录超过 10 分钟需要重新登录根管理员。状态不明先看独立进度页，不重复提交。
+
+| 确认框 | 确认后发生什么 | 失败或回滚 |
+|---|---|---|
+| 仅换程序 | Web、API 或两者，按签名配对说明选择。只读程序根、实际镜像、配置、挂载、schema、可用空间、恢复凭证和 worker 在线状态都重新核对。不封站、不停 worker/PostgreSQL、不新做全量备份、不迁移。 | 只切回已验证的旧程序；期间的写入保留。慢上传/在途事务允许正常收尾，不为了达标强杀。点击后条件失效会拒绝或要求人工核对，不会悄悄转为完整维护。 |
+| 完整维护 | 验证后封入口，等待 worker 空闲、停止三个程序角色，生成 PostgreSQL 和四类文件一致备份，再迁移及切换。 | 只在旧程序兼容当前数据时恢复；否则保留现场，不自动降库。完整回滚也会备份当前数据。 |
+
+仅换程序并不等于零中断：没有双写或两套同端口容器；替换 Web 时该入口可能暂时返回 502，替换 API 时新请求可能暂时不可用。确认成功必须经同源 `/login` 和 `/api/health` **实际读到各自预期的构建标识**、匿名管理接口仍是 401、worker 心跳和数据库版本正常。不能凭 Nginx 返回 200、Docker 显示 running 或前端倒计时认定成功。
+
+### 首次启用仅换程序（独立维护窗口）
+
+1. **先完整安装支持构建标识的应用及已核验签名的工具包。** `v0.1.4` 本身尚不能证明该能力，首次引入更新器/迁移/依赖变更不是快路径。不要为此次接入删除恢复点、改写 `state.json` 或复制个人 SSH 凭据。
+2. 在隔离 Linux/Docker 上拷贝一份**已停写生成**的完整五组件备份。以已拉取且核验的对应 PostgreSQL **镜像 ID**，在新的私有 scratch 目录运行工具（参数中的名字均为示意）：
+
+   ```sh
+   python3 -I /usr/local/lib/chat-reader-updater/prove_recovery.py \
+     /isolated/backups "$backup_relative_path" /isolated/scratch "$pg_image_id" \
+     "$trusted_owner_repo" "$numeric_repository_id" /isolated/program-recovery.json
+   ```
+
+   工具实际恢复 PG 到无网络、无宿主挂载的临时实例，实际解包并读回四类文件。把签发的结果由运维私下送回对应宿主，以 `root:root`, `0600` 安装到 `/etc/chat-reader/updater/program-recovery.json`。生产备份需保留相同的相对位置、清单和字节，不修改用户卷。这里的日期是**那一份备份**的日期，不是本次点击时刻。
+3. 确认没有活动/未解决任务，停止 `chat-reader-updater.service`（独立进度服务可保留），运行 `/usr/local/lib/chat-reader-updater/updater audit-hardening`。此时**不要创建 profile 标记**；工具对原可写容器完整扫描，核验来源、旧程序、本机布置、配置和卷。失败则不接入。
+4. `systemctl enable --now chat-reader-program-scratch.service` 准备三个私有磁盘临时目录；全是程序临时文件，不是用户业务卷。父目录仅 root 可遍历，磁盘 bind 挂载 `noexec,nosuid,nodev`，不把大上传挤进小内存 tmpfs。按原维护流程收尾现有上传、事务和 worker；保留 `.env`、Compose 和现有镜像指针。加载受信的 `current-images.env` 并导出其中各角色镜像，沿用本机**原来的**项目名、`--project-directory`、`--env-file` 和两个 `-f`，仅追加 `-f /usr/local/lib/chat-reader-updater/program-profile.yml`，使用 `up -d --no-deps --no-build --pull never api web import-worker` 重建**同版本**程序。不要启动 migrate、不要重建 PostgreSQL。
+5. 由 root 建立 `0600` 的 `/etc/chat-reader/updater/program-profile.enabled`，待同版本程序启动，执行 `updater enroll-hardening`。它再次扫描真实程序根、比对原配置、PG 身份和四个原卷，实际读回恢复点后登记。成功再启动协调器并确认旧站正常。未通过时保留现场：如尚未登记新指纹，用原镜像/两个原 Compose 文件恢复同版本、移开新标记，重新核验；不要混用新标记和旧布局，不手写指纹。后续所有运维 Compose 操作均须保留此覆盖层及独立的 `WORKER_IMAGE`。
+6. 验证后的恢复点以 root 所有的文件身份、长度、修改/变更时间和清单摘要封存。**七天内**不为每次准备或确认重新扫描大归档；任一改变、消失或超过七天，快路径拒绝。更换已恢复备份或定期独立复核：在无活动任务时停协调器，执行 `updater refresh-recovery` 完整读回并重新登记，再启动协调器。整个过程旧应用可在线；不会替换数据库、删除旧备份或自动恢复损坏的文件。
+
+### 什么版本有资格
+
+发布运行从该仓库同频道的上一正式发布取得签名清单及原镜像包，检查提交祖先关系、公钥、配置 ID 和数据合同。首批只识别静态 JSX 文本/样式、少数 CSS 声明，以及搜索服务中已限定的纯文本函数；不是按目录或 HTTP 方法放行。实际旧/新 API 各写入正常导入，双方各自在 PostgreSQL 独立 SELECT-only 角色、程序根和四个只读业务卷下读两代数据。未覆盖的业务修改、环境变化及不同程序底座走完整路径。受信仓库是 Fork 时全过程使用该 Fork 的真实版本和公钥。
+
+发布物中的 `program-evidence.json` 记录资格；仅通过者附 `program-transition-v1.json` 及 Ed25519 签名，绑定原 release、两侧不可变身份、原清单字节与证据。旧更新器忽略附加文件。预演和签名工作分离；私钥不进入兼容测试容器。初版不把不同配对的结果串联推断：上次仅替换了一部分角色、实际混合布局不在下一对起始证明中，**下一次明确提示完整维护**。回滚仍按最近一次已证实的精确角色布局，而非把未重启的 worker 标记成新版。
 
 进度页由独立进程在 `/__updates/` 提供，停服/刷新不依赖 Next 或 API。它是只读页；必须携带由同源根管理员预先领取、限单个任务的 Secure/HttpOnly/SameSite=Strict Cookie。不要复制 Cookie、URL 参数或日志给其他人。其他管理员重新领取同一任务的票据会替换旧票据。浏览器关闭不取消已提交的任务。
 
@@ -87,7 +117,7 @@ sudo env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME=/root LANG=C DOCKER_HOST=uni
 Fork 自己同步上游、合并、测试、签名、发版。应用不自动合并源码，不能下载 URL、切换发行方或上传更新包。一个签名清单同时声明源码 SHA、Actions run/attempt、制品 ID/digest、镜像 config/RootFS、GHCR digest、归档大小与 SHA-256、变更、来源和最低更新器协议。
 
 1. 对稳定 `vX.Y.Z` 和预览 `vX.Y.Z-rc.N` 标签启用仓库 ruleset，限制创建/修改和 workflow 变更；启用受审核的 `signed-releases` 环境，只允许受保护发行标签。使用 Fork **自己的** numeric repository ID，将仓库变量 `UPDATE_DISTRIBUTION` 设为 `OWNER/REPO:ID`。
-2. 在受保护用途的环境配置 `UPDATE_SIGNING_KEY`（Base64 编码的 Ed25519 PKCS#8 PEM 私钥），`UPDATE_PUBLIC_KEY`（原始公钥 Base64）。私钥不入仓库、不在控制台打印，不装到实例。仅发布 job 获得签名密钥和写 Packages/Releases 的权限。普通 CI 或 PR 不给这些权限。
+2. 在受保护的 `signed-releases` 环境配置 `UPDATE_SIGNING_KEY`（Base64 编码的 Ed25519 PKCS#8 PEM 私钥），并钉住 `UPDATE_PUBLIC_KEY`（原始公钥 Base64）。要签发快路径，还要把同一个**公钥**设为仓库 Actions 变量 `UPDATE_PUBLIC_KEY`，让无签名权限的兼容测试能验证旧发布。不要把私钥设为仓库变量。签名器独立核对密钥配对；普通 CI 和演练均无签名/发行写权限。
 3. 在开发者自己的经授权测试命名空间验证发行流程：完整原 CI → 此精确提交的独立制品检查 → 隔离更新演练 → 推送同一制品内的镜像到 GHCR → 按 digest 回读并比对 → 以 draft 上传并核对所有文件 → 公布 Release。发布确认同时检查发起运行、尝试和关联资格运行；不选“最近成功”。仅首次完整资格运行的 attempt 1 可用于发布，重试须重新发起完整资格验证。历史 image-only 修复白名单不适用于 Fork。实例首版只从签名 Release 包升级，不另走可变镜像标签。
 4. 修改 schema/Provider/job 合同时先验证迁移、备份和上一版的读写语义，再显式维护 `deploy/updater/compatibility.json`。v1 只接受已知 ABI，只允许相同 schema/ABI 的程序回退。旧读取语义不明时宁可拒绝。更换公钥/发行方是单独维护操作，不由待升级版本自行授权。
 
@@ -101,6 +131,6 @@ Fork 自己同步上游、合并、测试、签名、发版。应用不自动合
 | 宿主机在迁移/确认中重启 | systemd 启动后先核对真实程序、挂载、schema、持久指针和维护记号；不能证明安全则隔离，不盲目重放。 |
 | 需要验证或实际恢复 | 用复制出的备份在**新的隔离 PostgreSQL 和四个新业务卷**中先运行原 `verify_backup.sh`、恢复并核对 schema、关键行、四类文件、worker 和 HTTPS。先备存事发数据。人工选择数据权威版本后再制定切流步骤，不向生产卷就地解包。 |
 
-备份位置为 `<backups>/update-<job>/chat-reader-<UTC>`，包含 `postgres.dump`、四类归档、TOC、清单和校验和。每次确认都新建停写备份，绝不自动删旧备份。镜像准备目录位于宿主机状态路径，不在应用卷中；准备不会将数据卷快照冒充最终停写备份。源、Docker root、备份分属不同文件系统时分别计算空间。2026-11-18 的 `king` 历史余量不是下次准入证明。本功能不在 `king` 演练。
+完整维护备份位置为 `<backups>/update-<job>/chat-reader-<UTC>`，包含 `postgres.dump`、四类归档、TOC、清单和校验和。归档落盘时算 SHA，发布备份目录前独立读回；同一遍验证文件摘要、gzip 完整性、tar 结构，PG 另验 TOC。旧备份格式和手动路径保留。**仅换程序不生成新备份；两条路径都不自动删除恢复点。** 镜像准备目录位于宿主机状态路径，不在应用卷中。快路径只预算实际下载、镜像装载临时包、新层及余量。`king` 的历史容量不能证明下一次准入，本功能不在 `king` 演练。
 
 性能目标：制品传输并落盘 30 秒、确认重启到健康恢复 15 秒；分别记录网络传输、准备总时间、用户视角恢复和实际维护间隔。大数据备份、繁忙 worker、慢链路/磁盘、慢启动或 schema 变化都可能超过目标；绝不按计时器提前报成功。当前实测、截图、失败与尚未验证的边界见[隔离验收记录](../evidence/online-update-2026-11-18/verification.md)。

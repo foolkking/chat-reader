@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -40,41 +41,53 @@ type staged struct {
 	JobID                        string
 	From, Fingerprint            string
 	Expires, DownloadMS, ReadyMS int64
+	Plan                         cutover `json:",omitempty"`
+}
+type fastPair struct {
+	StageID string
+	Plan    cutover
 }
 type state struct {
-	Current     Release
-	Previous    *Release
-	Fingerprint string
-	Candidate   *candidate
-	Prepared    *staged
-	Job         *job
-	Used        []string
+	Current      Release
+	Previous     *Release
+	Fingerprint  string
+	Candidate    *candidate
+	Prepared     *staged
+	Job          *job
+	Used         []string
+	FastPrevious *fastPair `json:",omitempty"`
+	LastFullMS   int64     `json:",omitempty"`
 }
 type intent struct {
-	Expected string `json:"expected"`
-	Target   string `json:"target"`
-	ID       string `json:"id"`
+	Expected    string `json:"expected"`
+	Target      string `json:"target"`
+	ID          string `json:"id"`
+	Preparation string `json:"preparation,omitempty"`
 }
 type grant struct {
 	ID, Hash string
 	Expires  int64
 }
 type view struct {
-	Source     string `json:"source"`
-	Channel    string `json:"channel"`
-	Current    string `json:"current"`
-	Revision   string `json:"revision"`
-	Target     string `json:"target,omitempty"`
-	TargetID   string `json:"target_id,omitempty"`
-	Notes      string `json:"notes,omitempty"`
-	Previous   string `json:"previous,omitempty"`
-	PreviousID string `json:"previous_id,omitempty"`
-	Blocked    string `json:"blocked,omitempty"`
-	Bytes      int64  `json:"archive_bytes,omitempty"`
-	Prepared   bool   `json:"prepared,omitempty"`
-	DownloadMS int64  `json:"download_ms,omitempty"`
-	ReadyMS    int64  `json:"ready_ms,omitempty"`
-	Job        *job   `json:"job,omitempty"`
+	Source       string   `json:"source"`
+	Channel      string   `json:"channel"`
+	Current      string   `json:"current"`
+	Revision     string   `json:"revision"`
+	Target       string   `json:"target,omitempty"`
+	TargetID     string   `json:"target_id,omitempty"`
+	Notes        string   `json:"notes,omitempty"`
+	Previous     string   `json:"previous,omitempty"`
+	PreviousID   string   `json:"previous_id,omitempty"`
+	Blocked      string   `json:"blocked,omitempty"`
+	Bytes        int64    `json:"archive_bytes,omitempty"`
+	Prepared     bool     `json:"prepared,omitempty"`
+	DownloadMS   int64    `json:"download_ms,omitempty"`
+	ReadyMS      int64    `json:"ready_ms,omitempty"`
+	Preparation  string   `json:"preparation,omitempty"`
+	Plan         *cutover `json:"plan,omitempty"`
+	RollbackPlan *cutover `json:"rollback_plan,omitempty"`
+	LastFullMS   int64    `json:"last_full_ms,omitempty"`
+	Job          *job     `json:"job,omitempty"`
 }
 type deployHost interface {
 	perform(string, Release, Release, string, string) (string, error)
@@ -230,6 +243,12 @@ func (e *engine) view() view {
 		if v.Prepared {
 			v.DownloadMS = s.Prepared.DownloadMS
 			v.ReadyMS = s.Prepared.ReadyMS
+			p := s.Prepared.Plan
+			if p.Mode == "" {
+				p = cutover{Mode: "full", Reason: "no_pair_proof"}
+			}
+			v.Plan = &p
+			v.Preparation = s.Prepared.JobID
 		}
 		if !eligible(s.Current, r) {
 			v.Blocked = "incompatible_release"
@@ -238,7 +257,11 @@ func (e *engine) view() view {
 	if s.Previous != nil && reversible(s.Current, *s.Previous) {
 		v.Previous = s.Previous.Version
 		v.PreviousID = identity(*s.Previous)
+		if s.FastPrevious != nil {
+			v.RollbackPlan = &s.FastPrevious.Plan
+		}
 	}
+	v.LastFullMS = s.LastFullMS
 	return v
 }
 func (e *engine) check() error {
@@ -310,6 +333,10 @@ func (e *engine) start(action string, i intent) error {
 		if (action == "apply") != s.ready() {
 			return errors.New("preparation_required_or_already_ready")
 		}
+		if action == "apply" && ((i.Preparation != "" && i.Preparation != s.Prepared.JobID) ||
+			(s.Prepared.Plan.Mode == "program" && i.Preparation != s.Prepared.JobID)) {
+			return errors.New("stale_preparation")
+		}
 	case "rollback":
 		if s.Previous == nil || !reversible(s.Current, *s.Previous) {
 			return errors.New("unsafe_rollback")
@@ -339,13 +366,20 @@ func (e *engine) start(action string, i intent) error {
 	}
 	old, fp := s.Current, s.Fingerprint
 	preparedID := ""
+	plan := cutover{Mode: "full", Reason: "no_pair_proof"}
 	if action == "apply" {
 		preparedID = s.Prepared.JobID
+		if s.Prepared.Plan.Mode != "" {
+			plan = s.Prepared.Plan
+		}
+	} else if action == "rollback" && s.FastPrevious != nil {
+		preparedID = s.FastPrevious.StageID
+		plan = s.FastPrevious.Plan
 	}
-	e.launch(func() { e.run(i.ID, old, c, fp, action, preparedID) })
+	e.launch(func() { e.run(i.ID, old, c, fp, action, preparedID, plan) })
 	return nil
 }
-func (e *engine) run(id string, old Release, c candidate, fp, action, preparedID string) {
+func (e *engine) run(id string, old Release, c candidate, fp, action, preparedID string, plan cutover) {
 	next := c.Release
 	dir := filepath.Join(e.root, "jobs", id)
 	if os.Mkdir(dir, 0700) != nil {
@@ -361,6 +395,23 @@ func (e *engine) run(id string, old Release, c candidate, fp, action, preparedID
 		fresh, x := e.s.check()
 		if x != nil || !reflect.DeepEqual(fresh, c) {
 			e.phase("refused", "source_changed")
+			return
+		}
+		if qualifies(old, next) {
+			reply, err := e.h.perform("classify-program", old, next, fp, dir)
+			if err != nil || strict([]byte(reply), &plan) != nil ||
+				!((plan.Mode == "full" && plan.Reason == "mutable_host") || (plan.Mode == "program" &&
+					reflect.DeepEqual(plan.Roles, next.Transition.Roles) && plan.Recovery != "")) {
+				e.phase("refused", "recovery_or_profile")
+				return
+			}
+		} else if next.Transition != nil {
+			plan.Reason = "different_baseline"
+		} else if next.Schema != old.Schema {
+			plan.Reason = "schema_change"
+		}
+		if atomic(filepath.Join(dir, "plan.json"), plan, 0600) != nil {
+			e.phase("refused", "job_storage")
 			return
 		}
 		if call("space") != nil {
@@ -388,15 +439,26 @@ func (e *engine) run(id string, old Release, c candidate, fp, action, preparedID
 			return
 		}
 		e.mu.Lock()
-		e.st.Prepared = &staged{Candidate: c, JobID: id, From: identity(old), Fingerprint: fp, Expires: time.Now().Add(30 * time.Minute).Unix(), DownloadMS: e.st.Job.Times["downloading"], ReadyMS: time.Now().UnixMilli() - e.st.Job.StartedMS}
+		e.st.Prepared = &staged{Candidate: c, JobID: id, From: identity(old), Fingerprint: fp, Expires: time.Now().Add(30 * time.Minute).Unix(), DownloadMS: e.st.Job.Times["downloading"], ReadyMS: time.Now().UnixMilli() - e.st.Job.StartedMS, Plan: plan}
 		e.phaseLocked("prepared", "")
 		e.mu.Unlock()
 		return
 	}
 	// No remote reads, image loading, or compilation on the restart path. Recheck
 	// actual retained image identities and current backup headroom before fencing.
-	if action == "apply" && (!idRE.MatchString(preparedID) || atomicBytes(filepath.Join(dir, "staging-job"), []byte(preparedID), 0600) != nil) {
+	if (action == "apply" || plan.Mode == "program") && (!idRE.MatchString(preparedID) || atomicBytes(filepath.Join(dir, "staging-job"), []byte(preparedID), 0600) != nil) {
 		e.phase("refused", "job_storage")
+		return
+	}
+	if plan.Mode == "program" {
+		if action == "apply" {
+			if !qualifies(old, next) {
+				e.phase("refused", "source_changed")
+				return
+			}
+			next = programLayout(old, next, plan.Roles)
+		}
+		e.program(dir, old, next, fp, preparedID, plan, action)
 		return
 	}
 	if call("restart-preflight") != nil {
@@ -418,6 +480,7 @@ func (e *engine) run(id string, old Release, c candidate, fp, action, preparedID
 	}
 	e.mu.Lock()
 	e.st.Previous = &old
+	e.st.FastPrevious = nil
 	e.st.Current = next
 	e.st.Candidate = nil
 	e.st.Prepared = nil
@@ -430,6 +493,9 @@ func (e *engine) run(id string, old Release, c candidate, fp, action, preparedID
 		e.phase("recovery_required", "preserve_and_recover")
 		return
 	}
+	e.mu.Lock()
+	e.st.LastFullMS = time.Now().UnixMilli() - e.st.Job.StartedMS
+	e.mu.Unlock()
 	e.phase("succeeded", "")
 }
 
@@ -443,6 +509,9 @@ func (e *engine) reconcile() error {
 		return e.phase("refused", "interrupted_before_maintenance")
 	}
 	dir := filepath.Join(e.root, "jobs", j.ID)
+	if strings.HasPrefix(j.Phase, "program-") {
+		return e.reconcileProgram(dir)
+	}
 	if j.Phase == "commit" && identity(e.st.Current) == j.Target {
 		if _, x := e.h.perform("reconcile-committed", e.st.Current, e.st.Current, e.st.Fingerprint, dir); x == nil {
 			return e.phase("succeeded", "")

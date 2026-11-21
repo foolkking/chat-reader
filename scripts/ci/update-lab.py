@@ -3,6 +3,7 @@
 The origin is an isolated TLS GitHub-protocol fixture, not a live GitHub acceptance.
 Never invoke this on an installed instance. Test signing material stays in the lab.
 """
+
 import base64
 import gzip
 import hashlib
@@ -27,14 +28,19 @@ PTR = Path("/etc/chat-reader/release-state")
 PUBLIC = Path("/var/lib/chat-reader-update-progress")
 ROOT = Path("/var/lib/chat-reader-updater")
 REPO = "fixture/chat-reader"
-ORIGIN = "https://localhost:32481"
+PORT = 32482 if (LAB / "alternate-port").is_file() else 32481
+ORIGIN = f"https://localhost:{PORT}"
 CMD_GID, STATUS_GID = 29001, 65534
 SCHEMA = json.loads((DIST / "deploy/updater/compatibility.json").read_text())["schema"]
 
 
 def run(*args, stdin=None, env=None):
     p = subprocess.run(
-        [str(x) for x in args], input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
+        [str(x) for x in args],
+        input=stdin,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
     )
     if p.returncode:
         raise RuntimeError(
@@ -67,8 +73,18 @@ def serve():
             pass
 
         def do_GET(self):
-            files = {1: "update-v1.json", 2: "update-v1.json.sig", 3: "chat-reader-images.tar.gz"}
+            files = {
+                1: "update-v1.json",
+                2: "update-v1.json.sig",
+                3: "chat-reader-images.tar.gz",
+            }
             root = LAB / "feed"
+            for i, n in [
+                (4, "program-transition-v1.json"),
+                (5, "program-transition-v1.json.sig"),
+            ]:
+                if (root / n).is_file():
+                    files[i] = n
             if self.path == "/repos/" + REPO:
                 body = json.dumps({"id": 31, "full_name": REPO}).encode()
             elif self.path.startswith("/repos/" + REPO + "/releases?"):
@@ -87,7 +103,7 @@ def serve():
                 ).encode()
             elif self.path.startswith("/repos/" + REPO + "/releases/assets/") and self.path.split("/")[
                 -1
-            ] in ("1", "2", "3"):
+            ] in tuple(map(str, files)):
                 file = root / files[int(self.path.split("/")[-1])]
                 self.send_response(200)
                 self.send_header("Content-Length", str(file.stat().st_size))
@@ -127,9 +143,19 @@ def fixture_version(base, rev, tag, folder, *, failure_schema=None, failed_start
             )
         if failed_start and role == "web":
             df += 'CMD ["node","-e","process.exit(77)"]\n'
+        if role == "web":
+            # These fixtures deliberately relabel an actual qualified image.
+            # Rebind only its existing application-emitted /login build marker;
+            # never synthesize a healthy response at the test gateway.
+            old_marker = hashlib.sha256(("reader:web:" + base).encode()).hexdigest()
+            new_marker = hashlib.sha256(("reader:web:" + rev).encode()).hexdigest()
+            df += f"RUN cd /app/apps/web && sed -i 's/{old_marker}/{new_marker}/g' .next/routes-manifest.json server.js .next/required-server-files.json\n"
         if role == "api":
             dump(ctx / "metadata.json", {"revision": rev})
-            df += "COPY metadata.json /app/app/build_metadata.json\n"
+            # The fixture uses umask 077. Give the non-root app read access
+            # just as scripts.write_build_metadata does in the shipping build.
+            (ctx / "metadata.json").chmod(0o644)
+            df += "COPY --chown=chatreader:chatreader metadata.json /app/app/build_metadata.json\n"
             if failure_schema:
                 (ctx / "refusal.py").write_text(
                     "revision = {!r}\ndown_revision = {!r}\nbranch_labels=None\ndepends_on=None\n"
@@ -140,14 +166,23 @@ def fixture_version(base, rev, tag, folder, *, failure_schema=None, failed_start
                 )
                 df += "COPY refusal.py /app/alembic/versions/fixture_refusal.py\n"
         (ctx / "Dockerfile").write_text(df)
-        run("docker", "build", "--network=none", "--pull=false", "-t", f"chat-reader-{role}:{rev}", ctx)
+        run(
+            "docker",
+            "build",
+            "--network=none",
+            "--pull=false",
+            "-t",
+            f"chat-reader-{role}:{rev}",
+            ctx,
+        )
     roles = ("api", "import-worker", "migrate", "web")
     for role in ("migrate", "import-worker"):
         run("docker", "tag", "chat-reader-api:" + rev, f"chat-reader-{role}:{rev}")
     out = folder / "chat-reader-images.tar.gz"
     with out.open("wb") as f, gzip.GzipFile(fileobj=f, mode="wb", compresslevel=1) as zipped:
         with subprocess.Popen(
-            ["docker", "save", *[f"chat-reader-{r}:{rev}" for r in roles]], stdout=subprocess.PIPE
+            ["docker", "save", *[f"chat-reader-{r}:{rev}" for r in roles]],
+            stdout=subprocess.PIPE,
         ) as p:
             shutil.copyfileobj(p.stdout, zipped)
             assert p.wait() == 0
@@ -185,7 +220,18 @@ def fixture_version(base, rev, tag, folder, *, failure_schema=None, failed_start
         ),
     )
     (folder / "update-v1.json.sig").write_bytes(
-        base64.b64encode(run("openssl", "pkeyutl", "-sign", "-rawin", "-inkey", LAB / "sign.key", "-in", raw))
+        base64.b64encode(
+            run(
+                "openssl",
+                "pkeyutl",
+                "-sign",
+                "-rawin",
+                "-inkey",
+                LAB / "sign.key",
+                "-in",
+                raw,
+            )
+        )
     )
 
 
@@ -223,9 +269,15 @@ def setup(base):
         p.chmod(0o750)
     LIB.chmod(0o755)
     (LIB.parent).chmod(0o755)
-    for f in ("host.py", "nginx.conf"):
+    for f in ("host.py", "nginx.conf", "program-profile.yml", "prove_recovery.py", "program_scratch.py"):
         shutil.copyfile(DIST / "deploy/updater" / f, LIB / f)
-    for f in ("preflight_release_space.sh", "backup.sh", "backup_volume_reader.sh", "verify_backup.sh"):
+    for f in (
+        "preflight_release_space.sh",
+        "backup.sh",
+        "backup_volume_reader.sh",
+        "verify_backup.sh",
+        "backup_stream.py",
+    ):
         shutil.copyfile(DIST / "deploy" / f, LIB / f)
     shutil.copyfile(LAB / "updater", LIB / "updater")
     (LIB / "updater").chmod(0o755)
@@ -268,11 +320,15 @@ def setup(base):
     # Only synthetic non-running candidate tags in this newly created engine.
     # The old release's shared layers stay installed, as on an existing instance.
     run(
-        "docker", "image", "rm", *[f"chat-reader-{r}:{b}" for r in ("api", "web", "import-worker", "migrate")]
+        "docker",
+        "image",
+        "rm",
+        *[f"chat-reader-{r}:{b}" for r in ("api", "web", "import-worker", "migrate")],
     )
     for suffix in ("", ".sig"):
         shutil.copyfile(
-            LAB / "initial" / ("update-v1.json" + suffix), ETC / ("installed-update-v1.json" + suffix)
+            LAB / "initial" / ("update-v1.json" + suffix),
+            ETC / ("installed-update-v1.json" + suffix),
         )
     (PTR / "current-images.env").write_text(
         f"RELEASE_SHA={a}\nAPI_IMAGE=chat-reader-api:{a}\nWEB_IMAGE=chat-reader-web:{a}\n"
@@ -310,11 +366,13 @@ def setup(base):
         # process bound to Docker's published ports (which would block recreation).
         # Several WSL distros can share a kernel/network namespace. Never take
         # over or remove another fixture's bridge route.
-        routes=run("ip","route").decode()
-        prefix=next("10.237."+str(n)+"." for n in range(83,150) if ("10.237."+str(n)+".") not in routes)
+        routes = run("ip", "route").decode()
+        prefix = next(
+            "10.237." + str(n) + "." for n in range(83, 150) if ("10.237." + str(n) + ".") not in routes
+        )
         c = DIST / "docker-compose.production.yml"
         text = c.read_text()
-        for role, addr in [("api", prefix+"10"), ("web", prefix+"11")]:
+        for role, addr in [("api", prefix + "10"), ("web", prefix + "11")]:
             head, tail = text.split("\n  " + role + ":\n", 1)
             needle = "    networks:\n      - backend"
             assert needle in tail
@@ -323,20 +381,27 @@ def setup(base):
                 + "\n  "
                 + role
                 + ":\n"
-                + tail.replace(needle, "    networks:\n      backend:\n        ipv4_address: " + addr, 1)
+                + tail.replace(
+                    needle,
+                    "    networks:\n      backend:\n        ipv4_address: " + addr,
+                    1,
+                )
             )
         needle = "  backend:\n    driver: bridge"
         assert text.count(needle) == 1
         c.write_text(
-            text.replace(needle, needle + "\n    ipam:\n      config:\n        - subnet: "+prefix+"0/24")
+            text.replace(
+                needle,
+                needle + "\n    ipam:\n      config:\n        - subnet: " + prefix + "0/24",
+            )
         )
-        api_upstream, web_upstream = prefix+"10:8000",prefix+"11:3000"
+        api_upstream, web_upstream = prefix + "10:8000", prefix + "11:3000"
     ng.write_text(
         f"""user nobody; worker_processes 1; pid /lab/nginx.pid; error_log /lab/nginx-error.log;
 events {{worker_connections 128;}} http {{access_log off; client_body_temp_path /lab/nginx-client-body;
-proxy_temp_path /lab/nginx-proxy-temp; server {{listen {ip}:443 ssl; listen 32481 ssl;
+proxy_temp_path /lab/nginx-proxy-temp; server {{listen {ip}:443 ssl; listen {PORT} ssl;
 ssl_certificate /lab/cert.pem; ssl_certificate_key /lab/tls.key; include {LIB}/nginx.conf;
-location /api/ {{proxy_pass http://{api_upstream};proxy_set_header Host $http_host;}}
+location /api/ {{proxy_http_version 1.1;proxy_request_buffering off;proxy_pass http://{api_upstream};proxy_set_header Host $http_host;}}
 location / {{proxy_pass http://{web_upstream};proxy_set_header Host $http_host;}} }} }}"""
     )
     launch(base)
@@ -413,7 +478,11 @@ def launch(base):
         try:
             if (
                 json.loads(
-                    run("docker", "inspect", run(*dc, "ps", "-q", "api", env=environ).decode().strip())
+                    run(
+                        "docker",
+                        "inspect",
+                        run(*dc, "ps", "-q", "api", env=environ).decode().strip(),
+                    )
                 )[0]["State"]["Health"]["Status"]
                 == "healthy"
             ):
@@ -443,7 +512,10 @@ def launch(base):
     )
     run(LIB / "updater", "enroll")
     checkpoint()
-    for cmd, kw in [("progress", dict(user=65534, group=65534, extra_groups=[])), ("control", {})]:
+    for cmd, kw in [
+        ("progress", dict(user=65534, group=65534, extra_groups=[])),
+        ("control", {}),
+    ]:
         subprocess.Popen(
             [str(LIB / "updater"), cmd],
             stdin=subprocess.DEVNULL,
@@ -537,7 +609,7 @@ def verify(expected_pairs=1):
         == b"7129"
     )
     print(
-        f"Verified {expected_pairs} upgrade/rollback pair(s), {2*expected_pairs} five-component backups, four file sentinels, PostgreSQL sentinel/identity and six configuration hashes."
+        f"Verified {expected_pairs} upgrade/rollback pair(s), {2 * expected_pairs} five-component backups, four file sentinels, PostgreSQL sentinel/identity and six configuration hashes."
     )
 
 

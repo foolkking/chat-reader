@@ -2,7 +2,16 @@
 const { createRequire } = require("node:module");
 const path = require("node:path"), fs = require("node:fs"), assert = require("node:assert/strict");
 const { chromium } = createRequire(path.resolve(__dirname, "../../apps/web/package.json"))("@playwright/test");
-const origin="https://localhost:32481", args=process.argv.slice(2);
+const origin=process.env.UPDATE_LAB_ALTERNATE_PORT==="32482"?"https://localhost:32482":"https://localhost:32481", args=process.argv.slice(2);
+const scope=process.env.UPDATE_LAB_PROGRAM, thermal=process.env.UPDATE_LAB_CACHE;
+const crypto=require("node:crypto");
+const mark=(role,rev)=>crypto.createHash("sha256").update(`reader:${role}:${rev}`).digest("hex");
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+function operator(...args){
+ const lab=process.env.UPDATE_LAB_CONTAINER;
+ assert.match(lab,/^cr-(?:update-lab-[0-9]+-[0-9]+|program-(?:e|final)-20261121)$/);
+ return require("node:child_process").execFileSync("docker",["exec",lab,"python3","-B","/lab/source/scripts/ci/update-program-lab.py",...args],{stdio:"pipe"}).toString().trim();
+}
 async function main(){
  const credential=JSON.parse(fs.readFileSync(process.env.UPDATE_LAB_LOGIN,"utf8"));
  const browser=await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ? {executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH} : {channel:"chromium"});
@@ -32,6 +41,16 @@ async function main(){
     await show.click();
     return runtime.getByRole("region",{name:/Version updates|版本更新/});};
   const measured=[];
+  let revisions,writeIds=[];
+  const write=async(label)=>{
+    const title="program verification "+label+" "+crypto.randomUUID();
+    const r=await ctx.request.post(origin+"/api/conversations",{data:{title,messages:[{role:"user",content_markdown:title},{role:"assistant",content_markdown:"preserve this synthetic reply"}]},headers:{Origin:origin}});
+    assert.equal(r.status(),201);const id=(await r.json()).conversation.id;writeIds.push(id);
+  };
+  if(scope){
+    assert.ok(["web","api","api+web"].includes(scope)&&["cold","warm"].includes(thermal));
+    revisions=JSON.parse(operator("cert",scope));await write("before");
+  }
   for(const action of (args.length?args:["apply","rollback"])){
    const panel=await open();
    if(action==="apply"){
@@ -46,9 +65,63 @@ async function main(){
     assert.ok(!stopped && state.prepared && state.archive_bytes>0);assert.ok(state.download_ms>0 && state.ready_ms>=state.download_ms);
     measured.push({action:"prepare",archive_bytes:state.archive_bytes,download_ms:state.download_ms,ready_host_ms:state.ready_ms,click_to_ready_ms:elapsed,
       continuous_probes:true,phases_ms:state.job.timings_ms});
-    console.log("prepare metrics: "+JSON.stringify(measured.at(-1)));await restart.click();
+    console.log("prepare metrics: "+JSON.stringify(measured.at(-1)));
+    if(scope){
+      assert.equal(state.plan?.mode,"program");assert.deepEqual(state.plan.roles,scope.split("+"));
+      assert.ok(state.plan.recovery_at);operator("cache",scope,thermal);
+    }
+    await restart.click();
    }
    else await panel.getByRole("button",{name:/Roll back to|回滚到/}).click();
+   if(scope) {
+    await panel.getByText(/Program-only update|仅换程序/).waitFor();
+    if(process.env.UPDATE_LAB_METRICS && action==="apply"){
+      const image=path.join(path.dirname(process.env.UPDATE_LAB_METRICS),`confirm-${scope}.png`);
+      if(!fs.existsSync(image)) await panel.screenshot({path:image});
+    }
+    const expected={};
+    for(const r of ["api","web"])expected[r]=mark(r,action==="apply"&&scope.split("+").includes(r)?revisions.next:revisions.old);
+    const anon=await browser.newContext({ignoreHTTPSErrors:true,serviceWorkers:"block"});
+    let stop=false,outage=0,maxGap=0,firstReady=null,lastGood=performance.now(),wasDown=false,samples=0;
+    const start=performance.now();
+    const probe=(async()=>{while(!stop){
+      const replies=await Promise.all(["/login","/api/health","/api/admin/runtime-status"].map(path=>anon.request.get(origin+path,{timeout:1800}).catch(()=>null)));
+      const now=performance.now(),ok=replies.every((x,i)=>x&&x.status()===[200,200,401][i]);
+      samples++;
+      if(!ok){wasDown=true;firstReady=null;}
+      else {
+        if(wasDown){outage+=now-lastGood;maxGap=Math.max(maxGap,now-lastGood);wasDown=false;}
+        lastGood=now;
+        const matched=replies[0].headers()["x-chat-reader-build"]===expected.web&&replies[1].headers()["x-chat-reader-build"]===expected.api;
+        if(matched&&firstReady===null)firstReady=now;
+        if(!matched)firstReady=null;
+      }
+      await Promise.all(replies.map(r=>r?.dispose())); if(!stop)await delay(90);
+    }})();
+    try {
+      await panel.getByRole("button",{name:/Confirm restart and view progress|确认重启并查看进度/}).click();
+      await p.waitForURL(origin+"/__updates/"); assert.equal((await p.reload()).status(),200);
+      let terminal=false,wrote=false;
+      for(let i=0;i<600;i++){
+        const response=await ctx.request.get(origin+"/__updates/status");assert.equal(response.status(),200);
+        const s=await response.json();
+        assert.ok(!["fencing","draining","backup","migration"].includes(s.phase),"no full maintenance during program-only update");
+        // On a Web-only cutover the still-running real API accepts user writes.
+        if(scope==="web"&&!wrote&&s.phase==="program-switch"){await write("during");wrote=true;}
+        if(["refused","recovery_required","restored"].includes(s.phase))throw Error(`${action}: ${s.phase} (${s.reason})`);
+        if(s.phase==="succeeded"&&firstReady!==null){terminal=true;
+          measured.push({action,scope,thermal,click_to_target_ms:Math.round(firstReady-start),
+            click_to_confirmed_ms:Math.round(performance.now()-start),observed_outage_upper_ms:Math.round(outage),
+            max_observed_gap_ms:Math.round(maxGap),probe_samples:samples,phases_ms:s.timings_ms});break;}
+        await delay(80);
+      }
+      assert.ok(terminal);if(scope==="web")assert.ok(wrote,"concurrent API write while Web switches");
+      await write("after");
+      for(const id of writeIds)assert.equal((await ctx.request.get(origin+"/api/conversations/"+id)).status(),200);
+      console.log("program metrics: "+JSON.stringify(measured.at(-1)));
+    } finally {stop=true;await probe;await anon.close();}
+    continue;
+   }
    const start=performance.now();await panel.getByRole("button",{name:/Confirm restart and view progress|确认重启并查看进度/}).click();
    await p.waitForURL(origin+"/__updates/");
    const phases=new Set();let down=false, refreshed=false, outcome="",downAt=null,returnedAt=null,status={};
@@ -71,6 +144,7 @@ async function main(){
    measured.push({action,click_to_healthy_ms:Math.round(returnedAt-start),click_to_confirmed_ms:Math.round(performance.now()-start),observed_outage_ms:Math.round(returnedAt-downAt),maintenance_refresh:refreshed,phases_ms:status.timings_ms});
    console.log(action+" metrics: "+JSON.stringify(measured.at(-1)));
   }
+  if(scope)operator("verify",scope);
   if(process.env.UPDATE_LAB_METRICS)fs.writeFileSync(process.env.UPDATE_LAB_METRICS,JSON.stringify(measured,null,2));
  } finally{await browser.close();}
 }

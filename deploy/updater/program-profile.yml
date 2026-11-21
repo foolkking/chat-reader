@@ -1,0 +1,17 @@
+# Opt-in only, after a root operator has audited the original writable containers.
+# A retained worker has its own image identity even when the API alone changes.
+x-program: &program
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+services:
+  api:
+    <<: *program
+    volumes: ["/var/lib/chat-reader-program-scratch/api:/tmp:rw,rprivate"]
+  web:
+    <<: *program
+    volumes: ["/var/lib/chat-reader-program-scratch/web:/tmp:rw,rprivate"]
+  import-worker:
+    <<: *program
+    image: ${WORKER_IMAGE:-${API_IMAGE:-chat-reader-api:latest}}
+    volumes: ["/var/lib/chat-reader-program-scratch/import-worker:/tmp:rw,rprivate"]

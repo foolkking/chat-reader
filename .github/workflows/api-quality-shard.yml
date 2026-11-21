@@ -49,6 +49,11 @@ jobs:
           mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR"
           cd apps/api
           python -m alembic upgrade head
+      - name: Host updater transitions, backup format and publication proof
+        if: inputs.shard == 1
+        run: |
+          (cd deploy/updater && GOTOOLCHAIN=local go test ./...)
+          python -m unittest discover -s scripts/ci -p 'test_update*.py'
       - name: Context runtime and distributed Bundle consistency
         run: |
           python tools/context-skills/build.py --output apps/web/public/skills --check

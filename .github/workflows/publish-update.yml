@@ -38,12 +38,20 @@ jobs:
       transport: ${{ steps.kit.outputs.artifact-digest }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with: {persist-credentials: false}
+        with: {persist-credentials: false, fetch-depth: 0}
       - name: Verify and materialize exact tested archive
         env:
           GH_TOKEN: ${{ github.token }}
           EXACT_RUN: ${{ needs.qualify.outputs.run }}
         run: python3 scripts/ci/publish_update.py materialize "$EXACT_RUN"
+      - name: Evaluate the exact prior-version pair without signing credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}
+        run: |
+          corepack pnpm install --frozen-lockfile --ignore-scripts
+          docker pull postgres:16-alpine >/dev/null
+          python3 scripts/ci/publish_update.py program-proof
       - name: Isolated host updater acceptance (ephemeral runner)
         run: bash scripts/ci/update-rehearsal.sh "$RUNNER_TEMP/verified-release/chat-reader-images.tar.gz" "$GITHUB_SHA"
       - name: Retain redacted timing evidence
@@ -61,8 +69,30 @@ jobs:
           path: ${{ runner.temp }}/chat-reader-updater-linux-amd64.tar.gz
           if-no-files-found: error
           retention-days: 3
+  program-acceptance:
+    needs: qualify
+    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    permissions: {actions: read, contents: read}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          EXACT_RUN: ${{ needs.qualify.outputs.run }}
+        run: python3 scripts/ci/publish_update.py materialize "$EXACT_RUN"
+      - name: Exercise signed selective cutovers on protected synthetic data
+        run: bash scripts/ci/update-rehearsal.sh "$RUNNER_TEMP/verified-release/chat-reader-images.tar.gz" "$GITHUB_SHA" program
+      - name: Preserve samples, including refusals and overruns
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: program-timings-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/program-samples
+          if-no-files-found: warn
+          retention-days: 14
   publish:
-    needs: [qualify, rehearse]
+    needs: [qualify, rehearse, program-acceptance]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: signed-releases

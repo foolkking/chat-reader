@@ -1,0 +1,49 @@
+[
+  {
+    "action": "prepare",
+    "archive_bytes": 208535994,
+    "click_to_ready_ms": 17190,
+    "continuous_probes": true,
+    "download_ms": 1540,
+    "phases_ms": {
+      "admission": 2382,
+      "downloading": 1540,
+      "staging": 12510
+    },
+    "ready_host_ms": 16432
+  },
+  {
+    "action": "apply",
+    "click_to_confirmed_ms": 19443,
+    "click_to_healthy_ms": 19193,
+    "maintenance_refresh": true,
+    "observed_outage_ms": 15543,
+    "phases_ms": {
+      "admission": 3439,
+      "backup": 2977,
+      "commit": 1024,
+      "draining": 3197,
+      "fencing": 196,
+      "health": 5510,
+      "migration": 303,
+      "switching": 1961
+    }
+  },
+  {
+    "action": "rollback",
+    "click_to_confirmed_ms": 18412,
+    "click_to_healthy_ms": 18154,
+    "maintenance_refresh": true,
+    "observed_outage_ms": 15235,
+    "phases_ms": {
+      "admission": 2564,
+      "backup": 2933,
+      "commit": 1026,
+      "draining": 1323,
+      "fencing": 193,
+      "health": 7228,
+      "migration": 349,
+      "switching": 1911
+    }
+  }
+]

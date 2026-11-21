@@ -1,3 +1,6 @@
+import hashlib
+from functools import lru_cache
+
 from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
@@ -48,8 +51,18 @@ def root_health() -> HealthResponse:
 
 
 @router.get("/api/health", response_model=HealthResponse)
-def api_health() -> HealthResponse:
+def api_health(response: Response) -> HealthResponse:
+    marker = _build_marker()
+    if marker:
+        response.headers["X-Chat-Reader-Build"] = marker
+    response.headers["Cache-Control"] = "no-store"
     return health_payload()
+
+
+@lru_cache(maxsize=1)
+def _build_marker() -> str | None:
+    revision = app_info()["revision"]
+    return hashlib.sha256(("reader:api:" + revision).encode()).hexdigest() if revision else None
 
 
 class AppInfoResponse(BaseModel):
