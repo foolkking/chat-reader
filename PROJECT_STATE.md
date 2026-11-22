@@ -1,5 +1,7 @@
 # Project State
 
+**开发分支（非生产）：** 2026-11-23 的[桌面浏览器插件内测](docs/system/BROWSER_EXTENSION.md)新增用户设备授权、当前对话导入、来源保护和共享 Context 快捷出口；开发 head `20261123_0063`。插件未对生产启用，生产版本仍以下一条为准。见[双浏览器验收及未验证边界](docs/evidence/browser-extension-2026-11-23/README.md)。
+
 **当前生产：2026-11-22 01:48:57（北京时间），`king` 已上线 `v0.1.5` / `b824ee949f03ec403e7e60beb677731c2fcff9c4`。** PR #7 经限定授权合并，不改保护规则。标签完整 CI `44925538355/1` 19/19，签名发布 `44925521786/1` 4/4。镜像包、GHCR、生产同源构建标识、权限、worker 心跳、数据汇总及配置独立复核通过。数据库仍为 `20261117_0062`。下载 6.725 秒，本次涉及写入、走完整维护，确认到新版开放 452.871 秒；不把隔离快路径的 9.560 秒当成这次生产时间。[上线、边界与备份记录](docs/deployment.md#v015-production)。
 
 **固定内存导入已交付：** 服务器 worker 仍为 640 MiB；实际 API 与 worker 各核对七个改动文件。独立环境中同样 800 条消息，640 MiB 限额 JSON／Markdown 为 29.7／28.5 秒、worker 峰值约 139／140 MiB；1280 MiB 对照为 5.0／9.3 秒。正文及来源都保留，任务仍原子提交。任意原始 JSON／混合分析仍有原门槛。[合同](docs/system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [复核与失败记录](docs/evidence/import-units-2026-11-21/README.md#最终复核与交接)。

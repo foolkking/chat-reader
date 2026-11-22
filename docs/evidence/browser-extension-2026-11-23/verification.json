@@ -1,0 +1,172 @@
+{
+  "reader_code": "d736bcb3f9d50b6173c9a746a45b1f0bd5b88e2f",
+  "reader_base": "786cd06fac6390ab8d60155da44a1892599a563d",
+  "fork_code": "a3f0ebe738a2e69ea5c866bdddb29ce119f08fc5",
+  "fork_base": "9069e9c7b8023bc1d1162d94f661e26cd2cc4481",
+  "recorded_at": "2026-11-22T19:58:12.201854+00:00",
+  "disposable_only": true,
+  "github_ci_or_publication_claim": false,
+  "browsers": {
+    "chrome": {
+      "label": "chrome-en-faults-final",
+      "source": "network-isolated synthetic fixture",
+      "steps": [
+        "installed extension, toolbar registered to open side panel",
+        "signed-out native authorization flow returned through Reader login",
+        "genuine browser PKCE consent and explicit destination",
+        "real capture, ZIP and committed file import",
+        "identical import returns same conversation",
+        "suffix appended to same conversation",
+        "branch conflict requests review",
+        "browser IME composition and keyboard search focus (not a physical input-method test)",
+        "metadata result opens Reader in a new tab without a device credential in the URL",
+        "move, scoped conversation search and project pin persisted",
+        "rename an owned attachment and open the existing Reader file target",
+        "server generated a new context artifact via the panel",
+        "download bytes: verified context ZIP and canonical members",
+        "Reader webpage: actual quick action downloaded a valid context ZIP",
+        "source closed mid-resource: no upload, actionable interruption",
+        "real OPFS quota override: insufficient temporary space produced no upload",
+        "disconnected resource requires review before any publication",
+        "durable received job finished after source closed, panel reloaded and worker restarted",
+        "offscreen fault injection dropped a real 201; recovered the same conversation via request receipt",
+        "browser opened a native SIDE_PANEL context through a trusted gesture"
+      ],
+      "browser": "151.0.7922.34",
+      "redirectHost": "gihbiofiiflkckcmomddkkjkoifkddfi.chromiumapp.org",
+      "canonical": {
+        "messages": 4,
+        "source_refs": 4,
+        "files": 2,
+        "verified_file_digests": 2,
+        "file_message_owners": 2,
+        "secrets_absent_from_synthetic_packages": 3
+      },
+      "readerPageTrafficSourceMarker": false,
+      "result": "pass"
+    },
+    "edge": {
+      "label": "edge-zh-final",
+      "source": "network-isolated synthetic fixture",
+      "steps": [
+        "installed extension, toolbar registered to open side panel",
+        "genuine browser PKCE consent and explicit destination",
+        "real capture, ZIP and committed file import",
+        "identical import returns same conversation",
+        "suffix appended to same conversation",
+        "branch conflict requests review",
+        "browser IME composition and keyboard search focus (not a physical input-method test)",
+        "metadata result opens Reader in a new tab without a device credential in the URL",
+        "move, scoped conversation search and project pin persisted",
+        "rename an owned attachment and open the existing Reader file target",
+        "server generated a new context artifact via the panel",
+        "download bytes: verified context ZIP and canonical members",
+        "Reader webpage: actual quick action downloaded a valid context ZIP",
+        "browser opened a native SIDE_PANEL context through a trusted gesture"
+      ],
+      "browser": "158.0.4370.33",
+      "redirectHost": "gihbiofiiflkckcmomddkkjkoifkddfi.chromiumapp.org",
+      "canonical": {
+        "messages": 4,
+        "source_refs": 4,
+        "files": 2,
+        "verified_file_digests": 2,
+        "file_message_owners": 2,
+        "secrets_absent_from_synthetic_packages": 3
+      },
+      "readerPageTrafficSourceMarker": false,
+      "result": "pass"
+    }
+  },
+  "interface": {
+    "widths_css_px": [
+      320,
+      375,
+      480
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "languages": [
+      "en",
+      "zh-CN"
+    ],
+    "pre_change_comparison": "early private beta vs final; no preexisting production extension"
+  },
+  "worker_cgroup": {
+    "limit_bytes": 671088640,
+    "ram_plus_swap_bytes": 671088640,
+    "sample_start": "2026-11-23T03:47:44.6306887+08:00",
+    "sample_end": "2026-11-23T03:49:36.4794925+08:00",
+    "samples": 53,
+    "highest_observed_peak_bytes": 200331264,
+    "oom": 0,
+    "oom_kill": 0
+  },
+  "tests": {
+    "reader_selected": {
+      "passed": 136,
+      "skipped": 2,
+      "skip": "Windows symlink permission",
+      "additional_pinned_golden_passed": 1
+    },
+    "postgres": {
+      "passed": 14,
+      "warning": "Alembic legacy prepend_sys_path separator"
+    },
+    "fork": {
+      "node": "24.22.3",
+      "total": 176,
+      "passed": 113,
+      "failed": 0,
+      "skipped_private_fixtures": 63
+    },
+    "web": {
+      "lint": "pass",
+      "typecheck": "pass",
+      "production_webpack_build": "pass"
+    },
+    "extension_suite_at_reader_code": {
+      "passed": 12,
+      "overlaps_reader_selected_and_golden": true
+    }
+  },
+  "contract_fixture": {
+    "bytes": 1547,
+    "sha256": "97b98d2d611850f0a846790056af0a39eb91ddbfd5a4e5a407736a3277d8e7d0"
+  },
+  "unpacked_extension_zip": {
+    "origin": "http://127.0.0.1:18383",
+    "bytes": 97344,
+    "sha256": "601647e79a4ccfc00ad9f4d392e5fed84b5f69ac87f477530d77fdb018e6c787"
+  },
+  "screenshots_sha256": {
+    "chrome-320-dark.png": "ec2bc26f2b29b57d1e80eb715bcba6f645781684190fc140b93f9fdf20ab7bbc",
+    "chrome-320-light.png": "3ac7dcef77ebb3da3c990fb95f6b372948bfab53bbf7bce397af3afe119fe511",
+    "chrome-375-dark.png": "1281a7c5839d0b143b403f61dfd2528c2f3095973f89709e0954b275e679d5ef",
+    "chrome-375-light.png": "1a514a57834ba22b6cdb12a77236504fd3baf065c96fd71faedb156e6ac76ac7",
+    "chrome-480-dark.png": "db6d43631e8cbe4a777c3a4d880f8a78531028367fe55fcf2ffc7f715580b2c8",
+    "chrome-480-light.png": "9573ad802d4f5f11077964d7817ad686ff784eb65e1d97a4b167ff998299635c",
+    "early-beta-375-light.png": "a2998d5b8d4b8597730f3dcb25c8787cc516cd594e7f23fa45b7696751558892",
+    "edge-320-dark.png": "f8699c9444c1a28488b5f13701dd4227ad119604af11652be4562e17d2d9b66d",
+    "edge-320-light.png": "20bc955e99d3ac930d5230c24bf15b37841a3b142bf16636ef46e36750c196c4",
+    "edge-375-dark.png": "d1dec3772002c8dfefe20018f8d2302338f090ee03b83a9bc945a32226003238",
+    "edge-375-light.png": "f65fb86012b287e91ea033939e6cd5a3b11edf63b5ef5e7858bf5c819a0d8348",
+    "edge-480-dark.png": "4ab947820c5f779103a037d94a40c44e73ff09b41f743d8e3a4ad278b384c4c6",
+    "edge-480-light.png": "631299ddeb71b987031e6a2618fdb05a1c6eb1ad55afa1ed1a92c7a350b73fc9"
+  },
+  "not_tested": [
+    "real ChatGPT account / private endpoints on live service",
+    "project/account discovery",
+    "store distribution",
+    "production deployment",
+    "real physical OS IME",
+    "dedicated WAN throughput"
+  ],
+  "teardown": {
+    "temporary_compose_project": "down",
+    "dedicated_migration_pg": "removed",
+    "production_touched": false
+  }
+}
