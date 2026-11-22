@@ -463,7 +463,10 @@ def update_conversation_attachment(
     request: Request,
     db: Session = Depends(get_db),
 ) -> AttachmentRead:
-    _owned_conversation(db, conversation_id, ownership_scope_from_request(request))
+    try:
+        _owned_conversation(db, conversation_id, ownership_scope_from_request(request))
+    except AttachmentUploadError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     attachment = db.get(Attachment, attachment_id)
     if attachment is None or attachment.conversation_id != conversation_id or attachment.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Attachment not found.")

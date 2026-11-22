@@ -2,6 +2,7 @@
 from importlib import import_module
 
 MODULE_EXPORTS = {
+    "reader_extension": ("ExtensionDevice", "ExtensionSource"),
     "context_continuation": ("ContextMemberObject", "ContextBinding", "ContinuationRevision",
                              "ContinuationState", "ContinuationCandidate", "ContinuationValidation", "ContextExportReceipt"),
     "background_job": ("BackgroundJob",),

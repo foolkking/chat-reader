@@ -16,6 +16,19 @@ class Settings(BaseSettings):
     }
 
     app_name: str = Field(default="chat-reader", alias="APP_NAME")
+    # Private beta only: exact Chrome/Edge application IDs, never wildcards.
+    reader_extension_ids: list[str] = Field(default_factory=list, alias="READER_EXTENSION_IDS")
+    reader_extension_capture: bool = Field(default=True, alias="READER_EXTENSION_CAPTURE")
+
+    @field_validator("reader_extension_ids", mode="before")
+    @classmethod
+    def _fixed_extension_ids(cls, ids: list[str] | str) -> list[str]:
+        import re
+        if isinstance(ids, str):
+            ids = [i.strip() for i in ids.split(",") if i.strip()]
+        if len(ids) > 8 or any(re.fullmatch("[a-p]{32}", value) is None for value in ids):
+            raise ValueError("Expected registered Chromium extension IDs.")
+        return list(dict.fromkeys(ids))
     app_env: str = Field(default="development", alias="APP_ENV")
     database_url: str = Field(
         default="postgresql+psycopg://chat_reader:chat_reader@localhost:5432/chat_reader",

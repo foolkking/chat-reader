@@ -1,4 +1,5 @@
 "use client";
+import { ExtensionDevices } from "../features/browser-extension/devices";
 
 import { KeyRound, Laptop, LogOut, RefreshCw, UserRound } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -224,6 +225,7 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
     finishSignout();
   }} />;
   return <section className={focused ? "space-y-6" : "space-y-3 border-t border-ui pt-3"} aria-label={copy.title}>
+    <ExtensionDevices zh={resolvedLocale === "zh-CN"} />
     <SettingsSection icon={UserRound} title={copy.identity} badge={profile ? (profile.role === "ADMIN" ? (resolvedLocale === "zh-CN" ? "系统管理员" : "Administrator") : (resolvedLocale === "zh-CN" ? "用户" : "User")) : undefined}>
       {loading && !profile ? <p className="text-sm text-secondary" role="status">{copy.loading}</p> : null}
       {profile ? <form onSubmit={saveProfile} className="space-y-3">

@@ -274,6 +274,7 @@ def commit_import_preview(
     _report(progress_callback, "persisting", 10, 0, total_expected_messages)
 
     conversation_ids: list[uuid.UUID] = []
+    any_changed = False
     total_messages = 0
     all_warnings: list[str] = []
     verified_archive_sources: set[str] = set()
@@ -303,22 +304,26 @@ def commit_import_preview(
         for conversation_draft in persistable:
             try:
                 with db.begin_nested():
-                    conversation = _persist_conversation(
-                        import_record,
-                        artifacts,
-                        conversation_draft,
-                        db,
-                        progress_callback=progress_callback,
-                        processed_before=total_messages,
-                        total_messages=total_expected_messages,
-                        verified_archive_sources=verified_archive_sources,
-                    )
-                    add_conversation_to_project(db, target_project.id, conversation.id, added_by="system", ownership_scope=import_scope)
-                    _report(progress_callback, "headings", 78, total_messages, total_expected_messages)
-                    rebuild_headings_for_conversation(db, conversation.id)
-                    _report(progress_callback, "search", 88, total_messages, total_expected_messages)
-                    rebuild_search_documents_for_conversation(db, conversation.id)
-                    conversation.status = "active"
+                    attach_project = changed = True
+                    if (import_record.analysis_summary or {}).get("extension_device"):
+                        from app.services.extension_import import persist
+                        if expected_conversations != 1:
+                            raise CommitImportError("One source conversation is required.")
+                        conversation, attach_project, changed = persist(db, import_record, artifacts,
+                            conversation_draft, progress_callback, verified_archive_sources)
+                    else:
+                        conversation = _persist_conversation(import_record, artifacts, conversation_draft, db,
+                            progress_callback=progress_callback, processed_before=total_messages,
+                            total_messages=total_expected_messages, verified_archive_sources=verified_archive_sources)
+                    if attach_project:
+                        add_conversation_to_project(db, target_project.id, conversation.id, added_by="system", ownership_scope=import_scope)
+                    if changed:
+                        any_changed = True
+                        _report(progress_callback, "headings", 78, total_messages, total_expected_messages)
+                        rebuild_headings_for_conversation(db, conversation.id)
+                        _report(progress_callback, "search", 88, total_messages, total_expected_messages)
+                        rebuild_search_documents_for_conversation(db, conversation.id)
+                        conversation.status = "active"
                     db.flush()
                 conversation_ids.append(conversation.id)
                 total_messages += conversation.message_count
@@ -347,7 +352,8 @@ def commit_import_preview(
 
     if not conversation_ids:
         raise CommitImportError("No conversation could be committed from this import.")
-    _report(progress_callback, "search", 98, total_messages, total_expected_messages)
+    if any_changed:
+        _report(progress_callback, "search", 98, total_messages, total_expected_messages)
 
     import_record.conversation_id = conversation_ids[0] if conversation_ids else None
     import_record.status = "committed"

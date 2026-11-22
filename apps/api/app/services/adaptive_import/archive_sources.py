@@ -110,6 +110,11 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
         manifest = _read_manifest(archive, effective[manifest_path]) if primary_path and manifest_path else None
         dedicated = bool(primary_path and manifest_path and _is_exporter_manifest(manifest))
         archive_kind = "conversation_export" if dedicated else "markdown_zip"
+        from app.services.adaptive_import.reader_package import PROFILE, INDEX, package_header, require
+        reader_profile = (manifest or {}).get("version") == PROFILE
+        if reader_profile:
+            require(dedicated and not wrapper and INDEX in effective)
+            package_header(archive)
 
         manifest_assets: dict[str, dict[str, Any]] = {}
         invalid_manifest_asset_paths: list[str] = []
@@ -181,6 +186,7 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
             "source_sha256": getattr(artifact, "sha256", None),
             "artifact_id": str(artifact.id),
             "archive_kind": archive_kind,
+            **({"reader_profile": PROFILE} if reader_profile else {}),
             "wrapper_prefix": wrapper,
             "classification_version": int((getattr(artifact, "parsed_summary", None) or {}).get("classification_version") or 0) + 1,
             "materialization_token": uuid.uuid4().hex,
@@ -1280,6 +1286,7 @@ def _refresh_catalog_summary(catalog: dict[str, Any]) -> None:
 
 def _artifact_summary(catalog: dict[str, Any]) -> dict[str, Any]:
     return {
+        **({"reader_profile": catalog["reader_profile"]} if catalog.get("reader_profile") else {}),
         **({"catalog_file": catalog["catalog_file"]} if catalog.get("catalog_file") else {}),
         "archive_catalog_version": CATALOG_VERSION,
         "archive_kind": catalog["archive_kind"],

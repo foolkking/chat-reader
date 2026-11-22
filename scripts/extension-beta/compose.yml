@@ -1,0 +1,50 @@
+# Disposable localhost-only acceptance. All writable state is either tmpfs
+# or an explicitly chosen empty task directory; no production mounts or volumes.
+x-api: &api
+  image: ${BETA_API_IMAGE:?local dependency image required}
+  pull_policy: never
+  environment: &settings
+    APP_ENV: test
+    AUTH_ENABLED: "true"
+    AUTH_SESSION_SECRET: ${BETA_SESSION_SECRET:?}
+    ADMIN_EMAIL: browser-beta@example.test
+    ADMIN_PASSWORD: ${BETA_TEST_PASSWORD:?}
+    DATABASE_URL: postgresql+psycopg://postgres:${BETA_PG_PASSWORD:?}@pg/extension_beta
+    PUBLIC_WEB_BASE_URL: http://127.0.0.1:18383
+    READER_EXTENSION_IDS: ${BETA_EXTENSION_ID:?}
+    IMPORT_STORAGE_DIR: /data/imports
+    ASSET_STORAGE_DIR: /data/assets
+    EXPORT_STORAGE_DIR: /data/exports
+    OFFLINE_STORAGE_DIR: /data/offline
+    PYTHONDONTWRITEBYTECODE: "1"
+  volumes:
+    - ../../apps/api/app:/app/app:ro
+    - ../../apps/api/alembic:/app/alembic:ro
+    - ${BETA_DATA:?temporary directory required}:/data
+services:
+  pg:
+    image: postgres:16-alpine
+    pull_policy: never
+    tmpfs: [/var/lib/postgresql/data]
+    environment: {POSTGRES_PASSWORD: "${BETA_PG_PASSWORD:?}", POSTGRES_DB: extension_beta}
+    healthcheck: {test: ["CMD","pg_isready","-U","postgres","-d","extension_beta"], interval: 1s, timeout: 3s, retries: 40}
+  migrate:
+    <<: *api
+    depends_on: {pg: {condition: service_healthy}}
+    command: ["sh","-c","alembic upgrade head && python -m scripts.owner_auth ensure-configured"]
+  api:
+    <<: *api
+    ports: ["127.0.0.1:18385:8000"]
+    depends_on: {migrate: {condition: service_completed_successfully}}
+  worker:
+    <<: *api
+    mem_limit: 640m
+    memswap_limit: 640m
+    depends_on: {migrate: {condition: service_completed_successfully}}
+    command: ["python","-m","app.workers.import_worker"]
+  gateway:
+    image: public.ecr.aws/docker/library/nginx:stable-alpine
+    pull_policy: never
+    volumes: ["./nginx.conf:/etc/nginx/conf.d/default.conf:ro"]
+    ports: ["127.0.0.1:18383:80"]
+    depends_on: [api]

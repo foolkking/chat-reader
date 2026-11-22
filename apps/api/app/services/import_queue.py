@@ -207,12 +207,13 @@ def process_import(
             # never turn a successful canonical import into a failed import.
             try:
                 with db.begin_nested():
-                    queue_import_scan(
-                        db,
-                        result.conversation_ids,
-                        OwnershipScope(record.owner_user_id, include_legacy_unowned=record.owner_user_id is None),
-                        source_import_id=record.id,
-                    )
+                    if (record.analysis_summary or {}).get("extension_outcome") != "unchanged":
+                        queue_import_scan(
+                            db,
+                            result.conversation_ids,
+                            OwnershipScope(record.owner_user_id, include_legacy_unowned=record.owner_user_id is None),
+                            source_import_id=record.id,
+                        )
             except Exception as exc:  # pragma: no cover - operational guard
                 structured_event(logger, logging.WARNING, "post_import_noise_scan_queue_failed", import_id=str(import_id), error_class=type(exc).__name__)
             db.commit()

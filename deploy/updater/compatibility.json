@@ -1,6 +1,6 @@
 {
-  "schema": "20261117_0062",
-  "from_schemas": ["20261117_0062"],
+  "schema": "20261123_0063",
+  "from_schemas": ["20261117_0062", "20261123_0063"],
   "provider_abi": "local-assets-v1",
   "job_abi": "reader-jobs-v1",
   "min_updater": 1

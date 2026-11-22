@@ -30,6 +30,16 @@ export function ExportPresetsPanel({
   const [name, setName] = useState("");
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState("");
+  const [expanded,setExpanded]=useState(false);
+  const presetDefault=useQuery({queryKey:["context-quick-preset"],enabled:expanded,queryFn:async()=>{
+    const r=await fetch("/api/preferences/context-quick-preset",{cache:"no-store"});
+    if(!r.ok)throw Error();return (await r.json()).preset_id as string|null;
+  }});
+  const changeDefault=useMutation({mutationFn:async(id:string|null)=>{
+    const r=await fetch("/api/preferences/context-quick-preset",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({preset_id:id})});
+    if(!r.ok)throw Error();return id;
+  },onSuccess:id=>{queryClient.setQueryData(["context-quick-preset"],id);setError("");},
+    onError:()=>setError(zh?"默认预设未确认，请重试。":"Default preset not confirmed. Retry.")});
   const handleSaved = (saved: UserFeatureEntry<ExportPresetValue>) => {
       queryClient.setQueryData<UserFeatureEntry<ExportPresetValue>[]>(QUERY_KEY, (items = []) => [saved, ...items.filter((item) => item.id !== saved.id)]);
       setSaveOpen(false);
@@ -77,12 +87,19 @@ export function ExportPresetsPanel({
   }
 
   return (
-    <details className="group border-t border-ui">
+    <details className="group border-t border-ui" onToggle={e=>setExpanded(e.currentTarget.open)}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-sm text-secondary">
         <span>{zh ? "导出预设" : "Export presets"}{recovery.blocked || error || presets.isError ? <span className="ml-2 text-[var(--danger)]">{zh ? "需处理" : "Needs attention"}</span> : null}</span>
         <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
       </summary>
       <div className="space-y-2 pb-3">
+      {presetDefault.isSuccess&&presets.isSuccess?<label className="block text-xs text-secondary">{zh?"网页与插件的一键上下文预设":"Quick Context preset for Reader and extension"}
+        <select className="input-base mt-1 min-h-11 w-full px-2" value={presetDefault.data||""} disabled={changeDefault.isPending}
+          onChange={e=>changeDefault.mutate(e.target.value||null)}>
+          <option value="">{zh?"标准：完整对话，不含附件原件":"Standard: full conversation, no attachment bytes"}</option>
+          {presetDefault.data&&!presets.data.some(p=>p.id===presetDefault.data&&p.value.format==="context")?<option value={presetDefault.data}>{zh?"预设已失效，请重新选择":"Preset unavailable; choose another"}</option>:null}
+          {presets.data.filter(p=>p.value.format==="context").map(p=><option key={p.id} value={p.id}>{p.value.name}</option>)}
+        </select></label>:null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-secondary">{zh ? "只保存选项，不保存对话、任务或下载地址。" : "Stores options only—not conversations, jobs, or download URLs."}</p>
         <button type="button" disabled={recovery.blocked || !presets.isSuccess || presets.data.length >= 20} onClick={() => { setSaveOpen((value) => !value); setError(""); }} className="btn-secondary inline-flex min-h-11 items-center gap-1.5 px-2.5 text-xs disabled:opacity-50">

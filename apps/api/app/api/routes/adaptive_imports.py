@@ -243,6 +243,10 @@ def create_adaptive_import_session(
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
+    return stage_import_session(files, repair_profile_id, target_project_id, idempotency_key, db, ownership_scope)
+
+
+def stage_import_session(files, repair_profile_id, target_project_id, idempotency_key, db, ownership_scope, *, device=None):
     requested_target_project_id = target_project_id
     if not files:
         raise HTTPException(status_code=400, detail={"code": "FILES_REQUIRED", "message": "Choose at least one JSON, Markdown, or ZIP source file."})
@@ -288,9 +292,12 @@ def create_adaptive_import_session(
         with bounded_upload_staging_sync(files):
             previous = find_upload_request(db, ownership_scope, idempotency_key) if idempotency_key is not None else None
             if previous is not None:
+                existing = request_import(db, ownership_scope, previous)
+                if device and (existing.analysis_summary or {}).get("extension_device") != str(device):
+                    raise HTTPException(409, "Request belongs to a different client.")
                 verify_repeated_upload(previous, files, repair_profile_id, requested_target_project_id,
                     max_file_bytes=max_bytes, total_limit=total_limit)
-                return session_payload(request_import(db, ownership_scope, previous))
+                return session_payload(existing)
             record = begin_session(
                 db,
                 len(files),
@@ -298,6 +305,8 @@ def create_adaptive_import_session(
                 target_project_id=target_project_id,
                 owner_user_id=ownership_scope.owner_user_id,
             )
+            if device:
+                record.analysis_summary = {**(record.analysis_summary or {}), "extension_device": str(device)}
             for item in files:
                 item.file.seek(0)
                 add_session_source_stream(

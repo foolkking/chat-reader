@@ -73,6 +73,7 @@ def search(
     offset: int,
     conversation_id: uuid.UUID | None = None,
     project_id: uuid.UUID | None = None,
+    unclassified_only: bool = False,
     document_type: str | None = None,
     role: str | None = None,
     status_scope: str = "active",
@@ -251,6 +252,13 @@ def search(
             ordered_query = ordered_query.filter(SearchDocument.created_at >= date_from)
         if date_to is not None:
             ordered_query = ordered_query.filter(SearchDocument.created_at <= date_to)
+    if unclassified_only:
+        # Same meaning as the sidebar: no project relation, or the default project.
+        # Apply before ranking, counting and paging, not as a page-local post-filter.
+        ordered_query = ordered_query.filter(
+            ~Conversation.project_links.any()
+            | Conversation.project_links.any(ProjectConversation.project.has(Project.is_default.is_(True)))
+        )
     if tag_id is not None:
         subject = str(ownership_scope.owner_user_id) if ownership_scope.owner_user_id else "local:default"
         tag = db.query(UserFeatureEntry).filter(
