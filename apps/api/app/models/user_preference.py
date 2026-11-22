@@ -9,6 +9,8 @@ from app.models.import_record import utc_now
 
 
 class UserPreference(Base):
+    # Deliberately not SET NULL on preset deletion: a lost preset needs review.
+    context_quick_preset: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     __tablename__ = "user_preferences"
 
     subject_key: Mapped[str] = mapped_column(Text, primary_key=True)

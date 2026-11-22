@@ -1432,6 +1432,8 @@ def _mode_for_artifacts(artifacts: list[SourceArtifact]) -> str | None:
 def _summary(record: ImportRecord) -> dict[str, Any]:
     statuses = _count_statuses(family.resolution_status for family in record.structure_families)
     return {
+        **{k: (record.analysis_summary or {})[k] for k in ("extension_device","extension_decision")
+           if k in (record.analysis_summary or {})},
         **({"repair_profile_id": record.analysis_summary["repair_profile_id"]} if (record.analysis_summary or {}).get("repair_profile_id") else {}),
         **({"analysis_task_id": record.analysis_summary["analysis_task_id"]} if (record.analysis_summary or {}).get("analysis_task_id") else {}),
         **({"target_project_id": record.analysis_summary["target_project_id"]} if "target_project_id" in (record.analysis_summary or {}) else {}),
@@ -1557,6 +1559,14 @@ def _enrich_archive_drafts(
     )
     if source is None:
         return drafts
+
+    from app.services.adaptive_import.reader_package import indexed_draft, require
+    source_archive = (source.parsed_summary or {}).get("archive_artifact_id")
+    if source_archive:
+        catalog = archive_catalog(record, uuid.UUID(str(source_archive)))
+        if catalog.get("reader_profile"):
+            require(len(drafts) == 1)
+            drafts = [indexed_draft(record, source, drafts[0], catalog)]
 
     result: list[CanonicalDraftConversation] = []
     for draft_index, draft in enumerate(drafts):

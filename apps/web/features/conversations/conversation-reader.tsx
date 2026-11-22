@@ -21,6 +21,7 @@ import { ContinuationWorkspace } from "../exporting/continuation-workspace";
 import type { ContinuationViewState } from "../exporting/continuation-index";
 import { ExportPanel, type ExportPanelState } from "../exporting/export-panel";
 import { OfflineExportPanel } from "../exporting/offline-export-panel";
+import { useQuickContext } from "../browser-extension/quick-context";
 import { MobileSidebarTrigger, ProjectSidebar } from "../projects/project-sidebar";
 import { SharePanel } from "../sharing/share-panel";
 import { ConversationIndex } from "../toc/conversation-index";
@@ -2483,6 +2484,7 @@ export function ConversationReader({
   }, [conversationId, dataSource, readerSurfaceAvailable, markReaderScrollIntent, refreshActiveMessageFromLayout]);
 
   const conversation = conversationQuery.data;
+  const quickContext = useQuickContext(conversationId, conversation?.offline_revision, resolvedLocale === "zh-CN");
   const loadingProgress = initialPaintReady
     ? 100
     : windowQuery.isSuccess
@@ -3326,6 +3328,10 @@ export function ConversationReader({
       icon: FileOutput,
       onSelect: () => { void openUtilityPanel("export"); },
     } as ReaderHeaderAction] : []),
+    ...(dataSource.mode === "remote" && dataSource.capabilities.export && canManageCanonical ? [{
+      id: "quick-context", label: quickContext.label, icon: FileOutput, disabled: quickContext.busy,
+      onSelect: () => { void quickContext.start(); },
+    } as ReaderHeaderAction] : []),
     ...(canBrowseAttachments ? [{
       id: "conversation-files",
       label: resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files",
@@ -3357,8 +3363,8 @@ export function ConversationReader({
   const desktopPrimaryActions = ["search", "save-position", "annotations", "compare", "focus-mode"]
     .flatMap(id => headerActions.filter(action => action.id === id));
   const desktopSecondaryActions = headerActions.filter((action) => (!desktopPrimaryActionIds.has(action.id) || ["compare", "focus-mode"].includes(action.id))).map(action => ({ ...action,
-    group: ["share", "export", "conversation-files"].includes(action.id) ? (resolvedLocale === "zh-CN" ? "数据与分享" : "Data and sharing") : (resolvedLocale === "zh-CN" ? "内容工具" : "Content tools"),
-  })).sort((a, b) => Number(["share", "export", "conversation-files"].includes(a.id)) - Number(["share", "export", "conversation-files"].includes(b.id)));
+    group: ["share", "export", "quick-context", "conversation-files"].includes(action.id) ? (resolvedLocale === "zh-CN" ? "数据与分享" : "Data and sharing") : (resolvedLocale === "zh-CN" ? "内容工具" : "Content tools"),
+  })).sort((a, b) => Number(["share", "export", "quick-context", "conversation-files"].includes(a.id)) - Number(["share", "export", "quick-context", "conversation-files"].includes(b.id)));
 
   const navigationTabs = (
     <div className="flex items-center gap-2">
@@ -3608,6 +3614,8 @@ export function ConversationReader({
           <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">{resolvedLocale === "zh-CN" ? "对话简介" : "Conversation description"}</h2><button type="button" className="min-h-11 px-3 text-sm text-secondary" onClick={() => setDescriptionDismissed(conversationId)}>{resolvedLocale === "zh-CN" ? "关闭" : "Close"}</button></div>
           <p className="whitespace-pre-wrap break-words text-sm leading-6">{conversation.description_markdown || (resolvedLocale === "zh-CN" ? "简介已移除。" : "The description has been removed.")}</p>
         </section> : null}
+        {quickContext.error ? <p role="alert" className="absolute bottom-3 right-3 z-30 max-w-xs rounded-lg border border-ui bg-raised p-3 text-sm">
+          {resolvedLocale === "zh-CN" ? "上下文导出未完成。请检查默认预设，再用导出菜单重试。" : "Context export was not completed. Check the default preset and retry from the export menu."}</p> : null}
         {keyboardNavigationFeedback ? (
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-30 flex justify-center px-4" aria-live="polite" role="status" data-testid="reader-keyboard-feedback">
             <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-lg border border-ui bg-raised px-3 py-2 text-sm text-primary shadow-md">

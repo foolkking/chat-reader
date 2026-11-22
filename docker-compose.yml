@@ -26,6 +26,11 @@ services:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chat_reader}:${POSTGRES_PASSWORD:-chat_reader}@chat-reader-postgres:5432/${POSTGRES_DB:-chat_reader}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      READER_EXTENSION_IDS: ${READER_EXTENSION_IDS:-}
+      READER_EXTENSION_CAPTURE: ${READER_EXTENSION_CAPTURE:-true}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
+      PUBLIC_WEB_BASE_URL: ${PUBLIC_WEB_BASE_URL:-http://localhost:3000}
       ENABLE_INTERNAL_DIAGNOSTICS: ${ENABLE_INTERNAL_DIAGNOSTICS:-false}
       ARTIFACT_CLEANUP_GRACE_HOURS: ${ARTIFACT_CLEANUP_GRACE_HOURS:-24}
       OFFLINE_STORAGE_DIR: /workspace/apps/api/storage/offline
@@ -49,6 +54,10 @@ services:
     working_dir: /workspace/apps/api
     command: sh -c "pip install -e . && python -m app.workers.import_worker"
     environment:
+      READER_EXTENSION_IDS: ${READER_EXTENSION_IDS:-}
+      READER_EXTENSION_CAPTURE: ${READER_EXTENSION_CAPTURE:-true}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
       APP_NAME: ${APP_NAME:-chat-reader}
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chat_reader}:${POSTGRES_PASSWORD:-chat_reader}@chat-reader-postgres:5432/${POSTGRES_DB:-chat_reader}

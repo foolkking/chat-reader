@@ -31,6 +31,30 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         settings = get_settings()
+        # A physically separate router. Never substitute an extension grant for
+        # a web session or allow a web cookie to authorize extension RPCs.
+        if request.url.path.startswith("/api/extension/v1/"):
+            from fastapi import HTTPException
+            from app.services.extension_access import authenticate_device
+            if not settings.auth_enabled or not settings.reader_extension_ids:
+                return _json_error(404, "Extension unavailable.")
+            origin = request.headers.get("origin")
+            if origin and origin not in {"chrome-extension://" + client for client in settings.reader_extension_ids}:
+                return _json_error(403, "Unregistered origin.")
+            if request.url.path != "/api/extension/v1/token":
+                def verify():
+                    with SessionLocal() as db:
+                        return authenticate_device(db, request.headers.get("authorization"), origin)
+                try:
+                    request.state.auth = await run_in_threadpool(verify)
+                except HTTPException as exc:
+                    return _json_error(exc.status_code, exc.detail)
+                except SQLAlchemyError:
+                    return _json_error(503, "Authentication service unavailable.")
+            response = await call_next(request)
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["Pragma"] = "no-cache"
+            return response
         if not settings.auth_enabled:
             return await call_next(request)
 
