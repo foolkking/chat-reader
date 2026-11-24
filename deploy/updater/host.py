@@ -810,9 +810,31 @@ class Host:
     def stopped(self):
         need(all(not x["State"]["Running"] for x in self.nodes(ROLES)))
 
+    def migration_command(self, release):
+        schema = release["schema"]
+        need(re.fullmatch(r"[0-9]{8}_[0-9]{4}", schema))
+        images = self.images(release)
+        service = json.loads(self.dc("config", "--format", "json", env=images))["services"]["migrate"]
+        need(service["image"] == images["API_IMAGE"] and service.get("pull_policy") in (None, "missing", "if_not_present", "never"))
+        help_text = self.dc("run", "--help")
+        for flag in ("--no-deps", "--entrypoint", "--rm", "-T"):
+            need(re.search(r"(?m)^\s*" + re.escape(flag) + r"(?=[\s,=]|$)", help_text))
+        if re.search(r"(?m)^\s*--pull(?=[\s=]|$)", help_text):
+            pull = ["--pull", "never"]
+        else:
+            # Compose 2.27 honors the service policy but has no `run --pull`.
+            # A legacy host must exclude both registry access and source builds.
+            need(service.get("pull_policy") == "never" and "build" not in service)
+            pull = []
+        return ["run", "--rm", "--no-deps"] + pull + [
+            "-T", "--entrypoint", "alembic", "migrate", "upgrade", schema,
+        ]
+
     def admission_for_restart(self):
         f = self.dir
         old = self.old
+        if self.new["schema"] != old["schema"]:
+            self.migration_command(self.new)
         for role in ROLES:
             self.image(role, self.new)
         if not (f / "staging-job").exists():
@@ -1123,6 +1145,8 @@ class Host:
                 need(self.schema() == self.old["schema"])
                 return fp
             need(fp == self.fp)
+            if self.new["schema"] != self.old["schema"]:
+                self.migration_command(self.new)
             self.exclusive()
             self.health(self.old)
             need(self.probe("/api/admin/runtime-status", 401))
@@ -1238,24 +1262,11 @@ class Host:
             self.stopped()
             need(self.gate_owned() and exact(f / "backup" / "receipt") and self.schema() == old["schema"])
             if new["schema"] != old["schema"]:
-                need(re.fullmatch(r"[0-9]{8}_[0-9]{4}", new["schema"]))
+                command = self.migration_command(new)
+                self.image("api", new)
                 # A partially committed migration must never trigger automatic image rollback.
                 durable(f / "schema-attempted", new["schema"])
-                self.dc(
-                    "run",
-                    "--rm",
-                    "--no-deps",
-                    "--pull",
-                    "never",
-                    "-T",
-                    "--entrypoint",
-                    "alembic",
-                    "migrate",
-                    "upgrade",
-                    new["schema"],
-                    env=self.images(new),
-                    timeout=3600,
-                )
+                self.dc(*command, env=self.images(new), timeout=3600)
             need(self.schema() == new["schema"])
         elif op == "switching":
             incumbent = json.loads(exact(f / "incumbent").read_text())

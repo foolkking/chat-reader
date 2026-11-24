@@ -783,6 +783,58 @@ async function openMetadataFromList(page: Page, title: string, zh: boolean, fiel
   return page.getByRole("dialog", { name, exact: true });
 }
 
+test("a late account sort preserves a single Manage press and the unsaved description", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const before = await (await page.request.get("/api/preferences")).json() as UserPreferenceRead;
+  const created = await createConversation(page, "Synthetic late sort while managing");
+  const path = "/api/conversations/" + created.conversation.id;
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  try {
+    expect((await page.request.patch("/api/preferences", { data: {
+      locale_mode: "en-US", theme_mode: "dark", navigation_sort: { ...before.navigation_sort, all: { mode: "created", direction: "asc" } },
+    } })).ok()).toBe(true);
+    await page.route(url => url.pathname === "/api/preferences", async route => {
+      if (route.request().method() === "GET") await held;
+      await route.continue();
+    });
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/");
+    const list = page.locator("section[aria-busy]").filter({ has: page.getByRole("heading", { name: /^(Conversation history|对话记录)$/ }) });
+    const button = list.getByRole("button", { name: new RegExp("^(Manage|管理) " + created.conversation.title + "$") });
+    await button.hover();
+    await page.mouse.down();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    release();
+    // The persisted theme and sort are delivered in the same preference update.
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await page.mouse.up();
+    await page.getByRole("menuitem", { name: "Edit description", exact: true }).click();
+    const editor = page.getByRole("dialog", { name: "Edit description", exact: true });
+    const field = editor.getByLabel("Markdown description (optional)", { exact: true });
+    await field.fill("Synthetic unsaved text");
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue("Synthetic unsaved text");
+    const reordered = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/conversations" && url.searchParams.get("scope") === "all"
+        && url.searchParams.get("sort") === "created" && url.searchParams.get("direction") === "asc";
+    });
+    await field.press("Escape");
+    await page.getByRole("dialog", { name: "Discard unsaved changes?", exact: true }).getByRole("button", { name: "Close and discard draft", exact: true }).click();
+    expect((await reordered).ok()).toBe(true);
+    await expect(editor).toHaveCount(0);
+    expect((await (await page.request.get(path)).json()).description_markdown).toBeFalsy();
+  } finally {
+    release();
+    await page.unrouteAll({ behavior: "wait" });
+    expect((await page.request.patch("/api/preferences", { data: {
+      navigation_sort: before.navigation_sort, locale_mode: before.locale_mode, theme_mode: before.theme_mode,
+    } })).ok()).toBe(true);
+    expect((await page.request.delete(path)).ok()).toBe(true);
+  }
+});
+
 for (const [width, zh] of [[375, true], [1440, false]] as const) {
   test(width + "px: description validation preserves Unicode, cancelled drafts and explicit clearing", async ({ page }, info) => {
     await preferences(page, zh);

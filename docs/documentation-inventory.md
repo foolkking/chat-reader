@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-24：[签名发布的两次失败及隔离复现](evidence/reader-extension-append-2026-11-24/delivery-check.md#release-repair)记录侧栏拖放、迟到排序及生产旧版 Compose 的边界。[网页更新合同](system/ONLINE_UPDATES.md)说明迁移前的宿主机能力检查。
+
 2026-11-24：[只追加到末尾：插件选择与 Reader 固定目标、保留旧笔记和附件、排队后刷新与重新确认、双端 Context 文件](evidence/reader-extension-append-2026-11-24/README.md)；[收据丢失后的查找、设备级隐私选项及交付前测试](evidence/reader-extension-append-2026-11-24/delivery-check.md)；[安装和权限合同](system/BROWSER_EXTENSION.md)。这一记录不将隔离实验当成线上 CI 或生产部署。
 
 2026-11-24：[授权设备达到 32 台上限时的中英文错误恢复](evidence/reader-extension-append-2026-11-24/README.md#authorization-limit)，含真实隔离 API 的 409→撤销 fixture→200 验证、375px 截图及未通过尝试分类；[合同](system/BROWSER_EXTENSION.md)。真实生产设备未操作。

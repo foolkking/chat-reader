@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { usePreferences } from "../../components/preferences-provider";
 import {
@@ -43,6 +43,7 @@ export function ConversationActionMenu({
   onChanged,
   onUndo,
   onOpenChange,
+  holdListOrder,
   placement,
   ordering,
 }: {
@@ -54,6 +55,7 @@ export function ConversationActionMenu({
   onChanged?: () => Promise<void> | void;
   onUndo?: (undo: UndoAction) => void;
   onOpenChange?: (open: boolean) => void;
+  holdListOrder?: () => () => void;
   placement?: ConversationPlacementController;
   ordering?: { manual: boolean; enableManual: () => Promise<void>; up?: () => Promise<void>; down?: () => Promise<void> };
 }) {
@@ -75,8 +77,52 @@ export function ConversationActionMenu({
   const menuRef = useRef<HTMLDivElement | null>(null);
   const wasOpenRef = useRef(false);
   const title = conversation.display_title || conversation.title;
+  const previousCloseSignal = useRef(closeSignal);
+  const releaseOrder = useRef<(() => void) | null>(null);
+  const press = useRef<AbortController | null>(null);
+  const interacting = useRef(false);
 
-  useEffect(() => setOpen(false), [closeSignal]);
+  function releaseListOrder() {
+    releaseOrder.current?.();
+    releaseOrder.current = null;
+  }
+
+  useLayoutEffect(() => {
+    interacting.current = open || metadataField !== null;
+    if (!interacting.current && !press.current) releaseListOrder();
+  }, [open, metadataField]);
+
+  useLayoutEffect(() => () => {
+    press.current?.abort();
+    press.current = null;
+    releaseListOrder();
+  }, []);
+
+  useEffect(() => {
+    if (previousCloseSignal.current !== closeSignal) setOpen(false);
+    previousCloseSignal.current = closeSignal;
+  }, [closeSignal]);
+
+  function beginPress() {
+    if (!holdListOrder) return;
+    releaseOrder.current ??= holdListOrder();
+    press.current?.abort();
+    const controller = new AbortController();
+    press.current = controller;
+    // A release outside the button may never produce a click. Finish the native
+    // gesture before deciding whether the menu or editor still owns the order.
+    const finish = () => {
+      controller.abort();
+      requestAnimationFrame(() => {
+        if (press.current !== controller) return;
+        press.current = null;
+        if (!interacting.current) releaseListOrder();
+      });
+    };
+    for (const type of ["pointerup", "pointercancel", "blur"]) {
+      window.addEventListener(type, finish, { capture: type !== "blur", signal: controller.signal });
+    }
+  }
 
   useEffect(() => {
     onOpenChange?.(open);
@@ -169,11 +215,15 @@ export function ConversationActionMenu({
         type="button"
         disabled={metadataField !== null}
         data-no-dnd
-        onPointerDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+          if (event.isPrimary && event.button === 0) beginPress();
+        }}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
           if (metadataField !== null) return;
+          if (holdListOrder) releaseOrder.current ??= holdListOrder();
           setMetadataNotice("");
           setOpen((current) => !current);
         }}
