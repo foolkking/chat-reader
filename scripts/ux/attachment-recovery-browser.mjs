@@ -168,7 +168,15 @@ try {
         const second = attachments.find(item => item.display_name === "second.txt");
         const failedRow = panel.locator(`[data-attachment-id="${first.id}"]`);
         const successfulRow = panel.locator(`[data-attachment-id="${second.id}"]`);
+        const more = failedRow.getByRole("button", {name: /More file actions|更多文件操作/});
+        await more.click(); await expect(failedRow.getByRole("menu")).toBeVisible();
+        await panel.locator("p").first().click();
+        await expect(failedRow.getByRole("menu")).toHaveCount(0);
+        await expect(more).toBeFocused();
+        await more.click(); await expect(failedRow.getByRole("menu")).toBeVisible();
         await failedRow.getByRole("checkbox").check();
+        await expect(failedRow.getByRole("menu")).toHaveCount(0);
+        await expect(failedRow.getByRole("checkbox")).toBeFocused();
         await successfulRow.getByRole("checkbox").check();
         await panel.getByRole("button", { name: /^(Detach selected|移除所选)$/ }).click();
         await page.getByRole("dialog").getByRole("button", { name: /^(Detach|移除)$/ }).click();

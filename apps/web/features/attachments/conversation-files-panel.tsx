@@ -783,6 +783,16 @@ function FileRow({
     const closeOnOutside = (event: PointerEvent) => {
       if (!moreRef.current?.contains(event.target as Node)) {
         setMoreOpen(false);
+        const target = event.target, trigger = moreButtonRef.current;
+        // Clicking panel text dismisses the menu but leaves no native focus
+        // destination. Never take focus back from another control or dialog.
+        if (!(target instanceof Element) || !trigger?.closest('[data-testid="conversation-files-panel"]')?.contains(target)
+          || target.closest('a[href],button,input,select,textarea,label,summary,[contenteditable="true"],[role="button"],[tabindex]:not([tabindex="-1"])')) return;
+        window.setTimeout(() => {
+          const focused = document.activeElement;
+          if (trigger.isConnected && target.isConnected && (focused === document.body || focused?.contains(target)))
+            trigger.focus({ preventScroll: true });
+        }, 0);
       }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
