@@ -9,8 +9,9 @@ test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated authentic
 
 async function sources(request: APIRequestContext, project: boolean) {
   let projectId: string | undefined;
+  const projectName = project ? `Synthetic batch ${crypto.randomUUID()}` : null;
   if (project) {
-    const response = await request.post("/api/projects", { data: { name: `Synthetic batch ${crypto.randomUUID()}` } });
+    const response = await request.post("/api/projects", { data: { name: projectName } });
     expect(response.status()).toBe(201);
     projectId = (await response.json()).id;
   }
@@ -29,7 +30,7 @@ async function sources(request: APIRequestContext, project: boolean) {
       : await request.post(`/api/conversations/${id}/archive`);
     expect(moved.ok()).toBe(true);
   }
-  return { items, path: projectId ? `/projects/${projectId}` : "/archived" };
+  return { items, projectName, path: projectId ? `/projects/${projectId}` : "/archived" };
 }
 
 test("late batch submission cannot open or populate another account's tasks", async ({ page, context, playwright, baseURL }) => {
@@ -139,6 +140,9 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       const file = await saved;
       expect(await file.failure()).toBeNull();
       expect(file.suggestedFilename()).toMatch(/^chat-reader-export-.*\.zip$/);
+      const prefix = data.projectName ? `chat-reader-export-${data.projectName}-` : "chat-reader-export-";
+      expect(file.suggestedFilename().startsWith(prefix)).toBe(true);
+      expect(file.suggestedFilename().slice(prefix.length)).toMatch(/^\d{4}-\d{2}-\d{2}\.zip$/);
       const entries = unzipSync(await readFile((await file.path())!));
       expect(Object.keys(entries)).toHaveLength(3);
       order.forEach((id, index) => {

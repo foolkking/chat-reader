@@ -81,6 +81,8 @@ try {
         name: "Synthetic context guidance", bundle_url: "/synthetic-guidance.zip",
       } });
       if (url.pathname === "/api/user-feature-entries/export-preset") return route.fulfill({ json: presets });
+      if (url.pathname === "/api/preferences/context-quick-preset" && request.method() === "GET")
+        return route.fulfill({ json: { preset_id: null } });
       if (url.pathname.startsWith("/api/user-feature-entries/export-preset/") && request.method() === "PUT") {
         presetWrites++;
         presets.push({ id: url.pathname.split("/").at(-1), collection: "export-preset", revision: 1,

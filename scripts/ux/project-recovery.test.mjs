@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { exportViewDependencies } from "./export-view-fixture.mjs";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { test } from "node:test";
@@ -297,6 +298,7 @@ async function listFixture({ cached = true, rows = [row], error = new Error("Syn
     },
     "../../components/use-linear-selection": { useLinearSelection: () => ({ itemHandlers: () => ({}), checkboxClass: () => "flex" }) },
     "../../lib/batch-selection": {},
+    ...exportViewDependencies,
     "../../components/mobile-page-header": { MobilePageHeader: () => null },
     "../../components/workspace-shell": { useWorkspaceShell: () => ({ embedded: true }) },
     "../../components/hover-preview-link": { HoverPreviewLink: ({ href, children }) => React.createElement("a", { href }, children) },
