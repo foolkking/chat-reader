@@ -226,6 +226,27 @@ test("unmount ignores pending reads and previously captured publishers", async (
   assert.equal(f.value.canUseNotebook(), false);
 });
 
+for (const mode of ["offline", "remote"]) test(`${mode} notebook: sync feedback only revokes readiness when content could have changed`, async () => {
+  const r = runtime(), repo = repository({ mode });
+  const props = { conversationId: "synthetic-a", repository: repo.value, open: true, messages: [], activeMessageId: null, onOpenChange: noop, onNavigate: noop };
+  const render = () => r.render("annotation-workspace.tsx", "AnnotationWorkspace", props);
+  try {
+    render(); r.flush(); await setImmediate(); render(); r.flush();
+    const initial = repo.calls.notebook;
+    assert.ok(initial > 0);
+    r.events.dispatchEvent(new CustomEvent("sync", { detail: "reading-position" }));
+    assert.equal(repo.calls.notebook, initial);
+    r.events.dispatchEvent(new CustomEvent("sync", { detail: "outbox-retry" }));
+    const afterRetry = initial + Number(mode === "remote");
+    assert.equal(repo.calls.notebook, afterRetry);
+    assert.equal(repo.calls.conflicts, afterRetry);
+    r.events.dispatchEvent(new Event("sync")); // confirmed content or changed access; must still re-read
+    assert.equal(repo.calls.notebook, afterRetry + 1);
+    assert.equal(repo.calls.conflicts, afterRetry + 1);
+    await setImmediate();
+  } finally { r.dispose(); }
+});
+
 test("workspace opens with independent error recovery instead of false empty annotations", async () => {
   const r = runtime(), repo = repository({ list: async () => { throw new Error("Synthetic read"); } });
   const props = { conversationId: "synthetic-a", repository: repo.value, open: false, messages: [], activeMessageId: null, onOpenChange: noop, onNavigate: noop };

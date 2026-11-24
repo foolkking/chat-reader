@@ -112,7 +112,7 @@ export async function flushReadingPositionBatch(db: typeof offlineDb, access: nu
     seen.add(row.conversation_id);
     return row.attempts < 5 && !["AUTH", "INVALID", "CONFLICT"].includes(row.last_error ?? "") && (row.retry_after ?? 0) <= Date.now();
   }).limit(5).toArray();
-  let synced = 0, conflicts = 0;
+  let synced = 0, conflicts = 0, accessMayHaveChanged = false;
   for (const selectedRow of selected) {
     assertOfflineAccess(access);
     const sent = await db.transaction("rw", db.outbox, async () => {
@@ -153,11 +153,15 @@ export async function flushReadingPositionBatch(db: typeof offlineDb, access: nu
       synced += 1; if (response.status === "conflict") conflicts += 1;
     } catch (error) {
       assertOfflineAccess(access);
+      if (error instanceof ApiRequestError && [401, 403, 404].includes(error.status)) accessMayHaveChanged = true;
       const code = error instanceof ApiRequestError ? [401, 403].includes(error.status) ? "AUTH" : [400, 404, 409, 422].includes(error.status) ? "INVALID" : "NETWORK" : "NETWORK";
       await db.outbox.update(sent.operation_id, { attempts: sent.attempts + 1, last_error: code, retry_after: Date.now() + Math.min(30_000, 2_000 * 2 ** sent.attempts) });
     }
   }
-  window.dispatchEvent(new Event("chat-reader:sync-changed"));
+  // An empty queue did not change anything. A position update changed neither
+  // a notebook nor its conflicts. Do not revoke an unrelated ready Save click.
+  if (selected.length) window.dispatchEvent(accessMayHaveChanged ? new Event("chat-reader:sync-changed")
+    : new CustomEvent("chat-reader:sync-changed", { detail: "reading-position" }));
   const retries = await db.outbox.filter((row) => isPosition(row) && (!scope || scope.has(row.conversation_id)) && row.last_error === "NETWORK" && row.attempts < 5).toArray();
   return { synced, conflicts, retryAt: retries.length ? Math.min(...retries.map((row) => row.retry_after ?? Date.now())) : undefined };
 }

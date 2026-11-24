@@ -482,10 +482,14 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   };
   useEffect(() => {
     if (!open) return;
-    const update = () => { void reload().catch(() => undefined); };
+    const update = (event: Event) => {
+      const change = (event as CustomEvent<unknown>).detail;
+      if (change === "reading-position" || (change === "outbox-retry" && repository.mode === "offline")) return;
+      void reload().catch(() => undefined);
+    };
     window.addEventListener(OFFLINE_SYNC_CHANGED_EVENT, update);
     return () => window.removeEventListener(OFFLINE_SYNC_CHANGED_EVENT, update);
-  }, [open, reload]);
+  }, [open, reload, repository.mode]);
 
   // Defer initial reads until the panel opens. Once loaded, annotations also
   // support Reader highlights while the panel is closed.
