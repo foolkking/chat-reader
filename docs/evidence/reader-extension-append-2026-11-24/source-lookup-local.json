@@ -1,0 +1,126 @@
+{
+  "scope": "Local synthetic ChatGPT. source-ui: real native controls with simulated Reader responses. api-pg-worker: real local Reader and ordinary accounts; first-party Web consent and Reader Web UI not tested here. Not remote CI or production.",
+  "version": "0.2.0",
+  "packages": {
+    "before": "9effb275888e28dedd7121affa836f09c31338d492cd13ee8fec77dfdd891a70",
+    "candidate": "aec9fdaa3927ce9cfa0ae33113241b2c81bc4f89fe0b8dcdfde681f76620b7b5"
+  },
+  "runs": [
+    {
+      "run": "chrome-zh-account-before-01",
+      "suite": "source-ui",
+      "package": "before",
+      "browser": "151.0.7922.34",
+      "localTime": "2026-11-24T14:08:09+08:00",
+      "passed": false,
+      "completedSteps": [
+        "private-by-default",
+        "manual"
+      ],
+      "failedAt": "same-document-new-account"
+    },
+    {
+      "run": "chrome-zh-account-after-05",
+      "suite": "source-ui",
+      "package": "candidate",
+      "browser": "151.0.7922.34",
+      "localTime": "2026-11-24T14:17:13+08:00",
+      "passed": true,
+      "completedSteps": [
+        "private-by-default",
+        "manual",
+        "same-document-new-account",
+        "explicit-negative",
+        "opt-in-control",
+        "open-target",
+        "opt-out"
+      ]
+    },
+    {
+      "run": "edge-en-account-after-06",
+      "suite": "source-ui",
+      "package": "candidate",
+      "browser": "158.0.4370.33",
+      "localTime": "2026-11-24T14:17:17+08:00",
+      "passed": true,
+      "completedSteps": [
+        "private-by-default",
+        "manual",
+        "same-document-new-account",
+        "explicit-negative",
+        "opt-in-control",
+        "open-target",
+        "opt-out"
+      ]
+    },
+    {
+      "run": "chrome-zh-api-receipt-01",
+      "suite": "api-pg-worker",
+      "package": "candidate",
+      "browser": "151.0.7922.34",
+      "localTime": "2026-11-24T14:32:44+08:00",
+      "passed": false,
+      "completedSteps": [
+        "actual-device-A",
+        "actual-save"
+      ],
+      "failedAt": "read-back-bytes-and-owner",
+      "testDeviceGrantsRevoked": 1
+    },
+    {
+      "run": "chrome-zh-api-receipt-02",
+      "suite": "api-pg-worker",
+      "package": "candidate",
+      "browser": "151.0.7922.34",
+      "localTime": "2026-11-24T14:41:21+08:00",
+      "passed": false,
+      "completedSteps": [
+        "actual-device-A",
+        "actual-save"
+      ],
+      "failedAt": "read-back-bytes-and-owner",
+      "testDeviceGrantsRevoked": 1
+    },
+    {
+      "run": "chrome-zh-api-receipt-03",
+      "suite": "api-pg-worker",
+      "package": "candidate",
+      "browser": "151.0.7922.34",
+      "localTime": "2026-11-24T14:46:14+08:00",
+      "passed": true,
+      "completedSteps": [
+        "actual-device-A",
+        "actual-save",
+        "read-back-bytes-and-owner",
+        "default-private",
+        "manual-resolves-owner",
+        "switch-device-in-place",
+        "actual-foreign-negative"
+      ],
+      "testDeviceGrantsRevoked": 2
+    },
+    {
+      "run": "edge-en-api-receipt-04",
+      "suite": "api-pg-worker",
+      "package": "candidate",
+      "browser": "158.0.4370.33",
+      "localTime": "2026-11-24T14:46:31+08:00",
+      "passed": true,
+      "completedSteps": [
+        "actual-device-A",
+        "actual-save",
+        "read-back-bytes-and-owner",
+        "default-private",
+        "manual-resolves-owner",
+        "switch-device-in-place",
+        "actual-foreign-negative"
+      ],
+      "testDeviceGrantsRevoked": 2
+    }
+  ],
+  "finalTestSourceLFsha256": {
+    "source-state-browser.cjs": "2d1f0addd4769462bc063ceafc0f2a1f5d72ad14e3b71dd73886a558d73c70cd",
+    "source-receipt-api.cjs": "088f73f1c177cb23bab2b728bd210ebd8a0809e0810844128714c3c6a4cbb88d",
+    "verify_extension_build.py": "b6bd7d1775a511188c41c05a1bd9e8fb0532d5c825092e0b4082bbbd0b7e6f4c"
+  }
+}

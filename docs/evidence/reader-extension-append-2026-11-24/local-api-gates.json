@@ -1,0 +1,104 @@
+{
+  "scope": "Local platform evidence only. Not a single all-Linux suite, GitHub CI, or production acceptance. No change to the frozen schedule, thresholds or skip allowlist.",
+  "sources": {
+    "readerBase": "4afb430cf6d5d03b67474cd8a8d9e5ec2021935c",
+    "scheduleSha256": "42bcf1bb82c7f990723bce3a0340de7e7430de3268a32118ffbbf074f8f40905",
+    "extensionContractLFsha256": "9fbfee0dd1c4999d6b5ba9632d77da3ae17fcef89dc1039d852f2a6b0a0760cb",
+    "nativeCollectionSha256": "a7e953beb04cfc369a1f6156948605e3830d049d8b9382fbbfaaec31a4d8803f"
+  },
+  "nativeWindows": {
+    "postgresMajor": 17,
+    "schema": "20261123_0064",
+    "migrationAtHead": true,
+    "started": "2026-11-24T13:49:23+08:00",
+    "finished": "2026-11-24T15:45:13+08:00",
+    "uniqueCollected": 7116,
+    "groups": {
+      "local-1-01": {
+        "passed": 403,
+        "skipped": 1
+      },
+      "local-1-02": {
+        "passed": 570
+      },
+      "local-1-03": {
+        "passed": 194
+      },
+      "local-2-01": {
+        "passed": 326,
+        "skipped": 1
+      },
+      "local-2-02": {
+        "passed": 3182
+      },
+      "local-2-03": {
+        "passed": 417,
+        "skipped": 4
+      },
+      "local-2-04": {
+        "passed": 224
+      },
+      "local-3-01": {
+        "passed": 408,
+        "skipped": 2
+      },
+      "local-3-02": {
+        "passed": 374,
+        "skipped": 1
+      },
+      "local-3-03": {
+        "passed": 229,
+        "skipped": 4
+      },
+      "local-4-01": {
+        "passed": 420,
+        "skipped": 2
+      },
+      "local-4-02": {
+        "passed": 352,
+        "skipped": 2
+      }
+    },
+    "allIndividualPytestExitCodes": 0,
+    "outcomes": {
+      "passed": 7099,
+      "skipped": 17
+    },
+    "linuxCountCriterionRunnerExit": 1,
+    "ownedPostgresStopped": true
+  },
+  "linuxSupplement": {
+    "postgresMajor": 16,
+    "network": "loopback-only isolated namespace; no published ports",
+    "start": "2026-11-24T15:37:26+08:00",
+    "finish": "2026-11-24T15:38:49+08:00",
+    "actualNodeOutcomes": {
+      "tests/test_attachment_storage_integrity.py::test_symlinked_reference_components_are_never_followed": "passed",
+      "tests/test_bounded_zip_streaming.py::test_record_spool_rejects_data_and_index_symlinks[False]": "passed",
+      "tests/test_bounded_zip_streaming.py::test_record_spool_rejects_data_and_index_symlinks[True]": "passed",
+      "tests/test_cleanup_execution.py::test_outside_symlink_is_never_eligible": "passed",
+      "tests/test_import_source_cleanup.py::test_changed_directory_is_protected_not_reported_as_removed[symlink]": "passed",
+      "tests/test_import_source_repair.py::test_exclusion_never_follows_source_symlink_to_a_sibling[legacy]": "passed",
+      "tests/test_import_source_repair.py::test_exclusion_never_follows_source_symlink_to_a_sibling[worker]": "passed",
+      "tests/test_prepared_worker_processes.py::test_real_idle_maintenance_and_shutdown_never_overlap_two_execution_children": "passed",
+      "tests/test_prepared_worker_processes.py::test_real_parent_death_kills_its_unassigned_interpreter": "passed",
+      "tests/test_runtime_health_scripts.py::test_different_release_copies_share_one_lock": "passed",
+      "tests/test_worker_shutdown.py::test_posix_process_observes_external_stop_and_exits_successfully[False-15]": "passed",
+      "tests/test_worker_shutdown.py::test_posix_process_observes_external_stop_and_exits_successfully[False-2]": "passed",
+      "tests/test_worker_shutdown.py::test_posix_process_observes_external_stop_and_exits_successfully[True-15]": "passed",
+      "tests/test_worker_shutdown.py::test_posix_process_observes_external_stop_and_exits_successfully[True-2]": "passed"
+    },
+    "pytestExit": 0,
+    "ownedPostgresStopped": true
+  },
+  "localCombinedExactNodes": {
+    "passedAtLeastOnce": 7113,
+    "onlyProjectAllowlistedNotRun": [
+      "tests/test_exporter_markdown_parser.py::test_real_paired_fixture_uses_bounded_fast_path",
+      "tests/test_import_preview_exporter_combo.py::test_real_exporter_pair_preview_commit_and_retry",
+      "tests/test_import_preview_exporter_combo.py::test_response_only_real_pair_preview"
+    ],
+    "unexpectedUnverified": 0
+  },
+  "qualification": "The native Windows run itself remained 7099 passed/17 skipped; Linux supplement is provided separately, not substituted into a CI report."
+}

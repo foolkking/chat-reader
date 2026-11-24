@@ -90,9 +90,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             except SQLAlchemyError:
                 return _json_error(503, "Authentication service unavailable.")
             response.headers["X-Chat-Reader-Auth-Reason"] = reason
-            if token:
-                response.delete_cookie(SESSION_COOKIE_NAME, path="/", secure=settings.auth_cookie_secure, samesite="lax")
-            response.delete_cookie(SESSION_PRESENCE_COOKIE_NAME, path="/", secure=settings.auth_cookie_secure, samesite="lax")
+            if SESSION_COOKIE_NAME in request.cookies:
+                response.delete_cookie(SESSION_COOKIE_NAME, path="/", secure=settings.auth_cookie_secure, httponly=True, samesite="lax")
+            if SESSION_PRESENCE_COOKIE_NAME in request.cookies:
+                response.delete_cookie(SESSION_PRESENCE_COOKIE_NAME, path="/", secure=settings.auth_cookie_secure, samesite="lax")
             return response
 
         request.state.auth = authentication.context

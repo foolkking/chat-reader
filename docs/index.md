@@ -1,6 +1,8 @@
 # 文档导航
 
-- [Chat Reader 桌面浏览器插件：私有内测接入、使用与撤销](system/BROWSER_EXTENSION.md) · [隔离验收与失败记录](evidence/browser-extension-2026-11-23/README.md)。开发分支，非生产 v0.1.5 功能。
+- [开发：项目对话导出的范围和文件内容](system/DATA_ARCHIVE_CONTRACT.md) · [批量选择、范围复核与真实 ZIP 验收](evidence/project-batch-export-2026-11-23/README.md#implemented)。
+
+- [Chat Reader 桌面浏览器插件：接入、使用与撤销](system/BROWSER_EXTENSION.md) · [改前审查与计划](planning/ux-audit-reader-extension-2026-11-23.md) · [侧栏和一键保存](evidence/browser-extension-polish-2026-11-23/README.md) · [选择性末尾追加、双端下载、设备上限恢复与分发包](evidence/reader-extension-append-2026-11-24/README.md) · [原始内测](evidence/browser-extension-2026-11-23/README.md)。非生产 v0.1.5 功能。
 
 - [当前生产 v0.1.5：固定内存导入、完整维护实测与快路径边界](deployment.md#v015-production) · [签名发布与生产回执](evidence/import-units-2026-11-21/v0.1.5-production.json)。
 - [固定内存下的消息级导入](system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [640 MiB 与 1280 MiB 对照](evidence/import-units-2026-11-21/README.md)。原始 JSON／混合分析仍有原内存门槛。

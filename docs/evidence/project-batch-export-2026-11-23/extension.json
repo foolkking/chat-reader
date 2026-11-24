@@ -1,0 +1,22 @@
+{
+  "kind": "fresh private package and network-isolated source route fixture",
+  "started": "2026-11-23T11:23:43.925Z",
+  "files": 31,
+  "treeHashMethod": "concatenated sorted relative path, NUL, bytes (sha256)",
+  "treeSha256": "46ad64412fab4d1a0fa97221931ddb45bb26205b05090fb116255efefcef8574",
+  "localPickerPackaged": false,
+  "individualControls": [
+    "连接 Reader"
+  ],
+  "projectControls": [],
+  "panelFileChooserCount": 0,
+  "readerRequestsOrOtherUnexpectedRequestsBlocked": 0,
+  "offlinePrototypeOnly": {
+    "indexed": 4,
+    "explicitGroups": 2,
+    "noKnownGroup": 2,
+    "duplicateSourcesRejected": true
+  },
+  "status": "complete",
+  "finished": "2026-11-23T11:23:45.580Z"
+}

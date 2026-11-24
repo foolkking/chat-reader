@@ -684,7 +684,7 @@ function readerTurnRanges(messages: MessageWindowResponse["items"]): Array<{ sta
   if (messages.some((message) => userRoles.has(message.role.toLowerCase()))) {
     let start = 0;
     messages.forEach((message, index) => {
-      if (index > 0 && userRoles.has(message.role.toLowerCase())) {
+      if (index > 0 && (userRoles.has(message.role.toLowerCase()) || message.standalone_answer || messages[index-1].standalone_answer)) {
         ranges.push({ start, end: index });
         start = index;
       }
@@ -698,7 +698,7 @@ function readerTurnRanges(messages: MessageWindowResponse["items"]): Array<{ sta
     messages.slice(1).forEach((message, relativeIndex) => {
       const index = relativeIndex + 1;
       const current = message.turn_index ?? `synthetic-${index}`;
-      if (current !== previous) {
+      if (current !== previous || message.standalone_answer || messages[index-1].standalone_answer) {
         ranges.push({ start, end: index });
         start = index;
       }

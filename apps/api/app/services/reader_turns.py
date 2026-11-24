@@ -5,11 +5,11 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Query, Session, joinedload
 
 from app.models.attachment import Attachment, MessageVersionAttachment
-from app.models.message import Message
+from app.models.message import Message, STANDALONE_ANSWER
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
 from app.schemas.message import MessageListItem, MessageVersionRead, ReaderTurnResponse, RenderBlockRead
@@ -108,24 +108,35 @@ def _load_selected_turn(
     user_roles = ("user", "prompt", "human")
     has_user_role = base.filter(func.lower(Message.role).in_(user_roles)).first() is not None
     if has_user_role:
-        user_role_filter = func.lower(Message.role).in_(user_roles)
+        boundary = or_(func.lower(Message.role).in_(user_roles),
+                       and_(Message.role == "assistant", Message.author_label == STANDALONE_ANSWER))
         start_anchor = (
-            base.filter(user_role_filter, Message.order_key <= anchor.order_key)
+            base.filter(boundary, Message.order_key <= anchor.order_key)
             .order_by(Message.order_key.desc())
             .first()
         )
         first_message = base.order_by(Message.order_key.asc()).first()
         start_order = start_anchor.order_key if start_anchor is not None else first_message.order_key
+        if start_anchor is not None and start_anchor.standalone_answer and start_order < anchor.order_key:
+            start_order = base.filter(Message.order_key > start_order).order_by(Message.order_key.asc()).first().order_key
+        next_query = base.filter(Message.order_key > anchor.order_key)
+        if not anchor.standalone_answer:
+            next_query = next_query.filter(boundary)
         next_anchor = (
-            base.filter(user_role_filter, Message.order_key > anchor.order_key)
+            next_query
             .order_by(Message.order_key.asc())
             .first()
         )
         previous_anchor = (
-            base.filter(user_role_filter, Message.order_key < start_order)
+            base.filter(boundary, Message.order_key < start_order)
             .order_by(Message.order_key.desc())
             .first()
         )
+        if previous_anchor is not None and previous_anchor.standalone_answer:
+            previous_anchor = base.filter(Message.order_key > previous_anchor.order_key, Message.order_key < start_order
+                ).order_by(Message.order_key.asc()).first() or previous_anchor
+        if previous_anchor is None and first_message.order_key < start_order:
+            previous_anchor = first_message
     elif base.filter(Message.turn_index.is_not(None)).first() is not None:
         # Explicit turn_index data can repeat non-contiguously. The canonical
         # Python grouper treats each contiguous run as a distinct turn, so a
@@ -247,30 +258,26 @@ def build_reader_turn(
     )
 
 
-def _group_turns(messages: list[Message]) -> list[_Turn]:
+def reader_turn_ranges(rows: list[tuple[str, int | None, bool]]) -> list[tuple[int, int]]:
+    """Shared by canonical and frozen reads. An explicitly unpaired answer is one real turn."""
+    if not rows:
+        return []
     user_roles = {"user", "prompt", "human"}
-    if any(message.role.lower() in user_roles for message in messages):
-        ranges = []
-        start = 0
-        for index, message in enumerate(messages):
-            if index > 0 and message.role.lower() in user_roles:
-                ranges.append((start, index))
-                start = index
-        ranges.append((start, len(messages)))
-    elif any(message.turn_index is not None for message in messages):
-        ranges = []
-        start = 0
-        last_key = messages[0].turn_index
-        for index, message in enumerate(messages[1:], start=1):
-            key = message.turn_index if message.turn_index is not None else ("synthetic", index)
-            if key != last_key:
-                ranges.append((start, index))
-                start = index
-            last_key = key
-        ranges.append((start, len(messages)))
-    else:
-        ranges = [(index, index + 1) for index in range(len(messages))]
-    return [_Turn(f"turn-{index}", start, end) for index, (start, end) in enumerate(ranges)]
+    has_users = any(role.lower() in user_roles for role, _, _ in rows)
+    ranges, start = [], 0
+    for i in range(1, len(rows)):
+        role, turn, standalone = rows[i]
+        _, previous_turn, previous_standalone = rows[i-1]
+        boundary = role.lower() in user_roles if has_users else (turn is None or turn != previous_turn)
+        if boundary or standalone or previous_standalone:
+            ranges.append((start, i))
+            start = i
+    return [*ranges, (start, len(rows))]
+
+
+def _group_turns(messages: list[Message]) -> list[_Turn]:
+    ranges = reader_turn_ranges([(m.role, m.turn_index, m.standalone_answer) for m in messages])
+    return [_Turn(f"turn-{i}", start, end) for i, (start, end) in enumerate(ranges)]
 
 
 def _message_item(message: Message, version: MessageVersion | None, blocks: list[RenderBlockRead], ordinal: int) -> MessageListItem:
@@ -289,6 +296,7 @@ def _message_item(message: Message, version: MessageVersion | None, blocks: list
         id=message.id,
         conversation_id=message.conversation_id,
         role=message.role,
+        standalone_answer=message.standalone_answer,
         order_key=message.order_key,
         turn_index=message.turn_index,
         created_at=message.created_at,

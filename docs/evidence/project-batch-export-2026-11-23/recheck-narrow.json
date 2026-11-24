@@ -1,0 +1,58 @@
+{
+  "start": "2026-11-23T12:29:26.068Z",
+  "width": 375,
+  "height": 900,
+  "environment": "loopback synthetic ordinary account",
+  "steps": [
+    "sort only",
+    "moved before refetch",
+    "lost acknowledgement"
+  ],
+  "sortOnly": {
+    "before": {
+      "shown": "已选择 2 / 100（已加载）",
+      "checked": 2
+    },
+    "after": {
+      "shown": "已选择 2 / 100（已加载）",
+      "checked": 1
+    },
+    "originalSelection": 2,
+    "serverActive": 103,
+    "originalBothStillMembers": true,
+    "submitted": 1,
+    "membersInDownload": 1,
+    "bothPresent": false,
+    "sha256": "4f62546d784ce6d2469e6c7df9bce1e91aa6fd2c2b39aecf61a2ffe5074c199d"
+  },
+  "metadata": {
+    "sourceConversationId": true,
+    "sourceMessageId": true,
+    "sourceDisplayUser": true,
+    "sourceLink": true,
+    "unrelatedProviderFieldIncluded": false,
+    "originalFilename": true,
+    "displayFilename": true
+  },
+  "moveBeforeRefetch": {
+    "shown": "已选择 2 / 100（已加载）",
+    "checked": 2,
+    "serverActive": 102,
+    "originalSelection": 2,
+    "stillMembers": 1,
+    "submitted": 2,
+    "membersInDownload": 2,
+    "includesMovedButStillOwned": true,
+    "sha256": "aa36fbd76fb1e99dfbd51cf2dc2cf95f9221183ab937eaae3d382269df38e4bd"
+  },
+  "lostResponse": {
+    "serverAccepted": true,
+    "sameMountSameJob": true,
+    "reloadedSameJob": false,
+    "distinctCommittedJobsForSameMountRetry": 1,
+    "distinctCommittedJobsForReloadRetry": 2,
+    "warningMentionsReload": false
+  },
+  "status": "observed",
+  "finish": "2026-11-23T12:29:45.887Z"
+}

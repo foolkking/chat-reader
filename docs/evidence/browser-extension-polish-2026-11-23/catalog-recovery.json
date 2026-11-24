@@ -1,0 +1,364 @@
+{
+  "scope": "Isolated catalog follow-up; same disposable local NGINX, Reader API/Web, PostgreSQL, worker and network-isolated fixture as browser.cjs; not a real platform account, public release, CI or production.",
+  "reader_base": "4afb430cf6d5d03b67474cd8a8d9e5ec2021935c",
+  "fork_base": "a3f0ebe738a2e69ea5c866bdddb29ce119f08fc5",
+  "branch": "codex/reader-extension",
+  "baseline_tree": "3bf9a2e57f19f3214220047b779707181eb0c25b9a1a0df2f844b255a5e2aae0",
+  "tested_tree": "c2d1bc69335e36a1332215f91200cb7e9409bd8de3855d6db95d26a243759fb8",
+  "tree_definition": "SHA-256 of sorted relative path, TAB, raw-file SHA-256, LF, encoded as UTF-8",
+  "installed_files": 31,
+  "changed_installed_files": {
+    "panel.css": "b67b430b33030ebe02552bf3994dc07e6c0a84076744ec148935b9d91ed56b6e",
+    "panel.html": "0a20d3a863effc8307438b5e65a6225f087f5e72a970b59575bb354e0012fc06",
+    "panel.js": "de3824c048ab983fe12e34f0789f55864e1fc1a282892a53fcf564772f1a344b"
+  },
+  "loopback_only_zip": {
+    "name": "Chat-Reader-loopback-catalog-recovery.zip",
+    "bytes": 115144,
+    "sha256": "5aadfcb966000c215b2f44eed168ee79cccb1a2ea5cce45f7c2a8e1b85dad5b5",
+    "all_member_bytes_equal_installed_tree": true
+  },
+  "test_sources_raw_sha256": {
+    "scripts/extension-beta/browser.cjs": "68e911a49a2983dc087ec785657d8b10c4a4ea39d2a40babe437d369de989dba",
+    "scripts/extension-beta/panel-navigation.cjs": "ea56238b1e1513ab17a5f2b907ac19c3caf4c1bbdac9c148c52f3185c3e73473"
+  },
+  "before": {
+    "browser": "151.0.7922.34",
+    "label": "chrome-zh-baseline-01",
+    "result": "failed",
+    "failure": {
+      "step": "catalog-navigation-recovery",
+      "type": "AssertionError",
+      "detail": "operation failed"
+    },
+    "panelNavigation": {
+      "startup": {
+        "capabilities": {
+          "retry": false,
+          "catalogHidden": false,
+          "disconnectAvailable": true,
+          "noUnverifiedDestination": false,
+          "recovered": false
+        },
+        "projects": {
+          "retry": false,
+          "catalogHidden": false,
+          "disconnectAvailable": true,
+          "noUnverifiedDestination": false,
+          "recovered": false
+        }
+      },
+      "search": {
+        "keptQueryAndProject": false,
+        "returnsToSameResult": false
+      },
+      "magnified": {
+        "headerLines": 2,
+        "decorativeGutter": true,
+        "titleWidth": 146,
+        "actionsWidth": 88,
+        "horizontalOverflow": false
+      },
+      "failed": [
+        "capabilities.retry",
+        "capabilities.catalogHidden",
+        "capabilities.noUnverifiedDestination",
+        "capabilities.recovered",
+        "projects.retry",
+        "projects.catalogHidden",
+        "projects.noUnverifiedDestination",
+        "projects.recovered",
+        "search.keptQueryAndProject",
+        "search.returnsToSameResult",
+        "magnified.headerFits",
+        "magnified.titleGetsGutter"
+      ]
+    },
+    "resting": {
+      "searchTop": 60,
+      "firstRowTop": 160,
+      "actionWidth": 44
+    },
+    "geometry": {
+      "searchTop": 60,
+      "firstRowTop": 216
+    },
+    "finished": "2026-11-23T15:33:15+08:00",
+    "steps": 11,
+    "receipt_sha256": "e4d51a5688c94fcd10999070ae3f5e10e6dbc2f90aed207fd4d1a6143a50160b"
+  },
+  "both_final_runs": [
+    {
+      "browser": "151.0.7922.34",
+      "label": "chrome-zh-faults-release-check",
+      "result": "pass",
+      "panelNavigation": {
+        "startup": {
+          "capabilities": {
+            "retry": true,
+            "catalogHidden": true,
+            "disconnectAvailable": true,
+            "noUnverifiedDestination": true,
+            "focusedSearch": true,
+            "settingsClosed": true,
+            "retryDismissed": true,
+            "recovered": true
+          },
+          "projects": {
+            "retry": true,
+            "catalogHidden": true,
+            "unsupportedRouteNamed": true,
+            "disconnectAvailable": true,
+            "noUnverifiedDestination": true,
+            "newFocusSurvivedClose": true,
+            "focusedSearch": true,
+            "settingsClosed": true,
+            "retryDismissed": true,
+            "recovered": true
+          }
+        },
+        "search": {
+          "keptQueryAndProject": true,
+          "removedOnlyPinScope": true,
+          "returnsToSameResult": true
+        },
+        "magnified": {
+          "headerLines": 1,
+          "decorativeGutter": false,
+          "titleWidth": 200,
+          "actionsWidth": 88,
+          "horizontalOverflow": false,
+          "searchTop": 120,
+          "firstRowTop": 520
+        },
+        "failed": []
+      },
+      "pinPending": {
+        "oldActionsClosed": true,
+        "duplicateActionDisabled": true,
+        "actionsMarkedBusy": true,
+        "pendingStatusVisible": true,
+        "menuActionsLocked": true,
+        "triggerLocked": true,
+        "returnedFocus": true
+      },
+      "pinFailure": {
+        "explainsUnconfirmedResult": true,
+        "focusableError": true,
+        "oldWriteLocked": true,
+        "existingPinActionRetained": true
+      },
+      "resting": {
+        "searchTop": 60,
+        "firstRowTop": 160,
+        "actionWidth": 44
+      },
+      "geometry": {
+        "searchTop": 60,
+        "firstRowTop": 216
+      },
+      "finished": "2026-11-23T17:45:07+08:00",
+      "steps": 28,
+      "receipt_sha256": "a143d7240cc6a3ceaa39bf5b5794d480d2da0755e4c75d834be96a4e0598bf0a"
+    },
+    {
+      "browser": "158.0.4370.33",
+      "label": "edge-en-faults-release-check",
+      "result": "pass",
+      "panelNavigation": {
+        "startup": {
+          "capabilities": {
+            "retry": true,
+            "catalogHidden": true,
+            "disconnectAvailable": true,
+            "noUnverifiedDestination": true,
+            "focusedSearch": true,
+            "settingsClosed": true,
+            "retryDismissed": true,
+            "recovered": true
+          },
+          "projects": {
+            "retry": true,
+            "catalogHidden": true,
+            "unsupportedRouteNamed": true,
+            "disconnectAvailable": true,
+            "noUnverifiedDestination": true,
+            "newFocusSurvivedClose": true,
+            "focusedSearch": true,
+            "settingsClosed": true,
+            "retryDismissed": true,
+            "recovered": true
+          }
+        },
+        "search": {
+          "keptQueryAndProject": true,
+          "removedOnlyPinScope": true,
+          "returnsToSameResult": true
+        },
+        "magnified": {
+          "headerLines": 1,
+          "decorativeGutter": false,
+          "titleWidth": 200,
+          "actionsWidth": 88,
+          "horizontalOverflow": false,
+          "searchTop": 120,
+          "firstRowTop": 537
+        },
+        "failed": []
+      },
+      "pinPending": {
+        "oldActionsClosed": true,
+        "duplicateActionDisabled": true,
+        "actionsMarkedBusy": true,
+        "pendingStatusVisible": true,
+        "menuActionsLocked": true,
+        "triggerLocked": true,
+        "returnedFocus": true
+      },
+      "pinFailure": {
+        "explainsUnconfirmedResult": true,
+        "focusableError": true,
+        "oldWriteLocked": true,
+        "existingPinActionRetained": true
+      },
+      "resting": {
+        "searchTop": 60,
+        "firstRowTop": 160,
+        "actionWidth": 44
+      },
+      "geometry": {
+        "searchTop": 60,
+        "firstRowTop": 216
+      },
+      "finished": "2026-11-23T17:46:59+08:00",
+      "steps": 28,
+      "receipt_sha256": "0c950fc41f8d0d058f6d1f675b8a847fcef22e739b420d98e4e0e18e86096558"
+    }
+  ],
+  "attempts_before_final": [
+    {
+      "label": "chrome-zh-baseline-01",
+      "result": "failed",
+      "failure": {
+        "step": "catalog-navigation-recovery",
+        "type": "AssertionError",
+        "detail": "operation failed"
+      },
+      "finished": "2026-11-23T15:33:15+08:00",
+      "steps": 11,
+      "receipt_sha256": "e4d51a5688c94fcd10999070ae3f5e10e6dbc2f90aed207fd4d1a6143a50160b"
+    },
+    {
+      "label": "chrome-zh-faults-after-01",
+      "result": "failed",
+      "failure": {
+        "step": "project-operations",
+        "type": "TimeoutError",
+        "detail": "operation failed"
+      },
+      "finished": "2026-11-23T15:42:22+08:00",
+      "steps": 13,
+      "receipt_sha256": "d06ee07731a4f851b0335c346f395d9ddf9d5e8abd4cc04f3e05e0c8b6730cef"
+    },
+    {
+      "label": "chrome-zh-faults-after-02",
+      "result": "failed",
+      "failure": {
+        "step": "project-pin-pending",
+        "type": "AssertionError",
+        "detail": "operation failed"
+      },
+      "finished": "2026-11-23T16:04:23+08:00",
+      "steps": 13,
+      "receipt_sha256": "aceb7ed24c4f30b1ada1de479256fc3392b759287015ed380a30c499bae98d41"
+    },
+    {
+      "label": "chrome-zh-faults-after-03",
+      "result": "pass",
+      "finished": "2026-11-23T16:19:44+08:00",
+      "steps": 28,
+      "receipt_sha256": "2b79c7f8eff8cb4197039f6aa3695942be9763666228483ce094198c47005c2c"
+    },
+    {
+      "label": "edge-en-faults-after-04",
+      "result": "pass",
+      "finished": "2026-11-23T16:35:22+08:00",
+      "steps": 28,
+      "receipt_sha256": "0f37300a9c86949bf4fe1f32d4146fa23f8b97b6500f4beccbfe8df7bc2b2cdb"
+    },
+    {
+      "label": "chrome-zh-faults-final",
+      "result": "pass",
+      "finished": "2026-11-23T16:46:01+08:00",
+      "steps": 28,
+      "receipt_sha256": "999f03f98494fe1807dd5ed504f33889e7d412e23f121d425b8ba115608e354c"
+    },
+    {
+      "label": "chrome-zh-faults-verified",
+      "result": "pass",
+      "finished": "2026-11-23T16:57:29+08:00",
+      "steps": 28,
+      "receipt_sha256": "40b4e327f7423f15e8f23834f03376cb931017eaab1818747311442cff996826"
+    },
+    {
+      "label": "edge-en-faults-verified",
+      "result": "pass",
+      "finished": "2026-11-23T17:04:46+08:00",
+      "steps": 28,
+      "receipt_sha256": "96c48c81a59d641d4773292ced51b303485b43097a0645f77a515fae4f1e2a1d"
+    },
+    {
+      "label": "chrome-zh-faults-delivery",
+      "result": "failed",
+      "failure": {
+        "step": "catalog-navigation-recovery",
+        "type": "AssertionError",
+        "detail": "operation failed"
+      },
+      "finished": "2026-11-23T17:30:45+08:00",
+      "steps": 12,
+      "receipt_sha256": "6497946f4179e89c393b5363b4d5f0f17f2b201bd603bfd20fb8fa03396eeb5a"
+    },
+    {
+      "label": "edge-en-focus-control",
+      "result": "failed",
+      "failure": {
+        "step": "catalog-navigation-recovery",
+        "type": "AssertionError",
+        "detail": "operation failed"
+      },
+      "finished": "2026-11-23T17:38:34+08:00",
+      "steps": 11,
+      "receipt_sha256": "00165296d146d7f8dd6c3f1a9ef6ff9a8ce89aaf2f0eed83dacfb39035f45e31"
+    }
+  ],
+  "focus_control": {
+    "retry": true,
+    "catalogHidden": true,
+    "unsupportedRouteNamed": true,
+    "disconnectAvailable": true,
+    "noUnverifiedDestination": true,
+    "newFocusSurvivedClose": false,
+    "focusedSearch": true,
+    "settingsClosed": true,
+    "retryDismissed": true,
+    "recovered": true
+  },
+  "fork_tests": {
+    "node": "24.22.3",
+    "tests": 178,
+    "pass": 115,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 63,
+    "todo": 0,
+    "log_sha256": "3d5d8d35071149c2d0a956145c0de0688907340ddecdb6fc1fcc2bbdbc93cc5e"
+  },
+  "screenshots": {
+    "catalog-empty-zh.png": "b4f77268b2a6e27997bbf33996cabd000c86391f1c09c892fae214b59a098334",
+    "catalog-retry-zh.png": "162e4aa72c50fee08651cf447d79051984f6b5c8ee7ccdee092053cda3f16814",
+    "catalog-updating-zh.png": "95b2c2d250e7acce49b36585dff3a7b1cf60953f15721248e8f7e196ea3f298b",
+    "catalog-320-dark-en.png": "16a4f43364122615f72a13779dcf04a6f74026d8c8ae61571f6be994ed2e4f3f",
+    "catalog-zoom-before-after.png": "046b0fa5887b61a490379ba43d494e3769239e6fed4b163c89a82d8592bcefac"
+  }
+}

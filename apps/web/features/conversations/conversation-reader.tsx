@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Fragment, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { ArrowLeft, BookmarkPlus, BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, GitCompareArrows, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
+import { ArrowLeft, BookmarkPlus, BookOpen, ChevronDown, ChevronUp, Download, FileInput, FileOutput, Focus, GitCompareArrows, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
 import {
   ApiRequestError,
   deleteMessage,
@@ -3332,6 +3332,10 @@ export function ConversationReader({
       id: "quick-context", label: quickContext.label, icon: FileOutput, disabled: quickContext.busy,
       onSelect: () => { void quickContext.start(); },
     } as ReaderHeaderAction] : []),
+    ...(dataSource.mode === "remote" && canManageCanonical && conversationQuery.data?.status === "active" ? [{
+      id:"append-import",label:resolvedLocale === "zh-CN" ? "追加导入内容" : "Append imported messages",icon:FileInput,
+      onSelect:()=>router.push(`/conversations/${conversationId}/append`),
+    } as ReaderHeaderAction] : []),
     ...(canBrowseAttachments ? [{
       id: "conversation-files",
       label: resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files",
@@ -3363,8 +3367,8 @@ export function ConversationReader({
   const desktopPrimaryActions = ["search", "save-position", "annotations", "compare", "focus-mode"]
     .flatMap(id => headerActions.filter(action => action.id === id));
   const desktopSecondaryActions = headerActions.filter((action) => (!desktopPrimaryActionIds.has(action.id) || ["compare", "focus-mode"].includes(action.id))).map(action => ({ ...action,
-    group: ["share", "export", "quick-context", "conversation-files"].includes(action.id) ? (resolvedLocale === "zh-CN" ? "数据与分享" : "Data and sharing") : (resolvedLocale === "zh-CN" ? "内容工具" : "Content tools"),
-  })).sort((a, b) => Number(["share", "export", "quick-context", "conversation-files"].includes(a.id)) - Number(["share", "export", "quick-context", "conversation-files"].includes(b.id)));
+    group: ["share", "export", "quick-context", "conversation-files", "append-import"].includes(action.id) ? (resolvedLocale === "zh-CN" ? "数据与分享" : "Data and sharing") : (resolvedLocale === "zh-CN" ? "内容工具" : "Content tools"),
+  })).sort((a, b) => Number(["share", "export", "quick-context", "conversation-files", "append-import"].includes(a.id)) - Number(["share", "export", "quick-context", "conversation-files", "append-import"].includes(b.id)));
 
   const navigationTabs = (
     <div className="flex items-center gap-2">
@@ -3615,7 +3619,7 @@ export function ConversationReader({
           <p className="whitespace-pre-wrap break-words text-sm leading-6">{conversation.description_markdown || (resolvedLocale === "zh-CN" ? "简介已移除。" : "The description has been removed.")}</p>
         </section> : null}
         {quickContext.error ? <p role="alert" className="absolute bottom-3 right-3 z-30 max-w-xs rounded-lg border border-ui bg-raised p-3 text-sm">
-          {resolvedLocale === "zh-CN" ? "上下文导出未完成。请检查默认预设，再用导出菜单重试。" : "Context export was not completed. Check the default preset and retry from the export menu."}</p> : null}
+          {quickContext.error}</p> : null}
         {keyboardNavigationFeedback ? (
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-30 flex justify-center px-4" aria-live="polite" role="status" data-testid="reader-keyboard-feedback">
             <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-lg border border-ui bg-raised px-3 py-2 text-sm text-primary shadow-md">

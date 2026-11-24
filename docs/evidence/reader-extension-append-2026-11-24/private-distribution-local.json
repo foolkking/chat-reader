@@ -1,0 +1,135 @@
+{
+  "scope": "Local pre-release worktree evidence, including a read-only repository configuration lookup. Not a submitted CI, signed production artifact, or deployed release. All source conversations and accounts are synthetic.",
+  "generatedAt": "2026-11-24T16:49:39+08:00",
+  "gitBase": {
+    "reader": "4afb430cf6d5d03b67474cd8a8d9e5ec2021935c",
+    "extension": "a3f0ebe738a2e69ea5c866bdddb29ce119f08fc5"
+  },
+  "distributionAccessChecked": {
+    "time": "2026-11-24T16:09:45+08:00",
+    "repositoryVisibility": "public",
+    "repositoryVariableCount": 0,
+    "noGitHubVariablesWritten": true
+  },
+  "artifacts": {
+    "type": "local test ZIPs only; not addressed to a production service",
+    "nearbyWindowsDoubleBuildMatchedLinux": true,
+    "linux": {
+      "platform": "linux",
+      "node": "v22.13.1",
+      "version": "0.2.0",
+      "files": 32,
+      "installSha256": "316ccb6d77435ce60de5f7d978927772b3ec1d7cf4f8a66eac3f96dcfd0baa42",
+      "referenceSha256": "72ff302720d5be00c81f43bd84415a8e2d65465d1d6d183e95d9a7170c6e84a6"
+    },
+    "byteIdenticalOldMembers": 22,
+    "oldMembersChangedOnlyByCanonicalNewlines": [
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md",
+      "fast-text.js",
+      "i18n.js",
+      "licenses/JSZip-LICENSE.md",
+      "licenses/lucide-LICENSE.txt",
+      "licenses/marked-LICENSE.md",
+      "licenses/otaliptus-MIT.txt",
+      "locales/en.js",
+      "locales/zh_CN.js"
+    ],
+    "actualCIConditionCombinationsChecked": 8
+  },
+  "browserRuns": [
+    {
+      "run": "chrome-zh-state-01",
+      "at": "2026-11-24T16:33:40+08:00",
+      "browser": "151.0.7922.34",
+      "syntheticReaderResponses": true,
+      "actualApiWorkerPg": false,
+      "steps": [
+        "private-by-default",
+        "manual",
+        "same-document-new-account",
+        "explicit-negative",
+        "opt-in-control",
+        "open-target",
+        "opt-out"
+      ]
+    },
+    {
+      "run": "edge-en-state-02",
+      "at": "2026-11-24T16:33:45+08:00",
+      "browser": "158.0.4370.33",
+      "syntheticReaderResponses": true,
+      "actualApiWorkerPg": false,
+      "steps": [
+        "private-by-default",
+        "manual",
+        "same-document-new-account",
+        "explicit-negative",
+        "opt-in-control",
+        "open-target",
+        "opt-out"
+      ]
+    },
+    {
+      "run": "chrome-zh-api-03",
+      "at": "2026-11-24T16:34:06+08:00",
+      "browser": "151.0.7922.34",
+      "syntheticReaderResponses": false,
+      "actualApiWorkerPg": true,
+      "steps": [
+        "actual-device-A",
+        "actual-save",
+        "read-back-bytes-and-owner",
+        "default-private",
+        "manual-resolves-owner",
+        "switch-device-in-place",
+        "actual-foreign-negative"
+      ],
+      "testDeviceGrantsRevoked": 2
+    },
+    {
+      "run": "edge-en-api-04",
+      "at": "2026-11-24T16:34:23+08:00",
+      "browser": "158.0.4370.33",
+      "syntheticReaderResponses": false,
+      "actualApiWorkerPg": true,
+      "steps": [
+        "actual-device-A",
+        "actual-save",
+        "read-back-bytes-and-owner",
+        "default-private",
+        "manual-resolves-owner",
+        "switch-device-in-place",
+        "actual-foreign-negative"
+      ],
+      "testDeviceGrantsRevoked": 2
+    }
+  ],
+  "fullBrowserGate": {
+    "at": "2026-11-24T16:44:47+08:00",
+    "browser": "151.0.7922.34",
+    "result": "failed before account setup",
+    "phase": "lab-readiness",
+    "apiStatus": 200,
+    "loginStatus": 502,
+    "loginFormVisible": false,
+    "fixtureSetupStarted": false
+  },
+  "nodeFullFinal": {
+    "tests": 183,
+    "pass": 120,
+    "fail": 0,
+    "skipped": 63
+  },
+  "preFixNegative": {
+    "crossCheckoutLineEndings": "failed: checkout changed ZIP bytes",
+    "missingComparator": "failed: verifier not present"
+  },
+  "sourceLFsha256": {
+    "scripts/package-reader.cjs": "f93ea651f8ea125f6916a764d2bd0586e8f26a2b1b28dc739d1b21133282afa2",
+    "scripts/verify-reader-distribution.cjs": "9272f73e9dc694e8a7035a99f32690cfe3a31200280dba71126152cc97a10e62",
+    "tests/reader-distribution.test.cjs": "b040773193d010006fafe91ff0879ea7bb94efb2afe7ebfdcb42939d8f3dd3b3",
+    ".github/workflows/reader-contract.yml": "8be5a5dfaf262f5ead6c2f598c3a8564649a57a6af9a909c023cf98aeed97fdd",
+    "scripts/extension-beta/browser.cjs": "f29d20c3498eea835af6b5a99f3f600ebc494d2a68d291804376860b94cf53f7"
+  }
+}

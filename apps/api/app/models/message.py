@@ -8,6 +8,9 @@ from app.core.database import Base
 from app.models.import_record import utc_now
 
 
+STANDALONE_ANSWER = "reader:standalone-answer"
+
+
 class Message(Base):
     __tablename__ = "messages"
     __table_args__ = (UniqueConstraint("conversation_id", "order_key", name="uq_messages_conversation_order_key"),)
@@ -41,6 +44,10 @@ class Message(Base):
     conversation = relationship("Conversation", back_populates="messages")
     versions = relationship("MessageVersion", back_populates="message", cascade="all, delete-orphan")
     source_refs = relationship("SourceMessageRef", back_populates="message", cascade="all, delete-orphan")
+
+    @property
+    def standalone_answer(self) -> bool:
+        return self.role == "assistant" and self.author_label == STANDALONE_ANSWER
 
 
 Index("idx_messages_conversation_id", Message.conversation_id)

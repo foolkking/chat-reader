@@ -962,8 +962,36 @@ export async function getTask(jobId: string, signal?: AbortSignal): Promise<Back
   return withRequestDeadline(deadline => fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}`, { signal: deadline }), signal);
 }
 
-export async function queueConversationBatchExport(conversationIds: string[], idempotencyKey: string, signal: AbortSignal): Promise<BackgroundTaskRead> {
-  const request = jsonRequest("POST", { conversation_ids: conversationIds });
+export type ProjectExportScope = { project_id: string; mode: "selected" | "whole"; sort?: ConversationSortMode; direction?: "asc" | "desc"; reviewed?: string };
+type ProjectExportDifference = {count:number; titles:string[]};
+export type ProjectExportReview = { name: string; archived: boolean; count: number; limit: number; active_ids: string[]; reviewed: string; remaining_reviewed?:string; can_export_original?:boolean;
+  changes?: {added:ProjectExportDifference; removed:ProjectExportDifference; order_changed:boolean} };
+export function previewProjectExport(scope: ProjectExportScope, signal?: AbortSignal) {
+  return withRequestDeadline(s => fetchJson<ProjectExportReview>(`/api/projects/${scope.project_id}/export-preview?sort=${scope.sort ?? "custom"}&direction=${scope.direction ?? "asc"}`, { signal: s }), signal);
+}
+export function getBatchExportRequest(key: string, signal: AbortSignal) {
+  return fetchJson<{ found: boolean; task: BackgroundTaskRead | null }>(`/api/conversations/batch-export/requests/${encodeURIComponent(key.replace(/^batch-export-/, ""))}`, { signal });
+}
+
+export type AppendStatus = {id:string;target:string|null;excerpt:boolean;edition:string|null;state:string;status:string;phase:string;progress:number;
+  error:string|null;pending_receipt:string|null;submitted_selection?:AppendInput|null;result:{target:string;added:number;skipped:number;partial:boolean}|null;sources:{ordinal:number;title:string;count:number}[]};
+export type AppendChoice = {index:number;role:string;text:string;assets:number;turn:number|null;missing:number};
+export type AppendInput = {target:string;edition:string;volume:number;indexes:number[]};
+export type AppendReview = {title:string;tail:{role:string;text:string|null}|null;live_share:boolean;receipt:string;add:number;skip:number;changed:number;missing:number;partial:boolean};
+export const appendImportApi = {
+  stage:(cid:string,files:File[],key:string,signal:AbortSignal) => {
+    const data = new FormData(); for (const file of files) data.append("files",file);
+    return fetchJson<{id:string}>(`/api/conversations/${encodeURIComponent(cid)}/append-imports`,{method:"POST",body:data,headers:{"Idempotency-Key":key},signal});
+  },
+  status:(id:string,signal?:AbortSignal)=>withRequestDeadline(s=>fetchJson<AppendStatus>(`/api/append-imports/${id}`,{signal:s}),signal),
+  choices:(id:string,edition:string,volume:number,page:number,signal:AbortSignal)=>fetchJson<{items:AppendChoice[];page_size:number}>(`/api/append-imports/${id}/choices?edition=${edition}&volume=${volume}&page=${page}`,{signal}),
+  targets:(id:string,term:string,page:number,signal:AbortSignal)=>fetchJson<{items:{id:string;title:string;project:string|null}[];more:boolean}>(`/api/append-imports/${id}/targets?q=${encodeURIComponent(term)}&page=${page}`,{signal}),
+  review:(id:string,selection:AppendInput,signal:AbortSignal)=>fetchJson<AppendReview>(`/api/append-imports/${id}/review`,{...jsonRequest("POST",selection),signal}),
+  confirm:(id:string,selection:AppendInput,receipt:string,checks:{allow_partial:boolean;allow_share:boolean;allow_changed:boolean},signal:AbortSignal)=>
+    fetchJson<AppendStatus>(`/api/append-imports/${id}/confirm`,{...jsonRequest("POST",{...selection,receipt,...checks}),signal}),
+};
+export async function queueConversationBatchExport(conversationIds: string[], idempotencyKey: string, signal: AbortSignal, projectScope?: ProjectExportScope): Promise<BackgroundTaskRead> {
+  const request = jsonRequest("POST", { conversation_ids: conversationIds, ...(projectScope ? { project_scope: projectScope } : {}) });
   return fetchJson<BackgroundTaskRead>("/api/conversations/batch-export", {
     ...request, signal, headers: { ...request.headers, "Idempotency-Key": idempotencyKey },
   });
@@ -2263,7 +2291,7 @@ async function getApiRequestError(response: Response, path: string): Promise<Api
   if (code?.startsWith("CONTEXT_")) return error(code, code);
   if (typeof detail?.message === "string") return error(detail.message, code);
 
-  return error(`${path} returned ${response.status}`);
+  return error(`${path} returned ${response.status}`, code);
 }
 
 function localizedImportError(code: string): string | null {

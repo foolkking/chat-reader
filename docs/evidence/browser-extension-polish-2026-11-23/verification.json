@@ -1,0 +1,389 @@
+{
+  "scope": "A–C local synthetic rehearsal on existing branches; D sample research only; no GitHub Actions/release/production qualification.",
+  "timezone": "Asia/Shanghai (UTC+08:00)",
+  "branch_both": "codex/reader-extension",
+  "reader_base_sha": "4afb430cf6d5d03b67474cd8a8d9e5ec2021935c",
+  "fork_base_sha": "a3f0ebe738a2e69ea5c866bdddb29ce119f08fc5",
+  "source_identity": "These are base commits, not commits containing the worktree edits. The following hashes refer to the tested worktree / exact installed bytes.",
+  "reader_changed_product_and_test_files_lf_sha256": {
+    "apps/api/app/api/routes/reader_extension.py": "3d1218bde942b288229009c0a862b290ea595ad09c4a1c9c40b0820d34735ef8",
+    "apps/api/app/services/canonical/persistence.py": "5389d226c55c6cb58cbf074701715b8ce2ba2ae76aa905617e373bbb5b19616b",
+    "apps/api/app/services/extension_import.py": "c706b3516fa4e34ecd57290a235b63da3b5131d77f9ba3d13f3543da8ce28832",
+    "apps/api/app/services/extension_results.py": "feeff901a891ac30ad3c6b56e70dff70dc3e7f74368bdba08257f0a166a5b9dd",
+    "apps/api/app/services/extension_catalog.py": "8a1a25f5ab495c2d40547893517b0ed6270cfa6a824289da77fd5e74cf57da1a",
+    "apps/api/app/services/search/search_service.py": "a4445115591bbe520b348c3214859ade143a52a746423d714994cc7357e44305",
+    "apps/api/tests/test_reader_extension.py": "dd086dd6840835f84af86e420bd637f1c88b4845f8f8f70084db0f76539c7ade",
+    "apps/web/features/attachments/conversation-files-panel.tsx": "eff0e4ba75610a9088ac6c713abad2ee36f4a9604ab273df8ab983d5986f1cc8",
+    "scripts/extension-beta/browser.cjs": "dfc454546ead34a353a3265f78eab400a7c85e91f2f3cb576ac532956467aa2d",
+    "scripts/extension-beta/seed_catalog.py": "3a1e2721bdc94a0bf4184b197347b93b846ad652f3203954f38556dffd1839eb",
+    "scripts/ci/quality-coverage-extension.json": "95defbade10c35ee01bf2aeb847c33db34da0e53b2f4a46798b66e47de1b752f",
+    "scripts/ci/quality-coverage-extension.test.mjs": "3dbc230643fffe1a61b3477e9515252da83f8862aa14c0beb0584818a7ce2f0b",
+    "scripts/ci/quality-schedule.mjs": "431c388387feb440e62eb11326ad773389a497d041ce0bd818012863a1d6ee98",
+    "scripts/ci/quality_schedule.py": "5a4efecbc8737748570f143d331086df5a6592da49650e37ed74c508b3abd810",
+    "scripts/ci/test_api_shard_evidence.py": "ba4831248836862d87ee07afb432b04b5f3e7fd9bb5774a8ce97c47a45772bcd"
+  },
+  "fork_changed_product_and_test_files_lf_sha256": {
+    "reader/background.js": "3180dcc7db419ca70b4d9a8cd3abdebc5905c9665caa2c866e730a9013d4a160",
+    "reader/capture.js": "0e976b6180c5d18e4214b616e540e44db3e31304bbd806327221cb07f17369f5",
+    "reader/client.js": "795ef1782b47f79f18e86d47032eaa51aea044033f34547d00d9c0e1a38beea7",
+    "reader/glyphs.js": "cf2a12bc0ebd58374015add35e1be1cf06b7687a22b05dde26e36b62a659c06b",
+    "reader/host.js": "3cb5b74df270d029e7e55d948fd480d9f8e61feda21ad42b6921f70eaf4ae14e",
+    "reader/host.html": "1eb6b640a53813b90c7e91af61a79980cff16ff6d1fb4ae7f868176201b240a3",
+    "reader/panel.css": "d793abd0e8a03f8ec5db821e3b7c1d4f4d61e7f1989c319f1f1e378fc040fbe9",
+    "reader/panel.html": "2ad8c0901ac4d13aa12eac256b137d9df7ec4c687f8d8ede87642d3841819954",
+    "reader/panel.js": "5e40d011fa6a1fed3b879c4d1172bad307dfce88c4b87b055634cdff81b4ff44",
+    "reader/panel-export.js": "5af59932ee99e3e0e278ad18aba230b48db6e4f7c5be024cecee90e61620ceaf",
+    "reader/panel-jobs.js": "79742e74b27c2ca734118994490e9694b8e3848ca07c441230feae7c6c75e3e0",
+    "reader/source-actions.js": "34138a2101d97a10c90249e13d8a1b6386618b1f7b24857c2449c047b4669154",
+    "reader/source-control.js": "1e714d48bc8bc85212c90be62c865dc8f4fe1d4dcc57409da08eadc013e0f08a",
+    "reader/transfer-state.js": "bcfae593c8ed6fefb86ba7fa69ca3aba443e639322c56bc989246a01e19fa1c2",
+    "scripts/package-reader.cjs": "23d137a0304ca8be4802d145052ea4a2f985bc9a0814d1f9968d4fa991b3c046",
+    "tests/reader-contract.test.cjs": "ccfa1904233a007794780a33f4a99c81a475a3c58586a3ab857c776207cea6d3"
+  },
+  "installed_package": {
+    "version": "0.1.1",
+    "origin": "http://127.0.0.1:18383",
+    "files": 31,
+    "installed_tree_sha256": "3bf9a2e57f19f3214220047b779707181eb0c25b9a1a0df2f844b255a5e2aae0",
+    "tree_definition": "sha256 of UTF-8 sorted relative-path + TAB + raw-file SHA-256 + LF",
+    "loopback_only_zip_sha256": "dbfc2caefb193e03aa0ad135ce683d60ce9c5b0ecd97815d989774b6c610dc9d",
+    "bytes": 113703,
+    "all_members_crc_and_exact_bytes_verified": true
+  },
+  "before": {
+    "source": "../browser-extension-ux-review-2026-11-23/observations.json",
+    "review_search_y_css_px": 168,
+    "review_first_conversation_y_css_px": 413
+  },
+  "after": [
+    {
+      "label": "chrome-zh-faults-20",
+      "browser": "151.0.7922.34",
+      "result": "pass",
+      "steps": [
+        "installed extension, toolbar registered to open side panel",
+        "signed-out native authorization flow returned through Reader login",
+        "genuine browser PKCE consent and explicit destination",
+        "real recent and project-pinned rows; long localized titles, both themes and 200% CSS magnification without overflow",
+        "real capture, ZIP and committed file import",
+        "same-document navigation and a changed message invalidate the previous check without recapturing",
+        "committed page button opens without capturing and revisiting distinguishes a historical save",
+        "identical import returns same conversation",
+        "suffix appended to same conversation",
+        "branch conflict requests review",
+        "browser IME composition and keyboard search focus (not a physical input-method test)",
+        "metadata result opens Reader in a new tab without a device credential in the URL",
+        "move, scoped conversation search and project pin persisted",
+        "separate outcome retains original binding; unchanged receipt reports actual moved project",
+        "file hit returns only its conversation; opened Reader file panel and renamed owned file there",
+        "server generated a new context artifact via the panel",
+        "download bytes: verified context ZIP and canonical members",
+        "Reader webpage: actual quick action downloaded a valid context ZIP",
+        "source closed mid-resource: no upload, actionable interruption",
+        "real OPFS quota override: insufficient temporary space produced no upload",
+        "over-limit synthetic source stopped before upload with a distinct recovery state",
+        "disconnected resource requires review before any publication",
+        "acknowledged partial save remains partial in the durable receipt, panel and page button",
+        "terminated browser, opened same disposable profile in a different browser process: original accepted receipt persisted",
+        "durable received job finished after source closed, panel reloaded and worker restarted",
+        "offscreen fault injection dropped a real 201; recovered the same conversation via request receipt",
+        "browser opened a native SIDE_PANEL context through a trusted gesture"
+      ],
+      "resting": {
+        "searchTop": 60,
+        "firstRowTop": 160,
+        "actionWidth": 44
+      },
+      "geometry": {
+        "searchTop": 60,
+        "firstRowTop": 216
+      },
+      "canonical": {
+        "messages": 4,
+        "source_refs": 4,
+        "files": 2,
+        "verified_file_digests": 2,
+        "file_message_owners": 2,
+        "secrets_absent_from_synthetic_packages": 4
+      },
+      "readerPageTrafficSourceMarker": false,
+      "sourceNavigationProof": {
+        "documentMatches": false,
+        "currentTabMatches": true,
+        "documentIdentified": true
+      },
+      "completed_at": "2026-11-23T13:47:47+08:00"
+    },
+    {
+      "label": "edge-en-faults-21",
+      "browser": "158.0.4370.33",
+      "result": "pass",
+      "steps": [
+        "installed extension, toolbar registered to open side panel",
+        "signed-out native authorization flow returned through Reader login",
+        "genuine browser PKCE consent and explicit destination",
+        "real recent and project-pinned rows; long localized titles, both themes and 200% CSS magnification without overflow",
+        "real capture, ZIP and committed file import",
+        "same-document navigation and a changed message invalidate the previous check without recapturing",
+        "committed page button opens without capturing and revisiting distinguishes a historical save",
+        "identical import returns same conversation",
+        "suffix appended to same conversation",
+        "branch conflict requests review",
+        "browser IME composition and keyboard search focus (not a physical input-method test)",
+        "metadata result opens Reader in a new tab without a device credential in the URL",
+        "move, scoped conversation search and project pin persisted",
+        "separate outcome retains original binding; unchanged receipt reports actual moved project",
+        "file hit returns only its conversation; opened Reader file panel and renamed owned file there",
+        "server generated a new context artifact via the panel",
+        "download bytes: verified context ZIP and canonical members",
+        "Reader webpage: actual quick action downloaded a valid context ZIP",
+        "source closed mid-resource: no upload, actionable interruption",
+        "real OPFS quota override: insufficient temporary space produced no upload",
+        "over-limit synthetic source stopped before upload with a distinct recovery state",
+        "disconnected resource requires review before any publication",
+        "acknowledged partial save remains partial in the durable receipt, panel and page button",
+        "terminated browser, opened same disposable profile in a different browser process: original accepted receipt persisted",
+        "durable received job finished after source closed, panel reloaded and worker restarted",
+        "offscreen fault injection dropped a real 201; recovered the same conversation via request receipt",
+        "browser opened a native SIDE_PANEL context through a trusted gesture"
+      ],
+      "resting": {
+        "searchTop": 60,
+        "firstRowTop": 160,
+        "actionWidth": 44
+      },
+      "geometry": {
+        "searchTop": 60,
+        "firstRowTop": 216
+      },
+      "canonical": {
+        "messages": 4,
+        "source_refs": 4,
+        "files": 2,
+        "verified_file_digests": 2,
+        "file_message_owners": 2,
+        "secrets_absent_from_synthetic_packages": 4
+      },
+      "readerPageTrafficSourceMarker": false,
+      "sourceNavigationProof": {
+        "documentMatches": false,
+        "currentTabMatches": true,
+        "documentIdentified": true
+      },
+      "completed_at": "2026-11-23T13:49:57+08:00"
+    }
+  ],
+  "attempts_including_failures": [
+    {
+      "label": "chrome-zh-01",
+      "completed_at": "2026-11-23T10:56:40+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "file-directory",
+        "type": "TimeoutError",
+        "detail": "operation failed"
+      }
+    },
+    {
+      "label": "chrome-zh-04",
+      "result": "incomplete: no terminal receipt, not a pass"
+    },
+    {
+      "label": "chrome-zh-faults-06",
+      "completed_at": "2026-11-23T12:02:04+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "reader-file-actions",
+        "type": "TimeoutError",
+        "detail": "operation failed"
+      }
+    },
+    {
+      "label": "chrome-zh-faults-08",
+      "completed_at": "2026-11-23T12:13:51+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "browser-temp-space",
+        "type": "Error",
+        "detail": "wait expired"
+      }
+    },
+    {
+      "label": "chrome-zh-faults-09",
+      "completed_at": "2026-11-23T12:18:41+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "missing-file",
+        "type": "Error",
+        "detail": "wait expired"
+      }
+    },
+    {
+      "label": "chrome-zh-faults-10",
+      "completed_at": "2026-11-23T12:36:21+08:00",
+      "result": "pass"
+    },
+    {
+      "label": "chrome-zh-faults-13",
+      "completed_at": "2026-11-23T12:55:52+08:00",
+      "result": "pass"
+    },
+    {
+      "label": "chrome-zh-faults-14",
+      "completed_at": "2026-11-23T13:12:20+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "capture-import",
+        "type": "Error",
+        "detail": "wait expired"
+      }
+    },
+    {
+      "label": "chrome-zh-faults-18",
+      "completed_at": "2026-11-23T13:39:30+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "project-operations",
+        "type": "TimeoutError",
+        "detail": "operation failed"
+      },
+      "source_navigation": {
+        "documentMatches": false,
+        "currentTabMatches": true,
+        "documentIdentified": true
+      }
+    },
+    {
+      "label": "chrome-zh-faults-20",
+      "completed_at": "2026-11-23T13:47:47+08:00",
+      "result": "pass",
+      "source_navigation": {
+        "documentMatches": false,
+        "currentTabMatches": true,
+        "documentIdentified": true
+      }
+    },
+    {
+      "label": "chrome-zh-spa-16",
+      "completed_at": "2026-11-23T13:20:01+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "source-spa-new",
+        "type": "Error",
+        "detail": "wait expired"
+      }
+    },
+    {
+      "label": "chrome-zh-spa-proof-17",
+      "completed_at": "2026-11-23T13:34:32+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "source-spa-new",
+        "type": "Error",
+        "detail": "wait expired"
+      },
+      "source_navigation": {
+        "documentMatches": false,
+        "currentTabMatches": true,
+        "documentIdentified": true
+      }
+    },
+    {
+      "label": "edge-en-02",
+      "completed_at": "2026-11-23T11:03:59+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "web-login",
+        "type": "AssertionError",
+        "detail": "operation failed"
+      }
+    },
+    {
+      "label": "edge-en-03",
+      "completed_at": "2026-11-23T11:09:46+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "file-directory",
+        "type": "TimeoutError",
+        "detail": "operation failed"
+      }
+    },
+    {
+      "label": "edge-en-05",
+      "completed_at": "2026-11-23T11:30:22+08:00",
+      "result": "failed",
+      "failure": {
+        "step": "reader-file-actions",
+        "type": "TimeoutError",
+        "detail": "operation failed"
+      }
+    },
+    {
+      "label": "edge-en-07",
+      "completed_at": "2026-11-23T12:09:19+08:00",
+      "result": "pass"
+    },
+    {
+      "label": "edge-en-faults-11",
+      "completed_at": "2026-11-23T12:41:37+08:00",
+      "result": "pass"
+    },
+    {
+      "label": "edge-en-faults-12",
+      "completed_at": "2026-11-23T12:53:45+08:00",
+      "result": "pass"
+    },
+    {
+      "label": "edge-en-faults-21",
+      "completed_at": "2026-11-23T13:49:57+08:00",
+      "result": "pass",
+      "source_navigation": {
+        "documentMatches": false,
+        "currentTabMatches": true,
+        "documentIdentified": true
+      }
+    }
+  ],
+  "screenshots_sha256": {
+    "library-375-zh.png": "80ef4dc9455cb6d8f8d405f5c221fa584d49a7866d4f22c2a76af907dee10ab4",
+    "panel-review-375-zh.png": "dfae89334479d851d264280b7830b7a110130d768d9da635d2711696a154e8e1",
+    "library-320-dark-en.png": "39ec3d5e0f5f94123bc5ccabeb2fd044e05f0e6ba1e917356152527056c80e51",
+    "magnified-zh.png": "c60ff5c77094982ae583f8d103e135b161fdb7322029b59458bfb6b69518a505",
+    "source-saved-zh.png": "9c32a5b833e94a1643e6d98fa48daab22e651eef17cd9d0e76cc71947d1267ea",
+    "partial-zh.png": "dc8c92c29af2b72065df2fef6d393957f5b2d0e7fc2f58adb761a56182404082"
+  },
+  "other_local_checks": {
+    "reader_extension_and_grouped_search_pytest": {
+      "passed": 23,
+      "seconds": 314.09,
+      "exit": 0
+    },
+    "context_options_continuation_and_legacy_official_profile_pytest": {
+      "passed": 13,
+      "seconds": 31.04,
+      "exit": 0
+    },
+    "fork_node24": {
+      "total": 178,
+      "passed": 115,
+      "skipped": 63,
+      "failed": 0,
+      "exit": 0
+    },
+    "ci_test_registration_only": {
+      "node_passed": 3,
+      "python_passed": 6,
+      "exit": 0
+    },
+    "web_production_build": 0,
+    "web_lint": 0,
+    "web_typecheck": 0
+  },
+  "not_verified": [
+    "real ChatGPT account and service conditions",
+    "physical input method, assistive technology or mobile device",
+    "official-account ZIP and actual project/account completeness",
+    "GitHub Actions on these final edits",
+    "production or store distribution"
+  ]
+}

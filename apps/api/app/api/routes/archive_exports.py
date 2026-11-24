@@ -1,7 +1,7 @@
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, Response, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, Response, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.models.conversation import Conversation
 from app.models.background_job import BackgroundJob
 from app.schemas.task import BackgroundTaskRead
-from app.schemas.export import ExportRequest, ConversationBatchExportRequest
+from app.schemas.export import ExportRequest, ConversationBatchExportRequest, ProjectExportScope
 from app.services.background_jobs import queue_conversation_auto_clean, queue_conversation_derived_rebuild, queue_conversation_export
 from app.services.editing.message_edit_service import MessageEditError
 from app.api.routes.tasks import background_job_read
@@ -30,6 +30,29 @@ from app.api.routes.exports import direct_export_response
 router = APIRouter(tags=["exports"])
 
 
+@router.get("/api/projects/{project_id}/export-preview")
+def project_export_preview(project_id: uuid.UUID, request: Request, response: Response,
+    sort: str = Query(default="custom", pattern="^(recent_read|content_updated|updated|created|imported|title|message_count|custom)$"),
+    direction: str = Query(default="asc", pattern="^(asc|desc)$"), db: Session = Depends(get_db)):
+    from app.services.exporting.project_scope import project_review
+    response.headers["Cache-Control"] = "private, no-store"
+    try:
+        return project_review(db, ownership_scope_from_request(request),
+            ProjectExportScope(project_id=project_id, mode="whole", sort=sort, direction=direction))
+    except ExportError as error:
+        raise HTTPException(error.status_code, str(error)) from error
+
+
+@router.get("/api/conversations/batch-export/requests/{key}")
+def check_batch_export(key: uuid.UUID, request: Request, response: Response, db: Session = Depends(get_db)):
+    from app.services.exporting.conversation_batch import JOB_TYPE
+    scope = ownership_scope_from_request(request)
+    response.headers["Cache-Control"] = "private, no-store"
+    job = db.query(BackgroundJob).filter_by(owner_user_id=scope.owner_user_id, job_type=JOB_TYPE,
+                                            idempotency_key=f"batch-export-{key}").first()
+    return {"found": bool(job), "task": background_job_read(job) if job else None}
+
+
 @router.post("/api/conversations/batch-export", response_model=BackgroundTaskRead, status_code=202)
 def queue_batch_export(
     payload: ConversationBatchExportRequest,
@@ -38,10 +61,14 @@ def queue_batch_export(
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead:
     from app.services.exporting.conversation_batch import queue_conversation_batch_export
+    from app.services.exporting.project_scope import ProjectExportChanged
     try:
         job = queue_conversation_batch_export(db, conversation_ids=payload.conversation_ids,
-            idempotency_key=idempotency_key, ownership_scope=ownership_scope_from_request(request))
+            idempotency_key=idempotency_key, ownership_scope=ownership_scope_from_request(request), project_scope=payload.project_scope)
         db.commit()
+    except ProjectExportChanged as error:
+        db.rollback()
+        raise HTTPException(409, {"code": str(error), "review": error.review}) from error
     except ExportError as error:
         db.rollback()
         raise HTTPException(error.status_code, str(error)) from error

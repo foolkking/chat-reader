@@ -1,0 +1,45 @@
+{
+  "started": "2026-11-23T16:01:28.719Z",
+  "width": 1440,
+  "version": "151.0.7922.34",
+  "selection": {
+    "checked": 2,
+    "visible": 1,
+    "sent": 2,
+    "zip": 2,
+    "orderVerified": true,
+    "actionVisibleWithoutHorizontalScroll": true,
+    "labelWidth": 220,
+    "labelHeight": 36,
+    "targetHeight": 44
+  },
+  "moved": {
+    "explicitChoice": true,
+    "submittedAfterChoice": 1,
+    "zip": 1
+  },
+  "whole": {
+    "sameCountChangedMembership": true,
+    "zip": 102,
+    "orderVerified": true
+  },
+  "recovery": {
+    "realAccepted": true,
+    "afterReloadLookup": true,
+    "totalPosts": 1
+  },
+  "crossProject": {
+    "sameTitle": true,
+    "visiblyDistinguished": true,
+    "accessibleNamesDistinct": true,
+    "selected": 2,
+    "zip": 2,
+    "orderVerified": true
+  },
+  "empty": {
+    "cannotQueue": true
+  },
+  "pageErrors": 0,
+  "status": "passed",
+  "finished": "2026-11-23T16:02:57.220Z"
+}

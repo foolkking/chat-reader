@@ -497,6 +497,7 @@ export type MessageListItem = {
   id: string;
   conversation_id: string;
   role: string;
+  standalone_answer?: boolean;
   order_key: string;
   turn_index?: number | null;
   created_at?: string | null;

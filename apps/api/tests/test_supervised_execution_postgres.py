@@ -242,18 +242,19 @@ def test_control_migration_roundtrip_keeps_one_head(isolated_schema):
     from sqlalchemy import inspect
     engine, migrate = isolated_schema
     migrate("head")
-    assert ScriptDirectory.from_config(Config("alembic.ini")).get_heads() == ["20261123_0063"]
-    assert {"extension_devices", "extension_sources"} <= set(inspect(engine).get_table_names())
+    assert ScriptDirectory.from_config(Config("alembic.ini")).get_heads() == ["20261123_0064"]
+    extension_tables = {"extension_devices", "extension_sources", "conversation_append_items"}
+    assert extension_tables <= set(inspect(engine).get_table_names())
     assert "unclassified_sort_order" in {column["name"] for column in inspect(engine).get_columns("conversations")}
     assert "storage_deleted_at" in {column["name"] for column in inspect(engine).get_columns("asset_objects")}
     assert "task_execution_controls" in inspect(engine).get_table_names()
     migrate("20261108_0060", "downgrade")
-    assert {"extension_devices", "extension_sources"}.isdisjoint(inspect(engine).get_table_names())
+    assert extension_tables.isdisjoint(inspect(engine).get_table_names())
     assert "unclassified_sort_order" not in {column["name"] for column in inspect(engine).get_columns("conversations")}
     assert "task_execution_controls" not in inspect(engine).get_table_names()
     assert "storage_deleted_at" not in {column["name"] for column in inspect(engine).get_columns("asset_objects")}
     migrate("head")
-    assert {"extension_devices", "extension_sources"} <= set(inspect(engine).get_table_names())
+    assert extension_tables <= set(inspect(engine).get_table_names())
     assert "task_execution_controls" in inspect(engine).get_table_names()
     assert "unclassified_sort_order" in {column["name"] for column in inspect(engine).get_columns("conversations")}
 

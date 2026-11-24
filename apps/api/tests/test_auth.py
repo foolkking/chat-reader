@@ -65,10 +65,18 @@ def test_session_list_excludes_expired_and_old_credential_sessions(auth_client: 
 
 
 def test_session_status_clears_a_stale_presence_marker(auth_client: TestClient) -> None:
+    # A passive first-visit read can finish after the visitor signs in. It must
+    # not send tombstones for cookies that were not on that request.
+    first_visit = auth_client.get("/api/auth/session")
+    assert first_visit.status_code == 200 and first_visit.json()["authenticated"] is False
+    assert not first_visit.headers.get_list("set-cookie")
+    protected = auth_client.get("/api/projects")
+    assert protected.status_code == 401 and not protected.headers.get_list("set-cookie")
     auth_client.cookies.set("chat_reader_session_present", "1", domain="testserver.local", path="/")
     result = auth_client.get("/api/auth/session")
     assert result.json()["authenticated"] is False
     assert auth_client.cookies.get("chat_reader_session_present") is None
+    assert not any(value.startswith("chat_reader_session=") for value in result.headers.get_list("set-cookie"))
 
 
 def test_password_reset_availability_respects_admin_policy(auth_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

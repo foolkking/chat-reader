@@ -3,7 +3,7 @@ from collections.abc import Iterable
 from uuid import UUID
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 @dataclass(frozen=True)
@@ -22,8 +22,18 @@ class ExportOptions:
     preserve_attachment_uris: bool = False
 
 
+class ProjectExportScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    project_id: UUID
+    mode: Literal["selected", "whole"]
+    sort: Literal["recent_read", "content_updated", "updated", "created", "imported", "title", "message_count", "custom"] = "custom"
+    direction: Literal["asc", "desc"] = "asc"
+    reviewed: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+
+
 class ConversationBatchExportRequest(BaseModel):
     conversation_ids: list[UUID] = Field(min_length=1, max_length=5000)
+    project_scope: ProjectExportScope | None = None
 
     @field_validator("conversation_ids")
     @classmethod

@@ -753,6 +753,7 @@ export async function importOfflinePackage(packageId: string, response: Response
           // conversation index deterministic across browsers.
           messages.push({
             ...messageWithoutBlocks,
+            ...(message.role === "assistant" && message.author_label === "reader:standalone-answer" ? {standalone_answer:true} : {}),
             id: String(message.id),
             conversation_id: String(raw.id),
             current_version: message.current_version

@@ -14,7 +14,7 @@ from app.core.config import get_settings
 from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
 from app.models.heading import Heading
-from app.models.message import Message
+from app.models.message import Message, STANDALONE_ANSWER
 from app.models.message_version import MessageVersion
 from app.models.attachment import MessageVersionAttachment
 from app.models.render_block import RenderBlock
@@ -37,7 +37,7 @@ from app.schemas.share import (
 from app.services.preferences import get_or_create_preferences
 from app.schemas.toc import TocItem, TocResponse
 from app.services.reader_preview import dialogue_preview
-from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn_from_query
+from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn_from_query, reader_turn_ranges
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 from app.services.feature_policies import get_feature_policy
 
@@ -288,22 +288,9 @@ def preview_share(
 
 
 def _query_share_turn_count(query: Query) -> int:
-    rows = list(query.with_entities(Message.role, Message.turn_index).order_by(Message.order_key.asc()).yield_per(1000))
-    if not rows:
-        return 0
-    user_roles = {"user", "prompt", "human"}
-    if any((role or "").lower() in user_roles for role, _turn_index in rows):
-        return 1 + sum(1 for role, _turn_index in rows[1:] if (role or "").lower() in user_roles)
-    if any(turn_index is not None for _role, turn_index in rows):
-        count = 1
-        last_key = rows[0][1]
-        for index, (_role, turn_index) in enumerate(rows[1:], start=1):
-            key = turn_index if turn_index is not None else ("synthetic", index)
-            if key != last_key:
-                count += 1
-            last_key = key
-        return count
-    return len(rows)
+    rows = query.with_entities(Message.role, Message.turn_index, Message.author_label).order_by(Message.order_key.asc()).yield_per(1000)
+    return len(reader_turn_ranges([(role, turn, role == "assistant" and label == STANDALONE_ANSWER)
+                                   for role, turn, label in rows]))
 
 
 def list_shares(
@@ -1011,6 +998,7 @@ def _full_message_item(db: Session, message: Message, *, ordinal: int) -> Messag
         id=message.id,
         conversation_id=message.conversation_id,
         role=message.role,
+        standalone_answer=message.standalone_answer,
         order_key=message.order_key,
         turn_index=message.turn_index,
         created_at=message.created_at,
@@ -1042,31 +1030,7 @@ def _snapshot_items(snapshot: ShareSnapshot) -> list[MessageListItem]:
 
 
 def _snapshot_turn_ranges(items: list[MessageListItem]) -> list[tuple[int, int]]:
-    if not items:
-        return []
-    user_roles = {"user", "prompt", "human"}
-    if any(item.role.lower() in user_roles for item in items):
-        ranges: list[tuple[int, int]] = []
-        start = 0
-        for index, item in enumerate(items):
-            if index > 0 and item.role.lower() in user_roles:
-                ranges.append((start, index))
-                start = index
-        ranges.append((start, len(items)))
-        return ranges
-    if any(item.turn_index is not None for item in items):
-        ranges = []
-        start = 0
-        last_key = items[0].turn_index
-        for index, item in enumerate(items[1:], start=1):
-            key = item.turn_index if item.turn_index is not None else ("synthetic", index)
-            if key != last_key:
-                ranges.append((start, index))
-                start = index
-            last_key = key
-        ranges.append((start, len(items)))
-        return ranges
-    return [(index, index + 1) for index in range(len(items))]
+    return reader_turn_ranges([(m.role, m.turn_index, m.standalone_answer) for m in items])
 
 
 def _frozen_message_window(
@@ -1337,6 +1301,7 @@ def _message_item(db: Session, message: Message, *, ordinal: int | None = None) 
         id=message.id,
         conversation_id=message.conversation_id,
         role=message.role,
+        standalone_answer=message.standalone_answer,
         order_key=message.order_key,
         turn_index=message.turn_index,
         created_at=message.created_at,

@@ -1,0 +1,65 @@
+{
+  "started": "2026-11-23T11:19:53.259Z",
+  "viewport": [
+    1440,
+    900
+  ],
+  "source": "loopback isolated synthetic lab",
+  "steps": [
+    "fixture-ready",
+    "loaded-subset",
+    "download-verified",
+    "reimport-preview-no-commit",
+    "stale-selection-reviewed"
+  ],
+  "mixedOwnerStatus": 404,
+  "firstSelected": 100,
+  "activeOnServer": 103,
+  "firstSelectionText": "已选择 100 / 100（已加载）",
+  "selectedAfterLoadMore": 100,
+  "submitted": 100,
+  "zip": {
+    "members": 100,
+    "selectionOrderMatches": true,
+    "onlyCanonicalMembers": true,
+    "onlyMetadata": true,
+    "kinds": {
+      "manifest": 100,
+      "message": 100,
+      "attachment": 3,
+      "attachment_ref": 3,
+      "end": 100
+    },
+    "projectInHeader": false,
+    "archivedIncluded": false,
+    "unclassifiedIncluded": false,
+    "foreignIncluded": false,
+    "sameTitleBoth": false,
+    "sha256": "c32695400500a999ba07e88fb4854608b021b735502d6d9d059f258485c099db"
+  },
+  "wholeZipPreview": {
+    "upload": 201,
+    "state": "FAILED",
+    "conversationCount": 0,
+    "code": "ZIP_MARKDOWN_REQUIRED",
+    "diagnostics": []
+  },
+  "memberPreview": {
+    "upload": 201,
+    "state": "READY",
+    "conversationCount": 1,
+    "diagnostics": []
+  },
+  "afterMove": {
+    "toolbarText": "已选择 2 / 100（已加载）",
+    "visibleChecked": 1,
+    "canSubmit": true,
+    "submitted": 1,
+    "onlyRemaining": true,
+    "accepted": 202,
+    "worker": "committed",
+    "workerCount": 1
+  },
+  "status": "complete",
+  "finished": "2026-11-23T11:20:15.609Z"
+}

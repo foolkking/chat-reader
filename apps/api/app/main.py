@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.health import router as health_router
 from app.api.routes.reader_extension import router as extension_web_router, api as extension_router
+from app.api.routes.append_imports import router as append_import_router
 from app.api.routes.imports import router as imports_router
 from app.api.routes.conversations import router as conversations_router
 from app.api.routes.conversation_order import router as conversation_order_router
@@ -64,6 +65,7 @@ app.add_middleware(RequestObservabilityMiddleware)
 app.include_router(health_router)
 app.include_router(extension_web_router)
 app.include_router(extension_router)
+app.include_router(append_import_router)
 app.include_router(imports_router)
 app.include_router(conversations_router)
 app.include_router(conversation_order_router)

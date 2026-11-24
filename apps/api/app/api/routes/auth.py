@@ -158,7 +158,10 @@ def _read_session(request: Request, response: Response, db: Session) -> AuthSess
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
     if authentication is None:
-        _clear_cookie(response)
+        # A passive anonymous lookup can arrive after a successful login in
+        # the same browser. Never expire a cookie this request did not carry.
+        _clear_cookie(response, session=SESSION_COOKIE_NAME in request.cookies,
+                      presence=SESSION_PRESENCE_COOKIE_NAME in request.cookies)
         return AuthSessionRead(
             authenticated=False,
             failure_reason=session_rejection_reason(db, token, settings),
@@ -678,21 +681,14 @@ def _set_cookie(response: Response, token: str) -> None:
     response.headers["Pragma"] = "no-cache"
 
 
-def _clear_cookie(response: Response) -> None:
+def _clear_cookie(response: Response, *, session: bool = True, presence: bool = True) -> None:
     settings = get_settings()
-    response.delete_cookie(
-        SESSION_COOKIE_NAME,
-        path="/",
-        secure=settings.auth_cookie_secure,
-        httponly=True,
-        samesite="lax",
-    )
-    response.delete_cookie(
-        SESSION_PRESENCE_COOKIE_NAME,
-        path="/",
-        secure=settings.auth_cookie_secure,
-        samesite="lax",
-    )
+    if session:
+        response.delete_cookie(SESSION_COOKIE_NAME, path="/", secure=settings.auth_cookie_secure,
+                               httponly=True, samesite="lax")
+    if presence:
+        response.delete_cookie(SESSION_PRESENCE_COOKIE_NAME, path="/", secure=settings.auth_cookie_secure,
+                               samesite="lax")
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
 

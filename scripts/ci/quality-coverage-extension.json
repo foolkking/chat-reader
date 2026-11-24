@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "base_schedule_sha256": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
-  "reason": "Add navigation, in-conversation find, import and root-admin update coverage without changing original assignments, timeouts or skips",
+  "reason": "Add navigation, find, imports, extension, project export, selective append and admin update cases; retain baseline assignments, timeouts and skips",
   "api": {
     "tests/test_admin_updates.py": {
       "count": 9,
@@ -38,6 +38,21 @@
       "shard": 3,
       "source_lf_sha256": "66199ff64a34f8c5b6c19cb96f8eebbfabebeaeec42b0f0276a319b01749e9ac"
     },
+    "tests/test_project_export_scope.py": {
+      "count": 6,
+      "shard": 1,
+      "source_lf_sha256": "166964b5b2889d6e3ab1f7fa47728ae4a141adcd43598448ed201a3ad9810efa"
+    },
+    "tests/test_selective_append.py": {
+      "count": 6,
+      "shard": 2,
+      "source_lf_sha256": "895a6eb312bb1d3320ec61642121e66871e8625dc5ce3a406f32055a99c31cbf"
+    },
+    "tests/test_reader_extension.py": {
+      "count": 15,
+      "shard": 4,
+      "source_lf_sha256": "dd086dd6840835f84af86e420bd637f1c88b4845f8f8f70084db0f76539c7ade"
+    },
     "tests/test_reader_find.py": {
       "count": 6,
       "shard": 3,
@@ -45,6 +60,44 @@
     }
   },
   "api_fixture_revisions": {
+    "tests/test_auth.py": {
+      "previous_source_lf_sha256": "ae7ed02eb0830fd85e4ba7e03b9f64b712f572990d5ba21d150a8e38e10ac532",
+      "source_lf_sha256": "c04b2526d73a3d13b59531a630886b42d64475fbb0a3690069bcddf84f7070fb",
+      "nodeids": [
+        "tests/test_auth.py::test_malformed_login_email_is_generic_not_a_server_error[not-an-email]",
+        "tests/test_auth.py::test_malformed_login_email_is_generic_not_a_server_error[a@b]",
+        "tests/test_auth.py::test_malformed_login_email_is_generic_not_a_server_error[a b@example.test]",
+        "tests/test_auth.py::test_password_change_does_not_reissue_a_revoked_cookie_after_activity_touch",
+        "tests/test_auth.py::test_session_list_excludes_expired_and_old_credential_sessions",
+        "tests/test_auth.py::test_session_status_clears_a_stale_presence_marker",
+        "tests/test_auth.py::test_password_reset_availability_respects_admin_policy",
+        "tests/test_auth.py::test_session_policy_database_failure_is_retryable",
+        "tests/test_auth.py::test_malformed_origin_is_denied_without_server_error",
+        "tests/test_auth.py::test_detached_user_principal_cannot_fall_back_to_legacy_owner",
+        "tests/test_auth.py::test_slow_private_authentication_does_not_block_public_session_checks",
+        "tests/test_auth.py::test_admin_approval_blocks_sessions_until_explicit_review",
+        "tests/test_auth.py::test_cross_user_content_requires_explicit_admin_path",
+        "tests/test_auth.py::test_business_routes_are_protected_but_health_and_login_are_public",
+        "tests/test_auth.py::test_owner_session_does_not_unlock_an_independently_protected_share",
+        "tests/test_auth.py::test_owner_and_public_share_api_authorities_do_not_cross",
+        "tests/test_auth.py::test_login_sets_cookie_without_persisting_raw_token",
+        "tests/test_auth.py::test_admin_authorization_is_bound_to_stable_owner_identity",
+        "tests/test_auth.py::test_owner_provisioning_refuses_principal_rebinding",
+        "tests/test_auth.py::test_expiry_boundary_and_sliding_activity_are_deterministic",
+        "tests/test_auth.py::test_activity_touch_is_rate_limited_and_session_secret_rotation_invalidates_restore",
+        "tests/test_auth.py::test_session_polling_does_not_extend_inactivity_but_business_activity_does",
+        "tests/test_auth.py::test_sessions_are_independent_and_password_change_revokes_all",
+        "tests/test_auth.py::test_logout_other_devices_keeps_the_current_session",
+        "tests/test_auth.py::test_logout_revokes_cookie_and_cross_origin_mutations_are_denied",
+        "tests/test_auth.py::test_login_backoff_is_bounded_and_generic",
+        "tests/test_auth.py::test_registration_mode_closed_is_explicit",
+        "tests/test_auth.py::test_open_registration_creates_an_independent_email_session",
+        "tests/test_auth.py::test_legacy_owner_upgrade_binds_email_and_invalidates_sessions",
+        "tests/test_auth.py::test_admin_invitation_user_disable_and_password_reset_contract",
+        "tests/test_auth.py::test_expired_and_revoked_invitations_cannot_register"
+      ],
+      "reason": "Keep all 31 original auth cases. Strengthen stale-presence coverage: a late passive anonymous response must not delete a newly signed-in session; keep stale-marker cleanup and protected 401."
+    },
     "tests/test_import_selection_order.py": {
       "previous_source_lf_sha256": "de59e98ac66d536e7c06e109d4dce498b177cbdf8b722c2de864bfcf1cee6abd",
       "source_lf_sha256": "619080f040aa6a77f57d8d0585894e800aa028a38f6a445916e443994fe53712",
@@ -97,7 +150,7 @@
     },
     "tests/test_supervised_execution_postgres.py": {
       "previous_source_lf_sha256": "596204ef9aab0ac2b7e06b14348dbef59df242e6638c59e33a0ecdf3d38d3a9d",
-      "source_lf_sha256": "d2cd74ba7f907d706428cf39883782c35406869220a23fa78911cf513b7ac8e9",
+      "source_lf_sha256": "c7d52d63e79186182cbb60dca58c2d3ab79ce9e41a2a812750c3db900ff0cec8",
       "nodeids": [
         "tests/test_supervised_execution_postgres.py::test_repeated_progress_and_heartbeat_are_not_business_progress",
         "tests/test_supervised_execution_postgres.py::test_cancellation_is_independent_of_locked_canonical_row",
@@ -113,10 +166,48 @@
         "tests/test_supervised_execution_postgres.py::test_actual_supervisor_process_drains_two_jobs_without_overlapping[1]",
         "tests/test_supervised_execution_postgres.py::test_actual_supervisor_process_drains_two_jobs_without_overlapping[20]"
       ],
-      "reason": "Bind the single Alembic head to 0062 and explicitly prove navigation and execution-control columns survive the original downgrade/upgrade roundtrip."
+      "reason": "Bind the single Alembic head to 0064; retain the original navigation/execution assertions, exercise the selective-append ledger and extension tables on the same downgrade/upgrade roundtrip."
+    },
+    "tests/test_worker_model_registration.py": {
+      "previous_source_lf_sha256": "388401a205c3e4c57eac2407aef276049464007aa41f387490dc2f91fe704988",
+      "source_lf_sha256": "85c325de7e34b2e36bdb391b8b3abb0ec6e8b3981e2a5ec8a93479c0cdb4fc88",
+      "nodeids": [
+        "tests/test_worker_model_registration.py::test_default_and_nonworker_registration_keep_every_declared_table[none]",
+        "tests/test_worker_model_registration.py::test_default_and_nonworker_registration_keep_every_declared_table[uvicorn.__main__]",
+        "tests/test_worker_model_registration.py::test_default_and_nonworker_registration_keep_every_declared_table[alembic.__main__]",
+        "tests/test_worker_model_registration.py::test_default_and_nonworker_registration_keep_every_declared_table[unrecognized.worker]",
+        "tests/test_worker_model_registration.py::test_eager_worker_profile_is_a_complete_fk_and_relationship_closure[app.workers.import_worker-SUPERVISOR_MODULES-36]",
+        "tests/test_worker_model_registration.py::test_eager_worker_profile_is_a_complete_fk_and_relationship_closure[app.workers.execution_child-EXECUTION_MODULES-45]",
+        "tests/test_worker_model_registration.py::test_maintenance_and_complete_upgrade_preserve_class_identity_and_all_tables",
+        "tests/test_worker_model_registration.py::test_explicit_legacy_package_export_upgrades_worker_to_complete_registration[ContextBinding]",
+        "tests/test_worker_model_registration.py::test_explicit_legacy_package_export_upgrades_worker_to_complete_registration[EmailVerificationGrant]",
+        "tests/test_worker_model_registration.py::test_explicit_legacy_package_export_upgrades_worker_to_complete_registration[ContentCleanupRulePublication]",
+        "tests/test_worker_model_registration.py::test_complete_exports_keep_the_original_ninety_genuine_class_objects",
+        "tests/test_worker_model_registration.py::test_passive_maintenance_does_not_initialize_password_verification",
+        "tests/test_worker_model_registration.py::test_selected_service_reexports_are_the_original_objects[app.services.background_jobs-ContentCleanupScan-app.models.content_cleanup]",
+        "tests/test_worker_model_registration.py::test_selected_service_reexports_are_the_original_objects[app.services.background_jobs-effective_limits-app.services.feature_policies]",
+        "tests/test_worker_model_registration.py::test_selected_service_reexports_are_the_original_objects[app.services.exporting.archive_task_status-SystemBackupRecord-app.models.administration]",
+        "tests/test_worker_model_registration.py::test_selected_service_reexports_are_the_original_objects[app.services.sharing.share_service-hash_password-app.services.auth]",
+        "tests/test_worker_model_registration.py::test_selected_service_reexports_are_the_original_objects[app.services.sharing.share_service-verify_password-app.services.auth]"
+      ],
+      "reason": "Migrations 0063/0064 add two device/source tables and the append receipt. Require these three named tables/exports in addition to the original ninety exports. Keep all 17 original node IDs, worker profiles, FK and class identity checks, eager-worker budgets, and skip policy."
     }
   },
   "settings_fixture_revisions": {
+    "settings-batch-export.spec.ts": {
+      "previous_source_lf_sha256": "91f74a6a28738d6c8fb812d586c557911a782624c35f0dd0841504b9f9925899",
+      "source_lf_sha256": "90c2c7684d26735b0552f741d14d057dd03ab0c324dec0fc4e19314ef672c6ee",
+      "cases": [
+        { "id": "f6d9828374f0b1d3d186-cb95a3f3eaceafc914c0", "file": "settings-batch-export.spec.ts", "title": "late batch submission cannot open or populate another account's tasks", "line": 35, "column": 5, "timeout": 90000, "project_id": "" },
+        { "id": "f6d9828374f0b1d3d186-a735198f89449e7cf239", "file": "settings-batch-export.spec.ts", "title": "375px zh-CN: batch export recovers lost response and downloads after refresh", "line": 88, "column": 7, "timeout": 90000, "project_id": "" },
+        { "id": "f6d9828374f0b1d3d186-4547788a3c88614bdc6d", "file": "settings-batch-export.spec.ts", "title": "375px en-US: batch export recovers lost response and downloads after refresh", "line": 88, "column": 7, "timeout": 90000, "project_id": "" },
+        { "id": "f6d9828374f0b1d3d186-a540616ce9d1e832e986", "file": "settings-batch-export.spec.ts", "title": "768px zh-CN: batch export recovers lost response and downloads after refresh", "line": 88, "column": 7, "timeout": 90000, "project_id": "" },
+        { "id": "f6d9828374f0b1d3d186-4258066f97cc571a6714", "file": "settings-batch-export.spec.ts", "title": "768px en-US: batch export recovers lost response and downloads after refresh", "line": 88, "column": 7, "timeout": 90000, "project_id": "" },
+        { "id": "f6d9828374f0b1d3d186-9fa299a2d8545f7a06cc", "file": "settings-batch-export.spec.ts", "title": "1440px zh-CN: batch export recovers lost response and downloads after refresh", "line": 88, "column": 7, "timeout": 90000, "project_id": "" },
+        { "id": "f6d9828374f0b1d3d186-1f0de50e6097a2bf6f89", "file": "settings-batch-export.spec.ts", "title": "1440px en-US: batch export recovers lost response and downloads after refresh", "line": 88, "column": 7, "timeout": 90000, "project_id": "" }
+      ],
+      "reason": "Use the new exact count-bearing accessible name of the same export button. Preserve the seven original native identities, deadlines, account-isolation, retry and ZIP assertions."
+    },
     "settings-format-health.spec.ts": {
       "previous_source_lf_sha256": "9d8e57e0445a3291fdacc91aecc01a24f9b4048015ad6f1f93b7f8377c647dc6",
       "source_lf_sha256": "97252355b10d7eed8074cee56b6a91620f41b891f58e6c541f732bcc9ebe3a6f",

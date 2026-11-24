@@ -59,7 +59,7 @@ test("late batch submission cannot open or populate another account's tasks", as
         await route.fulfill({ response });
       } finally { done(); }
     });
-    await page.getByTestId("selection-toolbar").getByRole("button", { name: "Export", exact: true }).click();
+    await page.getByTestId("selection-toolbar").getByRole("button", { name: "Export 3 selected", exact: true }).click();
     await ready;
     expect((await context.request.post("/api/auth/logout")).status()).toBe(204);
     // A fresh focus is deliberately deduplicated. Explicit account switching
@@ -108,7 +108,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
           await route.abort("failed");
         } else await route.continue();
       });
-      const exportButton = page.getByTestId("selection-toolbar").getByRole("button", { name: /^(导出|Export)$/ });
+      const exportButton = page.getByTestId("selection-toolbar").getByRole("button", { name: locale === "zh-CN" ? "导出所选 3 条" : "Export 3 selected", exact: true });
       for (let attempt = 0; attempt < 2; attempt++) {
         await exportButton.click();
         await expect(page.getByRole("alert").filter({ hasText: /未确认提交结果|Submission was not confirmed/ })).toBeVisible();

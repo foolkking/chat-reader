@@ -1316,6 +1316,7 @@ def _update_session_state(db: Session, record: ImportRecord) -> None:
 
 def _prepare_plan(db: Session, record: ImportRecord, *, progress_callback=None) -> None:
     counters = {"conversation_count": 0, "message_count": 0}
+    append_books = []
 
     def iter_drafts():
         families = {family.id: family for family in record.structure_families}
@@ -1342,7 +1343,10 @@ def _prepare_plan(db: Session, record: ImportRecord, *, progress_callback=None) 
                         raise AdaptiveImportError("IMPORT_PLAN_INVALID", "The canonical import plan failed validation.", layer="validation")
                     from app.services.adaptive_import.source_preview import save_preview
                     save_preview(record, group, family, drafts)
-                    for draft in drafts:
+                    for group_ordinal, draft in enumerate(drafts):
+                        if (record.analysis_summary or {}).get("append_only"):
+                            from app.services.adaptive_import.append_choices import write_choices
+                            append_books.append(write_choices(record, group, draft, len(append_books), group_ordinal))
                         counters["conversation_count"] += 1
                         counters["message_count"] += len(draft.messages)
                         yield draft
@@ -1355,6 +1359,8 @@ def _prepare_plan(db: Session, record: ImportRecord, *, progress_callback=None) 
 
     with closing(iter_drafts()) as drafts:
         attach_import_draft(record, drafts)
+    if append_books:
+        record.draft_summary = {**record.draft_summary, "append_choices": append_books}
     record.session_state = "READY"
     record.status = "previewed"
     record.phase = "ready"
@@ -1432,7 +1438,7 @@ def _mode_for_artifacts(artifacts: list[SourceArtifact]) -> str | None:
 def _summary(record: ImportRecord) -> dict[str, Any]:
     statuses = _count_statuses(family.resolution_status for family in record.structure_families)
     return {
-        **{k: (record.analysis_summary or {})[k] for k in ("extension_device","extension_decision")
+        **{k: (record.analysis_summary or {})[k] for k in ("extension_device","extension_decision","append_only")
            if k in (record.analysis_summary or {})},
         **({"repair_profile_id": record.analysis_summary["repair_profile_id"]} if (record.analysis_summary or {}).get("repair_profile_id") else {}),
         **({"analysis_task_id": record.analysis_summary["analysis_task_id"]} if (record.analysis_summary or {}).get("analysis_task_id") else {}),

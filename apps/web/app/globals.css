@@ -1059,6 +1059,24 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
   background: color-mix(in srgb, var(--accent-soft) 38%, var(--surface-raised) 62%);
 }
 
+/* Use the toolbar's available width: a docked desktop pane can be narrow too.
+   Keep the count, named export and exit in reach, not in the scrolling action strip. */
+.selection-toolbar[data-primary-action] { container: selection-bar / inline-size; }
+.selection-toolbar[data-primary-action] .selection-toolbar-summary { flex-basis: 22.5rem; }
+@container selection-bar (min-width: 49rem) {
+  .selection-toolbar-summary { min-inline-size: 22.5rem; }
+  .selection-toolbar-actions { flex-basis: 29rem; }
+}
+@container selection-bar (max-width: 32rem) {
+  .selection-toolbar-summary .selection-toolbar-icon,
+  .selection-toolbar-summary .selection-toolbar-caption,
+  .selection-toolbar-summary .selection-toolbar-done span { display: none; }
+  .selection-toolbar-summary .selection-toolbar-done {
+    min-width: 2.75rem; min-height: 2.75rem; justify-content: center;
+  }
+  .selection-toolbar[data-primary-action] .selection-toolbar-summary { flex-basis: 100%; }
+}
+
 .selection-toolbar-button:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;

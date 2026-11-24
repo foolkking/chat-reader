@@ -18,6 +18,7 @@ from app.models.share import Share
 from app.services.adaptive_import.reader_package import PROFILE, INDEX, package_header
 from app.services.adaptive_import.archive_sources import _artifact_path, verify_archive_sources
 from app.services.extension_access import alive, principal_for
+from app.services.extension_results import write_outcome
 
 
 def canonical_stamp(db, cid):
@@ -100,7 +101,10 @@ def inspect(db, record, *, lock=False):
         (archives[0].parsed_summary or {}).get("classification_version"), destination]).encode()).hexdigest()
     receipt = hashlib.sha256(json.dumps([str(record.id), source_proof, state, str(cid),
         binding.source_digest if binding else None, shares, head["partial"]]).encode()).hexdigest()
-    return (dict(action=state, conversation_id=cid, live_share=bool(shares), partial=head["partial"],
+    # The private binding still contributes to the receipt; it is not permission
+    # to offer a link to a removed or no-longer-owned conversation.
+    openable = target.id if target is not None and target.deleted_at is None else None
+    return (dict(action=state, conversation_id=openable, live_share=bool(shares), partial=head["partial"],
                  messages=count, previous=binding.message_count if binding else 0, receipt=receipt,
                  source_proof=source_proof), key, digest, binding, target)
 
@@ -130,14 +134,14 @@ def persist(db, record, artifacts, draft, progress, verified):
             and (decision.get("approved_action") == "new" or decision.get("approved_action") == "append"
                  and decision.get("approved_target") == str(target.id))
             and (not info["partial"] or decision.get("accept_partial"))):
-        record.analysis_summary = {**record.analysis_summary, "extension_outcome": "unchanged"}
+        write_outcome(db, record, target, "unchanged", 0, info["partial"])
         return target, False, False
     if (decision.get("receipt") != info["receipt"] or info["partial"] and not decision.get("accept_partial")
             or info["live_share"] and not decision.get("accept_share")):
         raise cp.CommitImportError("Source, authorization or sharing changed. Review this import again.")
     copy = decision.get("separate") is True
-    if info["action"] == "conflict" and not copy:
-        raise cp.CommitImportError("Source diverged. The original was not changed.")
+    if copy != (info["action"] == "conflict"):
+        raise cp.CommitImportError("The source no longer matches the reviewed save action.")
     if info["action"] == "new" or copy:
         target = cp._persist_conversation(record, artifacts, draft, db, progress_callback=progress,
               total_messages=len(draft.messages), verified_archive_sources=verified)
@@ -145,7 +149,7 @@ def persist(db, record, artifacts, draft, progress, verified):
             binding = ExtensionSource(owner_user_id=record.owner_user_id, source_key=key, conversation_id=target.id)
         attach_project = True
     elif info["action"] == "unchanged":
-        record.analysis_summary = {**record.analysis_summary, "extension_outcome":"unchanged"}
+        write_outcome(db, record, target, "unchanged", 0, info["partial"])
         return target, False, False
     else:
         skip = binding.message_count
@@ -184,4 +188,6 @@ def persist(db, record, artifacts, draft, progress, verified):
         binding.source_digest, binding.canonical_digest = digest, canonical_stamp(db, target.id)
         binding.message_count = info["messages"]
         db.add(binding)
+    write_outcome(db, record, target, "separate_copy" if copy else "created" if attach_project else "appended",
+                  info["messages"] if attach_project else info["messages"] - info["previous"], info["partial"])
     return target, attach_project, True

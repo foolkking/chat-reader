@@ -1,6 +1,10 @@
 # Project State
 
-**开发分支（非生产）：** 2026-11-23 的[桌面浏览器插件内测](docs/system/BROWSER_EXTENSION.md)新增用户设备授权、当前对话导入、来源保护和共享 Context 快捷出口；开发 head `20261123_0063`。插件未对生产启用，生产版本仍以下一条为准。见[双浏览器验收及未验证边界](docs/evidence/browser-extension-2026-11-23/README.md)。
+**开发分支（非生产）：** [桌面浏览器插件](docs/system/BROWSER_EXTENSION.md)使用设备授权、已有来源保护和共享 Context 快捷出口。侧栏以对话为单位，缺附件的保存保持“部分完成”，项目和动作取自实际提交。ChatGPT 可先勾消息，Reader 正文也可固定目标从文件追加；只追加到末尾。已受理后刷新保留勾选与目标；末尾变化须重新确认，未归属的回答独立成轮。迁移单 head `20261123_0064`。[基线审查](docs/planning/ux-audit-reader-extension-2026-11-23.md) · [侧栏实测](docs/evidence/browser-extension-polish-2026-11-23/README.md) · [真实收件、末尾争用、Context 下载与门槛](docs/evidence/reader-extension-append-2026-11-24/README.md)。本记录不是生产启用凭据。
+
+**补充授权恢复复核（2026-11-24）：** 服务端设备上限仍为 32；Chrome/Edge 内测此前复现达到上限后页面误报“插件未登记”。现以 409 专属中英恢复提示指向账号安全中的设备撤销入口，不改变限额；真实隔离 API/浏览器测得 409 → 清理专用 32 条合成记录 → 正常授权 200，375px 无水平溢出、恢复链接 44px。新增 Web 回归 3/3 通过；见[改前审查、前后截图与失败保留](docs/evidence/reader-extension-append-2026-11-24/README.md#authorization-limit)及当前[浏览器扩展合同](docs/system/BROWSER_EXTENSION.md)。不代表完整扩展验收、CI 或发布。
+
+**项目导出（开发工作树）：** 区分「导出所选 N 条」与「导出整个项目的活动对话」。范围变化先复核；两者生成对话数据 ZIP，不是项目备份或 ChatGPT 项目采集。[合同](docs/system/DATA_ARCHIVE_CONTRACT.md) · [实际选择、任务、下载逐一对照](docs/evidence/project-batch-export-2026-11-23/README.md#implemented)。
 
 **当前生产：2026-11-22 01:48:57（北京时间），`king` 已上线 `v0.1.5` / `b824ee949f03ec403e7e60beb677731c2fcff9c4`。** PR #7 经限定授权合并，不改保护规则。标签完整 CI `44925538355/1` 19/19，签名发布 `44925521786/1` 4/4。镜像包、GHCR、生产同源构建标识、权限、worker 心跳、数据汇总及配置独立复核通过。数据库仍为 `20261117_0062`。下载 6.725 秒，本次涉及写入、走完整维护，确认到新版开放 452.871 秒；不把隔离快路径的 9.560 秒当成这次生产时间。[上线、边界与备份记录](docs/deployment.md#v015-production)。
 

@@ -90,7 +90,27 @@ def capabilities(db: Session = DB):
     from app.services.feature_policies import get_feature_policy
     return {"protocol": 1, "import_profile": "reader-chat-v1",
             "capture": get_settings().reader_extension_capture and get_feature_policy(db).allow_user_import,
+            "catalog_details": True, "save_receipts": True, "source_lookup": True,
+            "selective_append": get_settings().reader_extension_capture and get_feature_policy(db).allow_user_import,
             "project_discovery": False, "account_discovery": False}
+
+
+class SourceStatus(Strict):
+    source_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,128}$")
+
+
+@api.post("/sources/status")
+def source_status(body: SourceStatus, request: Request, response: Response, db: Session = DB):
+    """One user-selected source. Does not read ChatGPT, enumerate sources or attest freshness."""
+    from app.models.conversation import Conversation
+    from app.models.reader_extension import ExtensionSource
+    owner = request.state.auth.user_id
+    response.headers["Cache-Control"] = "private, no-store"
+    cid = db.scalar(select(Conversation.id).join(ExtensionSource, ExtensionSource.conversation_id == Conversation.id)
+                    .where(ExtensionSource.owner_user_id == owner, ExtensionSource.source_key == "chatgpt:" + body.source_id,
+                           Conversation.owner_user_id == owner, Conversation.deleted_at.is_(None),
+                           Conversation.status == "active"))
+    return {"conversation_id": cid}
 
 
 @api.get("/projects")
@@ -102,36 +122,9 @@ def catalog_projects(request: Request, db: Session = DB):
 @api.get("/conversations")
 def catalog(request: Request, q: str = Query("", max_length=200), project_id: UUID | None = None,
             scope: Literal["all", "unclassified"] = "all", offset: int = Query(0, ge=0),
-            limit: int = Query(40, ge=1, le=80), db: Session = DB):
-    if q.strip():
-        from app.services.search.search_service import search, SearchServiceError
-        from app.models.conversation import Conversation
-        from app.models.project import Project
-        from app.models.project_conversation import ProjectConversation
-        owner = ownership_scope_from_request(request)
-        try:
-            page = search(db, q, limit=limit, offset=offset, project_id=project_id, grouped=True,
-                          terms_mode=True, unclassified_only=scope == "unclassified", ownership_scope=owner)
-        except SearchServiceError as exc:
-            raise HTTPException(400, "Search unavailable.") from exc
-        ids = [r.conversation_id for r in page.items]
-        pins = dict(db.execute(select(ProjectConversation.conversation_id, ProjectConversation.is_pinned)
-            .join(Conversation, Conversation.id == ProjectConversation.conversation_id)
-            .where(owner.predicate(Conversation), ProjectConversation.project_id == project_id,
-                   ProjectConversation.conversation_id.in_(ids))).all()) if project_id else dict(db.execute(
-            select(Conversation.id, Conversation.is_global_pinned).where(owner.predicate(Conversation), Conversation.id.in_(ids))).all())
-        in_project = dict(db.execute(select(ProjectConversation.conversation_id, Project.id).join(Project)
-            .where(ProjectConversation.conversation_id.in_(ids), owner.predicate(Project), Project.is_default.is_(False),
-                   Project.is_archived.is_(False))).all())
-        return {"items": [{"id": row.conversation_id, "title": row.conversation_title, "project_id": in_project.get(row.conversation_id),
-                           "pinned": bool(pins.get(row.conversation_id))} for row in page.items],
-                "has_more": page.has_more}
-    rows = (projects.get_project_conversations(project_id, request, limit + 1, offset, "updated", "desc", db)
-            if project_id else conversations.list_conversations(request, limit + 1, offset, None, None, "",
-                                    None, False, "active", scope, "updated", "desc", db))
-    return {"items": [{"id": c.id, "title": c.display_title or c.title, "project_id": project_id or c.project_id,
-                       "pinned": c.project_relation.is_pinned if project_id else c.is_global_pinned}
-                      for c in rows[:limit]], "has_more": len(rows) > limit}
+            view: Literal["library", "recent", "pinned"] = "library", limit: int = Query(40, ge=1, le=80), db: Session = DB):
+    from app.services.extension_catalog import catalog as list_catalog
+    return list_catalog(db, ownership_scope_from_request(request), q, project_id, scope, view, offset, limit)
 
 
 @api.get("/files")
@@ -193,13 +186,24 @@ def read_preset(request: Request, db: Session = DB):
     return {"preset_id": get_or_create_preferences(db, subject_key_from_request(request)).context_quick_preset}
 
 
+def context_scope(options):
+    return {"attachments": options.context_attachment_policy, "continuation": options.continuation_policy,
+            "personal_annotations_and_notebook": True}
+
+
+@api.get("/context/options")
+def context_options(request: Request, db: Session = DB):
+    subject = subject_key_from_request(request)
+    return context_scope(preset_options(db, subject, get_or_create_preferences(db, subject).context_quick_preset))
+
+
 @router.post("/api/conversations/{cid}/quick-context", status_code=202)
 @api.post("/conversations/{cid}/context", status_code=202)
 def quick_context(cid: UUID, request: Request, key: UUID = Header(alias="Idempotency-Key"), db: Session = DB):
     subject = subject_key_from_request(request)
     body = preset_options(db, subject, get_or_create_preferences(db, subject).context_quick_preset)
     task = archive_exports.queue_archive_export(cid, request, body, False, False, False, True, str(key), db)
-    return {"id": task.job_id, "status": task.status}
+    return {"id": task.job_id, "status": task.status, "context_policy": context_scope(body)}
 
 
 @api.get("/exports/{jid}")
@@ -248,6 +252,20 @@ def upload(request: Request, files: list[UploadFile] = File(...), target_project
     return {"id": result["import_id"], "state": result["state"]}
 
 
+@api.post("/append-imports", status_code=201)
+def upload_excerpt(request: Request, files: list[UploadFile] = File(...),
+                   key: UUID = Header(alias="Idempotency-Key"), db: Session = DB):
+    from app.api.routes.adaptive_imports import stage_import_session
+    if not get_settings().reader_extension_capture:
+        raise HTTPException(403)
+    if len(files) != 1 or not (files[0].filename or "").lower().endswith(".zip"):
+        raise HTTPException(422)
+    device = str(request.state.auth.session_id)
+    result = stage_import_session(files, None, None, key, db, ownership_scope_from_request(request),
+                                 device=device, append_only={"device": device})
+    return {"id": result["import_id"], "state": result["state"]}
+
+
 def _record(db, request, iid, *, lock=False):
     from app.models.import_record import ImportRecord
     stmt = select(ImportRecord).where(ImportRecord.id == iid, ImportRecord.owner_user_id == request.state.auth.user_id)
@@ -270,14 +288,18 @@ def upload_receipt(key: UUID, request: Request, db: Session = DB):
 def import_state(iid: UUID, request: Request, db: Session = DB):
     from app.services.extension_import import inspect
     from app.services.adaptive_import.resource_wait import public_wait
+    from app.services.extension_results import public_result
     record = _record(db, request, iid)
+    if (record.analysis_summary or {}).get("append_only"):
+        return {"id": iid, "state": record.session_state, "status": record.status, "mode": "selective_append"}
     info = inspect(db, record)[0] if record.status == "previewed" and record.session_state == "READY" else None
     from app.models.conversation import Conversation
     saved = get_owned(db, Conversation, record.conversation_id, ownership_scope_from_request(request)) if record.status == "committed" and record.conversation_id else None
     return {"id": iid, "state": record.session_state, "status": record.status, "phase": record.phase,
             "progress": record.progress, "review": info, "wait": public_wait(record.analysis_summary),
             "conversation_id": saved.id if saved and not saved.deleted_at else None,
-            "title": saved.display_title if saved and not saved.deleted_at else None}
+            "title": (saved.display_title or saved.title) if saved and not saved.deleted_at else None,
+            "result": public_result(db, record, saved)}
 
 
 class Decision(Strict):
@@ -293,12 +315,14 @@ def confirm(iid: UUID, body: Decision, request: Request, response: Response, db:
     from app.api.routes.imports import commit_import
     from app.schemas.import_schema import ImportCommitOptions
     record = _record(db, request, iid, lock=True)
+    if (record.analysis_summary or {}).get("append_only"):
+        raise HTTPException(409, "Review the selected messages in Reader.")
     if record.status not in ("queued","committed","processing"):
         if record.session_state != "READY":
             raise HTTPException(409, "Analysis is not ready.")
         info = inspect(db, record)[0]
         if (info["receipt"] != body.receipt or info["partial"] and not body.accept_partial or
-                info["live_share"] and not body.accept_share or info["action"] == "conflict" and not body.separate):
+                info["live_share"] and not body.accept_share or body.separate != (info["action"] == "conflict")):
             raise HTTPException(409, "Review the current source and sharing before confirming.")
         record.analysis_summary = {**record.analysis_summary, "extension_decision": {
             **body.model_dump(), "source_proof": info["source_proof"], "approved_action": info["action"],
