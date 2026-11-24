@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { exportViewDependencies } from "./export-view-fixture.mjs";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { test } from "node:test";
@@ -104,6 +105,7 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
         return React.createElement("aside", { "data-testid": "synthetic-selection-toolbar" }, selectedCount); } },
     "../../components/use-linear-selection": { useLinearSelection: () => ({ itemHandlers: () => ({}), checkboxClass: () => "flex" }) },
     "../../lib/batch-selection": {},
+    ...exportViewDependencies,
     "../../components/hover-preview-link": { HoverPreviewLink: ({ href, children }) => React.createElement("a", { href }, children) },
   };
   const module = { exports: {} };

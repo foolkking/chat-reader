@@ -84,7 +84,10 @@ def create_conversation_batch_export(db, *, job, ownership_scope, progress_callb
     if not directory.is_relative_to(root):
         raise ExportError("BATCH_EXPORT_STORAGE_UNAVAILABLE", 503)
     name = job.payload.get("project_name")
-    filename = f"chat-reader-{_safe_name(name) if name else 'export'}-{job.queued_at:%Y-%m-%d}.zip"
+    # Keep the established download prefix for both scopes. Project exports
+    # remain distinguishable without changing the generic filename.
+    scope_label = f"{_safe_name(name)}-" if name else ""
+    filename = f"chat-reader-export-{scope_label}{job.queued_at:%Y-%m-%d}.zip"
     destination = directory / filename
     temporary = None
     entries, counts = [], []

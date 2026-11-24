@@ -14,11 +14,11 @@ function load(path, mocks, window) {
   const code = ts.transpileModule(readFileSync(new URL("../../apps/web/" + path, import.meta.url), "utf8"), {
     fileName: path, compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
-  new Function("require", "module", "exports", "window", code)(name => {
+  new Function("require", "module", "exports", "window", "sessionStorage", code)(name => {
     if (Object.hasOwn(mocks, name)) return mocks[name];
     if (name.startsWith(".")) throw new Error("Unexpected dependency: " + name);
     return appRequire(name);
-  }, module, module.exports, window);
+  }, module, module.exports, window, window?.sessionStorage);
   return module.exports;
 }
 
@@ -68,14 +68,20 @@ function findButton(surface, label) {
 
 function exportFixture(outcome = async () => ({ job_id: "synthetic-export" })) {
   const runtime = hooks(), window = windowFixture(), writes = [];
+  const data = new Map();
+  window.sessionStorage = { getItem: k => data.get(k) ?? null, setItem: (k,v) => data.set(k,v), removeItem: k => data.delete(k) };
+  class ApiRequestError extends Error {}
+  const { batchExportFailureCode } = load("lib/batch-export-errors.ts", { "./api": { ApiRequestError } }, window);
   const { useBatchExport } = load("features/conversations/use-batch-export.tsx", {
     react: runtime.react,
     "@tanstack/react-query": { useQueryClient: () => ({ setQueryData: noop, invalidateQueries: async () => {} }) },
-    "../../lib/api": { queueConversationBatchExport: async (ids, key, signal) => {
+    "../../lib/api": { ApiRequestError, queueConversationBatchExport: async (ids, key, signal) => {
       writes.push({ ids, key, signal }); return outcome();
     } },
-    "../../lib/batch-export-errors": { batchExportFailureCode: () => "UNCONFIRMED", batchExportError: code => code },
-    "../../lib/offline-access": { authenticationGeneration: () => 0, OFFLINE_ACCESS_LOCKED_EVENT: "synthetic:locked" },
+    "../../lib/batch-export-errors": { batchExportFailureCode, batchExportError: code => code },
+    "../../lib/batch-export-receipt": load("lib/batch-export-receipt.ts", {}, window),
+    "../../lib/auth-client": { getCurrentOfflineRuntimeUserId: () => "synthetic-export-owner" },
+    "../../lib/offline-access": { authenticationGeneration: () => 0, OFFLINE_ACCESS_LOCKED_EVENT: "synthetic:locked", AUTH_GENERATION_CHANGED_EVENT: "synthetic:identity" },
   }, window);
   return { ...runtime, writes, render: () => runtime.render(() => useBatchExport(false)) };
 }
