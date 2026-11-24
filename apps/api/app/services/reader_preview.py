@@ -15,7 +15,7 @@ _MARKDOWN_EMPHASIS_RE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
 _MARKDOWN_INLINE_CODE_RE = re.compile(r"`+([^`\n]+)`+")
 
 
-def dialogue_preview(text: str, role: str | None = None) -> str:
+def dialogue_preview(text: str, role: str | None = None, *, empty: str = "打开消息查看正文") -> str:
     if role == "assistant":
         # A preview-only projection; canonical source remains unchanged.
         text = clean_thinking_summary(role, text).text
@@ -44,4 +44,4 @@ def dialogue_preview(text: str, role: str | None = None) -> str:
         if value:
             plain_lines.append(value)
     preview = " ".join("\n".join(plain_lines).split())[:160]
-    return preview or "打开消息查看正文"
+    return preview or empty

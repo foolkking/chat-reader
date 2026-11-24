@@ -1,0 +1,434 @@
+{
+  "scope": "Only local synthetic data; Reader Web browser uses webpack development server; separate optimized production build. No CI or production claim. Receipt times are filesystem completion times in Asia/Shanghai.",
+  "reader_base": "4afb430cf6d5d03b67474cd8a8d9e5ec2021935c",
+  "extension_base": "a3f0ebe738a2e69ea5c866bdddb29ce119f08fc5",
+  "reader_source_lf_sha256": {
+    "apps/api/app/api/routes/append_imports.py": "a5903c8def0edb0882b7b7f3155dc197ab48eec59a907136b5141be942884e69",
+    "apps/api/app/api/routes/auth.py": "d484ca00be73a8f00065dc6fa66b3b1affccedcac1d88a94a2084c49e276df50",
+    "apps/api/app/core/auth_middleware.py": "1a00246cdfc0f62d1383549a9f28383aec5a506511a404dd82e6433dcd20cc25",
+    "apps/api/app/services/adaptive_import/append_choices.py": "a726487da5e10c013469e7e6499fbff360a8854c2ce49d117cc8ac79ff1c09c0",
+    "apps/api/app/services/selective_append.py": "f4ca28d26e89acc008bca7f594a3c9ec60d624661e9e33bd63286f57788a4f15",
+    "apps/api/app/services/exporting/project_scope.py": "e7686aa6ae1c5adf79af265e4020263d78e6940991c0f897aebe38ca90c9ac54",
+    "apps/api/app/services/reader_turns.py": "1dbcb25dcd6ca774cd9489021155b0e85e2afead6d9b1da2e1270850d067e9e5",
+    "apps/web/features/import/append-import-workspace.tsx": "124266a8b463e04ba6320fb19837cc226589e33121d2b9598b6732d1002392f9",
+    "apps/web/features/import/append-prepare-source.tsx": "fe2a5e4c03e52c7a74154e402b03ae578c9b940a33836d77b34ee025b389a87c",
+    "deploy/updater/compatibility.json": "3c994b2de3d217009081adbe1d4a382b46604bfcaa8ee968231b8780a5805999",
+    "scripts/extension-beta/browser.cjs": "9f9ba4b2913dc74ca0cc0bcc1dde7832df0196a06454d82ba31323f7dde7f85c",
+    "scripts/extension-beta/selective-append.cjs": "5054d5ef02ec5fafb3a00f32607a0e7a5f0205a720c39980edb5f66684589b53",
+    "scripts/ci/quality-coverage-extension.json": "8ceddec36b389b580e62cdc3f5d0d8ccd7d3eb14111647e501977d6626c7f568",
+    "scripts/extension-beta/inspect_project_sample.py": "fec84e8d3fb7484ca322fbda87b954e302f0f2f0ff82a8be87cefc38542a43f6",
+    "scripts/extension-beta/test_inspect_project_sample.py": "342389c9d32ef8951ffb5f95c71108d6ebd4916a5a1d9158975295c45911d864"
+  },
+  "lab_extension": {
+    "version": "0.2.0",
+    "zip_bytes": 122080,
+    "files": 32,
+    "sha256": "e08b440b496e85d5534e0f8b73f32846ec76fd8ca0ec85aca8c633f40e140e15",
+    "origin": "scope lab loopback only; not a production installable"
+  },
+  "full_browsers": {
+    "chromium": {
+      "attempt": "chrome-zh-faults-delivery-10",
+      "receipt_modified_at": "2026-11-24T02:48:43+08:00",
+      "browser": "151.0.7922.34",
+      "result": "pass",
+      "steps": [
+        "installed extension, toolbar registered to open side panel",
+        "signed-out native authorization and delayed anonymous read did not erase the new login",
+        "genuine browser PKCE consent and explicit destination",
+        "real recent and project-pinned rows; long localized titles, both themes and 200% CSS magnification without overflow",
+        "real capture, ZIP and committed file import",
+        "same-document navigation and a changed message invalidate the previous check without recapturing",
+        "committed page button opens without capturing and revisiting distinguishes a historical save",
+        "identical import returns same conversation",
+        "suffix appended to same conversation",
+        "branch conflict requests review",
+        "browser IME composition and keyboard search focus (not a physical input-method test)",
+        "metadata result opens Reader in a new tab without a device credential in the URL",
+        "catalog boot retries the failed read without a new grant; empty search keeps the query, project and pin scope; magnified rows yield space to titles",
+        "move, scoped conversation search and project pin persisted",
+        "separate outcome retains original binding; unchanged receipt reports actual moved project",
+        "file hit returns only its conversation; opened Reader file panel and renamed owned file there",
+        "panel and same Reader document: verified both ZIP policies, attachment ownership, own private notes and exclusion of another subject",
+        "removed preset: both quick actions returned 409 rather than downloading a previous package",
+        "only selected source messages and image bytes reached Reader; independent owner session changed the tail, retained choices required a second explicit click; fixed-target web append preserved originals",
+        "source closed mid-resource: no upload, actionable interruption",
+        "real OPFS quota override: insufficient temporary space produced no upload",
+        "over-limit synthetic source stopped before upload with a distinct recovery state",
+        "disconnected resource requires review before any publication",
+        "acknowledged partial save remains partial in the durable receipt, panel and page button",
+        "terminated browser, opened same disposable profile in a different browser process: original accepted receipt persisted",
+        "durable received job finished after source closed, panel reloaded and worker restarted",
+        "offscreen fault injection dropped a real 201; recovered the same conversation via request receipt",
+        "browser opened a native SIDE_PANEL context through a trusted gesture"
+      ],
+      "login_http": 200,
+      "late_anonymous_read_had_set_cookie": false,
+      "scoped_source_marker_in_reader_requests": false,
+      "selective_append": {
+        "archive": {
+          "orderedRows": 2,
+          "images": 1,
+          "imageSha256": "4399b4a4e49a282daabe01ca4aa8d13a7541a4156e30aae1a51e44b6f0a04e1e",
+          "omittedFilePresent": false
+        },
+        "resources": {
+          "csv": 0,
+          "png": 1
+        },
+        "previewLabelsVerified": true,
+        "reviewWidth": 1280,
+        "serverZeroBeforeConfirm": true,
+        "reconfirmedAfter409": true,
+        "selectedRetained": 2,
+        "readerOriginalsUnchanged": true,
+        "unrelatedAnswersHaveSeparateTurns": true,
+        "webTargetLocked": true,
+        "webCommitted": 2,
+        "fileMappingConfirmed": false
+      },
+      "context_downloads": {
+        "samples": [
+          {
+            "surface": "panel",
+            "attachments": "include",
+            "binary_members": 2,
+            "metadata_records": 2,
+            "own_annotations": 1,
+            "own_notebooks": 1,
+            "foreign_or_conflict_markers": 0
+          },
+          {
+            "surface": "web",
+            "attachments": "include",
+            "binary_members": 2,
+            "metadata_records": 2,
+            "own_annotations": 1,
+            "own_notebooks": 1,
+            "foreign_or_conflict_markers": 0
+          },
+          {
+            "surface": "panel",
+            "attachments": "metadata_only",
+            "binary_members": 0,
+            "metadata_records": 2,
+            "own_annotations": 1,
+            "own_notebooks": 1,
+            "foreign_or_conflict_markers": 0
+          },
+          {
+            "surface": "web",
+            "attachments": "metadata_only",
+            "binary_members": 0,
+            "metadata_records": 2,
+            "own_annotations": 1,
+            "own_notebooks": 1,
+            "foreign_or_conflict_markers": 0
+          }
+        ],
+        "rejected": {
+          "web": 409,
+          "panel": 409
+        },
+        "webRequests": 3,
+        "seed": {
+          "subjects": 2,
+          "annotations": 2,
+          "notebooks": 3
+        }
+      },
+      "canonical_counts": {
+        "messages": 4,
+        "source_refs": 4,
+        "files": 2,
+        "verified_file_digests": 2,
+        "file_message_owners": 2,
+        "secrets_absent_from_synthetic_packages": 4
+      },
+      "catalog_layout": {
+        "searchTop": 60,
+        "firstRowTop": 160,
+        "actionWidth": 44
+      }
+    },
+    "edge": {
+      "attempt": "edge-en-faults-delivery-09",
+      "receipt_modified_at": "2026-11-24T02:45:57+08:00",
+      "browser": "158.0.4370.33",
+      "result": "pass",
+      "steps": [
+        "installed extension, toolbar registered to open side panel",
+        "signed-out native authorization and delayed anonymous read did not erase the new login",
+        "genuine browser PKCE consent and explicit destination",
+        "real recent and project-pinned rows; long localized titles, both themes and 200% CSS magnification without overflow",
+        "real capture, ZIP and committed file import",
+        "same-document navigation and a changed message invalidate the previous check without recapturing",
+        "committed page button opens without capturing and revisiting distinguishes a historical save",
+        "identical import returns same conversation",
+        "suffix appended to same conversation",
+        "branch conflict requests review",
+        "browser IME composition and keyboard search focus (not a physical input-method test)",
+        "metadata result opens Reader in a new tab without a device credential in the URL",
+        "catalog boot retries the failed read without a new grant; empty search keeps the query, project and pin scope; magnified rows yield space to titles",
+        "move, scoped conversation search and project pin persisted",
+        "separate outcome retains original binding; unchanged receipt reports actual moved project",
+        "file hit returns only its conversation; opened Reader file panel and renamed owned file there",
+        "panel and same Reader document: verified both ZIP policies, attachment ownership, own private notes and exclusion of another subject",
+        "removed preset: both quick actions returned 409 rather than downloading a previous package",
+        "only selected source messages and image bytes reached Reader; independent owner session changed the tail, retained choices required a second explicit click; fixed-target web append preserved originals",
+        "source closed mid-resource: no upload, actionable interruption",
+        "real OPFS quota override: insufficient temporary space produced no upload",
+        "over-limit synthetic source stopped before upload with a distinct recovery state",
+        "disconnected resource requires review before any publication",
+        "acknowledged partial save remains partial in the durable receipt, panel and page button",
+        "terminated browser, opened same disposable profile in a different browser process: original accepted receipt persisted",
+        "durable received job finished after source closed, panel reloaded and worker restarted",
+        "offscreen fault injection dropped a real 201; recovered the same conversation via request receipt",
+        "browser opened a native SIDE_PANEL context through a trusted gesture"
+      ],
+      "login_http": 200,
+      "late_anonymous_read_had_set_cookie": false,
+      "scoped_source_marker_in_reader_requests": false,
+      "selective_append": {
+        "archive": {
+          "orderedRows": 2,
+          "images": 1,
+          "imageSha256": "4399b4a4e49a282daabe01ca4aa8d13a7541a4156e30aae1a51e44b6f0a04e1e",
+          "omittedFilePresent": false
+        },
+        "resources": {
+          "csv": 0,
+          "png": 1
+        },
+        "previewLabelsVerified": true,
+        "reviewWidth": 375,
+        "serverZeroBeforeConfirm": true,
+        "reconfirmedAfter409": true,
+        "selectedRetained": 2,
+        "readerOriginalsUnchanged": true,
+        "unrelatedAnswersHaveSeparateTurns": true,
+        "webTargetLocked": true,
+        "webCommitted": 2,
+        "fileMappingConfirmed": false
+      },
+      "context_downloads": {
+        "samples": [
+          {
+            "surface": "panel",
+            "attachments": "include",
+            "binary_members": 2,
+            "metadata_records": 2,
+            "own_annotations": 1,
+            "own_notebooks": 1,
+            "foreign_or_conflict_markers": 0
+          },
+          {
+            "surface": "web",
+            "attachments": "include",
+            "binary_members": 2,
+            "metadata_records": 2,
+            "own_annotations": 1,
+            "own_notebooks": 1,
+            "foreign_or_conflict_markers": 0
+          },
+          {
+            "surface": "panel",
+            "attachments": "metadata_only",
+            "binary_members": 0,
+            "metadata_records": 2,
+            "own_annotations": 1,
+            "own_notebooks": 1,
+            "foreign_or_conflict_markers": 0
+          },
+          {
+            "surface": "web",
+            "attachments": "metadata_only",
+            "binary_members": 0,
+            "metadata_records": 2,
+            "own_annotations": 1,
+            "own_notebooks": 1,
+            "foreign_or_conflict_markers": 0
+          }
+        ],
+        "rejected": {
+          "web": 409,
+          "panel": 409
+        },
+        "webRequests": 3,
+        "seed": {
+          "subjects": 2,
+          "annotations": 2,
+          "notebooks": 3
+        }
+      },
+      "canonical_counts": {
+        "messages": 4,
+        "source_refs": 4,
+        "files": 2,
+        "verified_file_digests": 2,
+        "file_message_owners": 2,
+        "secrets_absent_from_synthetic_packages": 4
+      },
+      "catalog_layout": {
+        "searchTop": 60,
+        "firstRowTop": 160,
+        "actionWidth": 44
+      }
+    }
+  },
+  "first_use_mapping_verified_separately": true,
+  "earlier_failed_browser_attempts": [
+    {
+      "attempt": "chrome-zh-shipping-01",
+      "recorded_at": "2026-11-24T00:52:02+08:00",
+      "stage": "web-login",
+      "class": "AssertionError",
+      "login_http": null
+    },
+    {
+      "attempt": "chrome-zh-shipping-02",
+      "recorded_at": "2026-11-24T00:54:59+08:00",
+      "stage": "native-consent",
+      "class": "Error",
+      "login_http": null
+    },
+    {
+      "attempt": "chrome-zh-excerpt-only-05",
+      "recorded_at": "2026-11-24T01:21:25+08:00",
+      "stage": "excerpt-reader-destination",
+      "class": "Error",
+      "login_http": null
+    },
+    {
+      "attempt": "chrome-zh-excerpt-only-06",
+      "recorded_at": "2026-11-24T01:30:47+08:00",
+      "stage": "excerpt-received-bytes",
+      "class": "Error",
+      "login_http": null
+    },
+    {
+      "attempt": "chrome-zh-excerpt-only-07",
+      "recorded_at": "2026-11-24T01:39:14+08:00",
+      "stage": "fixed-append-from-reader",
+      "class": "TimeoutError",
+      "login_http": null
+    },
+    {
+      "attempt": "chrome-zh-excerpt-only-08",
+      "recorded_at": "2026-11-24T01:58:04+08:00",
+      "stage": "native-consent",
+      "class": "Error",
+      "login_http": null
+    },
+    {
+      "attempt": "edge-en-faults-shipping-11",
+      "recorded_at": "2026-11-24T02:09:12+08:00",
+      "stage": "native-consent",
+      "class": "Error",
+      "login_http": null
+    },
+    {
+      "attempt": "edge-en-faults-ship5-01",
+      "recorded_at": "2026-11-24T02:20:51+08:00",
+      "stage": "fixed-append-from-reader",
+      "class": "TimeoutError",
+      "login_http": 200
+    },
+    {
+      "attempt": "edge-en-faults-ship5-03",
+      "recorded_at": "2026-11-24T02:24:07+08:00",
+      "stage": "native-consent",
+      "class": "Error",
+      "login_http": 200
+    },
+    {
+      "attempt": "edge-en-faults-final-05",
+      "recorded_at": "2026-11-24T02:34:05+08:00",
+      "stage": "native-consent",
+      "class": "Error",
+      "login_http": null
+    },
+    {
+      "attempt": "chrome-zh-faults-final-06",
+      "recorded_at": "2026-11-24T02:34:21+08:00",
+      "stage": "native-consent",
+      "class": "Error",
+      "login_http": null
+    }
+  ],
+  "local_commands": [
+    {
+      "command": "python -m pytest -q tests/test_auth.py tests/test_reader_extension.py tests/test_selective_append.py tests/test_project_export_scope.py",
+      "exit": 0,
+      "passed": 57,
+      "seconds": 434.76
+    },
+    {
+      "command": "targeted native Reader turn, sharing, offline, extension and scope suites (overlapping, not additive)",
+      "exit": 0,
+      "passed": 49,
+      "seconds": 417.6
+    },
+    {
+      "command": "isolated PG16: batch export suite and supervised migration roundtrip to 0060 and back to head",
+      "exit": 0,
+      "passed": 8,
+      "warnings": 1,
+      "seconds": 45.78
+    },
+    {
+      "command": "python -m alembic heads; compare release target and forward ancestry",
+      "exit": 0,
+      "single_head": "20261123_0064",
+      "pre_fix": "mismatch: 0063 vs 0064; exit 1"
+    },
+    {
+      "command": "pytest --collect-only; validate_api_sources; additive native scheduling controls",
+      "exit": 0,
+      "collected_only_not_passed": 7115,
+      "node_controls": 3,
+      "python_controls": 6
+    },
+    {
+      "command": "pnpm run lint; pnpm --filter web exec tsc --noEmit --incremental false; next build --webpack (isolated copy)",
+      "exit": [
+        0,
+        0,
+        0
+      ],
+      "static_pages": 22
+    },
+    {
+      "command": "npm test (Node 24.22.3) in Fork",
+      "exit": 0,
+      "total": 180,
+      "passed": 117,
+      "skipped_legacy": 63,
+      "reader_contract_cases_no_skips": 8
+    },
+    {
+      "command": "node --test scripts/ci/release-image-sources.test.mjs",
+      "exit": 0,
+      "passed": 24
+    },
+    {
+      "command": "python -m unittest discover -s scripts/extension-beta -p test_inspect_project_sample.py",
+      "exit": 0,
+      "passed": 3,
+      "reader_single_conversation_fixture_negative_control_exit": 2
+    }
+  ],
+  "negative_first_visit_control": {
+    "exit": 1,
+    "test": "test_session_status_clears_a_stale_presence_marker",
+    "failed": 1,
+    "deselected": 30
+  },
+  "not_attested": [
+    "live personal ChatGPT session, project or account enumeration",
+    "private upstream fixture tests skipped by existing upstream harness",
+    "physical mobile device",
+    "hosted CI, signing, commit identity and production deployment"
+  ],
+  "pending_user_input": "Dedicated, privacy-safe official export from a test account, with known project, branch and attachment ground truth; file path and explicit authorization for local read-only verification. Project selection prototype is not exported or attested."
+}

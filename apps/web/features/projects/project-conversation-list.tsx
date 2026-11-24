@@ -33,6 +33,8 @@ import { formatActivityTime, fullActivityTime, sortTimeLabel } from "../../lib/a
 import { useBatchExport } from "../conversations/use-batch-export";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
+import { ExportSelected, ExportContents } from "../../components/export-selected";
+import { selectionOrder } from "../../lib/export-selection";
 import { runBatchSelection, type BatchSelectionProgress, type BatchSelectionResult } from "../../lib/batch-selection";
 import { MobilePageHeader } from "../../components/mobile-page-header";
 import { useWorkspaceShell } from "../../components/workspace-shell";
@@ -52,7 +54,6 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const { openImportDialog } = useImportDialog();
   const { resolvedLocale, projectSortMode = "custom", projectSortDirection = "asc" } = usePreferences();
   const { conversationSortMode, conversationSortDirection, place: placeInOrder, orderVersion, setSort, ready = true } = useScopedSort(`project:${projectId}`);
-  const batchExport = useBatchExport(resolvedLocale === "zh-CN");
   const batchCheck = useBatchResultCheck(resolvedLocale === "zh-CN", "project:" + projectId);
   const deletion = useConversationDeletion();
   const deleteFlight = useRef(false);
@@ -89,6 +90,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const [undo, setUndo] = useState<UndoAction | null>(null);
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
+  const batchExport = useBatchExport(resolvedLocale === "zh-CN", `project:${projectId}`, mergeOrderIds);
   const [batchNotice, setBatchNotice] = useState<ReactNode>(null);
   const [batchProgress, setBatchProgress] = useState<BatchSelectionProgress | null>(null);
   const [newConversationOpen, setNewConversationOpen] = useState(false);
@@ -145,13 +147,15 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const canAddToProject = Boolean(project && !project.is_archived && !projectsQuery.isError && !projectsQuery.isLoading);
   const customOrderUnavailable = !project || projectsQuery.isLoading || projectsQuery.isError;
   const placement = useConversationPlacement({ scope: "project-list:" + projectId, unavailable: projectUnavailable, onChanged: refreshProject });
+  const displayedById = new Map(conversations.map(row => [row.id, row]));
   const selectedMergeConversations = mergeOrderIds
-    .map((id) => conversations.find((conversation) => conversation.id === id))
+    .map((id) => displayedById.get(id))
     .filter((conversation): conversation is ProjectConversationRead => Boolean(conversation));
   const linearSelection = useLinearSelection({
     ids: conversations.map((conversation) => conversation.id),
     selectedIds: selectedConversationIds,
     onChange: applySelection,
+    keepOutsideWindow: true,
     disabled: bulkBusy !== null,
     selectionMode,
     onActivate: () => setSelectionMode(true),
@@ -171,7 +175,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
 
   function applySelection(ids: Iterable<string>) {
     const requested = new Set(ids);
-    const orderedIds = conversations.filter((conversation) => requested.has(conversation.id)).map((conversation) => conversation.id);
+    const orderedIds = selectionOrder(mergeOrderIds, requested, conversations.map(c => c.id));
     setSelectedConversationIds(new Set(orderedIds));
     setMergeOrderIds(orderedIds);
   }
@@ -352,7 +356,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
             ) : null}
             {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{zh ? "排序结果未确认，请先刷新并核对当前顺序。" : "The order result is unconfirmed. Refresh and check the current order before trying again."}</p> : null}
             {!projectUnavailable ? <MergeConversationsDialog key={`merge:${projectId}`} open={mergeOpenScope === projectId}
-              conversations={selectedMergeConversations} title={mergeTitle} busy={bulkBusy === "merge"}
+              conversations={selectedMergeConversations.length === selectedConversationIds.size ? selectedMergeConversations : []} title={mergeTitle} busy={bulkBusy === "merge"}
               recoveryDisabled={bulkBusy !== null} projectId={projectId}
               onTitleChange={setMergeTitle} onReorder={setMergeOrderIds}
               onOpen={() => setMergeOpenScope(projectId)} onClose={() => { if (bulkBusy !== "merge") setMergeOpenScope(null); }}
@@ -393,6 +397,10 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
             {batchExport.feedback}
             {selectionMode && !projectUnavailable ? <SelectionToolbar
               selectedCount={selectedConversationIds.size}
+              selectedInView={selectedMergeConversations.length}
+              primaryAction={<ExportSelected zh={zh} count={selectedConversationIds.size} busy={batchExport.busy}
+                disabled={bulkBusy !== null || batchExport.overLimit(selectedConversationIds.size) || mergeOrderIds.some(id=>batchCheck.blockedIds.has(id))}
+                onClick={()=>{if(isCurrentView()) void batchExport.submit(mergeOrderIds,{project_id:projectId,mode:"selected"});}} />}
               totalCount={conversations.length}
               loadedOnly={conversationsQuery.hasNextPage}
               busy={bulkBusy !== null}
@@ -406,8 +414,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 selectedConversations={selectedMergeConversations}
                 busy={bulkBusy}
                 projects={(projectsQuery.data ?? []).filter((item) => !item.is_default && !item.is_archived && item.id !== projectId)}
-                exportOverLimit={batchExport.overLimit(selectedConversationIds.size)}
-                unresolvedSelection={[...selectedConversationIds].some((id) => batchCheck.blockedIds.has(id))}
+                unresolvedSelection={batchExport.busy || selectedMergeConversations.length !== selectedConversationIds.size || [...selectedConversationIds].some((id) => batchCheck.blockedIds.has(id))}
                 onOpenMerge={() => setMergeOpenScope(projectId)}
                 onMove={async (ids, targetProjectId) => {
                   if (bulkBusy !== null || batchStop.current || !isCurrentView()) return;
@@ -417,15 +424,6 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                     if (!result) return;
                     applyBatchResult(result);
                     await refreshProject();
-                  } finally {
-                    if (isCurrentView()) setBulkBusy(null);
-                  }
-                }}
-                onExport={async (selected) => {
-                  if (bulkBusy !== null || batchStop.current || !isCurrentView()) return;
-                  setBulkBusy("export");
-                  try {
-                    await batchExport.submit(selected);
                   } finally {
                     if (isCurrentView()) setBulkBusy(null);
                   }
@@ -478,6 +476,12 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                 }}
               />
             </SelectionToolbar> : null}
+            {selectionMode && !projectUnavailable ? <>
+              {batchExport.overLimit(selectedConversationIds.size) ? <p role="status" className="text-sm text-secondary">{zh?"单次最多导出 5000 条，请缩小选择。":"Select at most 5,000 conversations per export."}</p> : null}
+              {selectedMergeConversations.length < selectedConversationIds.size ? <p className="text-xs text-secondary">{zh?"翻页或排序不会取消勾选；其他批量修改需先加载所有选中的对话。":"Items outside this view stay selected. Load all selected items before making bulk edits."}</p> : null}
+              <div className="flex flex-wrap items-start gap-x-4"><ExportContents zh={zh}/>
+                <a className="inline-flex min-h-11 items-center text-xs font-medium text-accent underline underline-offset-4" href={`/projects/${projectId}/export`}>{zh?"导出整个项目的对话…":"Export the whole project’s conversations…"}</a></div>
+            </> : null}
 
             {conversationsQuery.isLoading ? <StateBlock label={resolvedLocale === "zh-CN" ? "正在加载项目对话…" : "Loading project conversations…"} /> : null}
             {conversationsQuery.isError ? <StateBlock error
@@ -596,24 +600,20 @@ function ProjectBulkActions({
   busy,
   projects,
   onMove,
-  onExport,
   onRemove,
   onOpenMerge,
   onArchive,
   onDelete,
-  exportOverLimit,
   unresolvedSelection,
 }: {
   selectedConversations: ProjectConversationRead[];
   busy: string | null;
   projects: ProjectRead[];
   onMove: (ids: string[], projectId: string | null) => Promise<void>;
-  onExport: (conversations: ProjectConversationRead[]) => Promise<void>;
   onRemove: (ids: string[]) => Promise<void>;
   onOpenMerge: () => void;
   onArchive: (ids: string[]) => Promise<void>;
   onDelete: (ids: string[]) => Promise<void>;
-  exportOverLimit: boolean;
   unresolvedSelection: boolean;
 }) {
   const selectedIds = selectedConversations.map((conversation) => conversation.id);
@@ -623,10 +623,6 @@ function ProjectBulkActions({
     <>
       <div className="selection-toolbar-action-group flex flex-wrap justify-end gap-1.5">
         <BulkMoveReview label="project-conversation" selectedIds={selectedIds} projects={projects} busy={busy !== null || unresolvedSelection} onMove={onMove} />
-        <div className="flex flex-col">
-          <button type="button" disabled={busy !== null || selectedIds.length === 0 || exportOverLimit || unresolvedSelection} onClick={() => void onExport(selectedConversations)} title={exportOverLimit ? (zh ? "单次最多导出 5000 个对话" : "A single export supports at most 5,000 conversations") : undefined} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{busy === "export" ? (zh ? "正在导出" : "Exporting") : (zh ? "导出" : "Export")}</button>
-          {exportOverLimit ? <span className="text-xs text-[var(--danger)]">{zh ? "单次最多 5000 项" : "Maximum 5,000 items"}</span> : null}
-        </div>
         <button
           type="button"
           disabled={busy !== null || selectedIds.length === 0 || unresolvedSelection}

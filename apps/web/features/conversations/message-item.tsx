@@ -293,7 +293,8 @@ function MessageItemComponent({
       <div className="min-w-0 w-full max-w-full flex-1">
         <div data-message-meta className="group/message-actions relative mb-2 flex min-h-10 items-center gap-2">
           <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${isUser ? "bg-[var(--accent-soft)] text-accent" : "bg-[var(--text)] text-[var(--surface)]"}`}>{isUser ? "U" : "CR"}</span>
-          <span className="text-xs font-semibold text-secondary">{isUser ? userLabel ?? t("you") : "Assistant"} - #{message.ordinal ?? message.order_key}</span>
+          <span className="text-xs font-semibold text-secondary">{isUser ? userLabel ?? t("you") : message.standalone_answer
+            ? (zh ? "单独追加的回答" : "Answer appended separately") : "Assistant"} - #{message.ordinal ?? message.order_key}</span>
           {turnLead && turnKey && onToggleTurn ? (
             <button
               type="button"

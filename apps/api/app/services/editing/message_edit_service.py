@@ -1401,8 +1401,9 @@ def refresh_conversation_stats(
     _refresh_conversation_stats(db, conversation_id, bump_revision=bump_revision)
 
 
-def _get_active_conversation(db: Session, conversation_id: uuid.UUID) -> Conversation:
-    conversation = db.get(Conversation, conversation_id)
+def _get_active_conversation(db: Session, conversation_id: uuid.UUID, *, lock: bool = False) -> Conversation:
+    conversation = (db.get(Conversation, conversation_id, with_for_update=True, populate_existing=True)
+                    if lock else db.get(Conversation, conversation_id))
     if conversation is None or conversation.deleted_at is not None:
         raise MessageEditError("Conversation not found.", HTTPStatus.NOT_FOUND)
     return conversation
@@ -1498,7 +1499,10 @@ def insert_manual_messages(
     messages: list[tuple[str, str]],
     expected_offline_revision: int | None = None,
 ) -> MessageInsertResult:
-    conversation = _get_active_conversation(db, conversation_id)
+    # Serialize with tail imports and other inserts before reading the revision
+    # or calculating order keys. The ownership check may already have loaded
+    # this row into the session before another writer committed.
+    conversation = _get_active_conversation(db, conversation_id, lock=True)
     if expected_offline_revision is not None and conversation.offline_revision != expected_offline_revision:
         raise MessageEditError("Conversation changed since it was loaded.", HTTPStatus.CONFLICT)
     if position not in {"before", "after"} or mode not in {"single", "pair"}:

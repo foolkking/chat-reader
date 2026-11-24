@@ -36,6 +36,8 @@ export function SelectionToolbar({
   selectedCount,
   totalCount,
   loadedOnly = false,
+  selectedInView,
+  primaryAction,
   busy = false,
   className = "",
   context = "conversation",
@@ -49,6 +51,8 @@ export function SelectionToolbar({
   selectedCount: number;
   totalCount: number;
   loadedOnly?: boolean;
+  selectedInView?: number;
+  primaryAction?: React.ReactNode;
   busy?: boolean;
   className?: string;
   context?: "conversation" | "project";
@@ -60,7 +64,7 @@ export function SelectionToolbar({
   children?: React.ReactNode;
 }) {
   const zh = locale === "zh-CN";
-  const allSelected = totalCount > 0 && selectedCount === totalCount;
+  const allSelected = totalCount > 0 && (selectedInView ?? selectedCount) === totalCount;
   const buttonClass = "selection-toolbar-button inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-secondary transition hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40";
   const toolbarRef = useRef<HTMLDivElement | null>(null);
 
@@ -78,6 +82,7 @@ export function SelectionToolbar({
       role="toolbar"
       data-testid="selection-toolbar"
       data-state="selection"
+      data-primary-action={primaryAction ? "true" : undefined}
       aria-label={zh ? `${context === "project" ? "项目" : "对话"}批量选择工具` : `${context === "project" ? "Project" : "Conversation"} bulk selection tools`}
       className={`selection-toolbar sticky top-0 z-20 flex w-full flex-wrap items-center gap-3 rounded-xl border border-ui bg-raised/95 p-3 shadow-lg backdrop-blur ${className}`}
     >
@@ -86,11 +91,14 @@ export function SelectionToolbar({
           <ListChecks className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1" aria-live="polite">
-          <span className="block text-xs font-semibold uppercase tracking-wide text-secondary">{zh ? "批量操作" : "Bulk actions"}</span>
-          <span className="block truncate text-sm font-semibold text-primary">{zh ? `已选择 ${selectedCount} / ${totalCount}${loadedOnly ? "（已加载）" : ""}` : `${selectedCount} of ${totalCount}${loadedOnly ? " loaded" : ""} selected`}</span>
+          <span className="selection-toolbar-caption block text-xs font-semibold uppercase tracking-wide text-secondary">{zh ? "批量操作" : "Bulk actions"}</span>
+          <span className="block text-sm font-semibold text-primary">{selectedInView !== undefined && selectedInView < selectedCount
+            ? (zh ? `已选择 ${selectedCount} 条 · 当前列表 ${selectedInView} 条` : `${selectedCount} selected · ${selectedInView} in view`)
+            : (zh ? `已选择 ${selectedCount} / ${totalCount}${loadedOnly ? "（已加载）" : ""}` : `${selectedCount} of ${totalCount}${loadedOnly ? " loaded" : ""} selected`)}</span>
         </span>
-        <button type="button" disabled={busy} onClick={onDone} className={`${buttonClass} text-primary`} title={zh ? "退出选择模式" : "Exit selection mode"}>
-          <X className="h-4 w-4" /> {zh ? "完成" : "Done"}
+        {primaryAction}
+        <button type="button" disabled={busy} onClick={onDone} className={`${buttonClass} selection-toolbar-done text-primary`} aria-label={zh ? "完成" : "Done"} title={zh ? "退出选择模式" : "Exit selection mode"}>
+          <X aria-hidden="true" className="h-4 w-4" /> <span>{zh ? "完成" : "Done"}</span>
         </button>
       </div>
       <div className="selection-toolbar-actions relative flex min-w-0 max-w-full flex-1 basis-[44rem] items-center gap-1.5 overflow-x-auto pb-0.5">

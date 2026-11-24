@@ -67,7 +67,7 @@ def messages(z, m):
     """Consumes Markdown and JSONL in lockstep; never inflate the entire archive/text."""
     from app.services.adaptive_import.bounded_io import checkpoint
     roots = {a["path"]: a["root"] for a in m["assets"]}
-    seen, tree_nodes, used, previous = set(), set(), set(), None
+    seen, tree_nodes, used, previous, last_user = set(), set(), set(), None, None
     with z.open("conversation.md") as md, z.open(INDEX) as idx:
         header = f"# {m['title']}\n\n".encode()
         require(md.read(len(header)) == header)
@@ -75,9 +75,16 @@ def messages(z, m):
             checkpoint()
             require(len(line) <= 64 * 1024 and line.endswith(b"\n") and len(seen) < 50000)
             row = _json(line)
-            require(set(row) == {"id","parent","source_path","role","offset","bytes","sha256","assets","at"})
+            fields = {"id","parent","source_path","role","offset","bytes","sha256","assets","at"}
+            require(isinstance(row, dict) and set(row) in (fields, fields | {"question"}))
             key, role, n = row["id"], row["role"], row["bytes"]
             require(isinstance(key, str) and ID.fullmatch(key) and key not in seen and role in ("user","assistant"))
+            if "question" in row:
+                # Excerpts may refer only to an already disclosed, selected question, never to an omitted row.
+                require(m["lineage"] == "list" and role == "assistant" and last_user is not None
+                        and row["question"] == last_user)
+            if role == "user":
+                last_user = key
             require(row["parent"] == (previous if m["lineage"] == "tree" else None))
             segment = row["source_path"]
             require(isinstance(segment, list) and (0 < len(segment) <= 128 if m["lineage"] == "tree" else not segment))
@@ -130,6 +137,7 @@ def indexed_draft(record, source, template, catalog):
     with zipfile.ZipFile(path) as z:
         meta = package_header(z)
         verify_assets(z, meta)
+        asset_roots = {item["path"]: item["root"] for item in meta["assets"]}
 
         def rows():
             nonlocal first, turns
@@ -147,6 +155,13 @@ def indexed_draft(record, source, template, catalog):
                 ref = {"message_id": key, "source_message_id": key, "source_index": i, "source_type":"chatgpt",
                        "source_profile":PROFILE, "source_conversation_id":meta["source_id"],
                        "source_metadata":{"parent":row["parent"], "tree_nodes":row["source_path"], "fingerprint":fingerprint}}
+                if "question" in row:
+                    ref["source_metadata"]["selected_question"] = row["question"]
+                # An explicitly selected excerpt does not claim the intervening tree edges.
+                # This content identity is independent of its neighbors and of Reader asset UUIDs.
+                ref["source_metadata"]["item_digest"] = hashlib.sha256(json.dumps(
+                    [role, row["sha256"], [(p, asset_roots[p]) for p in row["assets"]]],
+                    ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
                 yield {"message":message, "source_refs":[ref]}
         if streaming_budget():
             spool = RecordSpool.write(path.parent, rows(), prefix="reader-source")

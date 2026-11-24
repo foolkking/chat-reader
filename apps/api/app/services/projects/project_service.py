@@ -502,14 +502,19 @@ def list_project_conversations(
 ) -> list[ProjectConversation]:
     if get_owned(db, Project, project_id, ownership_scope) is None:
         raise ProjectServiceError("Project not found.")
+    query = project_member_query(db, project_id, sort, direction, ownership_scope)
+    return query.options(
+        selectinload(ProjectConversation.conversation).selectinload(Conversation.recent_item),
+        selectinload(ProjectConversation.conversation)
+        .selectinload(Conversation.project_links)
+        .selectinload(ProjectConversation.project),
+    ).offset(offset).limit(limit).all()
+
+
+def project_member_query(db, project_id, sort, direction, ownership_scope):
+    """Same active membership and ordering for the paged list and an export review."""
     query = (
         db.query(ProjectConversation)
-        .options(
-            selectinload(ProjectConversation.conversation).selectinload(Conversation.recent_item),
-            selectinload(ProjectConversation.conversation)
-            .selectinload(Conversation.project_links)
-            .selectinload(ProjectConversation.project),
-        )
         .join(ProjectConversation.conversation)
         .outerjoin(RecentItem, RecentItem.conversation_id == Conversation.id)
         .filter(
@@ -530,8 +535,7 @@ def list_project_conversations(
         "custom": ProjectConversation.sort_order,
     }[sort]
     ordered_field = field.asc() if direction == "asc" else field.desc()
-    return (
-        query.order_by(*(
+    return query.order_by(*(
             (
                 ProjectConversation.is_pinned.desc(),
                 ordered_field,
@@ -545,10 +549,6 @@ def list_project_conversations(
                 Conversation.id.asc(),
             )
         ))
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
 
 
 def record_project_recent(

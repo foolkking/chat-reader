@@ -190,6 +190,9 @@ def commit_import_preview(
         raise CommitImportError("Import record not found.")
     if import_record.committed_at is not None or import_record.status == "committed":
         raise CommitImportError("Import has already been committed.")
+    if (import_record.analysis_summary or {}).get("append_only"):
+        from app.services.selective_append import persist
+        return persist(db, import_record, progress_callback)
 
     artifacts = (
         db.query(SourceArtifact)
@@ -317,6 +320,10 @@ def commit_import_preview(
                             total_messages=total_expected_messages, verified_archive_sources=verified_archive_sources)
                     if attach_project:
                         add_conversation_to_project(db, target_project.id, conversation.id, added_by="system", ownership_scope=import_scope)
+                    if (import_record.analysis_summary or {}).get("extension_result"):
+                        from app.services.extension_results import snapshot_project
+                        db.flush()
+                        snapshot_project(db, import_record, conversation.id)
                     if changed:
                         any_changed = True
                         _report(progress_callback, "headings", 78, total_messages, total_expected_messages)

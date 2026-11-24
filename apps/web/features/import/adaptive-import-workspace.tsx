@@ -79,7 +79,8 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
   session: AdaptiveImportSession;
   onSession: (session: AdaptiveImportSession) => void;
   onBack: () => void;
-  onImport: () => void;
+  // Source-preparation surfaces may resolve files and mappings but must not offer a whole import.
+  onImport?: () => void;
   importing: boolean;
   error: unknown;
   onRetryImport?: () => void;
@@ -231,7 +232,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
         <button type="button" disabled={overviewActionBusy} className="min-h-11 text-accent underline" onClick={() => rebuildPreview.run(undefined)}>{tr("重新生成预览")}</button>
         {rebuildPreview.error ? <ErrorLine message={rebuildPreview.error} action="mutation" /> : null}
       </details> : null}
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4">
+      {onImport && <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4">
         <div>
           <p className="text-sm text-secondary">
             {session.state === "READY"
@@ -248,7 +249,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
         <button type="button" data-testid="commit-import-button" disabled={!session.can_import || overviewActionBusy} onClick={onImport} className="btn-primary min-h-10 px-5 text-sm font-medium">
           {importing ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在导入")}</> : tr("导入 {0} 个对话", session.conversation_count || session.group_count)}
         </button>
-      </footer>
+      </footer>}
     </section>
   );
 }

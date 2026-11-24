@@ -457,6 +457,8 @@ def commit_import(
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> CommitImportResponse:
     import_record = _get_import_or_404(import_id, db, ownership_scope)
+    if (import_record.analysis_summary or {}).get("append_only"):
+        raise HTTPException(409, detail={"code": "APPEND_REVIEW_REQUIRED"})
     if import_record.source_profile != "adaptive_json_markdown" or (
         import_record.session_state not in {"COLLECTING", "ANALYZING"}
         and import_record.status not in {"queued", "processing", "committed"}

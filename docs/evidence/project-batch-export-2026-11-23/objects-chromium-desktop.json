@@ -1,0 +1,56 @@
+{
+  "firstUtc": "2026-11-23T13:07:46.562Z",
+  "viewport": [
+    1440,
+    900
+  ],
+  "engine": "Chromium",
+  "version": "151.0.7922.34",
+  "crossProject": {
+    "sourceProjectActiveCounts": [
+      1,
+      1,
+      0
+    ],
+    "originalProjects": 3,
+    "rowsDisplayOwnProject": [
+      false,
+      false
+    ],
+    "sameCheckboxName": true,
+    "requestFields": [
+      "conversation_ids"
+    ],
+    "downloadedConversations": 2,
+    "rawOrderMatchesRequest": true,
+    "distinctFilenames": 2,
+    "directoryCount": 0,
+    "membershipProjectIdsInFile": 0,
+    "projectNamesInFile": 0,
+    "containsArchived": false,
+    "containsUnselected": false,
+    "hashedZip": "faa88ee5e8ddbc68066722d6f39812d054fbc869dd714c91f33c00efcb127bbc"
+  },
+  "independentExports": {
+    "sameSuggestedFilename": true,
+    "usesOnlyDay": true,
+    "differentBytes": true
+  },
+  "emptyProject": {
+    "noConversationRows": true,
+    "exportDisabled": true
+  },
+  "archivedProject": {
+    "hiddenFromActiveProjects": true,
+    "memberRemainsActive": true,
+    "activeProjectPageEndpointStillListsMember": true,
+    "archivedConversationInActiveA": false,
+    "projectActions": {
+      "restore": 1,
+      "permanentlyDelete": 1,
+      "export": 0
+    }
+  },
+  "status": "observed",
+  "lastUtc": "2026-11-23T13:08:08.070Z"
+}

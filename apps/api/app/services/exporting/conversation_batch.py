@@ -24,7 +24,7 @@ JOB_TYPE = "conversation_batch_export"
 FORMAT = "chat-reader-conversation-batch"
 
 
-def _require_sources(db, ids, scope):
+def _require_sources(db, ids, scope, *, review_missing=False):
     if not ids or len(ids) > 5000 or len(ids) != len(set(ids)):
         raise ExportError("Select between 1 and 5000 distinct conversations.", 422)
     if scope.owner_user_id is not None:
@@ -33,18 +33,33 @@ def _require_sources(db, ids, scope):
             raise ExportError("BATCH_EXPORT_ACCOUNT_UNAVAILABLE", 403)
     found = set(db.scalars(select(Conversation.id).where(
         Conversation.id.in_(ids), scope.predicate(Conversation), Conversation.deleted_at.is_(None))))
-    if found != set(ids):
+    available = found == set(ids)
+    if not available and not review_missing:
         raise ExportError("BATCH_EXPORT_SOURCE_UNAVAILABLE", 404)
+    return available
 
 
-def queue_conversation_batch_export(db, *, conversation_ids, idempotency_key, ownership_scope):
-    _require_sources(db, conversation_ids, ownership_scope)
+def queue_conversation_batch_export(db, *, conversation_ids, idempotency_key, ownership_scope, project_scope=None):
+    from app.services.exporting.project_scope import check_project_scope
     existing = _existing(db, ownership_scope.owner_user_id, JOB_TYPE, idempotency_key)
     ids = [str(value) for value in conversation_ids]
+    origin = project_scope.model_dump(mode="json", exclude_none=True) if project_scope else None
     if existing is not None:
-        if existing.payload.get("conversation_ids") != ids:
+        _require_sources(db, conversation_ids, ownership_scope)
+        if existing.payload.get("conversation_ids") != ids or existing.payload.get("project_scope") != origin:
             raise ExportError("This request key was already used for a different selection.", 409)
         return existing
+    # Whole-project drift (including a deleted member) returns a new review of
+    # this owned project, not a job. Do not disclose outside/foreign sources.
+    if project_scope and project_scope.mode == "whole":
+        project_name = check_project_scope(db, ownership_scope, project_scope, conversation_ids)
+    selected_project = project_scope is not None and project_scope.mode == "selected"
+    original_available = _require_sources(db, conversation_ids, ownership_scope, review_missing=selected_project)
+    if project_scope and len(conversation_ids) > get_settings().bundle_max_entries:
+        raise ExportError("BATCH_EXPORT_LIMIT", 413)
+    if selected_project:
+        project_name = check_project_scope(db, ownership_scope, project_scope, conversation_ids,
+                                           can_export_original=original_available)
     # Snapshot only two owned titles, in selection order. Task reads need no
     # conversation lookup, and an idempotent retry retains the original label.
     titles = dict(db.execute(select(Conversation.id, Conversation.display_title).where(
@@ -53,7 +68,8 @@ def queue_conversation_batch_export(db, *, conversation_ids, idempotency_key, ow
     source_label = " · ".join(titles[value][:160] for value in conversation_ids[:2] if titles.get(value))
     job = BackgroundJob(id=uuid.uuid4(), owner_user_id=ownership_scope.owner_user_id,
         job_type=JOB_TYPE, status="queued", phase="queued", total_items=len(ids),
-        progress=0, processed_items=0, payload={"conversation_ids": ids, "source_label": source_label}, result={},
+        progress=0, processed_items=0, payload={"conversation_ids": ids, "source_label": source_label,
+            **({"project_scope": origin, "project_name": project_name} if origin else {})}, result={},
         idempotency_key=idempotency_key)
     db.add(job)
     db.flush()
@@ -67,7 +83,8 @@ def create_conversation_batch_export(db, *, job, ownership_scope, progress_callb
     directory = (root / str(job.id)).resolve()
     if not directory.is_relative_to(root):
         raise ExportError("BATCH_EXPORT_STORAGE_UNAVAILABLE", 503)
-    filename = f"chat-reader-export-{job.queued_at:%Y-%m-%d}.zip"
+    name = job.payload.get("project_name")
+    filename = f"chat-reader-{_safe_name(name) if name else 'export'}-{job.queued_at:%Y-%m-%d}.zip"
     destination = directory / filename
     temporary = None
     entries, counts = [], []
@@ -134,4 +151,7 @@ def create_conversation_batch_export(db, *, job, ownership_scope, progress_callb
 
 
 def _safe_name(value):
-    return re.sub(r"\s+", " ", re.sub(r'[<>:"/\\|?*\x00-\x1f]', "-", value)).strip()[:80] or "conversation"
+    text = re.sub(r"\s+", " ", re.sub(r'[<>:"/\\|?*\x00-\x1f]', "-", value)).strip()
+    # Prefix/date, staging suffix and the ZIP entry suffix must fit NAME_MAX
+    # even with four-byte characters on a typical production filesystem.
+    return text[:80].encode("utf-8")[:180].decode("utf-8", "ignore").rstrip(" .") or "conversation"

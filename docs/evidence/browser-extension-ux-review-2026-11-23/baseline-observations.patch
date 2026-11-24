@@ -1,0 +1,58 @@
+--- a/scripts/extension-beta/browser.cjs
++++ b/scripts/extension-beta/browser.cjs
+@@ -132,6 +132,10 @@
+     return j;
+   }
+   mark("capture-import");const first=await clickSource("done");assert.ok(first.cid);steps.push("real capture, ZIP and committed file import");
++  await chat.waitForTimeout(7500);
++  const ax=await ctx.newCDPSession(chat);const treeAX=await ax.send("Accessibility.getFullAXTree");await ax.detach();
++  report.sourceAfterCommit={saveInsteadOfOpen:treeAX.nodes.some(n=>n.role?.value==='button'&&/^(Save to Reader|保存到 Reader)$/.test(n.name?.value||''))};
++  await chat.screenshot({path:path.join(dir,'source-after-commit.png')});
+   mark("duplicate");assert.equal((await clickSource("done")).cid,first.cid);steps.push("identical import returns same conversation");
+   mark("append");n=4;assert.equal((await clickSource("done")).cid,first.cid);steps.push("suffix appended to same conversation");
+   mark("branch-conflict");changed=true;assert.equal((await clickSource("review")).review,"conflict");steps.push("branch conflict requests review");
+@@ -150,6 +154,9 @@
+   for(const w of [320,375,480])for(const theme of ["light","dark"]){
+     await panel.setViewportSize({width:w,height:860});await panel.emulateMedia({colorScheme:theme});
+     assert.ok(await panel.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
++    if(w===375&&theme==='light')report.geometry=await panel.evaluate(()=>({width:innerWidth,height:innerHeight,
++      searchTop:Math.round(document.getElementById('q').getBoundingClientRect().top),firstRowTop:Math.round(document.querySelector('#rows li').getBoundingClientRect().top),
++      constantResultActions:[...document.querySelectorAll('#rows li:first-child .row button')].map(b=>b.textContent)}));
+     await panel.screenshot({path:path.join(dir,`panel-${w}-${theme}.png`)});
+   }
+   mark("project-operations");await panel.locator("#filter").selectOption("unclassified");await row.waitFor();
+@@ -160,6 +167,20 @@
+   await row.getByRole("button",{name:/^(项目置顶|Pin in project)$/i}).click();
+   await row.getByRole("button",{name:/^(更多|More)$/i}).click();await row.getByRole("button",{name:/取消项目置顶|Unpin in project/i}).waitFor();
+   steps.push("move, scoped conversation search and project pin persisted");
++  report.catalog=await panel.evaluate(async({cid,pid})=>{
++    const id=(await chrome.storage.local.get('device')).device.id;
++    const get=async p=>(await ReaderClient.request(id,p)).json();const files=await get('files?project_id='+pid),matches=await get('conversations?q=tide.csv&project_id='+pid);
++    const same=files.items.filter(f=>f.conversation_id===cid);const task=(await chrome.storage.local.get('jobs')).jobs.find(j=>j.cid===cid);const r=await get('imports/'+task.iid);
++    return {fileRows:same.length,fileParents:new Set(same.map(f=>f.conversation_id)).size,matchingConversationRows:matches.items.filter(c=>c.id===cid).length,
++      conversationKeys:Object.keys(matches.items[0]||{}).sort(),receiptKeys:Object.keys(r).sort(),terminal:r.status};
++  },{cid:first.cid,pid});
++  await panel.setViewportSize({width:375,height:860});await panel.emulateMedia({colorScheme:'light'});
++  changed=false;const sameAfterMove=await clickSource("done");assert.equal(sameAfterMove.cid,first.cid);
++  report.destination=await panel.evaluate(async({cid,pid})=>{const {device,destination,jobs}=await chrome.storage.local.get(['device','destination','jobs']);
++    const actual=(await (await ReaderClient.request(device.id,'conversations?project_id='+pid)).json()).items.some(c=>c.id===cid&&c.project_id===pid);
++    const last=jobs.at(-1);return {defaultWasUnclassified:!destination.project,originalStayedInMovedProject:actual,sameConversation:last.cid===cid,terminalHasProject:Object.hasOwn(last,'project')||Object.hasOwn(last,'project_id'),terminalHasOutcome:Object.hasOwn(last,'outcome')};},{cid:first.cid,pid});
++  await panel.locator('#q').fill('');await panel.locator('#files').click();await until(()=>panel.locator('#rows li').count().then(n=>n===2));
++  await panel.screenshot({path:path.join(dir,'two-file-rows.png')});
+   mark("file-directory");await panel.locator("#q").fill("tide.csv");await panel.locator("#files").click();
+   const fr=panel.locator("#rows li").filter({hasText:"tide.csv"}).first();await fr.waitFor();
+   const fl=await fr.locator("a").getAttribute("href");assert.ok(fl.startsWith(origin+"/conversations/"+first.cid+"?files=open&attachmentId="));
+@@ -211,6 +232,13 @@
+     const same=await clickSource("done");
+     assert.ok(await checkDropped());assert.equal(same.cid,original);steps.push("offscreen fault injection dropped a real 201; recovered the same conversation via request receipt");
+   }
++  mark("partial-terminal-ui");name='synthetic-'+crypto.randomUUID();changed=false;missing=true;
++  const partialReview=await clickSource("review");assert.equal(partialReview.partial,true);
++  const latest=panel.locator('#jobs > .job').first();await latest.getByRole('button',{name:/^(确认保存|Confirm save)$/}).click();
++  await until(async()=>(await jobs()).at(-1)?.phase==='done',75000);
++  report.partialTerminal=await panel.evaluate(async()=>{const j=(await chrome.storage.local.get('jobs')).jobs.at(-1);
++    return {hadFileWarning:j.losses?.files>0,showsReview:!!j.review,terminalText:document.querySelector('#jobs > .job p')?.textContent};});
++  await panel.setViewportSize({width:375,height:860});await panel.screenshot({path:path.join(dir,'partial-terminal.png')});
+   mark("native-side-panel");
+   // Exercise the native Side Panel API with an actual trusted user click. This is
+   // separate from screenshots of the extension document at controlled widths.

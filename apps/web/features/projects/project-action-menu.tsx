@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Archive, MoreHorizontal, Settings } from "lucide-react";
+import { Archive, Download, MoreHorizontal, Settings } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -238,7 +238,7 @@ export function ProjectActionMenu({ project, onChanged, archive }: { project: Pr
     if (open && event.key === "Escape") { event.preventDefault(); close(); }
   }} onPointerDown={(event) => event.stopPropagation()}>
     <button ref={buttonRef} type="button" data-no-dnd onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggle(); }} onKeyDown={(event) => { if (event.key === "ArrowDown" && !open) { event.preventDefault(); toggle(); } }} aria-haspopup="menu" aria-expanded={open} aria-label={`${zh ? "管理项目" : "Manage project"} ${project.name}`} className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-subtle md:[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100"><MoreHorizontal className="h-4 w-4" /></button>
-    {open ? createPortal(<div ref={menuRef} role="menu" aria-label={zh ? "项目操作" : "Project actions"} className="fixed z-[280] w-56 rounded-lg border border-ui bg-raised p-1 text-primary shadow-xl" style={position} onKeyDown={(event) => {
+    {open ? createPortal(<div ref={menuRef} role="menu" aria-label={zh ? "项目操作" : "Project actions"} className="fixed z-[280] max-h-[calc(100dvh-1rem)] w-56 overflow-y-auto rounded-lg border border-ui bg-raised p-1 text-primary shadow-xl" style={position} onKeyDown={(event) => {
       const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)'));
       const index = items.indexOf(document.activeElement as HTMLButtonElement);
       if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key) && items.length) {
@@ -246,6 +246,7 @@ export function ProjectActionMenu({ project, onChanged, archive }: { project: Pr
       } else if (event.key === "Tab") { close(); }
     }}>
       <button role="menuitem" type="button" disabled={archive.busy} className="flex min-h-10 w-full items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-subtle" onClick={() => { setOpen(false); setSettingsOpen(true); }}><Settings className="h-4 w-4" />{zh ? "项目设置" : "Project settings"}</button>
+      <Link role="menuitem" href={`/projects/${project.id}/export`} onClick={()=>setOpen(false)} className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-sm hover:bg-subtle focus-visible:ring-2 focus-visible:ring-[var(--focus)]"><Download className="h-4 w-4" aria-hidden="true"/>{zh?"导出项目对话…":"Export project conversations…"}</Link>
       {preferences.projectSortMode === "custom" ? [-1, 1].map(delta => <button key={delta} role="menuitem" type="button" disabled={moving || !project.order_version || !orderedProjects[orderIndex + delta]} className="flex min-h-11 w-full items-center px-3 text-left text-sm hover:bg-subtle disabled:opacity-50" onClick={() => void move(delta)}>{delta < 0 ? (zh ? "项目上移" : "Move project up") : (zh ? "项目下移" : "Move project down")}</button>) : null}
       {orderError ? <p role="alert" className="px-3 text-xs text-[var(--danger)]">{zh ? "顺序保存未确认，请刷新后核对。" : "Order unconfirmed. Refresh to check."}</p> : null}
       <button role="menuitem" type="button" disabled={archive.blocked} className="flex min-h-10 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50" onClick={() => { close(); void archive.request(project); }}><Archive className="h-4 w-4" />{archive.state?.phase === "archiving" && archive.state.project.id === project.id ? (zh ? "正在归档…" : "Archiving…") : (zh ? "归档项目" : "Archive project")}</button>

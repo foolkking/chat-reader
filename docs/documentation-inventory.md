@@ -1,5 +1,17 @@
 # Markdown 文档台账
 
+2026-11-24：[只追加到末尾：插件选择与 Reader 固定目标、保留旧笔记和附件、排队后刷新与重新确认、双端 Context 文件](evidence/reader-extension-append-2026-11-24/README.md)；[收据丢失后的查找、设备级隐私选项及交付前测试](evidence/reader-extension-append-2026-11-24/delivery-check.md)；[安装和权限合同](system/BROWSER_EXTENSION.md)。这一记录不将隔离实验当成线上 CI 或生产部署。
+
+2026-11-24：[授权设备达到 32 台上限时的中英文错误恢复](evidence/reader-extension-append-2026-11-24/README.md#authorization-limit)，含真实隔离 API 的 409→撤销 fixture→200 验证、375px 截图及未通过尝试分类；[合同](system/BROWSER_EXTENSION.md)。真实生产设备未操作。
+
+2026-11-23：以下「未改变产品行为」描述的是修复前的取证。后续开发改动、适用范围与修复后证据分别见[当前项目导出合同](system/DATA_ARCHIVE_CONTRACT.md)与[已实现版本复验](evidence/project-batch-export-2026-11-23/README.md#implemented)；不代表已发布。
+
+2026-11-23：[项目批量导出审查](planning/ux-audit-project-batch-export-2026-11-23.md) · [真实 ZIP、项目选择和插件打包边界实测](evidence/project-batch-export-2026-11-23/README.md) · [只换排序也会漏导、未刷新会纳入已移出项、重试边界](evidence/project-batch-export-2026-11-23/README.md#second-pass) · [Chromium/Edge：跨项目同名、空项目和归档边界](evidence/project-batch-export-2026-11-23/README.md#project-objects)。区分导出所选对话、项目可恢复迁移及从 ChatGPT Project 批量保存；属于审查，未改变产品行为。
+
+2026-11-23：[侧栏搜索恢复、置顶回执与放大布局补测](evidence/browser-extension-polish-2026-11-23/README.md#catalog-recovery)。同一隔离安装包在 Chrome 与 Edge 验证；不替代[末尾选轮追加的设计与独立门禁](planning/ux-audit-reader-extension-2026-11-23.md#append-only)。
+
+2026-11-23：[现状审查与 A–D 实施优先级](planning/ux-audit-reader-extension-2026-11-23.md)、[优化前的可复现观测](evidence/browser-extension-ux-review-2026-11-23/README.md)、[优化后的双浏览器回执](evidence/browser-extension-polish-2026-11-23/README.md)、[批量导入的授权样本门槛](planning/reader-extension-batch-sample-gate-2026-11-23.md)。区分当前会话保存、已存内容的 Context 导出以及未实现的账号／项目发现。
+
 2026-11-23：[浏览器插件合同](system/BROWSER_EXTENSION.md)和[内测验收](evidence/browser-extension-2026-11-23/README.md)区分 Fork 采集、Reader 权限／存储和两种 ZIP。新开发 head 0063 不冒充生产 schema；真实账号、全量发现及正式分发未验收。
 
 2026-11-22：[v0.1.5 生产部署](deployment.md#v015-production)及[精确回执](evidence/import-units-2026-11-21/v0.1.5-production.json)绑定 PR #7 授权、保护标签、独立资格与签名分发、现役程序和五组件备份。隔离快路径和实际完整维护分别计时；没有在 `king` 做性能演练。

@@ -1,0 +1,194 @@
+{
+  "scope": "local committed baseline; successful reproduction is not approval of reproduced UX defects",
+  "reader_sha": "4afb430cf6d5d03b67474cd8a8d9e5ec2021935c",
+  "last_reader_application_sha": "d736bcb3f9d50b6173c9a746a45b1f0bd5b88e2f",
+  "fork_sha": "a3f0ebe738a2e69ea5c866bdddb29ce119f08fc5",
+  "branch_both": "codex/reader-extension",
+  "production_and_remote_ci_checked": false,
+  "external_source": "network-isolated synthetic responses; no real accounts or official exports",
+  "backend": "loopback NGINX / Next.js / FastAPI / PostgreSQL 16 / worker capped at 640 MiB incl swap",
+  "measurements": "geometry in the extension document viewport; actual native SIDE_PANEL activation tested separately; partial and moved-destination trials in Edge run",
+  "runs": [
+    {
+      "label": "chrome-zh-baseline-observation",
+      "source": "network-isolated synthetic fixture",
+      "steps": [
+        "installed extension, toolbar registered to open side panel",
+        "genuine browser PKCE consent and explicit destination",
+        "real capture, ZIP and committed file import",
+        "identical import returns same conversation",
+        "suffix appended to same conversation",
+        "branch conflict requests review",
+        "browser IME composition and keyboard search focus (not a physical input-method test)",
+        "metadata result opens Reader in a new tab without a device credential in the URL",
+        "move, scoped conversation search and project pin persisted",
+        "rename an owned attachment and open the existing Reader file target",
+        "server generated a new context artifact via the panel",
+        "download bytes: verified context ZIP and canonical members",
+        "Reader webpage: actual quick action downloaded a valid context ZIP",
+        "browser opened a native SIDE_PANEL context through a trusted gesture"
+      ],
+      "browser": "151.0.7922.34",
+      "sourceAfterCommit": {
+        "saveInsteadOfOpen": true
+      },
+      "geometry": {
+        "width": 375,
+        "height": 860,
+        "searchTop": 168,
+        "firstRowTop": 413,
+        "constantResultActions": [
+          "导出上下文",
+          "更多"
+        ]
+      },
+      "catalog": {
+        "fileRows": 2,
+        "fileParents": 1,
+        "matchingConversationRows": 1,
+        "conversationKeys": [
+          "id",
+          "pinned",
+          "project_id",
+          "title"
+        ],
+        "receiptKeys": [
+          "conversation_id",
+          "id",
+          "phase",
+          "progress",
+          "review",
+          "state",
+          "status",
+          "title",
+          "wait"
+        ],
+        "terminal": "committed"
+      },
+      "canonical": {
+        "messages": 4,
+        "source_refs": 4,
+        "files": 2,
+        "verified_file_digests": 2,
+        "file_message_owners": 2,
+        "secrets_absent_from_synthetic_packages": 3
+      },
+      "readerPageTrafficSourceMarker": false,
+      "result": "pass",
+      "receipt_written_at": "2026-11-23T09:45:04+08:00",
+      "exit_code": 0
+    },
+    {
+      "label": "edge-en-results-review",
+      "source": "network-isolated synthetic fixture",
+      "steps": [
+        "installed extension, toolbar registered to open side panel",
+        "genuine browser PKCE consent and explicit destination",
+        "real capture, ZIP and committed file import",
+        "identical import returns same conversation",
+        "suffix appended to same conversation",
+        "branch conflict requests review",
+        "browser IME composition and keyboard search focus (not a physical input-method test)",
+        "metadata result opens Reader in a new tab without a device credential in the URL",
+        "move, scoped conversation search and project pin persisted",
+        "rename an owned attachment and open the existing Reader file target",
+        "server generated a new context artifact via the panel",
+        "download bytes: verified context ZIP and canonical members",
+        "Reader webpage: actual quick action downloaded a valid context ZIP",
+        "browser opened a native SIDE_PANEL context through a trusted gesture"
+      ],
+      "browser": "158.0.4370.33",
+      "sourceAfterCommit": {
+        "saveInsteadOfOpen": true
+      },
+      "geometry": {
+        "width": 375,
+        "height": 860,
+        "searchTop": 168,
+        "firstRowTop": 413,
+        "constantResultActions": [
+          "Export context",
+          "More"
+        ]
+      },
+      "catalog": {
+        "fileRows": 2,
+        "fileParents": 1,
+        "matchingConversationRows": 1,
+        "conversationKeys": [
+          "id",
+          "pinned",
+          "project_id",
+          "title"
+        ],
+        "receiptKeys": [
+          "conversation_id",
+          "id",
+          "phase",
+          "progress",
+          "review",
+          "state",
+          "status",
+          "title",
+          "wait"
+        ],
+        "terminal": "committed"
+      },
+      "destination": {
+        "defaultWasUnclassified": true,
+        "originalStayedInMovedProject": true,
+        "sameConversation": true,
+        "terminalHasProject": false,
+        "terminalHasOutcome": false
+      },
+      "canonical": {
+        "messages": 4,
+        "source_refs": 4,
+        "files": 2,
+        "verified_file_digests": 2,
+        "file_message_owners": 2,
+        "secrets_absent_from_synthetic_packages": 4
+      },
+      "partialTerminal": {
+        "hadFileWarning": true,
+        "showsReview": false,
+        "terminalText": "Saved to Reader"
+      },
+      "readerPageTrafficSourceMarker": false,
+      "result": "pass",
+      "receipt_written_at": "2026-11-23T09:48:10+08:00",
+      "exit_code": 0
+    }
+  ],
+  "audit_build_vs_previous_loopback_zip": {
+    "previous_zip_sha256": "601647e79a4ccfc00ad9f4d392e5fed84b5f69ac87f477530d77fdb018e6c787",
+    "files_each": 25,
+    "raw_member_equality": "failed",
+    "different_raw_members": 12,
+    "member_name_differences": 0,
+    "different_after_crlf_to_lf_normalization": 0,
+    "note": "This is not byte-identical package qualification. Tests used the pinned git archive build."
+  },
+  "retained_artifacts": {
+    "attachment-rows-375-zh.png": {
+      "bytes": 27140,
+      "sha256": "b0f48c4dcd37c17629e8c01e822ad1aafbfc8408eb3bfe32a50acaa664edf67c"
+    },
+    "baseline-observations.patch": {
+      "bytes": 5695,
+      "sha256": "f9ca791894f57761917f204d19e3754f4bf9f027ff048d7b7a3471abc4ce0869"
+    },
+    "panel-review-375-zh.png": {
+      "bytes": 19408,
+      "sha256": "065354e8c2893a071d3ccaf4614149b5ad05b01fe5d992fc0bcb6d2400c721b8"
+    },
+    "partial-terminal-375-en.png": {
+      "bytes": 20479,
+      "sha256": "84e960930f3cb4b5ad4bc542483b88c269236f26bc33152a0896062a38aa3606"
+    },
+    "source-after-commit-zh.png": {
+      "bytes": 12851,
+      "sha256": "244cb6093f1e892bab9d0c397ab967a490ddbdb7a5f7ecebe97204afd2aab6a0"
+    }
+  }
+}

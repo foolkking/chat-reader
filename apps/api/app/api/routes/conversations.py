@@ -1300,6 +1300,7 @@ def _message_item(
         id=message.id,
         conversation_id=message.conversation_id,
         role=message.role,
+        standalone_answer=message.standalone_answer,
         order_key=message.order_key,
         turn_index=message.turn_index,
         created_at=message.created_at,

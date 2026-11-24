@@ -783,7 +783,6 @@ function FileRow({
     const closeOnOutside = (event: PointerEvent) => {
       if (!moreRef.current?.contains(event.target as Node)) {
         setMoreOpen(false);
-        window.setTimeout(() => moreButtonRef.current?.focus({ preventScroll: true }), 0);
       }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -852,12 +851,12 @@ function FileRow({
           </div>
         </div>
       </div>
-      <div className="mt-1 flex justify-end gap-1 border-t border-ui pt-1">
+      <div className="mt-1 flex flex-wrap justify-end gap-1 border-t border-ui pt-1">
         <IconButton label={zh ? "插入" : "Insert"} onClick={() => onInsert("inline")}><Plus /></IconButton>
         <IconButton label={zh ? "预览" : "Preview"} onClick={onPreview}><Eye /></IconButton>
         {occurrences.length === 1 ? <IconButton label="Locate in conversation" onClick={() => onLocate(occurrences[0])}><LocateFixed /></IconButton> : null}
         {occurrences.length > 1 ? <IconButton label={referencesOpen ? "Hide references" : "Show references"} onClick={locateReferences}><LocateFixed /></IconButton> : null}
-        <div ref={moreRef} className="relative">
+        <div ref={moreRef} className="contents">
           <button
             ref={moreButtonRef}
             type="button"
@@ -870,7 +869,9 @@ function FileRow({
           >
             {moreOpen ? <X className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}
           </button>
-          {moreOpen ? <div role="menu" className="absolute right-0 z-20 mt-1 min-w-44 rounded-md border border-ui bg-raised p-1 shadow-xl">
+          {moreOpen ? <div role="menu" aria-label={zh ? "文件操作" : "File actions"}
+            onClick={(event) => { if ((event.target as Element).closest("a,button")) setMoreOpen(false); }}
+            className="mt-1 grid basis-full grid-cols-1 rounded-md border border-ui bg-raised p-1 [&>a]:min-h-11 [&>button]:min-h-11">
             {attachment.download_url ? (
               <a href={attachment.download_url} className="flex min-h-8 items-center gap-2 rounded px-2 text-xs text-primary hover:bg-subtle">
                 <Download className="h-3.5 w-3.5" />{zh ? "下载" : "Download"}

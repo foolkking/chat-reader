@@ -246,7 +246,7 @@ def create_adaptive_import_session(
     return stage_import_session(files, repair_profile_id, target_project_id, idempotency_key, db, ownership_scope)
 
 
-def stage_import_session(files, repair_profile_id, target_project_id, idempotency_key, db, ownership_scope, *, device=None):
+def stage_import_session(files, repair_profile_id, target_project_id, idempotency_key, db, ownership_scope, *, device=None, append_only=None):
     requested_target_project_id = target_project_id
     if not files:
         raise HTTPException(status_code=400, detail={"code": "FILES_REQUIRED", "message": "Choose at least one JSON, Markdown, or ZIP source file."})
@@ -293,6 +293,8 @@ def stage_import_session(files, repair_profile_id, target_project_id, idempotenc
             previous = find_upload_request(db, ownership_scope, idempotency_key) if idempotency_key is not None else None
             if previous is not None:
                 existing = request_import(db, ownership_scope, previous)
+                if (existing.analysis_summary or {}).get("append_only") != append_only:
+                    raise HTTPException(409, "Request belongs to a different import action.")
                 if device and (existing.analysis_summary or {}).get("extension_device") != str(device):
                     raise HTTPException(409, "Request belongs to a different client.")
                 verify_repeated_upload(previous, files, repair_profile_id, requested_target_project_id,
@@ -307,6 +309,8 @@ def stage_import_session(files, repair_profile_id, target_project_id, idempotenc
             )
             if device:
                 record.analysis_summary = {**(record.analysis_summary or {}), "extension_device": str(device)}
+            if append_only:
+                record.analysis_summary = {**(record.analysis_summary or {}), "append_only": append_only}
             for item in files:
                 item.file.seek(0)
                 add_session_source_stream(

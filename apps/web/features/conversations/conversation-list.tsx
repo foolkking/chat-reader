@@ -31,6 +31,8 @@ import { usePreferences } from "../../components/preferences-provider";
 import { QuickStartGuide } from "../../components/quick-start-guide";
 import { formatActivityTime, fullActivityTime, sortTimeLabel } from "../../lib/activity-time";
 import { useBatchExport } from "./use-batch-export";
+import { selectionOrder } from "../../lib/export-selection";
+import { ExportContents, ExportSelected } from "../../components/export-selected";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
 import { runBatchSelection, type BatchSelectionProgress, type BatchSelectionResult } from "../../lib/batch-selection";
@@ -62,7 +64,7 @@ export function ConversationList({
   const { resolvedLocale, projectSortMode = "custom", projectSortDirection = "asc" } = usePreferences();
   const { conversationSortMode, conversationSortDirection, place: placeInOrder, orderVersion, setSort } = useScopedSort("all");
   const zh = resolvedLocale === "zh-CN";
-  const batchExport = useBatchExport(resolvedLocale === "zh-CN");
+  const batchExport = useBatchExport(zh, `list:${mode}:${tagId ?? "all"}`);
   const batchCheck = useBatchResultCheck(zh, "conversation-list:" + mode);
   const deletion = useConversationDeletion();
   const deleteFlight = useRef(false);
@@ -158,13 +160,20 @@ export function ConversationList({
   const loadedConversations = [...new Map((conversationsQuery.data?.pages.flatMap((page) => page.items) ?? []).map((row) => [row.id, row])).values()];
   const conversations = listUnavailable ? [] : loadedConversations.filter((conversation) => conversation.status === mode);
   const placement = useConversationPlacement({ scope: "conversation-list:" + mode, unavailable: listUnavailable, onChanged: refreshLists });
+  const displayedById = new Map(conversations.map(row => [row.id,row]));
+  const titleCounts = new Map<string, number>();
+  if (selectionMode) for (const c of conversations) {
+    const title = c.display_title || c.title;
+    titleCounts.set(title,(titleCounts.get(title) ?? 0)+1);
+  }
   const selectedMergeConversations = mergeOrderIds
-    .map((id) => conversations.find((conversation) => conversation.id === id))
+    .map((id) => displayedById.get(id))
     .filter((conversation): conversation is ConversationListItem => Boolean(conversation));
   const linearSelection = useLinearSelection({
     ids: conversations.map((conversation) => conversation.id),
     selectedIds: selectedConversationIds,
     onChange: applySelection,
+    keepOutsideWindow: true,
     disabled: bulkBusy !== null || isMerging || tagsBusy,
     selectionMode,
     onActivate: () => setSelectionMode(true),
@@ -274,7 +283,7 @@ export function ConversationList({
       <ConversationPlacementSurface placement={placement} />
       {undo ? <ConversationUndoNotice key={undo.id} undo={undo} disabled={bulkBusy !== null || isMerging}
         onDone={() => setUndo((current) => current === undo ? null : current)} /> : null}
-      <MergeConversationsDialog key="merge" open={mergeOpen} conversations={selectedMergeConversations}
+      <MergeConversationsDialog key="merge" open={mergeOpen} conversations={selectedMergeConversations.length === selectedConversationIds.size ? selectedMergeConversations : []}
         title={mergeTitle} busy={isMerging} recoveryDisabled={bulkBusy !== null}
         onTitleChange={setMergeTitle} onReorder={setMergeOrderIds}
         onOpen={() => setMergeOpen(true)} onClose={() => { if (!isMerging) setMergeOpen(false); }}
@@ -396,7 +405,7 @@ export function ConversationList({
 
   function applySelection(ids: Iterable<string>) {
     const requested = new Set(ids);
-    const orderedIds = conversations.filter((conversation) => requested.has(conversation.id)).map((conversation) => conversation.id);
+    const orderedIds = selectionOrder(mergeOrderIds, requested, conversations.map(c=>c.id));
     setSelectedConversationIds(new Set(orderedIds));
     setMergeOrderIds(orderedIds);
   }
@@ -517,6 +526,10 @@ export function ConversationList({
       {selectionMode ? <SelectionToolbar
         loadedOnly={conversationsQuery.hasNextPage}
         selectedCount={selectedConversationIds.size}
+        selectedInView={selectedMergeConversations.length}
+        primaryAction={<ExportSelected count={selectedConversationIds.size} zh={zh} busy={batchExport.busy}
+          disabled={bulkBusy !== null || isMerging || tagsBusy || batchExport.overLimit(selectedConversationIds.size) || mergeOrderIds.some(id=>batchCheck.blockedIds.has(id))}
+          onClick={()=>{if (isCurrentView()) void batchExport.submit(mergeOrderIds);}}/>}
         totalCount={conversations.length}
         busy={bulkBusy !== null || isMerging || tagsBusy}
         locale={resolvedLocale}
@@ -536,8 +549,7 @@ export function ConversationList({
             selectedConversations={selectedMergeConversations}
             bulkBusy={bulkBusy ?? (tagsBusy ? "tags" : null)}
             projects={(projectsQuery.data ?? []).filter((project) => !project.is_default && !project.is_archived)}
-            exportOverLimit={batchExport.overLimit(selectedConversationIds.size)}
-            unresolvedSelection={[...selectedConversationIds].some((id) => batchCheck.blockedIds.has(id))}
+            unresolvedSelection={batchExport.busy || selectedMergeConversations.length !== selectedConversationIds.size || [...selectedConversationIds].some((id) => batchCheck.blockedIds.has(id))}
             onOpenMerge={() => setMergeOpen(true)}
             onOpenTitleTrim={() => {
               const snapshot = selectedMergeConversations.map((conversation) => ({ ...conversation }));
@@ -552,15 +564,6 @@ export function ConversationList({
                 if (!result) return;
                 applyBatchResult(result);
                 await refreshLists();
-              } finally {
-                if (isCurrentView()) setBulkBusy(null);
-              }
-            }}
-            onExport={async (selected) => {
-              if (bulkBusy !== null || batchStop.current || !isCurrentView()) return;
-              setBulkBusy("export");
-              try {
-                await batchExport.submit(selected);
               } finally {
                 if (isCurrentView()) setBulkBusy(null);
               }
@@ -617,6 +620,11 @@ export function ConversationList({
             }}
           />
       </SelectionToolbar> : null}
+      {selectionMode ? <>
+        {batchExport.overLimit(selectedConversationIds.size) ? <p role="status" className="text-sm text-secondary">{zh?"单次最多导出 5000 条，请缩小选择。":"Select at most 5,000 conversations per export."}</p> : null}
+        {selectedMergeConversations.length < selectedConversationIds.size ? <p className="text-xs text-secondary">{zh?"翻页或排序不会取消勾选；请先加载所选对话再移动、合并或删除。":"Items outside this view stay selected. Load them before moving, merging or deleting."}</p> : null}
+        <ExportContents zh={zh}/>
+      </> : null}
       <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => { setActiveSortId(null); setActiveSortSize(null); }} onDragEnd={(event) => { setActiveSortId(null); setActiveSortSize(null); void handleSortEnd(event); }}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
         {conversations.map((conversation, index) => (
             <SortableConversationRow id={conversation.id} enabled={!selectionMode && conversationSortMode === "custom" && !conversationsQuery.isFetching && !conversationsQuery.isError} key={conversation.id}><article
@@ -633,7 +641,7 @@ export function ConversationList({
                     checked={selectedConversationIds.has(conversation.id)}
                     onClick={(event) => { setSelectionMode(true); linearSelection.toggle(conversation.id, { selected: !selectedConversationIds.has(conversation.id), range: event.shiftKey }); }}
                     onChange={() => undefined}
-                    aria-label={`${resolvedLocale === "zh-CN" ? "选择" : "Select"} ${conversation.display_title || conversation.title}`}
+                    aria-label={`${zh ? "选择" : "Select"} ${conversation.display_title || conversation.title}${(titleCounts.get(conversation.display_title || conversation.title) ?? 0) > 1 ? ` · ${conversation.project_name || (zh?"未归类":"Unclassified")}` : ""}`}
                   />
                 </label>
                 <div className="min-w-0">
@@ -659,6 +667,7 @@ export function ConversationList({
               </div>
               <div className="flex items-start justify-between gap-3 md:justify-end md:text-right">
                 <div className="min-w-0">
+                  {selectionMode ? <p className="max-w-48 truncate text-xs font-medium text-primary" title={conversation.project_name ?? undefined}>{conversation.project_name || (zh?"未归类":"Unclassified")}</p> : null}
                   {sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback) ? <p className="text-xs text-secondary" title={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale, conversationSortMode)}>{sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback)} · {formatActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale, undefined, conversationSortMode)}</p> : null}
                   <p className="mt-1 text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                 </div>
@@ -708,13 +717,11 @@ function BulkActions({
   bulkBusy,
   projects,
   onMove,
-  onExport,
   onOpenMerge,
   onOpenTitleTrim,
   onArchive,
   onRestore,
   onDelete,
-  exportOverLimit,
   unresolvedSelection,
 }: {
   mode: "active" | "archived";
@@ -722,13 +729,11 @@ function BulkActions({
   bulkBusy: string | null;
   projects: ProjectRead[];
   onMove: (ids: string[], projectId: string | null) => Promise<void>;
-  onExport: (conversations: ConversationListItem[]) => Promise<void>;
   onOpenMerge: () => void;
   onOpenTitleTrim: () => void;
   onArchive: (ids: string[]) => Promise<void>;
   onRestore: (ids: string[]) => Promise<void>;
   onDelete: (ids: string[]) => Promise<void>;
-  exportOverLimit: boolean;
   unresolvedSelection: boolean;
 }) {
   const selectedIds = selectedConversations.map((conversation) => conversation.id);
@@ -739,10 +744,6 @@ function BulkActions({
     <>
       <div className="selection-toolbar-action-group flex flex-wrap items-center gap-1.5">
         {mode === "active" ? <BulkMoveReview label="conversation" selectedIds={selectedIds} projects={projects} busy={bulkBusy !== null || unresolvedSelection} onMove={onMove} /> : null}
-        <div className="flex flex-col">
-          <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0 || exportOverLimit || unresolvedSelection} onClick={() => void onExport(selectedConversations)} title={exportOverLimit ? (zh ? "单次最多导出 5000 个对话" : "A single export supports at most 5,000 conversations") : undefined} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{bulkBusy === "export" ? (zh ? "正在导出" : "Exporting") : (zh ? "导出" : "Export")}</button>
-          {exportOverLimit ? <span className="text-xs text-[var(--danger)]">{zh ? "单次最多 5000 项" : "Maximum 5,000 items"}</span> : null}
-        </div>
         <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0 || unresolvedSelection} onClick={onOpenTitleTrim} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{zh ? "修整标题" : "Clean titles"}</button>
         {isArchivedMode ? (
           <button

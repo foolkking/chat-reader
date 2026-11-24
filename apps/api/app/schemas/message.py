@@ -44,6 +44,7 @@ class MessageListItem(BaseModel):
     id: UUID
     conversation_id: UUID
     role: str
+    standalone_answer: bool = False
     order_key: str
     turn_index: int | None
     created_at: datetime | None

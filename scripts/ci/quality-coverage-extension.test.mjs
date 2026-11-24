@@ -11,8 +11,11 @@ test("product coverage is additive; frozen scheduling and original skips remain 
   assert.deepEqual(active.settings, base.settings);
   assert.deepEqual(active.web, base.web);
   assert.deepEqual(active.api.allowed_skips, base.api.allowed_skips);
-  assert.equal(active.api.collected_count, base.api.collected_count + 79);
-  assert.equal(active.api.expected_passed, base.api.expected_passed + 79);
+  assert.equal(active.api.collected_count, base.api.collected_count + 106);
+  assert.equal(active.api.expected_passed, base.api.expected_passed + 106);
+  assert.equal(active.api.added_file_counts["tests/test_project_export_scope.py"], 6);
+  assert.equal(active.api.added_file_counts["tests/test_selective_append.py"], 6);
+  assert.equal(active.api.added_file_counts["tests/test_reader_extension.py"], 15);
   assert.equal(active.api.added_file_counts["tests/test_import_message_units.py"], 39);
   assert.equal(active.api.added_file_counts["tests/test_program_update_confirmation.py"], 1);
   assert.equal(active.api.added_file_counts["tests/test_admin_updates.py"], 9);
@@ -66,7 +69,9 @@ test("reviewed Settings navigation adaptation preserves all original native case
   assert.equal(help.cases.length, 6);
   assert.equal(help.cases.filter(item => item.timeout === 180_000).length, 4);
   assert.equal(presentation.cases.filter(item => item.timeout === 180_000).length, 6);
-  const cases = () => new Map([...format.cases, ...help.cases, ...presentation.cases].map(identity => [identity.id, { identity: structuredClone(identity) }]));
+  const bulk = schedule.settings_fixture_revisions["settings-batch-export.spec.ts"];
+  assert.equal(bulk.cases.length, 7);
+  const cases = () => new Map([...format.cases, ...help.cases, ...presentation.cases, ...bulk.cases].map(identity => [identity.id, { identity: structuredClone(identity) }]));
   validateReviewedSettingsCases(cases(), schedule);
   for (const mutate of [
     value => { value.delete(format.cases[0].id); },

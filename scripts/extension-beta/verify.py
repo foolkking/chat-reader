@@ -15,7 +15,7 @@ from app.services.assets.asset_store import get_asset_store
 from app.models.import_record import ImportRecord
 from pathlib import Path
 
-assert os.environ["APP_ENV"] == "test" and os.environ["PUBLIC_WEB_BASE_URL"] == "http://127.0.0.1:18383"
+assert os.environ["APP_ENV"] == "test" and os.environ["PUBLIC_WEB_BASE_URL"] == os.environ["SYNTHETIC_ORIGIN"] in {"http://127.0.0.1:18383","http://127.0.0.1:18483"}
 _register_all_models()
 cid = uuid.UUID(sys.argv[1])
 with SessionLocal() as db:

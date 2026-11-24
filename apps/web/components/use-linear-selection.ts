@@ -11,6 +11,7 @@ export function useLinearSelection({
   selectionMode,
   onActivate,
   onExit,
+  keepOutsideWindow = false,
 }: {
   ids: string[];
   selectedIds: Set<string>;
@@ -19,6 +20,7 @@ export function useLinearSelection({
   selectionMode?: boolean;
   onActivate?: () => void;
   onExit?: () => void;
+  keepOutsideWindow?: boolean;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const anchorIdRef = useRef<string | null>(null);
@@ -29,8 +31,9 @@ export function useLinearSelection({
   const selectionActive = selectionMode ?? selectedIds.size > 0;
 
   const apply = useCallback((next: Set<string>) => {
-    onChange(new Set(ids.filter((id) => next.has(id))));
-  }, [ids, onChange]);
+    const outside = keepOutsideWindow ? [...selectedIds].filter(id => !idSet.has(id)) : [];
+    onChange(new Set([...outside, ...ids.filter((id) => next.has(id))]));
+  }, [ids, idSet, selectedIds, keepOutsideWindow, onChange]);
 
   const toggle = useCallback((id: string, options: { selected?: boolean; range?: boolean } = {}) => {
     if (disabled || !idSet.has(id)) return;

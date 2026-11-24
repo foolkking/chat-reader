@@ -3,6 +3,7 @@ from importlib import import_module
 
 MODULE_EXPORTS = {
     "reader_extension": ("ExtensionDevice", "ExtensionSource"),
+    "append_item": ("AppendItem",),
     "context_continuation": ("ContextMemberObject", "ContextBinding", "ContinuationRevision",
                              "ContinuationState", "ContinuationCandidate", "ContinuationValidation", "ContextExportReceipt"),
     "background_job": ("BackgroundJob",),
