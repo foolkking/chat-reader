@@ -71,11 +71,17 @@ test("reviewed Settings navigation adaptation preserves all original native case
   assert.equal(presentation.cases.filter(item => item.timeout === 180_000).length, 6);
   const bulk = schedule.settings_fixture_revisions["settings-batch-export.spec.ts"];
   assert.equal(bulk.cases.length, 7);
-  const cases = () => new Map([...format.cases, ...help.cases, ...presentation.cases, ...bulk.cases].map(identity => [identity.id, { identity: structuredClone(identity) }]));
+  const signout = schedule.settings_fixture_revisions["settings-pending-signout.spec.ts"];
+  assert.deepEqual(signout.cases.map(item => item.title).sort(), [
+    "pending signout: discard failure", "pending signout: export", "pending signout: password", "pending signout: sync",
+  ]);
+  assert.ok(signout.cases.every(item => item.timeout === 140_000));
+  const cases = () => new Map([...format.cases, ...help.cases, ...presentation.cases, ...bulk.cases, ...signout.cases].map(identity => [identity.id, { identity: structuredClone(identity) }]));
   validateReviewedSettingsCases(cases(), schedule);
   for (const mutate of [
     value => { value.delete(format.cases[0].id); },
     value => { value.delete(presentation.cases[0].id); },
+    value => { value.delete(signout.cases.find(item => item.title === "pending signout: export").id); },
     value => { value.get(help.cases.find(item => item.timeout === 180_000).id).identity.timeout = 90_000; },
     value => { const first = value.values().next().value; value.set("extra", structuredClone(first)); },
     value => { value.values().next().value.identity.id = "substitute"; },

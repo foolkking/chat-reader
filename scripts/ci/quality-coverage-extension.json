@@ -282,6 +282,17 @@
       ],
       "reason": "All six original identities, declarations and deadlines are retained. The responsive root-admin sessions verify that Help has no version display, then expand Runtime status, match the actual server API version and close it again."
     },
+    "settings-pending-signout.spec.ts": {
+      "previous_source_lf_sha256": "3647abf9040b3557b0158e6a8129df58587644ed2f93a47b32239d89c9b3c9a9",
+      "source_lf_sha256": "50a498bd873eaf0fbe0569a9f03eeae4efb77ad644c821b1d807a193dda067d3",
+      "cases": [
+        {"id":"c18bee09468646c73013-51a1f0aa7a4a1919d009","file":"settings-pending-signout.spec.ts","title":"pending signout: sync","line":11,"column":7,"timeout":140000,"project_id":""},
+        {"id":"c18bee09468646c73013-9bf393b6b869acbeb37c","file":"settings-pending-signout.spec.ts","title":"pending signout: export","line":11,"column":7,"timeout":140000,"project_id":""},
+        {"id":"c18bee09468646c73013-b7ddcefcab809638db45","file":"settings-pending-signout.spec.ts","title":"pending signout: discard failure","line":11,"column":7,"timeout":140000,"project_id":""},
+        {"id":"c18bee09468646c73013-a7b37fdfe0ce94e5a002","file":"settings-pending-signout.spec.ts","title":"pending signout: password","line":11,"column":7,"timeout":140000,"project_id":""}
+      ],
+      "reason": "Deliver retry bookkeeping during the original native Save click and check both queued notebook titles before stale-export signout. Preserve all four cases, cleanup assertions and deadlines."
+    },
     "settings-presentation.spec.ts": {
       "previous_source_lf_sha256": "4ea973f934ee4ebc593f19cea9275e9782dae7d013082a267d2d207b1aa3a912",
       "source_lf_sha256": "0a4e86f1f038d7af803520a2fdbb45cc790fe1bf7a280c7d2d48dd4a16a50ffe",
