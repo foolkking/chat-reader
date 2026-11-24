@@ -890,7 +890,8 @@ function FileRow({
             <button type="button" onClick={onRename} className="flex min-h-8 w-full items-center gap-2 rounded px-2 text-left text-xs text-primary hover:bg-subtle">
               <Pencil className="h-3.5 w-3.5" />{zh ? "重命名显示名称" : "Rename display name"}
             </button>
-            <button type="button" onClick={onCopyReference} className="flex min-h-8 w-full items-center gap-2 rounded px-2 text-left text-xs text-primary hover:bg-subtle">
+            {/* Copy stays in the same row; Escape then dismisses only its menu, not the Files panel. */}
+            <button type="button" onClick={event => { event.stopPropagation(); onCopyReference(); }} className="flex min-h-8 w-full items-center gap-2 rounded px-2 text-left text-xs text-primary hover:bg-subtle">
               <ClipboardCopy className="h-3.5 w-3.5" />{zh ? "复制附件引用" : "Copy attachment reference"}
             </button>
             <button type="button" onClick={onShowDetails} className="flex min-h-8 w-full items-center gap-2 rounded px-2 text-left text-xs text-primary hover:bg-subtle">

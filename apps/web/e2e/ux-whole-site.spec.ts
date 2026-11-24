@@ -86,6 +86,8 @@ for (const width of [375, 768, 1440]) for (const zh of [true, false]) {
       await page.keyboard.press("ArrowDown");
       await expect(page.getByRole("menuitem", { name: /项目设置|Project settings/ })).toBeFocused();
       await page.keyboard.press("ArrowDown");
+      await expect(page.getByRole("menuitem", { name: /导出项目对话|Export project conversations/ })).toBeFocused();
+      await page.keyboard.press("ArrowDown");
       await expect(page.getByRole("menuitem", { name: /归档项目|Archive project/ })).toBeFocused();
       await page.keyboard.press("Home"); await page.keyboard.press("Enter");
       const settings = page.getByRole("dialog", { name: /^(项目设置|Project settings)$/ });
@@ -335,7 +337,10 @@ test("attachments: failed load, rename draft, copy feedback and partial detach r
     await renamed.getByRole("button", { name: "More file actions" }).click();
     await renamed.getByRole("button", { name: "Copy attachment reference" }).click();
     await expect(files.locator('[role="status"], [role="alert"]')).toContainText(/copied|Copy failed/);
+    await expect(renamed.getByRole("menu", { name: "File actions" })).toBeVisible();
     await page.keyboard.press("Escape");
+    await expect(renamed.getByRole("button", { name: "More file actions" })).toBeFocused();
+    await expect(files.getByRole("checkbox")).toHaveCount(2);
     for (const checkbox of await files.getByRole("checkbox").all()) await checkbox.check();
     await page.route(`**${endpoint}/${first.id}`, (route) => route.fulfill({ status: 503, json: { detail: "Synthetic detach failure" } }));
     await files.getByRole("button", { name: "Detach selected" }).click();
