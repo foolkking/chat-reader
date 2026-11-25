@@ -16,6 +16,37 @@ class HostIntegrityReadTest(unittest.TestCase):
         self.host = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.host)
 
+    def test_migration_uses_only_the_signed_target_and_a_supported_no_pull_contract(self):
+        host = object.__new__(self.host.Host)
+        release = {"revision": "a" * 40, "schema": "20261123_0064", "images": {"api": {}, "web": {}}}
+        images = host.images(release)
+        legacy = "Options:\n      --entrypoint string\n      --no-deps\n  -T, --no-TTY\n      --rm\n"
+        modern = legacy + "      --pull string     Pull image before running\n"
+        base = {"image": images["API_IMAGE"]}
+        tail = ["-T", "--entrypoint", "alembic", "migrate", "upgrade", release["schema"]]
+        for help_text, service, flags in [
+            (modern, dict(base, build={"context": "app"}), ["--pull", "never"]),
+            (legacy, dict(base, pull_policy="never"), []),
+            (legacy, base, None),
+            (legacy, dict(base, pull_policy="missing"), None),
+            (legacy, dict(base, pull_policy="never", build={}), None),
+            (modern, dict(base, pull_policy="build"), None),
+            (modern, dict(base, pull_policy="always"), None),
+            (modern, {"image": "chat-reader-api:latest"}, None),
+            (legacy.replace("--no-deps", "--something-else"), dict(base, pull_policy="never"), None),
+            (legacy + "  --foo  also accepts --pull", base, None),
+        ]:
+            with self.subTest(help=help_text.splitlines()[-1], service=service):
+                host.dc = Mock(side_effect=[json.dumps({"services": {"migrate": service}}), help_text])
+                if flags is None:
+                    with self.assertRaises(ValueError):
+                        host.migration_command(release)
+                else:
+                    self.assertEqual(host.migration_command(release), ["run", "--rm", "--no-deps"] + flags + tail)
+                self.assertEqual(host.dc.call_args_list[0].args, ("config", "--format", "json"))
+                self.assertEqual(host.dc.call_args_list[0].kwargs, {"env": images})
+                self.assertTrue(all(call.args[0] == "config" or call.args == ("run", "--help") for call in host.dc.call_args_list))
+
     def read(self, path, elapsed=0, data=b"[]", status=200):
         connection = Mock()
         response = Mock(status=status)

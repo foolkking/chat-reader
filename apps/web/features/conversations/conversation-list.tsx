@@ -19,7 +19,7 @@ import {
   unarchiveConversation,
   updateConversation,
 } from "../../lib/api";
-import type { ConversationListItem, ProjectRead } from "../../lib/types";
+import type { ConversationListItem, ProjectRead, ScopedSort } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
 import { ConversationActionMenu } from "./conversation-action-menu";
 import { useConversationDeletion } from "./conversation-deletion-provider";
@@ -62,7 +62,8 @@ export function ConversationList({
 }) {
   const queryClient = useQueryClient();
   const { resolvedLocale, projectSortMode = "custom", projectSortDirection = "asc" } = usePreferences();
-  const { conversationSortMode, conversationSortDirection, place: placeInOrder, orderVersion, setSort } = useScopedSort("all");
+  const sorting = useScopedSort("all");
+  const { place: placeInOrder, orderVersion, setSort } = sorting;
   const zh = resolvedLocale === "zh-CN";
   const batchExport = useBatchExport(zh, `list:${mode}:${tagId ?? "all"}`);
   const batchCheck = useBatchResultCheck(zh, "conversation-list:" + mode);
@@ -74,6 +75,18 @@ export function ConversationList({
   if (viewRef.current.mode !== mode) viewRef.current = { mode };
   const currentView = viewRef.current;
   const viewGeneration = authenticationGeneration();
+  const [heldOrder, setHeldOrder] = useState<{ mode: typeof mode; tagId?: string; generation: number; sort: ScopedSort } | null>(null);
+  const displayedOrder = heldOrder?.generation === viewGeneration && heldOrder.mode === mode && heldOrder.tagId === tagId ? heldOrder.sort : undefined;
+  const conversationSortMode = displayedOrder?.mode ?? sorting.conversationSortMode;
+  const conversationSortDirection = displayedOrder?.direction ?? sorting.conversationSortDirection;
+  const pendingOrder = conversationSortMode !== sorting.conversationSortMode || conversationSortDirection !== sorting.conversationSortDirection;
+  function holdListOrder() {
+    // Keep the current live query and its matching controls together while a
+    // row action is in use. Never reuse rows from another scope or account.
+    const held = { mode, tagId, generation: viewGeneration, sort: { mode: conversationSortMode, direction: conversationSortDirection } };
+    setHeldOrder(held);
+    return () => setHeldOrder(current => current === held ? null : current);
+  }
   function isCurrentView() {
     return mounted.current && viewRef.current === currentView && viewGeneration === authenticationGeneration();
   }
@@ -235,7 +248,7 @@ export function ConversationList({
   async function handleSortEnd(event: DragEndEvent) {
     const origin = sortOrigin.current;
     sortOrigin.current = null;
-    if (listUnavailable || conversationsQuery.isFetching || conversationsQuery.isError || sortBusy.current || conversationSortMode !== "custom" || !event.over
+    if (pendingOrder || listUnavailable || conversationsQuery.isFetching || conversationsQuery.isError || sortBusy.current || conversationSortMode !== "custom" || !event.over
       || !origin || origin.scope !== sortScopeKey || origin.updatedAt !== conversationsQuery.dataUpdatedAt
       || event.active.id === event.over.id) return;
     const rows = conversations;
@@ -515,7 +528,7 @@ export function ConversationList({
           <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `已加载 ${conversations.length} 个${conversationsQuery.hasNextPage ? "，仍有更多" : ""}` : `${conversations.length} loaded${conversationsQuery.hasNextPage ? ", more available" : ""}`}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <ConversationSortMenu />
+          <ConversationSortMenu displayedOrder={displayedOrder} />
           <SelectionModeButton active={selectionMode} locale={resolvedLocale} onClick={selectionMode ? exitSelectionMode : () => setSelectionMode(true)} />
         </div>
       </div>
@@ -627,7 +640,7 @@ export function ConversationList({
       </> : null}
       <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => { setActiveSortId(null); setActiveSortSize(null); }} onDragEnd={(event) => { setActiveSortId(null); setActiveSortSize(null); void handleSortEnd(event); }}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
         {conversations.map((conversation, index) => (
-            <SortableConversationRow id={conversation.id} enabled={!selectionMode && conversationSortMode === "custom" && !conversationsQuery.isFetching && !conversationsQuery.isError} key={conversation.id}><article
+            <SortableConversationRow id={conversation.id} enabled={!pendingOrder && !selectionMode && conversationSortMode === "custom" && !conversationsQuery.isFetching && !conversationsQuery.isError} key={conversation.id}><article
             {...linearSelection.itemHandlers(conversation.id)}
             data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined}
             aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined}
@@ -671,7 +684,7 @@ export function ConversationList({
                   {sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback) ? <p className="text-xs text-secondary" title={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale, conversationSortMode)}>{sortTimeLabel(conversationSortMode, resolvedLocale, conversation.content_time_fallback)} · {formatActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale, undefined, conversationSortMode)}</p> : null}
                   <p className="mt-1 text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                 </div>
-                {!selectionMode ? <ConversationActionMenu conversation={conversation} placement={placement} onChanged={refreshLists} onUndo={setUndo} ordering={{
+                {!selectionMode ? <ConversationActionMenu conversation={conversation} placement={placement} holdListOrder={holdListOrder} onChanged={refreshLists} onUndo={setUndo} ordering={pendingOrder ? undefined : {
                   manual: conversationSortMode === "custom", enableManual: () => setSort("custom", "asc"),
                   up: index > 0 && sameSortPriority(conversation, conversations[index - 1]) && orderVersion ? () => placeInOrder(conversation.id, conversations[index - 1].id, null, orderVersion) : undefined,
                   down: index + 1 < conversations.length && sameSortPriority(conversation, conversations[index + 1]) && orderVersion ? () => placeInOrder(conversation.id, null, conversations[index + 1].id, orderVersion) : undefined,

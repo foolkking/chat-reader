@@ -82,8 +82,18 @@ for (const scenario of ["sync", "export", "discard failure", "password"] as cons
           await secondTitle.fill("Synthetic newer signout note");
           await expect(secondEditor.getByText("Draft saved on this device", { exact: true })).toBeVisible();
           await expect(secondEditor).toHaveAttribute("data-notebook-save-ready", "true");
-          await secondEditor.getByRole("button", { name: "Save notebook", exact: true }).click();
+          const save = secondEditor.getByRole("button", { name: "Save notebook", exact: true });
+          // Deliver a retry notification in the press itself. Neither this signal
+          // nor a reading position writes notebook content. A real snapshot still
+          // invalidates the notebook; both writes below must be present in Dexie.
+          await save.evaluate(button => button.addEventListener("pointerdown", () => {
+            window.dispatchEvent(new CustomEvent("chat-reader:sync-changed", { detail: "outbox-retry" }));
+          }, { capture: true, once: true }));
+          await save.click();
           await expect.poll(async () => (await readLocal(second, userId)).outbox.length).toBe(2);
+          const queued = (await readLocal(second, userId)).outbox;
+          expect(queued).toEqual(expect.arrayContaining(["Synthetic newer signout note", "Synthetic unsynced signout note"].map(title =>
+            expect.objectContaining({ entity_type: "notebook", payload: expect.objectContaining({ title }) }))));
           await panel.getByRole("button", { name: "File saved — clear and sign out", exact: true }).click();
           await page.getByRole("button", { name: "Discard and continue", exact: true }).click();
           await expect(panel.getByRole("alert")).toContainText("Local changes changed");

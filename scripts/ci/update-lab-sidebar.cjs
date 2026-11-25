@@ -2,6 +2,31 @@
 const {createRequire}=require("node:module"), path=require("node:path"),fs=require("node:fs"),assert=require("node:assert/strict");
 const {chromium}=createRequire(path.resolve(__dirname,"../../apps/web/package.json"))("@playwright/test");
 const origin="https://localhost:32481";
+
+async function dropPoint(heading, fraction, context) {
+ const deadline = Date.now() + 11000;
+ while (Date.now() < deadline) {
+  await heading.scrollIntoViewIfNeeded({timeout: Math.max(1, deadline - Date.now())});
+  const point = await heading.evaluate(async (el, fraction) => {
+   const measure = () => {
+    const pane = el.closest("[data-sidebar-navigation-scroll]")?.getBoundingClientRect();
+    if (!pane || !el.isConnected || !el.getClientRects().length) return null;
+    const rect = el.getBoundingClientRect();
+    const left = Math.max(0, rect.left, pane.left), right = Math.min(innerWidth, rect.right, pane.right);
+    const top = Math.max(0, rect.top, pane.top), bottom = Math.min(innerHeight, rect.bottom, pane.bottom);
+    if (right - left < 4 || bottom - top < 4) return null;
+    return {x: left + (right - left) * fraction, y: top + Math.min(16, (bottom - top) / 2)};
+   };
+   const before = measure();
+   await new Promise(requestAnimationFrame);
+   const after = measure();
+   return before && after && Math.abs(before.x - after.x) < 1 && Math.abs(before.y - after.y) < 1 ? after : null;
+  }, fraction);
+  if (point) return point;
+ }
+ throw Error(`${context}: drop heading never settled inside the sidebar`);
+}
+
 async function main(){
  const login=JSON.parse(fs.readFileSync(process.env.UPDATE_LAB_LOGIN,"utf8"));
  const browser=await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{channel:"chromium"});
@@ -18,13 +43,27 @@ async function main(){
    const aside=p.locator("aside[data-reader-primary-sidebar]").filter({visible:true}).last();
    const row=aside.getByTestId("conversation-row-"+convo),group=aside.getByTestId("unclassified-container"),toggle=group.getByRole("button",{name:/^(Unclassified|未归类)(\s|$)/i});
    if(await toggle.getAttribute("aria-expanded")==="false")await toggle.click();
-   async function drag(target){
-    await row.waitFor();await row.evaluate(el=>el.scrollIntoView({block:"nearest"}));
-    const b=await row.boundingBox(),x=b.x+b.width*.45,y=b.y+Math.min(22,b.height/2);
-    await p.mouse.move(x,y);await p.mouse.down();await p.mouse.move(x+14,y,{steps:5});await p.getByTestId("sidebar-drag-overlay").waitFor();
-    await target.evaluate(el=>el.scrollIntoView({block:"nearest"}));const z=await target.boundingBox();
-    await p.mouse.move(z.x+z.width/2,z.y+Math.min(z.height/2,18),{steps:15});await p.waitForTimeout(550);
-    const dest=await target.boundingBox();await p.mouse.move(dest.x+dest.width*.52,dest.y+Math.min(dest.height/2,16),{steps:4});
+   async function drag(heading, name){
+    const context = `${width}px drag to ${name}`;
+    console.log(context);
+    const pickup = row.getByRole("link").first();
+    // hover() checks the live hit target. A row's bounding box alone can be outside the scrollport.
+    await p.evaluate(() => {
+     window.lastDragPickup = null;
+     document.addEventListener("pointermove", event => {
+      window.lastDragPickup = {x: event.clientX, y: event.clientY};
+     }, {capture: true, once: true});
+    });
+    await pickup.hover();
+    const hit = await pickup.evaluate(el => {
+     const point = window.lastDragPickup;
+     return point && el.contains(document.elementFromPoint(point.x, point.y)) ? point : null;
+    });
+    assert.ok(hit, `${context}: pointer did not land on the source link`);
+    await p.mouse.down();await p.mouse.move(hit.x+14,hit.y,{steps:5});await p.getByTestId("sidebar-drag-overlay").waitFor();
+    const first=await dropPoint(heading,.5,context);
+    await p.mouse.move(first.x,first.y,{steps:15});await p.waitForTimeout(550);
+    const dest=await dropPoint(heading,.52,context);await p.mouse.move(dest.x,dest.y,{steps:4});
     await p.waitForFunction(()=>document.querySelector('[data-testid="sidebar-drag-overlay"]')?.getAttribute('data-drop-intent')==="conversation-placement");
     await p.mouse.up();await p.getByTestId("sidebar-drag-overlay").waitFor({state:"hidden"});
    }
@@ -32,13 +71,13 @@ async function main(){
     for(let i=0;i<40;i++){const r=await api.get(origin+"/api/conversations/"+convo);assert.ok(r.ok());if((await r.json()).project_id===id)return;await p.waitForTimeout(180)}
     throw new Error("Placement not persisted");
    }
-   await drag(aside.getByTestId("project-conversation-container-"+project));await assigned(project);
+   await drag(aside.getByTestId("project-conversation-container-"+project).locator(":scope > .reader-interactive-row").first(),"project");await assigned(project);
    await p.reload();if(mobile)await p.getByTestId("mobile-sidebar-button").filter({visible:true}).first().click();
    if(await row.count()===0)await aside.getByRole("button",{name:"Expand "+name,exact:true}).click();
    await row.waitFor();await p.waitForFunction(id=>!!document.querySelector(`[data-testid="conversation-row-${id[0]}"][data-project-id="${id[1]}"]`),[convo,project]);
    await toggle.click();assert.equal(await toggle.getAttribute("aria-expanded"),"false");
    assert.equal(await group.getByTestId("unclassified-new-conversation-button").count(),0);
-   await drag(group);await assigned(null);
+   await drag(group.getByRole("heading").first(),"unclassified");await assigned(null);
    if(await toggle.getAttribute("aria-expanded")==="false")await toggle.click();
    await row.waitFor();await toggle.click();await p.reload();if(mobile)await p.getByTestId("mobile-sidebar-button").filter({visible:true}).first().click();
    await toggle.waitFor();assert.equal(await toggle.getAttribute("aria-expanded"),"false");

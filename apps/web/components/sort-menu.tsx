@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown } from "lucide-reac
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { usePreferences } from "./preferences-provider";
-import type { ConversationSortMode, ProjectSortMode, SortDirection } from "../lib/types";
+import type { ConversationSortMode, ProjectSortMode, ScopedSort, SortDirection } from "../lib/types";
 import { useScopedSort, type SortScope } from "./use-scoped-sort";
 import { useInteractionDialog } from "./interaction-dialog-provider";
 
@@ -39,11 +39,14 @@ const projectOptions: SortOption<ProjectSortMode>[] = [
   { value: "custom", zh: "手动顺序", en: "Manual order" },
 ];
 
-export function ConversationSortMenu({ compact = false, sidebar = false, settingLabel, hideCustomDirection = false, scope = "all" }: { compact?: boolean; sidebar?: boolean; settingLabel?: string; hideCustomDirection?: boolean; scope?: SortScope } = {}) {
+export function ConversationSortMenu({ compact = false, sidebar = false, settingLabel, hideCustomDirection = false, scope = "all", displayedOrder }: { compact?: boolean; sidebar?: boolean; settingLabel?: string; hideCustomDirection?: boolean; scope?: SortScope; displayedOrder?: ScopedSort } = {}) {
   const preferences = usePreferences();
   const sorting = useScopedSort(scope);
   const { confirm } = useInteractionDialog();
   const zh = preferences.resolvedLocale === "zh-CN";
+  const heldOrderIsStale = !!displayedOrder && (
+    displayedOrder.mode !== sorting.conversationSortMode || displayedOrder.direction !== sorting.conversationSortDirection
+  );
   const [error, setError] = useState(false);
   const run = async (action: () => Promise<unknown>) => {
     setError(false);
@@ -51,7 +54,7 @@ export function ConversationSortMenu({ compact = false, sidebar = false, setting
   };
   return <div className={settingLabel ? "min-w-0" : "flex flex-wrap items-center gap-2"}>
     {scope.startsWith("project:") ? <span className="text-xs text-secondary">{sorting.inherited ? (zh ? "跟随项目默认" : "Following project default") : (zh ? "本项目独立设置" : "Project override")}</span> : null}
-    <SortMenu disabled={!sorting.canChange} sidebar={sidebar} settingLabel={settingLabel} compact={compact} hideCustomDirection={hideCustomDirection} options={conversationOptions} mode={sorting.conversationSortMode} direction={sorting.conversationSortDirection} onChange={sorting.setSort} locale={preferences.resolvedLocale}
+    <SortMenu disabled={!sorting.canChange || heldOrderIsStale} sidebar={sidebar} settingLabel={settingLabel} compact={compact} hideCustomDirection={hideCustomDirection} options={conversationOptions} mode={displayedOrder?.mode ?? sorting.conversationSortMode} direction={displayedOrder?.direction ?? sorting.conversationSortDirection} onChange={sorting.setSort} locale={preferences.resolvedLocale}
       actions={scope !== "project_default" ? <button type="button" role="menuitem" disabled={!sorting.canChange} className="min-h-11 w-full rounded-md px-3 text-left text-xs text-secondary hover:bg-subtle" onClick={() => void run(async () => {
         if (await confirm({ title: zh ? "按当前排序重建手动顺序？" : "Rebuild manual order from this sort?",
           description: zh ? "替换此范围已保存的手动位置，其他范围不变。" : "Replace saved manual positions in this scope only." })) await sorting.rebuild();

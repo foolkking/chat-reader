@@ -175,7 +175,10 @@ async function flushConversationBatch(db: typeof offlineDb, access: number, oper
     await db.transaction("rw", db.outbox, async () => {
       for (const item of operations) await db.outbox.update(item.operation_id, { attempts: item.attempts + 1, last_error: code });
     });
-    window.dispatchEvent(new Event(OFFLINE_SYNC_CHANGED_EVENT));
+    // Only retry bookkeeping was written locally. A remote write may still
+    // have reached the server, so remote views must recheck on an unknown result.
+    window.dispatchEvent(code === "NETWORK" ? new CustomEvent(OFFLINE_SYNC_CHANGED_EVENT, { detail: "outbox-retry" })
+      : new Event(OFFLINE_SYNC_CHANGED_EVENT));
     throw error;
   }
 }
