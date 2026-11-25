@@ -1,13 +1,15 @@
 # Chat Reader 浏览器插件（桌面 Chrome / Edge 私有内测）
 
-插件是本实例的客户端，不是第二个文件库。扩展的采集、资源转换及界面在 `foolkking/chat-intelligent-ui-exporter` 的 `codex/reader-extension` 分支；本仓库负责账号、数据归属、导入和导出。两边的合同名是 `reader-chat-v1`。**生产 `v0.1.5` 不包含本功能；不能仅安装扩展后就连接旧站。** 见[隔离验收记录](../evidence/browser-extension-2026-11-23/README.md)。
+插件是本实例的客户端，不是第二个文件库。扩展的采集、资源转换及界面在 `foolkking/chat-intelligent-ui-exporter` 的 `codex/reader-extension` 分支；本仓库负责账号、数据归属、导入和导出。两边的合同名是 `reader-chat-v1`。**`king` 已在 [`v0.1.7`](../deployment.md#v017-production) 启用 0.2.0 的设备登记；其他实例需要自行部署和登记。** 见[隔离验收记录](../evidence/browser-extension-2026-11-23/README.md)。
 
 ## 安装、连接、撤销
 
-1. 在**测试实例**安装本分支对应的 Web、API 和 worker，并迁到该提交的 Alembic head。P0–P2 内测时为 `20261123_0063`，增加逐条末尾追加收据的开发工作树为 `20261123_0064`。原来是 `0062` 的实例需要按[完整维护流程](../deployment.md)升级，不能走“只换 Web”。不覆盖已有配置、数据库或卷。
+1. 运维仅在**首次接入的实例**部署同一签名版本的 Web、API 和 worker，并迁到对应 Alembic head。`v0.1.7` 为 `20261123_0064`；早期 P0–P2 内测为 `0063`。已获得本实例私有安装包的用户直接看第 3、4 步。原来是 `0062` 的实例需要按[完整维护流程](../deployment.md)升级，不能走“只换 Web”。不覆盖已有配置、数据库或卷。
 2. 保持正常 Reader 登录：`AUTH_ENABLED=true`，使用本实例自己的强 `AUTH_SESSION_SECRET`，`PUBLIC_WEB_BASE_URL` 与实际入口一致。在现有 API **和 worker** 的环境中设置 `READER_EXTENSION_IDS=gihbiofiiflkckcmomddkkjkoifkddfi`。默认空值：扩展 API 不可用。没有域名通配和跨站 Cookie 要求。不要把个人密钥交给扩展。
    **从 v0.1.5 首次接入：只改 `.env` 不够。** 该版本的标准 Compose 不把这两个扩展选项传入容器；在线更新也不会替换运维配置。对照新版 `docker-compose.production.yml`，仅在现有 `&api-environment` 加上 `READER_EXTENSION_IDS: ${READER_EXTENSION_IDS:-}` 和 `READER_EXTENSION_CAPTURE: ${READER_EXTENSION_CAPTURE:-true}`（自定义 Compose 则核对 API、worker 的实际环境）。保留已有变量和挂载；在维护前验证配置但不要打印渲染后的完整配置。安装后以已授权设备实际读取能力为准，不把登录页 `200` 当作扩展已接通。
-3. 在 Fork 根目录运行（最后一个参数必须是**尚不存在**的目录；使用真实 Reader 的精确 HTTPS origin，无末尾斜杠）：
+3. **普通用户：**解压运维提供的本实例 ZIP（已经解压则跳过），在扩展管理页选择「加载已解压的扩展程序」，选直接包含 `manifest.json` 的目录，不选 ZIP 本身。接着按第 4 步登录。
+
+   **仅打包者：**在 Fork 根目录运行（最后一个参数必须是**尚不存在**的目录；使用真实 Reader 的精确 HTTPS origin，无末尾斜杠）：
 
    ```powershell
    node scripts/package-reader.cjs https://reader.example.test E:\chat-reader-temp\reader-private-build --zip

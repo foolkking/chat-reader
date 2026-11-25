@@ -1,0 +1,608 @@
+{
+  "scope": "Production verification, no real-user login/data capture or production rollback exercise. All ISO timestamps below carry the time zone. Historical red runs retained.",
+  "tag": "v0.1.7",
+  "sha": "6da435a70f0485a116c84525da899bfd8f234434",
+  "old_sha": "b824ee949f03ec403e7e60beb677731c2fcff9c4",
+  "pr": 10,
+  "tested_head": "13efce90321116dcc60a4e482f8eeb69818ea50a",
+  "verified_release_tree": "2dfdaacbf28c22ef692e5401b304fed1c0faec37",
+  "tag_object": "443250ad805f3a28a1b3afea61751c1b939c06d3",
+  "tag_wait_seconds": 1500.0939999999828,
+  "branch": {
+    "run": 45439413814,
+    "attempt": 1,
+    "jobs": [
+      {
+        "job": 138606055304,
+        "name": "image-preparation",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606055370,
+        "name": "settings-restore",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606055424,
+        "name": "settings-quality-shard-1 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606055519,
+        "name": "settings-quality-shard-4 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606055581,
+        "name": "api-quality-shard-4 / suite",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606055637,
+        "name": "reading-performance-comparison / compare",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606055705,
+        "name": "web-quality-shard-3 / gates",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606055844,
+        "name": "api-quality-shard-2 / suite",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606055852,
+        "name": "settings-quality-shard-2 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606056242,
+        "name": "web-quality-shard-1 / gates",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606056302,
+        "name": "api-quality-shard-3 / suite",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606056333,
+        "name": "web-quality-shard-2 / gates",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606056541,
+        "name": "api-quality-shard-1 / suite",
+        "conclusion": "success"
+      },
+      {
+        "job": 138606056548,
+        "name": "settings-quality-shard-3 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "job": 138616052840,
+        "name": "api-quality",
+        "conclusion": "success"
+      },
+      {
+        "job": 138617494651,
+        "name": "settings-quality",
+        "conclusion": "success"
+      },
+      {
+        "job": 138620096077,
+        "name": "web-quality",
+        "conclusion": "success"
+      },
+      {
+        "job": 138620466219,
+        "name": "build-images",
+        "conclusion": "success"
+      },
+      {
+        "job": 138620847512,
+        "name": "inspect-release-artifact",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "extension": {
+    "version": "0.2.0",
+    "sha": "be5e8dabd772809635db345a51c8c15c26b468ed",
+    "run": 45364758606,
+    "attempt": 1,
+    "job": 138343492884,
+    "neutral_artifact_id": 14905388570,
+    "neutral_transport_digest": "sha256:b5c1ef3096c0fb80d837bcda82a1a53cb9241bcc165397fbe72023ff1f4df95e",
+    "registered_on_api_and_worker": true,
+    "private_installer_files_verified": 32,
+    "production_device_grant_exercised_by_operator": false
+  },
+  "qualification": {
+    "run": 45526592309,
+    "attempt": 1,
+    "jobs": [
+      {
+        "job": 138911396003,
+        "name": "settings-restore",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396147,
+        "name": "web-quality-shard-3 / gates",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396157,
+        "name": "image-preparation",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396229,
+        "name": "api-quality-shard-1 / suite",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396268,
+        "name": "api-quality-shard-4 / suite",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396277,
+        "name": "api-quality-shard-2 / suite",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396295,
+        "name": "settings-quality-shard-1 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396327,
+        "name": "web-quality-shard-2 / gates",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396346,
+        "name": "reading-performance-comparison / compare",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396355,
+        "name": "api-quality-shard-3 / suite",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396366,
+        "name": "web-quality-shard-1 / gates",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396378,
+        "name": "settings-quality-shard-2 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396431,
+        "name": "settings-quality-shard-3 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "job": 138911396525,
+        "name": "settings-quality-shard-4 / matrix",
+        "conclusion": "success"
+      },
+      {
+        "job": 138916174572,
+        "name": "api-quality",
+        "conclusion": "success"
+      },
+      {
+        "job": 138917644074,
+        "name": "settings-quality",
+        "conclusion": "success"
+      },
+      {
+        "job": 138920813704,
+        "name": "web-quality",
+        "conclusion": "success"
+      },
+      {
+        "job": 138920943435,
+        "name": "build-images",
+        "conclusion": "success"
+      },
+      {
+        "job": 138921126600,
+        "name": "inspect-release-artifact",
+        "conclusion": "success"
+      }
+    ],
+    "artifact_id": 14984590219,
+    "artifact_digest": "sha256:afa192d6d2dc16e6d6a15206f5ced811206ec966e766dbf740f6e3f3fe9c0efb",
+    "application_archive_sha256": "d9b293d4bf8c17d8b41e4cdfcc46eaeda10d2410eb7bb5219f856a31af0b66e9",
+    "archive_bytes": 178091730,
+    "roles": {
+      "api": {
+        "config_id": "sha256:117116b65f8b1b4456e18e215715cdf98afc45b52d96370d0f0c458471a469de",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+          "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+          "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+          "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+          "sha256:86dfb8adfa27e65a34c48b444e9d51c220fc7c410a4ce08962cc6558d7812a7d",
+          "sha256:198709bea2cbb39076fae0c3723420a55d3450a95a2f541b464cb3e48ee7eb10",
+          "sha256:d9dd15b5e4392aaac1562f14a1443f980390e6df3bfa2a893c6ea88fb1157008",
+          "sha256:8a1d59ce3df79cfe787f94f7b4ae59f46bd7cd4eeb5e9d889a2de0f3fcc8be37",
+          "sha256:a7f9001d1a82dd25fb1b3e76bf078505112492aa07225ddd54580606ef19d667",
+          "sha256:a723cc476870e58cd58c1afa4546036ce86b0de7a840410cb0234619a30c5661",
+          "sha256:d6ea70e62f25ac3788edcb4a6e3b0c3df8ac87d03dd9142735b5816950cbc498",
+          "sha256:61702a569d6b9a1b79a5c85851ae3e6a89bd67b7b398447d2ec5bc313ba40fa9",
+          "sha256:9ed570bc46966b5b7bcebd863d6f840eaec1c6de3f3e4c5db18b85ebabda27a9",
+          "sha256:378628070189c2e80caf4e60ccb907192a5e5ce9c69c91e9e7cf44ddebfb1abd"
+        ],
+        "accepted_engine_ids": [
+          "sha256:117116b65f8b1b4456e18e215715cdf98afc45b52d96370d0f0c458471a469de",
+          "sha256:952591350b03b88dea3f97a65ecdd1002701f95b9cdb274b9ad4232446eba8c3"
+        ]
+      },
+      "import-worker": {
+        "config_id": "sha256:117116b65f8b1b4456e18e215715cdf98afc45b52d96370d0f0c458471a469de",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+          "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+          "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+          "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+          "sha256:86dfb8adfa27e65a34c48b444e9d51c220fc7c410a4ce08962cc6558d7812a7d",
+          "sha256:198709bea2cbb39076fae0c3723420a55d3450a95a2f541b464cb3e48ee7eb10",
+          "sha256:d9dd15b5e4392aaac1562f14a1443f980390e6df3bfa2a893c6ea88fb1157008",
+          "sha256:8a1d59ce3df79cfe787f94f7b4ae59f46bd7cd4eeb5e9d889a2de0f3fcc8be37",
+          "sha256:a7f9001d1a82dd25fb1b3e76bf078505112492aa07225ddd54580606ef19d667",
+          "sha256:a723cc476870e58cd58c1afa4546036ce86b0de7a840410cb0234619a30c5661",
+          "sha256:d6ea70e62f25ac3788edcb4a6e3b0c3df8ac87d03dd9142735b5816950cbc498",
+          "sha256:61702a569d6b9a1b79a5c85851ae3e6a89bd67b7b398447d2ec5bc313ba40fa9",
+          "sha256:9ed570bc46966b5b7bcebd863d6f840eaec1c6de3f3e4c5db18b85ebabda27a9",
+          "sha256:378628070189c2e80caf4e60ccb907192a5e5ce9c69c91e9e7cf44ddebfb1abd"
+        ],
+        "accepted_engine_ids": [
+          "sha256:117116b65f8b1b4456e18e215715cdf98afc45b52d96370d0f0c458471a469de",
+          "sha256:952591350b03b88dea3f97a65ecdd1002701f95b9cdb274b9ad4232446eba8c3"
+        ]
+      },
+      "migrate": {
+        "config_id": "sha256:117116b65f8b1b4456e18e215715cdf98afc45b52d96370d0f0c458471a469de",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+          "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+          "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+          "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+          "sha256:86dfb8adfa27e65a34c48b444e9d51c220fc7c410a4ce08962cc6558d7812a7d",
+          "sha256:198709bea2cbb39076fae0c3723420a55d3450a95a2f541b464cb3e48ee7eb10",
+          "sha256:d9dd15b5e4392aaac1562f14a1443f980390e6df3bfa2a893c6ea88fb1157008",
+          "sha256:8a1d59ce3df79cfe787f94f7b4ae59f46bd7cd4eeb5e9d889a2de0f3fcc8be37",
+          "sha256:a7f9001d1a82dd25fb1b3e76bf078505112492aa07225ddd54580606ef19d667",
+          "sha256:a723cc476870e58cd58c1afa4546036ce86b0de7a840410cb0234619a30c5661",
+          "sha256:d6ea70e62f25ac3788edcb4a6e3b0c3df8ac87d03dd9142735b5816950cbc498",
+          "sha256:61702a569d6b9a1b79a5c85851ae3e6a89bd67b7b398447d2ec5bc313ba40fa9",
+          "sha256:9ed570bc46966b5b7bcebd863d6f840eaec1c6de3f3e4c5db18b85ebabda27a9",
+          "sha256:378628070189c2e80caf4e60ccb907192a5e5ce9c69c91e9e7cf44ddebfb1abd"
+        ],
+        "accepted_engine_ids": [
+          "sha256:117116b65f8b1b4456e18e215715cdf98afc45b52d96370d0f0c458471a469de",
+          "sha256:952591350b03b88dea3f97a65ecdd1002701f95b9cdb274b9ad4232446eba8c3"
+        ]
+      },
+      "web": {
+        "config_id": "sha256:2235bcf6f4a1613f6e4a1e7b351f73b0330b2c6bb1d73a7d534c71b6eeee3d58",
+        "platform": "linux/amd64",
+        "rootfs": [
+          "sha256:a0904247e36a7726c03c71ee48f3e64462021c88dafeb13f37fdaf613b27f11c",
+          "sha256:0ac4251d3ceb1f9a47f7a4a2c3f0a11d2170e8f827a9e733e6278473d6c2674e",
+          "sha256:1e154f3abc96911e063658b8bc45e19c5a1a24cd6c68cbf87d8bfa1b28bc74b9",
+          "sha256:74e3c643bad513259e9f5190690801b63fc218d293f228213810f973ee3ae4cd",
+          "sha256:ec1de9460e1aa52a1e12f1dd2990ed1c9f89561227a5783018b586ca832f1ffc",
+          "sha256:40b7a8c61caa404f3167b156be3c9623b34315d553671ec124e1df15343f5ef4",
+          "sha256:68b76d74a981cd7134f0f2bb6f67750219aa4f4a74ee2e84946067af81d5e0b7",
+          "sha256:5fafdaa81a12b4e117f392fa4b9d713ff2a11c5b5f0d36dc4767f621cc9cc708",
+          "sha256:e7ae11dd30aca87f1a46a7d1edcb2119a4df643d5ba1a1d2feb7d7654894c387"
+        ],
+        "accepted_engine_ids": [
+          "sha256:2235bcf6f4a1613f6e4a1e7b351f73b0330b2c6bb1d73a7d534c71b6eeee3d58",
+          "sha256:6bfcd80ef2aa28cdabf4b858adc6413966d72ae1e11a7d48bfac8a168425f344"
+        ]
+      }
+    },
+    "native_api": {
+      "collected": 7116,
+      "passed": 7113,
+      "skips": [
+        "tests/test_exporter_markdown_parser.py::test_real_paired_fixture_uses_bounded_fast_path",
+        "tests/test_import_preview_exporter_combo.py::test_real_exporter_pair_preview_commit_and_retry",
+        "tests/test_import_preview_exporter_combo.py::test_response_only_real_pair_preview"
+      ]
+    }
+  },
+  "release": {
+    "release_id": 457574000,
+    "published_at": "2026-11-25T02:24:02Z",
+    "parent": 45526548169,
+    "attempt": 1,
+    "assets": {
+      "chat-reader-images.tar.gz": {
+        "id": 789721365,
+        "size": 178091730,
+        "digest": "sha256:d9b293d4bf8c17d8b41e4cdfcc46eaeda10d2410eb7bb5219f856a31af0b66e9"
+      },
+      "chat-reader-updater-linux-amd64.tar.gz": {
+        "id": 789721367,
+        "size": 7094109,
+        "digest": "sha256:834f88b0318e9174963398289d7f341b7ac583cc056a8c7377594338e573667f"
+      },
+      "program-evidence.json": {
+        "id": 789721400,
+        "size": 321,
+        "digest": "sha256:be6ba27b1b32396fca3dbeb68571d0af27fd82c0b0c87ffbd754d5a0e7a18e40"
+      },
+      "update-v1.json": {
+        "id": 789721366,
+        "size": 3381,
+        "digest": "sha256:3c9b7f9ada000cfa3e468082503b4c1bca7371f69e85311307c2cf080029ef92"
+      },
+      "update-v1.json.sig": {
+        "id": 789721368,
+        "size": 88,
+        "digest": "sha256:dfdf8db0bd61f7c3e98cf19f2da219b90f2aa4b71288dc5818b7a47ad4627d7e"
+      },
+      "updater-kit.sha256": {
+        "id": 789721370,
+        "size": 105,
+        "digest": "sha256:e54d1abec00767f30708fd90606f78e7cea23dc62e0eb428a32252f289f51585"
+      },
+      "updater-kit.sha256.sig": {
+        "id": 789721394,
+        "size": 88,
+        "digest": "sha256:54fd9b285a07647ef57e58f26b54a9578c08b9891c9362bf83140f619d1be659"
+      }
+    },
+    "registry": {
+      "api": {
+        "pinned_digest": "sha256:952591350b03b88dea3f97a65ecdd1002701f95b9cdb274b9ad4232446eba8c3",
+        "config": "sha256:117116b65f8b1b4456e18e215715cdf98afc45b52d96370d0f0c458471a469de",
+        "rootfs_reread": true
+      },
+      "web": {
+        "pinned_digest": "sha256:6bfcd80ef2aa28cdabf4b858adc6413966d72ae1e11a7d48bfac8a168425f344",
+        "config": "sha256:2235bcf6f4a1613f6e4a1e7b351f73b0330b2c6bb1d73a7d534c71b6eeee3d58",
+        "rootfs_reread": true
+      }
+    },
+    "signatures": [
+      "update-v1.json",
+      "updater-kit.sha256"
+    ],
+    "archive_matches_qualification": true,
+    "accepted": 30,
+    "program_max_ms": {
+      "confirmed": 7818,
+      "rollback": 6849,
+      "download": 2254,
+      "visible": 8685,
+      "online_preparation": 15371
+    },
+    "program_scope": "full",
+    "program_reason": "unproven_changes",
+    "jobs": [
+      {
+        "job": 138911234198,
+        "name": "qualify",
+        "conclusion": "success"
+      },
+      {
+        "job": 138921588237,
+        "name": "program-acceptance",
+        "conclusion": "success"
+      },
+      {
+        "job": 138921588469,
+        "name": "rehearse",
+        "conclusion": "success"
+      },
+      {
+        "job": 138931136320,
+        "name": "publish",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "rejected_earlier": {
+    "v0.1.6_signed_parent": 45392557022,
+    "attempts": [
+      1,
+      2
+    ],
+    "tag_or_runs_rewritten": false,
+    "subsequent_failed_branch_runs": [
+      45418870730,
+      45431295897
+    ],
+    "ordinary_PR_merge_exit": 1
+  },
+  "runtime": {
+    "at": "2026-11-25T02:38:41.061728+00:00",
+    "method": "host operator manual (not a website click)",
+    "schema_before": "20261117_0062",
+    "schema_after": "20261123_0064",
+    "heartbeat": true,
+    "roles": {
+      "api": {
+        "engine": "sha256:117116b65f8b1b4456e18e215715cdf98afc45b52d96370d0f0c458471a469de",
+        "started": "2026-11-25T02:36:56.409485077Z",
+        "memory_limit": 0
+      },
+      "import-worker": {
+        "engine": "sha256:117116b65f8b1b4456e18e215715cdf98afc45b52d96370d0f0c458471a469de",
+        "started": "2026-11-25T02:36:57.649617521Z",
+        "memory_limit": 671088640
+      },
+      "web": {
+        "engine": "sha256:2235bcf6f4a1613f6e4a1e7b351f73b0330b2c6bb1d73a7d534c71b6eeee3d58",
+        "started": "2026-11-25T02:36:58.629687817Z",
+        "memory_limit": 0
+      }
+    },
+    "anonymous_same_origin": {
+      "/__updates/status": 404,
+      "/api/admin/updates": 401,
+      "/api/extension-devices": 401,
+      "/api/extension/v1/capabilities": 401,
+      "/api/extension/v1/projects": 401,
+      "/api/health": 200,
+      "/login": 200
+    },
+    "app_replacement_only": true,
+    "unchanged": [
+      "postgres_unchanged_identifier",
+      "mounts_hash",
+      "other_container_count",
+      "other_container_set_hash",
+      "pg_image"
+    ],
+    "aggregate_since_admission": {
+      "row_counts_digest": true,
+      "four_volume_totals": true
+    },
+    "data_aggregate_preserved_while_fenced": true,
+    "no_unexpected_business_writes_while_fenced": true,
+    "new_enrollment": true,
+    "prior_journal_preserved": true,
+    "limited_configuration_change": "one allowed client id via private instance env; two settings wired into shared api/worker/migrate compose environment; no unrelated values or proxy changes",
+    "installed_host_adapter_sha256": "4cbabe8a35b3846725e02bee1d9b1d063e2478bd5f7572dee3df6ef6778331d5",
+    "operator_changes_to_runtime_code": "signed host.py atomic replacement only, rest of coordinator unchanged",
+    "web_rollback_available": false,
+    "pre_transfer_capacity_kib": {
+      "available_kib": 7882284,
+      "backup_kib": 6514256,
+      "candidate_required_kib": 7518344,
+      "margin_kib": 363940,
+      "retained_required_kib": 7169616
+    }
+  },
+  "times": {
+    "observed": {
+      "at": "2026-11-25T02:37:13.306467+00:00",
+      "begin": "2026-11-25T02:30:42.554518+00:00",
+      "complete": true,
+      "first_non_200": "2026-11-25T02:31:28.120384+00:00",
+      "first_verified_target": "2026-11-25T02:37:13.143753+00:00",
+      "interval_seconds": 4,
+      "observations": 96,
+      "source": "same-origin HTTPS probes, not browser-click timing",
+      "states": [
+        {
+          "at": "2026-11-25T02:30:42.554533+00:00",
+          "build": "incumbent",
+          "code": 200,
+          "t": 0.052
+        },
+        {
+          "at": "2026-11-25T02:31:28.120384+00:00",
+          "build": "none",
+          "code": 503,
+          "t": 45.595
+        },
+        {
+          "at": "2026-11-25T02:37:13.143753+00:00",
+          "build": "target",
+          "code": 200,
+          "t": 390.628
+        }
+      ]
+    },
+    "from_host_ms": {
+      "backup": 30392,
+      "commit": 374254,
+      "complete": 381632,
+      "configure": 347324,
+      "coordination": 1,
+      "draining": 28579,
+      "enroll": 375425,
+      "fencing": 28270,
+      "health": 362037,
+      "migration": 341209,
+      "preflight": 745,
+      "reopen": 374317,
+      "switching": 353050
+    },
+    "host_utc_ticks": {
+      "backup": "2026-11-25T02:31:27.082539+00:00",
+      "commit": "2026-11-25T02:37:10.944044+00:00",
+      "complete": "2026-11-25T02:37:18.322266+00:00",
+      "configure": "2026-11-25T02:36:44.014670+00:00",
+      "coordination": "2026-11-25T02:30:56.691206+00:00",
+      "draining": "2026-11-25T02:31:25.269463+00:00",
+      "enroll": "2026-11-25T02:37:12.115577+00:00",
+      "fencing": "2026-11-25T02:31:24.959407+00:00",
+      "health": "2026-11-25T02:36:58.726866+00:00",
+      "migration": "2026-11-25T02:36:37.898515+00:00",
+      "preflight": "2026-11-25T02:30:57.435171+00:00",
+      "reopen": "2026-11-25T02:37:11.007478+00:00",
+      "switching": "2026-11-25T02:36:49.739834+00:00"
+    },
+    "summary": {
+      "first_503_to_target_seconds": 345.023,
+      "operator_coordination_to_public_target_seconds": 376.453,
+      "backup_step_seconds": 310.817,
+      "download_seconds": 6.603
+    }
+  },
+  "recovery": {
+    "id": "chat-reader-20261125T023127Z",
+    "manifest_sha256": "d0e94524f8e52a86856126d0cadec5ac3f8946de5168c716bf251a0deccb0a40",
+    "size_bytes": 4093944377,
+    "components": 5,
+    "physical_pg_restore": {
+      "schema": "20261117_0062",
+      "tables": 93,
+      "validated_foreign_keys": 154,
+      "fresh_tmpfs_postgres": true
+    },
+    "four_file_volume_verification": {
+      "imports": {
+        "method": "two complete archive SHA/CRC + every member content/metadata; changed entries extracted and independently reread locally",
+        "readback_delta_bytes": 28344242
+      },
+      "exports": {
+        "method": "two complete archive SHA/CRC + every member content/metadata; changed entries extracted and independently reread locally",
+        "readback_delta_bytes": 0
+      },
+      "offline": {
+        "method": "exact gzip digest tied to prior isolated restoration",
+        "readback_delta_bytes": null
+      },
+      "assets": {
+        "method": "two complete archive SHA/CRC + every member content/metadata; changed entries extracted and independently reread locally",
+        "readback_delta_bytes": 22620536
+      }
+    },
+    "previous_program_manifest_sha256": "fb85dfcac546f6555fb3eee1213f1a5af64ab677805f1cd80a215e5004b2ea4f",
+    "retained_release": "v0.1.5",
+    "removed_only": "chat-reader-20261121T174318Z",
+    "freed_allocated_bytes": 4049907712,
+    "available_after_bytes": 7734960128,
+    "independent_readback_at": "2026-11-25T02:45:57.754211+00:00",
+    "one_set_after_retention": true,
+    "images_or_volumes_deleted": false
+  },
+  "limits": [
+    "real account consent, ChatGPT capture, personal website UX and mobile hardware not tested on production by operator",
+    "ChatGPT project/account discovery is not included; export of Reader project conversations is distinct",
+    "cross-schema rollback is manual isolated recovery, not automatic database downgrade",
+    "host is not used for performance experiments; download measured directly, outage sampled at four-second intervals"
+  ]
+}

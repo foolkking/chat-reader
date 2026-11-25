@@ -1,10 +1,12 @@
 # 文档导航
 
-- [开发：项目对话导出的范围和文件内容](system/DATA_ARCHIVE_CONTRACT.md) · [批量选择、范围复核与真实 ZIP 验收](evidence/project-batch-export-2026-11-23/README.md#implemented)。
+- [当前生产 v0.1.7：插件登记、末尾追加、项目导出及独立恢复](deployment.md#v017-production) · [CI、签名、生产实测与单份保留回执](evidence/reader-extension-append-2026-11-24/v0.1.7-production.json)。
 
-- [Chat Reader 桌面浏览器插件：接入、使用与撤销](system/BROWSER_EXTENSION.md) · [改前审查与计划](planning/ux-audit-reader-extension-2026-11-23.md) · [侧栏和一键保存](evidence/browser-extension-polish-2026-11-23/README.md) · [选择性末尾追加、双端下载、设备上限恢复与分发包](evidence/reader-extension-append-2026-11-24/README.md) · [原始内测](evidence/browser-extension-2026-11-23/README.md)。非生产 v0.1.5 功能。
+- [项目对话导出的范围和文件内容](system/DATA_ARCHIVE_CONTRACT.md) · [批量选择、范围复核与真实 ZIP 验收](evidence/project-batch-export-2026-11-23/README.md#implemented)。
 
-- [当前生产 v0.1.5：固定内存导入、完整维护实测与快路径边界](deployment.md#v015-production) · [签名发布与生产回执](evidence/import-units-2026-11-21/v0.1.5-production.json)。
+- [Chat Reader 桌面浏览器插件：接入、使用与撤销](system/BROWSER_EXTENSION.md) · [改前审查与计划](planning/ux-audit-reader-extension-2026-11-23.md) · [侧栏和一键保存](evidence/browser-extension-polish-2026-11-23/README.md) · [选择性末尾追加、双端下载、设备上限恢复与分发包](evidence/reader-extension-append-2026-11-24/README.md) · [原始内测](evidence/browser-extension-2026-11-23/README.md)。已在 `v0.1.7` 启用；个人账号实机操作由用户验收。
+
+- [历史 v0.1.5：固定内存导入、完整维护实测与快路径边界](deployment.md#v015-production) · [签名发布与生产回执](evidence/import-units-2026-11-21/v0.1.5-production.json)。
 - [固定内存下的消息级导入](system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [640 MiB 与 1280 MiB 对照](evidence/import-units-2026-11-21/README.md)。原始 JSON／混合分析仍有原内存门槛。
 - [历史 v0.1.4：搜索与阅读修复、实测时间及当时的容量门槛](deployment.md#v014-production) · [精确 CI、签名、备份与生产回执](evidence/search-reading-2026-11-20/v0.1.4-production.json)。
 - [v0.1.3 标签资格失败与修复](evidence/search-reading-2026-11-20/ci-44757335968-saved-search-placement.json)：该标签未发布；冷态检查修复和折叠的已保存搜索晚到造成的 32px 位移修复随后进入 v0.1.4。[浏览器前后对照](evidence/search-reading-2026-11-20/saved-search-late-read-before-after.png)。

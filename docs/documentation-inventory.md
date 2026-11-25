@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-25：[当前生产 v0.1.7 与升级前单套恢复点](deployment.md#v017-production) · [精确 CI、签名制品、同源探测与隔离恢复记录](evidence/reader-extension-append-2026-11-24/v0.1.7-production.json) · [私有浏览器包安装及设备授权](system/BROWSER_EXTENSION.md)。区分已启用的服务端、隔离环境 UI 验收与用户自己在生产进行的登录测试。
+
 2026-11-24：[签名发布的两次失败及隔离复现](evidence/reader-extension-append-2026-11-24/delivery-check.md#release-repair)记录侧栏拖放、迟到排序及生产旧版 Compose 的边界。[网页更新合同](system/ONLINE_UPDATES.md)说明迁移前的宿主机能力检查。
 
 2026-11-24：[只追加到末尾：插件选择与 Reader 固定目标、保留旧笔记和附件、排队后刷新与重新确认、双端 Context 文件](evidence/reader-extension-append-2026-11-24/README.md)；[收据丢失后的查找、设备级隐私选项及交付前测试](evidence/reader-extension-append-2026-11-24/delivery-check.md)；[安装和权限合同](system/BROWSER_EXTENSION.md)。这一记录不将隔离实验当成线上 CI 或生产部署。
