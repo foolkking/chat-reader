@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-26（v0.1.9 发布未通过）：[精确失败与归档导航审查](evidence/merge-html-2026-11-25/archive-navigation-audit.md)记录归档项目晚到位移、偏好换查询卸载链接，以及独立审查发现的失联交互锁。[交互合同](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#对话原生链接与迟到列表读取2026-11-26-候选)同步候选行为；保留原14/60/124门禁，新增独立12项检查而不增加默认PWA跳过。[本地验收及源码摘要](evidence/merge-html-2026-11-25/archive-navigation-local-verification.json)保留首次定位GET 500与最终原套件结果。Project State 区分候选和当前生产，不以本地结果代替精确CI与部署。
+
 2026-11-25（v0.1.8 发布未通过）：合并提交的完整分支 CI 已通过，标签资格停在一次 Web DELETE 500。[失败与 TCP 回归](evidence/merge-html-2026-11-25/README.md#branch-ci-and-the-v018-release-attempt)保留精确运行和制品标识；[Next 代理约束](system/NEXT_LTS_MIGRATION_CONTRACT.md#upstream-mutation-proxy--candidate-2026-11-25)说明写请求新连接、无重放和升级依赖时的回归要求。未放宽浏览器 204 断言。
 
 2026-11-25（合并修复候选）：[生产只读诊断与合成 HTML 卡片回归](evidence/merge-html-2026-11-25/README.md)及[合并引用合同](system/BACKEND_AND_API.md#conversation-merge-execution-current)。统一源引用识别，不改权限、迁移或原对话；前一候选完整 CI 通过不代替本次新增修复的资格。

@@ -3,8 +3,8 @@
 import { useScopedSort } from "../../components/use-scoped-sort";
 
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, type DragEndEvent, type DragStartEvent, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -50,6 +50,91 @@ function sameSortPriority(left: ConversationListItem, right: ConversationListIte
   return left.is_global_pinned === right.is_global_pinned;
 }
 
+// Own only the current list order, not navigation. In particular, releasing on
+// pointerup synchronously can replace the anchor before its native click.
+function useConversationLinkOrder(holdListOrder: () => () => void, scope: string): HTMLAttributes<HTMLDivElement> {
+  type Owner = { anchor: HTMLAnchorElement; release: () => void; controller: AbortController; pointerId: number | null; frame: number | null };
+  const active = useRef<Owner | null>(null);
+  const hold = useRef(holdListOrder);
+  hold.current = holdListOrder;
+
+  function release(owner = active.current) {
+    if (!owner || active.current !== owner) return;
+    active.current = null;
+    owner.controller.abort();
+    if (owner.frame !== null) cancelAnimationFrame(owner.frame);
+    owner.release();
+  }
+  function afterActivation(owner: Owner) {
+    if (active.current !== owner || owner.frame !== null) return;
+    owner.frame = requestAnimationFrame(() => release(owner));
+  }
+  function anchorFor(event: { target: EventTarget; currentTarget: HTMLDivElement }) {
+    const anchor = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+    return anchor && event.currentTarget.contains(anchor) ? anchor : null;
+  }
+  function acquire(anchor: HTMLAnchorElement) {
+    if (active.current?.anchor === anchor) {
+      if (active.current.frame !== null) cancelAnimationFrame(active.current.frame);
+      active.current.frame = null;
+      return active.current;
+    }
+    release();
+    const owner: Owner = { anchor, release: hold.current(), controller: new AbortController(), pointerId: null, frame: null };
+    active.current = owner;
+    const options = { capture: true, signal: owner.controller.signal };
+    window.addEventListener("pointerup", event => {
+      if (owner.pointerId === event.pointerId) {
+        owner.pointerId = null;
+        afterActivation(owner);
+      }
+    }, options);
+    window.addEventListener("pointercancel", event => {
+      if (owner.pointerId === event.pointerId) release(owner);
+    }, options);
+    window.addEventListener("blur", () => release(owner), { signal: owner.controller.signal });
+    return owner;
+  }
+
+  // Scope/account changes and unmount must not carry interaction ownership into
+  // another list, including an interaction interrupted by selection mode.
+  useLayoutEffect(() => () => release(), [scope]);
+  // Removing a focused DOM node does not reliably emit blur. A background
+  // result can remove this row without changing the list's scope.
+  useLayoutEffect(() => {
+    const owner = active.current;
+    if (owner && !owner.anchor.isConnected) release(owner);
+  });
+
+  return {
+    onPointerDownCapture: event => {
+      if (!event.isPrimary || (event.button !== 0 && event.button !== 1)) return;
+      const anchor = anchorFor(event);
+      if (anchor) acquire(anchor).pointerId = event.pointerId;
+    },
+    onFocusCapture: event => {
+      const anchor = anchorFor(event);
+      if (anchor) acquire(anchor);
+    },
+    onBlurCapture: event => {
+      const owner = active.current;
+      if (owner && owner.anchor === anchorFor(event) && owner.pointerId === null) release(owner);
+    },
+    onKeyDownCapture: event => {
+      const anchor = anchorFor(event);
+      if (anchor && event.key === "Enter") acquire(anchor);
+      if (event.key === "Escape") release();
+    },
+    onClick: event => {
+      const owner = active.current;
+      if (owner?.anchor === anchorFor(event)) afterActivation(owner);
+    },
+    onAuxClick: event => {
+      const owner = active.current;
+      if (owner?.anchor === anchorFor(event)) afterActivation(owner);
+    },
+  };
+}
 
 export function ConversationList({
   onImportClick,
@@ -102,6 +187,7 @@ export function ConversationList({
       setSelectedConversationIds(new Set());
       setMergeOrderIds([]);
       setSelectionMode(false);
+      setHeldOrder(null);
     };
     window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, clearForIdentityChange);
     return () => window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, clearForIdentityChange);
@@ -132,6 +218,7 @@ export function ConversationList({
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+  const conversationLinkHandlers = useConversationLinkOrder(holdListOrder, JSON.stringify([mode, tagId, viewGeneration, selectionMode]));
   const pageSize = 100;
   const conversationsQuery = useInfiniteQuery({
     queryKey: ["conversations", "paged", mode, tagId, conversationSortMode, conversationSortDirection],
@@ -657,7 +744,7 @@ export function ConversationList({
                     aria-label={`${zh ? "选择" : "Select"} ${conversation.display_title || conversation.title}${(titleCounts.get(conversation.display_title || conversation.title) ?? 0) > 1 ? ` · ${conversation.project_name || (zh?"未归类":"Unclassified")}` : ""}`}
                   />
                 </label>
-                <div className="min-w-0">
+                <div className="min-w-0" {...(!selectionMode ? conversationLinkHandlers : {})}>
                   {selectionMode ? <button type="button" className="block w-full text-left" onClick={() => toggleConversationSelection(conversation.id, !selectedConversationIds.has(conversation.id))}>
                     <h3 className="truncate text-base font-semibold text-primary">
                       {conversation.is_global_pinned ? (resolvedLocale === "zh-CN" ? "置顶 · " : "Pinned · ") : ""}

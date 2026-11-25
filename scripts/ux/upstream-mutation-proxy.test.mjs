@@ -113,6 +113,17 @@ test("GET still chooses the seeded pool socket when the peer resets it", async (
   assert.deepEqual(proxy.observations(), { connections: 1, resets: 1 });
 });
 
+for (const method of ["GET", "HEAD", "OPTIONS"]) {
+  test(`${method} to the Reader API avoids an expired pooled socket without replay`, async (t) => {
+    const proxy = await seedPool(t);
+    const result = await request(proxy.port, method, "/api/conversations/synthetic/reader-turn?anchor=synthetic");
+    assert.equal(result.status, 204);
+    assert.deepEqual(proxy.errors, []);
+    assert.deepEqual(proxy.mutations, [method]);
+    assert.deepEqual(proxy.observations(), { connections: 2, resets: 0 });
+  });
+}
+
 test("GET, HEAD and OPTIONS still reuse a healthy upstream socket", async (t) => {
   const sockets = [], methods = [];
   const api = http.createServer((req, res) => {

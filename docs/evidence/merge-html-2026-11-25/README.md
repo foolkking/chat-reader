@@ -185,3 +185,47 @@ successful rerun used a fresh synthetic database, not a changed assertion.
 The standalone runtime also lacks an unused ESM source file required by one
 source-equivalence control; the full dependency image passed all eleven.
 These local results do not replace the next exact-commit CI or signed release.
+
+## v0.1.9: archive activation before the reading assertion
+
+The proxy repair `97e19367b0ce48886a8b4f4e6e597694105056db` passed exact
+branch run `45638462292/1`, all 19 jobs and independent native/image checks.
+Its protected tag qualification `45644445123/1` then failed one of 60 reading
+cases in job `139311528820`; parent `45644411382/1` did not publish.
+The first archive-to-Reader click failed before the delayed bookmark and touch
+inputs were installed. This was not an observed failure of the drift limit.
+All 19 API requests in that window succeeded; no Reader-window or position
+read followed. The missing original event trace prevents unique attribution.
+
+Controlled actual-browser runs found two separate causes of lost native
+activation: removing the empty project section moved the pressed link by
+116px/96px at 375px/1280px; delivering account preferences instead replaced
+the pressed anchor at the same coordinates. The correction puts projects
+after conversations and owns the existing list order for the native gesture
+or keyboard focus. It never forces navigation or replays the click.
+Independent review also found and corrected orphaned ownership after a
+background read removes a focused link without changing scope.
+
+See the [pre-edit audit and acceptance boundaries](archive-navigation-audit.md).
+The new 12-case browser gate has its own configuration and artifact. It does
+not add skips to default PWA or alter the original 14 gates, 60 reading cases,
+124 mutation/recovery cases, timeouts or assertions. The old failed tags and
+all attempted evidence remain retained.
+
+The local follow-up initially passed all 60 reading cases and their independent
+frame checks, then passed 123 of 124 recovery cases. A real `reader-turn`
+GET on a message deep link received 500 from the proxy (`ECONNRESET`). The API
+had no matching failed request. Its later successful window read displayed the
+body, while the UI correctly offered **Retry locate**. The original settled
+assertion at `release-mutation-lifecycle.spec.ts:58` remained necessary.
+Real TCP controls reproduced the gap for GET, HEAD and OPTIONS under `/api`.
+The pinned patch now uses a fresh connection for each Reader API call without
+replaying reads or writes. The existing eleven transport controls are intact.
+
+The isolated final Web build passed the twelve new archive cases, all sixty
+reading cases and their native frame verifier, and all 124 mutation/recovery
+cases, including the previously failing message deep link. Each browser case
+ran once. Frozen dependency installation, lint, typecheck and 2,642 Node
+tests passed. The fourteen transport controls passed on Windows Node 24 and
+the pinned Linux Node 22.13.1. [Local reports and source hashes](archive-navigation-local-verification.json)
+retain the earlier failed run and trace. Production deployment is tracked separately.
