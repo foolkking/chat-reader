@@ -1,5 +1,30 @@
 # Imported HTML attachment cards: merge failure — 2026-11-25
 
+## Delivered: v0.1.10, November 26
+
+Exact source `7c4574b005d663a79e99698a2fa7d9eabf3e4cc4` passed branch
+`45665830564/1` and tag qualification `45671364525/1`, each 19/19.
+Signed publication `45671333305/1` passed 4/4. Release 458520473's
+seven assets, native test evidence, signatures and both GHCR images were
+independently verified. Transient TLS/REST verification failures were retained;
+they did not bypass verification or cause a second publish.
+
+The enrolled host updater deployed this version to `king`, migrating
+0064 → 0065. Success was observed at 03:14:40 Asia/Shanghai, followed by
+independent image, health, worker, configuration, mount and backup checks.
+The user's loaded extension folder was then replaced with the exact 0.3.0
+bundle, preserving its ID and browser storage. Browser reload and personal
+ChatGPT acceptance remain the user's steps. The original failed production
+merge was not replayed.
+
+Six unused historical images were removed; user data and backups were not.
+The new backup passed full readback but has no independent restore proof yet,
+so the previous validated recovery set is also retained. See the
+[production and extension receipt](v0.1.10-production.json) and
+[deployment/recovery boundaries](../../deployment.md#v0110-production).
+The failures and intermediate results below remain historical evidence,
+not unresolved release status.
+
 ## Observed production failure (read-only)
 
 Production was `v0.1.7` / `6da435a70f0485a116c84525da899bfd8f234434`,

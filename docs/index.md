@@ -1,16 +1,18 @@
 # 文档导航
 
+- **当前交付：[v0.1.10生产部署、两套恢复点的保留原因](deployment.md#v0110-production)** · [精确CI、签名、生产与插件0.3.0脱敏回执](evidence/merge-html-2026-11-25/v0.1.10-production.json)。用户实际加载目录已原位替换，仍需在浏览器重新加载；原失败合并未自动重试。
+
 - 合并失败排查：[HTML 卡片附件引用误判、合成回归与发布边界](evidence/merge-html-2026-11-25/README.md)。生产只读查因，不跳过附件校验或修改用户原文。
 
-- 发布导航修复：[v0.1.9 归档首次点击失败、真实竞态及原生导航审查](evidence/merge-html-2026-11-25/archive-navigation-audit.md) · [候选交互合同](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#对话原生链接与迟到列表读取2026-11-26-候选)。保留失败标签；没有放宽阅读门槛。
+- 发布导航修复：[v0.1.9 归档首次点击失败、真实竞态及原生导航审查](evidence/merge-html-2026-11-25/archive-navigation-audit.md) · [已上线交互合同](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#对话原生链接与迟到列表读取2026-11-26-候选)。保留失败标签；没有放宽阅读门槛。
 
-- 浏览器插件复审收尾：[20状态对照、修复、真实隔离测试与未验证边界](evidence/extension-design-2026-11-25/README.md)。本地候选尚未通过正式CI/发布，保留原失败及真实ChatGPT/Chrome安装证据缺口。
+- 浏览器插件复审收尾：[20状态对照、修复、真实隔离测试与未验证边界](evidence/extension-design-2026-11-25/README.md)。功能已随v0.1.10/插件0.3.0交付；保留原失败及个人ChatGPT实机验收证据缺口。
 
-- 浏览器插件本轮：[统一设计 v2 初审失败表](execution/ux-audit-extension-design-v2-2026-11-25.md) · [修复后候选合同与真实来源边界](system/BROWSER_EXTENSION.md#unified-candidate)（未发布）。
+- 浏览器插件本轮：[统一设计 v2 初审失败表](execution/ux-audit-extension-design-v2-2026-11-25.md) · [0.3.0合同与真实来源边界](system/BROWSER_EXTENSION.md#unified-candidate)。
 
-- [本地候选：长对话分块采集、续传与读取进度](system/BROWSER_EXTENSION.md#capture-streaming-candidate) · [跨仓大包、PostgreSQL、Edge 与失败记录](evidence/extension-capture-2026-11-25/README.md)。未发布部署，不代表完整插件优化计划完成。
+- [已交付：长对话分块采集、续传与读取进度](system/BROWSER_EXTENSION.md#capture-streaming-candidate) · [跨仓大包、PostgreSQL、Edge 与失败记录](evidence/extension-capture-2026-11-25/README.md)。历史局部结果不替代最终精确资格。
 
-- [当前生产 v0.1.7：插件登记、末尾追加、项目导出及独立恢复](deployment.md#v017-production) · [CI、签名、生产实测与单份保留回执](evidence/reader-extension-append-2026-11-24/v0.1.7-production.json)。
+- [历史生产 v0.1.7：插件登记、末尾追加、项目导出及独立恢复](deployment.md#v017-production) · [CI、签名、生产实测与当时单份保留回执](evidence/reader-extension-append-2026-11-24/v0.1.7-production.json)。
 
 - [项目对话导出的范围和文件内容](system/DATA_ARCHIVE_CONTRACT.md) · [批量选择、范围复核与真实 ZIP 验收](evidence/project-batch-export-2026-11-23/README.md#implemented)。
 

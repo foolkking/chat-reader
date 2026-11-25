@@ -1,8 +1,9 @@
 # Next LTS Migration Contract
 
-Last synchronized: 2026-11-25
+Last synchronized: 2026-11-26
 
-### Upstream mutation proxy — candidate 2026-11-25
+<a id="upstream-mutation-proxy--candidate-2026-11-25"></a>
+### Upstream mutation proxy — deployed in v0.1.10
 
 The locked dependency remains Next 16.4.5. The `pnpm` patch uses a fresh
 upstream connection for every Reader `/api` or `/api/*` rewrite, including
@@ -23,12 +24,13 @@ streaming, upstream errors and a lost
 response after one accepted write. Both the package metadata and the lockfile
 must retain the patch for frozen installs and Docker builds. Re-evaluate it
 with that regression suite when upgrading Next. See the
-[failed release and local controls](../evidence/merge-html-2026-11-25/README.md#branch-ci-and-the-v018-release-attempt);
-deployment status is maintained in `PROJECT_STATE.md`.
+[failed release and local controls](../evidence/merge-html-2026-11-25/README.md#branch-ci-and-the-v018-release-attempt)
+and the [v0.1.10 production receipt](../evidence/merge-html-2026-11-25/v0.1.10-production.json).
+Deployment status is maintained in `PROJECT_STATE.md`.
 
 The following paragraph records the November 19 dependency checkpoint.
 
-Current deployed26b35501 pins **Next 16.4.5**, **React/react-dom 19.2.8** in
+The then-deployed 26b35501 pins **Next 16.4.5**, **React/react-dom 19.2.8** in
 `apps/web/package.json` and `pnpm-lock.yaml`. Web CI and image runtime use
 **Node 22.13.1** in the workflow and Dockerfile. The locked Next upgrade is outside
 the affected range of GHSA-mfr8-8qww-v76h; the November 18 official-registry
