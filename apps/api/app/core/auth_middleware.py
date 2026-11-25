@@ -41,7 +41,11 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             origin = request.headers.get("origin")
             if origin and origin not in {"chrome-extension://" + client for client in settings.reader_extension_ids}:
                 return _json_error(403, "Unregistered origin.")
-            if request.url.path != "/api/extension/v1/token":
+            public_grant = request.method == "POST" and request.url.path in {
+                "/api/extension/v1/token", "/api/extension/v1/pair/start",
+                "/api/extension/v1/pair/poll", "/api/extension/v1/pair/cancel",
+            }
+            if not public_grant:
                 def verify():
                     with SessionLocal() as db:
                         return authenticate_device(db, request.headers.get("authorization"), origin)

@@ -50,12 +50,19 @@ class ApiShardTests(unittest.TestCase):
         original = json.loads((ROOT / "scripts/ci/quality-schedule-v2.json").read_text("utf8"))
         self.assertEqual(original["api"]["collected_count"], 7010)
         self.assertEqual(original["api"]["expected_passed"], 7007)
-        self.assertEqual(plan["api"]["collected_count"], 7116)
-        self.assertEqual(plan["api"]["expected_passed"], 7113)
-        self.assertEqual(sum(plan["api"]["added_file_counts"].values()), 106)
+        self.assertEqual(plan["api"]["collected_count"], 7267)
+        self.assertEqual(plan["api"]["expected_passed"], 7264)
+        self.assertEqual(sum(plan["api"]["added_file_counts"].values()), 257)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_project_export_scope.py"], 6)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_selective_append.py"], 6)
-        self.assertEqual(plan["api"]["added_file_counts"]["tests/test_reader_extension.py"], 15)
+        self.assertEqual(plan["api"]["added_file_counts"]["tests/test_reader_extension.py"], 17)
+        for file, count in {
+            "test_extension_release_postgres.py": 18, "test_extension_retry.py": 18,
+            "test_extension_transfer.py": 4, "test_extension_transfer_postgres.py": 2,
+            "test_memory_probe_windows.py": 5, "test_reader_index_metadata.py": 19,
+            "test_reader_long_message_storage.py": 83,
+        }.items():
+            self.assertEqual(plan["api"]["added_file_counts"]["tests/" + file], count)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_program_update_confirmation.py"], 1)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_reader_find.py"], 6)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_admin_updates.py"], 9)

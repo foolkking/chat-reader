@@ -1,0 +1,58 @@
+
+> web@0.0.0 build <READER_REPO>\apps\web
+> next build --webpack
+
+▲ Next.js 16.4.5 (webpack)
+✓ Running next.config.mjs took 64ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 28.1s
+  Running TypeScript ...
+  Finished TypeScript in 7.8s ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/23) ...
+  Generating static pages using 15 workers (5/23)
+  Generating static pages using 15 workers (11/23)
+  Generating static pages using 15 workers (17/23)
+✓ Generating static pages using 15 workers (23/23) in 3.4s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /account-upgrade
+├ ƒ /admin/users/[userId]/conversations/[conversationId]
+├ ƒ /annotations
+├ ƒ /append-imports/[id]
+├ ƒ /archived
+├ ƒ /compare
+├ ƒ /conversations/[conversationId]
+├ ƒ /conversations/[conversationId]/append
+├ ƒ /conversations/[conversationId]/print
+├ ƒ /duplicates
+├ ƒ /example
+├ ƒ /extension/connect/[client]/[challenge]/[state]
+├ ƒ /extension/devices
+├ ƒ /files
+├ ƒ /library
+├ ƒ /login
+├ ƒ /offline
+├ ƒ /projects/[projectId]
+├ ƒ /projects/[projectId]/export
+├ ƒ /read-together
+├ ƒ /reading-list
+├ ƒ /recent
+├ ƒ /register
+├ ƒ /reset-password
+├ ƒ /search
+├ ƒ /share/[token]
+├ ƒ /tags
+└ ƒ /verify-email
+
+Route (pages)
+─ ƒ /api/imports/[importId]/commit
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand

@@ -98,3 +98,69 @@ test("an unrelated authorization error keeps the existing generic message", asyn
   await expect(alert).not.toContainText(/limit|Disconnect an older browser/i);
   await expect(page.getByRole("link", { name: "Open Reader" })).toHaveCount(0);
 });
+
+for (const locale of ["en-US", "zh-CN"] as const) {
+  test(`${locale}: short code requires explicit review and approval; a changed account cannot approve`, async ({ page, context, baseURL }) => {
+    await openConsent(page, context, baseURL!, locale, 403);
+    const zh = locale === "zh-CN";
+    let approvals = 0, previews = 0, changedAccount = false;
+    await page.route("**/api/auth/session", route => route.fulfill({ json: changedAccount
+      ? { ...session, user_id: "00000000-0000-4000-8000-00000000000b" } : session }));
+    await page.route("**/api/extension-devices", route => route.fulfill({ json: { enabled: true, items: [] } }));
+    await page.route("**/api/extension-devices/pair/preview", async route => {
+      previews++;
+      expect(route.request().postDataJSON()).toEqual({ code: "ABCD-EFGH", expected_user_id: userId });
+      await route.fulfill({ json: { device_name: "Synthetic Edge" } });
+    });
+    await page.route("**/api/extension-devices/pair/approve", async route => {
+      approvals++;
+      await route.fulfill({ json: { approved: true } });
+    });
+    await page.goto(`${baseURL}/extension/devices`);
+    const input = page.getByLabel(zh ? "插件配对短码" : "Extension pairing code");
+    await input.fill("ABCD-EFGH");
+    await page.getByRole("button", { name: zh ? "核对设备" : "Review device" }).click();
+    await expect(page.getByText(/Synthetic Edge/)).toBeVisible();
+    await expect(page.getByText(/Synthetic reader/)).toBeVisible();
+    expect(approvals).toBe(0);
+    changedAccount = true;
+    await page.getByRole("button", { name: zh ? "批准此设备" : "Approve this device" }).click();
+    await expect(page.getByRole("status")).toContainText(zh ? "未确认授权" : "Authorization unconfirmed");
+    expect(approvals).toBe(0);
+    expect(previews).toBe(1);
+    const dimensions = await page.evaluate(() => ({
+      width: document.documentElement.scrollWidth,
+      viewport: innerWidth,
+      inputHeight: document.querySelector<HTMLInputElement>("#reader-device-code")!.getBoundingClientRect().height,
+    }));
+    expect(dimensions.width).toBeLessThanOrEqual(dimensions.viewport);
+    expect(dimensions.inputHeight).toBeGreaterThanOrEqual(44);
+  });
+}
+
+test("short-code approval refreshes the device list and revocation has an explicit recovery", async ({ page, context, baseURL }) => {
+  await openConsent(page, context, baseURL!, "en-US", 403);
+  let granted = false, revoked = false;
+  const deviceId = "00000000-0000-4000-8000-0000000000cd";
+  await page.route("**/api/extension-devices", route => route.fulfill({ json: { enabled: true, items: granted && !revoked
+    ? [{ id: deviceId, name: "Synthetic Edge", created_at: "2026-11-25T00:00:00Z", expires_at: "2026-12-25T00:00:00Z" }] : [] } }));
+  await page.route("**/api/extension-devices/pair/preview", route => route.fulfill({ json: { device_name: "Synthetic Edge" } }));
+  await page.route("**/api/extension-devices/pair/approve", async route => {
+    granted = true;
+    await route.fulfill({ json: { approved: true } });
+  });
+  await page.route(`**/api/extension-devices/${deviceId}`, async route => {
+    expect(route.request().method()).toBe("DELETE");
+    revoked = true;
+    await route.fulfill({ status: 204 });
+  });
+  await page.goto(`${baseURL}/extension/devices`);
+  await page.getByLabel("Extension pairing code").fill("ABCD-EFGH");
+  await page.getByRole("button", { name: "Review device" }).click();
+  await page.getByRole("button", { name: "Approve this device" }).click();
+  await expect(page.getByRole("status")).toContainText("Approved");
+  await expect(page.getByText("Synthetic Edge", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Revoke access" }).click();
+  await expect(page.getByText("No authorized extensions.")).toBeVisible();
+  expect(revoked).toBe(true);
+});

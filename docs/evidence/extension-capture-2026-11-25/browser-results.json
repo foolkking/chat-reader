@@ -1,0 +1,2519 @@
+{
+  "at": "2026-11-25T07:05:09.339Z",
+  "kind": "real Edge, synthetic source/runtime only",
+  "files": {
+    "glyphs.js": "cf2a12bc0ebd58374015add35e1be1cf06b7687a22b05dde26e36b62a659c06b",
+    "progress.js": "73fd3d3523373501300116d1f6ee46688b5e8abd1c7a01b59d63c80de38d924b",
+    "page-index.js": "8e1a5b91403ca5d2e776d404383a8cad324c557db6dfb8ed38059e5e546387e8",
+    "source-control.js": "1fa517ad79f2eb1f44bae7cb5b9c36287637a7bab6a90b6f14ad87df51c78989"
+  },
+  "scenarios": [
+    {
+      "name": "desktop-zh",
+      "stages": [
+        {
+          "step": {
+            "stage": "source",
+            "pages": 2,
+            "done": 524288
+          },
+          "main": "正在保存…",
+          "text": "读取对话 · 第 2 页 · 512.0 KiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 364,
+            "y": 98,
+            "width": 712,
+            "height": 500,
+            "right": 1076,
+            "bottom": 598
+          },
+          "host": {
+            "x": 1250.09375,
+            "y": 745,
+            "width": 177.90625,
+            "height": 79,
+            "right": 1428,
+            "bottom": 824
+          },
+          "composer": {
+            "x": 364,
+            "y": 836,
+            "width": 712,
+            "height": 52,
+            "right": 1076,
+            "bottom": 888
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "读取对话 · 0 B",
+            ""
+          ],
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "bodyWidth": 1440
+        },
+        {
+          "step": {
+            "stage": "index",
+            "done": 50001
+          },
+          "main": "正在保存…",
+          "text": "核对来源 · 50001",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 364,
+            "y": 98,
+            "width": 712,
+            "height": 500,
+            "right": 1076,
+            "bottom": 598
+          },
+          "host": {
+            "x": 1271.609375,
+            "y": 745,
+            "width": 156.390625,
+            "height": 79,
+            "right": 1428,
+            "bottom": 824
+          },
+          "composer": {
+            "x": 364,
+            "y": 836,
+            "width": 712,
+            "height": 52,
+            "right": 1076,
+            "bottom": 888
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "核对来源 · 50001",
+            ""
+          ],
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "bodyWidth": 1440
+        },
+        {
+          "step": {
+            "stage": "messages",
+            "done": 50000,
+            "total": 50001
+          },
+          "main": "正在保存…",
+          "text": "整理消息 · 50000 / 50001",
+          "progressHidden": false,
+          "meterHidden": false,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 364,
+            "y": 98,
+            "width": 712,
+            "height": 500,
+            "right": 1076,
+            "bottom": 598
+          },
+          "host": {
+            "x": 1268.875,
+            "y": 734,
+            "width": 159.125,
+            "height": 90,
+            "right": 1428,
+            "bottom": 824
+          },
+          "composer": {
+            "x": 364,
+            "y": 836,
+            "width": 712,
+            "height": 52,
+            "right": 1076,
+            "bottom": 888
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "整理消息 · 50000 / 50001",
+            ""
+          ],
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "bodyWidth": 1440
+        },
+        {
+          "step": {
+            "stage": "asset",
+            "files": 1,
+            "done": 17825792
+          },
+          "main": "正在保存…",
+          "text": "接收附件 · 第 1 个 · 17.0 MiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 364,
+            "y": 98,
+            "width": 712,
+            "height": 500,
+            "right": 1076,
+            "bottom": 598
+          },
+          "host": {
+            "x": 1252.75,
+            "y": 745,
+            "width": 175.25,
+            "height": 79,
+            "right": 1428,
+            "bottom": 824
+          },
+          "composer": {
+            "x": 364,
+            "y": 836,
+            "width": 712,
+            "height": 52,
+            "right": 1076,
+            "bottom": 888
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "接收附件 · 第 1 个 · 17.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "bodyWidth": 1440
+        },
+        {
+          "step": {
+            "stage": "package",
+            "done": 115343360
+          },
+          "main": "正在保存…",
+          "text": "生成导入包 · 110.0 MiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 364,
+            "y": 98,
+            "width": 712,
+            "height": 500,
+            "right": 1076,
+            "bottom": 598
+          },
+          "host": {
+            "x": 1271.609375,
+            "y": 745,
+            "width": 156.390625,
+            "height": 79,
+            "right": 1428,
+            "bottom": 824
+          },
+          "composer": {
+            "x": 364,
+            "y": 836,
+            "width": 712,
+            "height": 52,
+            "right": 1076,
+            "bottom": 888
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "生成导入包 · 110.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "bodyWidth": 1440
+        },
+        {
+          "step": {
+            "stage": "upload",
+            "done": 4194304,
+            "total": 131072000
+          },
+          "main": "正在保存…",
+          "text": "上传到 Reader · 4.0 MiB / 125.0 MiB",
+          "progressHidden": false,
+          "meterHidden": false,
+          "meterValue": 4194304,
+          "meterMax": 131072000,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 364,
+            "y": 98,
+            "width": 712,
+            "height": 500,
+            "right": 1076,
+            "bottom": 598
+          },
+          "host": {
+            "x": 1213.84375,
+            "y": 734,
+            "width": 214.15625,
+            "height": 90,
+            "right": 1428,
+            "bottom": 824
+          },
+          "composer": {
+            "x": 364,
+            "y": 836,
+            "width": 712,
+            "height": 52,
+            "right": 1076,
+            "bottom": 888
+          },
+          "menu": [
+            "在资料库查看",
+            "在此对话隐藏按钮"
+          ],
+          "active": "在资料库查看",
+          "note": [
+            "上传到 Reader · 4.0 MiB / 125.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "bodyWidth": 1440
+        }
+      ],
+      "widths": [
+        712,
+        712,
+        712,
+        712,
+        712,
+        712
+      ],
+      "screenshots": [
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-00-baseline.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-01-source.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-01b-after-virtualization.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-02-index.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-03-messages.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-04-asset.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-05-package.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-06-upload.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-07-upload-menu.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-08-paused.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-09-resumed-from-background.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-10-saved.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-10b-branch-changed.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-11-denied-before-reading.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\desktop-zh-12-source-changed.png"
+      ],
+      "beforeWidth": 712,
+      "afterVirtualization": {
+        "sample": {
+          "before": 1,
+          "after": 1
+        },
+        "state": {
+          "main": "正在保存…",
+          "text": "读取对话 · 768.0 KiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 364,
+            "y": 98,
+            "width": 712,
+            "height": 500,
+            "right": 1076,
+            "bottom": 598
+          },
+          "host": {
+            "x": 1271.609375,
+            "y": 745,
+            "width": 156.390625,
+            "height": 79,
+            "right": 1428,
+            "bottom": 824
+          },
+          "composer": {
+            "x": 364,
+            "y": 836,
+            "width": 712,
+            "height": 52,
+            "right": 1076,
+            "bottom": 888
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "读取对话 · 0 B",
+            ""
+          ],
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "bodyWidth": 1440
+        }
+      },
+      "interrupted": {
+        "main": "继续上传",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 4194304,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 364,
+          "y": 98,
+          "width": 712,
+          "height": 500,
+          "right": 1076,
+          "bottom": 598
+        },
+        "host": {
+          "x": 1283,
+          "y": 778,
+          "width": 145,
+          "height": 46,
+          "right": 1428,
+          "bottom": 824
+        },
+        "composer": {
+          "x": 364,
+          "y": 836,
+          "width": 712,
+          "height": 52,
+          "right": 1076,
+          "bottom": 888
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "bodyWidth": 1440
+      },
+      "resumed": {
+        "main": "正在保存…",
+        "text": "上传到 Reader · 9.0 MiB / 125.0 MiB",
+        "progressHidden": false,
+        "meterHidden": false,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": "reader-transfer-description",
+        "disabled": true,
+        "line": {
+          "x": 364,
+          "y": 98,
+          "width": 712,
+          "height": 500,
+          "right": 1076,
+          "bottom": 598
+        },
+        "host": {
+          "x": 1213.84375,
+          "y": 734,
+          "width": 214.15625,
+          "height": 90,
+          "right": 1428,
+          "bottom": 824
+        },
+        "composer": {
+          "x": 364,
+          "y": 836,
+          "width": 712,
+          "height": 52,
+          "right": 1076,
+          "bottom": 888
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "上传到 Reader · 9.0 MiB / 125.0 MiB",
+          ""
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "bodyWidth": 1440
+      },
+      "receiptAttemptAfterVirtualization": "synthetic-attempt",
+      "afterRealBranchChange": {
+        "main": "打开已存版本",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 364,
+          "y": 98,
+          "width": 712,
+          "height": 500,
+          "right": 1076,
+          "bottom": 598
+        },
+        "host": {
+          "x": 1236,
+          "y": 778,
+          "width": 192,
+          "height": 46,
+          "right": 1428,
+          "bottom": 824
+        },
+        "composer": {
+          "x": 364,
+          "y": 836,
+          "width": 712,
+          "height": 52,
+          "right": 1076,
+          "bottom": 888
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "bodyWidth": 1440
+      },
+      "deniedBeforeReading": {
+        "main": "重新连接 Reader",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 364,
+          "y": 98,
+          "width": 712,
+          "height": 500,
+          "right": 1076,
+          "bottom": 598
+        },
+        "host": {
+          "x": 1235,
+          "y": 778,
+          "width": 193,
+          "height": 46,
+          "right": 1428,
+          "bottom": 824
+        },
+        "composer": {
+          "x": 364,
+          "y": 836,
+          "width": 712,
+          "height": 52,
+          "right": 1076,
+          "bottom": 888
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "bodyWidth": 1440
+      },
+      "afterRealContentEdit": {
+        "main": "正在保存…",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": true,
+        "line": {
+          "x": 364,
+          "y": 98,
+          "width": 712,
+          "height": 500,
+          "right": 1076,
+          "bottom": 598
+        },
+        "host": {
+          "x": 1271.609375,
+          "y": 778,
+          "width": 156.390625,
+          "height": 46,
+          "right": 1428,
+          "bottom": 824
+        },
+        "composer": {
+          "x": 364,
+          "y": 836,
+          "width": 712,
+          "height": 52,
+          "right": 1076,
+          "bottom": 888
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "bodyWidth": 1440
+      },
+      "maxWidthChange": 0,
+      "pass": true
+    },
+    {
+      "name": "narrow-zh",
+      "stages": [
+        {
+          "step": {
+            "stage": "source",
+            "pages": 2,
+            "done": 524288
+          },
+          "main": "正在保存…",
+          "text": "读取对话 · 第 2 页 · 512.0 KiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 185.09375,
+            "y": 657,
+            "width": 177.90625,
+            "height": 79,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "读取对话 · 0 B",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        },
+        {
+          "step": {
+            "stage": "index",
+            "done": 50001
+          },
+          "main": "正在保存…",
+          "text": "核对来源 · 50001",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 206.609375,
+            "y": 657,
+            "width": 156.390625,
+            "height": 79,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "核对来源 · 50001",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        },
+        {
+          "step": {
+            "stage": "messages",
+            "done": 50000,
+            "total": 50001
+          },
+          "main": "正在保存…",
+          "text": "整理消息 · 50000 / 50001",
+          "progressHidden": false,
+          "meterHidden": false,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 203.875,
+            "y": 646,
+            "width": 159.125,
+            "height": 90,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "整理消息 · 50000 / 50001",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        },
+        {
+          "step": {
+            "stage": "asset",
+            "files": 1,
+            "done": 17825792
+          },
+          "main": "正在保存…",
+          "text": "接收附件 · 第 1 个 · 17.0 MiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 187.75,
+            "y": 657,
+            "width": 175.25,
+            "height": 79,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "接收附件 · 第 1 个 · 17.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        },
+        {
+          "step": {
+            "stage": "package",
+            "done": 115343360
+          },
+          "main": "正在保存…",
+          "text": "生成导入包 · 110.0 MiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 206.609375,
+            "y": 657,
+            "width": 156.390625,
+            "height": 79,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "生成导入包 · 110.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        },
+        {
+          "step": {
+            "stage": "upload",
+            "done": 4194304,
+            "total": 131072000
+          },
+          "main": "正在保存…",
+          "text": "上传到 Reader · 4.0 MiB / 125.0 MiB",
+          "progressHidden": false,
+          "meterHidden": false,
+          "meterValue": 4194304,
+          "meterMax": 131072000,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 148.84375,
+            "y": 646,
+            "width": 214.15625,
+            "height": 90,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [
+            "在资料库查看",
+            "在此对话隐藏按钮"
+          ],
+          "active": "在资料库查看",
+          "note": [
+            "上传到 Reader · 4.0 MiB / 125.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        }
+      ],
+      "widths": [
+        327,
+        327,
+        327,
+        327,
+        327,
+        327
+      ],
+      "screenshots": [
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-00-baseline.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-01-source.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-01b-after-virtualization.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-02-index.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-03-messages.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-04-asset.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-05-package.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-06-upload.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-07-upload-menu.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-08-paused.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-09-resumed-from-background.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-10-saved.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-10b-branch-changed.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-11-denied-before-reading.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-zh-12-source-changed.png"
+      ],
+      "beforeWidth": 327,
+      "afterVirtualization": {
+        "sample": {
+          "before": 1,
+          "after": 1
+        },
+        "state": {
+          "main": "正在保存…",
+          "text": "读取对话 · 768.0 KiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 206.609375,
+            "y": 657,
+            "width": 156.390625,
+            "height": 79,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "读取对话 · 0 B",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        }
+      },
+      "interrupted": {
+        "main": "继续上传",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 4194304,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 24,
+          "y": 98,
+          "width": 327,
+          "height": 500,
+          "right": 351,
+          "bottom": 598
+        },
+        "host": {
+          "x": 218,
+          "y": 690,
+          "width": 145,
+          "height": 46,
+          "right": 363,
+          "bottom": 736
+        },
+        "composer": {
+          "x": 12,
+          "y": 748,
+          "width": 351,
+          "height": 52,
+          "right": 363,
+          "bottom": 800
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "bodyWidth": 375
+      },
+      "resumed": {
+        "main": "正在保存…",
+        "text": "上传到 Reader · 9.0 MiB / 125.0 MiB",
+        "progressHidden": false,
+        "meterHidden": false,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": "reader-transfer-description",
+        "disabled": true,
+        "line": {
+          "x": 24,
+          "y": 98,
+          "width": 327,
+          "height": 500,
+          "right": 351,
+          "bottom": 598
+        },
+        "host": {
+          "x": 148.84375,
+          "y": 646,
+          "width": 214.15625,
+          "height": 90,
+          "right": 363,
+          "bottom": 736
+        },
+        "composer": {
+          "x": 12,
+          "y": 748,
+          "width": 351,
+          "height": 52,
+          "right": 363,
+          "bottom": 800
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "上传到 Reader · 9.0 MiB / 125.0 MiB",
+          ""
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "bodyWidth": 375
+      },
+      "receiptAttemptAfterVirtualization": "synthetic-attempt",
+      "afterRealBranchChange": {
+        "main": "打开已存版本",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 24,
+          "y": 98,
+          "width": 327,
+          "height": 500,
+          "right": 351,
+          "bottom": 598
+        },
+        "host": {
+          "x": 171,
+          "y": 690,
+          "width": 192,
+          "height": 46,
+          "right": 363,
+          "bottom": 736
+        },
+        "composer": {
+          "x": 12,
+          "y": 748,
+          "width": 351,
+          "height": 52,
+          "right": 363,
+          "bottom": 800
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "bodyWidth": 375
+      },
+      "deniedBeforeReading": {
+        "main": "重新连接 Reader",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 24,
+          "y": 98,
+          "width": 327,
+          "height": 500,
+          "right": 351,
+          "bottom": 598
+        },
+        "host": {
+          "x": 170,
+          "y": 690,
+          "width": 193,
+          "height": 46,
+          "right": 363,
+          "bottom": 736
+        },
+        "composer": {
+          "x": 12,
+          "y": 748,
+          "width": 351,
+          "height": 52,
+          "right": 363,
+          "bottom": 800
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "bodyWidth": 375
+      },
+      "afterRealContentEdit": {
+        "main": "正在保存…",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": true,
+        "line": {
+          "x": 24,
+          "y": 98,
+          "width": 327,
+          "height": 500,
+          "right": 351,
+          "bottom": 598
+        },
+        "host": {
+          "x": 206.609375,
+          "y": 690,
+          "width": 156.390625,
+          "height": 46,
+          "right": 363,
+          "bottom": 736
+        },
+        "composer": {
+          "x": 12,
+          "y": 748,
+          "width": 351,
+          "height": 52,
+          "right": 363,
+          "bottom": 800
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "bodyWidth": 375
+      },
+      "maxWidthChange": 0,
+      "pass": true
+    },
+    {
+      "name": "compact-en",
+      "stages": [
+        {
+          "step": {
+            "stage": "source",
+            "pages": 2,
+            "done": 524288
+          },
+          "main": "Saving…",
+          "text": "Reading conversation · page 2 · 512.0 KiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 132,
+            "width": 272,
+            "height": 500,
+            "right": 296,
+            "bottom": 632
+          },
+          "host": {
+            "x": 75,
+            "y": 547,
+            "width": 233,
+            "height": 97,
+            "right": 308,
+            "bottom": 644
+          },
+          "composer": {
+            "x": 12,
+            "y": 656,
+            "width": 296,
+            "height": 52,
+            "right": 308,
+            "bottom": 708
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "Reading conversation · 0 B",
+            ""
+          ],
+          "viewport": {
+            "width": 320,
+            "height": 720
+          },
+          "bodyWidth": 320
+        },
+        {
+          "step": {
+            "stage": "index",
+            "done": 50001
+          },
+          "main": "Saving…",
+          "text": "Indexing source · 50001",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 132,
+            "width": 272,
+            "height": 500,
+            "right": 296,
+            "bottom": 632
+          },
+          "host": {
+            "x": 156.6875,
+            "y": 565,
+            "width": 151.3125,
+            "height": 79,
+            "right": 308,
+            "bottom": 644
+          },
+          "composer": {
+            "x": 12,
+            "y": 656,
+            "width": 296,
+            "height": 52,
+            "right": 308,
+            "bottom": 708
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "Indexing source · 50001",
+            ""
+          ],
+          "viewport": {
+            "width": 320,
+            "height": 720
+          },
+          "bodyWidth": 320
+        },
+        {
+          "step": {
+            "stage": "messages",
+            "done": 50000,
+            "total": 50001
+          },
+          "main": "Saving…",
+          "text": "Preparing messages · 50000 / 50001",
+          "progressHidden": false,
+          "meterHidden": false,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 132,
+            "width": 272,
+            "height": 500,
+            "right": 296,
+            "bottom": 632
+          },
+          "host": {
+            "x": 91,
+            "y": 554,
+            "width": 217,
+            "height": 90,
+            "right": 308,
+            "bottom": 644
+          },
+          "composer": {
+            "x": 12,
+            "y": 656,
+            "width": 296,
+            "height": 52,
+            "right": 308,
+            "bottom": 708
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "Preparing messages · 50000 / 50001",
+            ""
+          ],
+          "viewport": {
+            "width": 320,
+            "height": 720
+          },
+          "bodyWidth": 320
+        },
+        {
+          "step": {
+            "stage": "asset",
+            "files": 1,
+            "done": 17825792
+          },
+          "main": "Saving…",
+          "text": "Receiving file · file 1 · 17.0 MiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 132,
+            "width": 272,
+            "height": 500,
+            "right": 296,
+            "bottom": 632
+          },
+          "host": {
+            "x": 122.71875,
+            "y": 565,
+            "width": 185.28125,
+            "height": 79,
+            "right": 308,
+            "bottom": 644
+          },
+          "composer": {
+            "x": 12,
+            "y": 656,
+            "width": 296,
+            "height": 52,
+            "right": 308,
+            "bottom": 708
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "Receiving file · file 1 · 17.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 320,
+            "height": 720
+          },
+          "bodyWidth": 320
+        },
+        {
+          "step": {
+            "stage": "package",
+            "done": 115343360
+          },
+          "main": "Saving…",
+          "text": "Preparing archive · 110.0 MiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 132,
+            "width": 272,
+            "height": 500,
+            "right": 296,
+            "bottom": 632
+          },
+          "host": {
+            "x": 128.40625,
+            "y": 565,
+            "width": 179.59375,
+            "height": 79,
+            "right": 308,
+            "bottom": 644
+          },
+          "composer": {
+            "x": 12,
+            "y": 656,
+            "width": 296,
+            "height": 52,
+            "right": 308,
+            "bottom": 708
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "Preparing archive · 110.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 320,
+            "height": 720
+          },
+          "bodyWidth": 320
+        },
+        {
+          "step": {
+            "stage": "upload",
+            "done": 4194304,
+            "total": 131072000
+          },
+          "main": "Saving…",
+          "text": "Uploading to Reader · 4.0 MiB / 125.0 MiB",
+          "progressHidden": false,
+          "meterHidden": false,
+          "meterValue": 4194304,
+          "meterMax": 131072000,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 132,
+            "width": 272,
+            "height": 500,
+            "right": 296,
+            "bottom": 632
+          },
+          "host": {
+            "x": 75,
+            "y": 536,
+            "width": 233,
+            "height": 108,
+            "right": 308,
+            "bottom": 644
+          },
+          "composer": {
+            "x": 12,
+            "y": 656,
+            "width": 296,
+            "height": 52,
+            "right": 308,
+            "bottom": 708
+          },
+          "menu": [
+            "Open Reader library",
+            "Hide for this conversation"
+          ],
+          "active": "Open Reader library",
+          "note": [
+            "Uploading to Reader · 4.0 MiB / 125.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 320,
+            "height": 720
+          },
+          "bodyWidth": 320
+        }
+      ],
+      "widths": [
+        272,
+        272,
+        272,
+        272,
+        272,
+        272
+      ],
+      "screenshots": [
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-00-baseline.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-01-source.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-01b-after-virtualization.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-02-index.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-03-messages.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-04-asset.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-05-package.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-06-upload.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-07-upload-menu.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-08-paused.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-09-resumed-from-background.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-10-saved.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-10b-branch-changed.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-11-denied-before-reading.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\compact-en-12-source-changed.png"
+      ],
+      "beforeWidth": 272,
+      "afterVirtualization": {
+        "sample": {
+          "before": 1,
+          "after": 1
+        },
+        "state": {
+          "main": "Saving…",
+          "text": "Reading conversation · 768.0 KiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 132,
+            "width": 272,
+            "height": 500,
+            "right": 296,
+            "bottom": 632
+          },
+          "host": {
+            "x": 110.4375,
+            "y": 565,
+            "width": 197.5625,
+            "height": 79,
+            "right": 308,
+            "bottom": 644
+          },
+          "composer": {
+            "x": 12,
+            "y": 656,
+            "width": 296,
+            "height": 52,
+            "right": 308,
+            "bottom": 708
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "Reading conversation · 0 B",
+            ""
+          ],
+          "viewport": {
+            "width": 320,
+            "height": 720
+          },
+          "bodyWidth": 320
+        }
+      },
+      "interrupted": {
+        "main": "Resume upload",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 4194304,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 24,
+          "y": 132,
+          "width": 272,
+          "height": 500,
+          "right": 296,
+          "bottom": 632
+        },
+        "host": {
+          "x": 121.109375,
+          "y": 598,
+          "width": 186.890625,
+          "height": 46,
+          "right": 308,
+          "bottom": 644
+        },
+        "composer": {
+          "x": 12,
+          "y": 656,
+          "width": 296,
+          "height": 52,
+          "right": 308,
+          "bottom": 708
+        },
+        "menu": [
+          "Open Reader library",
+          "Hide for this conversation"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 320,
+          "height": 720
+        },
+        "bodyWidth": 320
+      },
+      "resumed": {
+        "main": "Saving…",
+        "text": "Uploading to Reader · 9.0 MiB / 125.0 MiB",
+        "progressHidden": false,
+        "meterHidden": false,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": "reader-transfer-description",
+        "disabled": true,
+        "line": {
+          "x": 24,
+          "y": 132,
+          "width": 272,
+          "height": 500,
+          "right": 296,
+          "bottom": 632
+        },
+        "host": {
+          "x": 75,
+          "y": 536,
+          "width": 233,
+          "height": 108,
+          "right": 308,
+          "bottom": 644
+        },
+        "composer": {
+          "x": 12,
+          "y": 656,
+          "width": 296,
+          "height": 52,
+          "right": 308,
+          "bottom": 708
+        },
+        "menu": [
+          "Open Reader library",
+          "Hide for this conversation"
+        ],
+        "active": "",
+        "note": [
+          "Uploading to Reader · 9.0 MiB / 125.0 MiB",
+          ""
+        ],
+        "viewport": {
+          "width": 320,
+          "height": 720
+        },
+        "bodyWidth": 320
+      },
+      "receiptAttemptAfterVirtualization": "synthetic-attempt",
+      "afterRealBranchChange": {
+        "main": "Open saved version",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 24,
+          "y": 132,
+          "width": 272,
+          "height": 500,
+          "right": 296,
+          "bottom": 632
+        },
+        "host": {
+          "x": 75.53125,
+          "y": 598,
+          "width": 232.46875,
+          "height": 46,
+          "right": 308,
+          "bottom": 644
+        },
+        "composer": {
+          "x": 12,
+          "y": 656,
+          "width": 296,
+          "height": 52,
+          "right": 308,
+          "bottom": 708
+        },
+        "menu": [
+          "Open Reader library",
+          "Hide for this conversation"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 320,
+          "height": 720
+        },
+        "bodyWidth": 320
+      },
+      "deniedBeforeReading": {
+        "main": "Reconnect Reader",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 24,
+          "y": 132,
+          "width": 272,
+          "height": 500,
+          "right": 296,
+          "bottom": 632
+        },
+        "host": {
+          "x": 104.859375,
+          "y": 598,
+          "width": 203.140625,
+          "height": 46,
+          "right": 308,
+          "bottom": 644
+        },
+        "composer": {
+          "x": 12,
+          "y": 656,
+          "width": 296,
+          "height": 52,
+          "right": 308,
+          "bottom": 708
+        },
+        "menu": [
+          "Open Reader library",
+          "Hide for this conversation"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 320,
+          "height": 720
+        },
+        "bodyWidth": 320
+      },
+      "afterRealContentEdit": {
+        "main": "Saving…",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": true,
+        "line": {
+          "x": 24,
+          "y": 132,
+          "width": 272,
+          "height": 500,
+          "right": 296,
+          "bottom": 632
+        },
+        "host": {
+          "x": 165.3125,
+          "y": 598,
+          "width": 142.6875,
+          "height": 46,
+          "right": 308,
+          "bottom": 644
+        },
+        "composer": {
+          "x": 12,
+          "y": 656,
+          "width": 296,
+          "height": 52,
+          "right": 308,
+          "bottom": 708
+        },
+        "menu": [
+          "Open Reader library",
+          "Hide for this conversation"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 320,
+          "height": 720
+        },
+        "bodyWidth": 320
+      },
+      "maxWidthChange": 0,
+      "pass": true
+    },
+    {
+      "name": "narrow-dark",
+      "stages": [
+        {
+          "step": {
+            "stage": "source",
+            "pages": 2,
+            "done": 524288
+          },
+          "main": "正在保存…",
+          "text": "读取对话 · 第 2 页 · 512.0 KiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 185.09375,
+            "y": 657,
+            "width": 177.90625,
+            "height": 79,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "读取对话 · 0 B",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        },
+        {
+          "step": {
+            "stage": "index",
+            "done": 50001
+          },
+          "main": "正在保存…",
+          "text": "核对来源 · 50001",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 206.609375,
+            "y": 657,
+            "width": 156.390625,
+            "height": 79,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "核对来源 · 50001",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        },
+        {
+          "step": {
+            "stage": "messages",
+            "done": 50000,
+            "total": 50001
+          },
+          "main": "正在保存…",
+          "text": "整理消息 · 50000 / 50001",
+          "progressHidden": false,
+          "meterHidden": false,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 203.875,
+            "y": 646,
+            "width": 159.125,
+            "height": 90,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "整理消息 · 50000 / 50001",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        },
+        {
+          "step": {
+            "stage": "asset",
+            "files": 1,
+            "done": 17825792
+          },
+          "main": "正在保存…",
+          "text": "接收附件 · 第 1 个 · 17.0 MiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 187.75,
+            "y": 657,
+            "width": 175.25,
+            "height": 79,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "接收附件 · 第 1 个 · 17.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        },
+        {
+          "step": {
+            "stage": "package",
+            "done": 115343360
+          },
+          "main": "正在保存…",
+          "text": "生成导入包 · 110.0 MiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 50000,
+          "meterMax": 50001,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 206.609375,
+            "y": 657,
+            "width": 156.390625,
+            "height": 79,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "生成导入包 · 110.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        },
+        {
+          "step": {
+            "stage": "upload",
+            "done": 4194304,
+            "total": 131072000
+          },
+          "main": "正在保存…",
+          "text": "上传到 Reader · 4.0 MiB / 125.0 MiB",
+          "progressHidden": false,
+          "meterHidden": false,
+          "meterValue": 4194304,
+          "meterMax": 131072000,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 148.84375,
+            "y": 646,
+            "width": 214.15625,
+            "height": 90,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [
+            "在资料库查看",
+            "在此对话隐藏按钮"
+          ],
+          "active": "在资料库查看",
+          "note": [
+            "上传到 Reader · 4.0 MiB / 125.0 MiB",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        }
+      ],
+      "widths": [
+        327,
+        327,
+        327,
+        327,
+        327,
+        327
+      ],
+      "screenshots": [
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-00-baseline.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-01-source.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-01b-after-virtualization.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-02-index.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-03-messages.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-04-asset.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-05-package.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-06-upload.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-07-upload-menu.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-08-paused.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-09-resumed-from-background.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-10-saved.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-10b-branch-changed.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-11-denied-before-reading.png",
+        "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-progress-WEMMR7\\narrow-dark-12-source-changed.png"
+      ],
+      "beforeWidth": 327,
+      "afterVirtualization": {
+        "sample": {
+          "before": 1,
+          "after": 1
+        },
+        "state": {
+          "main": "正在保存…",
+          "text": "读取对话 · 768.0 KiB",
+          "progressHidden": false,
+          "meterHidden": true,
+          "meterValue": 0,
+          "meterMax": 1,
+          "described": "reader-transfer-description",
+          "disabled": true,
+          "line": {
+            "x": 24,
+            "y": 98,
+            "width": 327,
+            "height": 500,
+            "right": 351,
+            "bottom": 598
+          },
+          "host": {
+            "x": 206.609375,
+            "y": 657,
+            "width": 156.390625,
+            "height": 79,
+            "right": 363,
+            "bottom": 736
+          },
+          "composer": {
+            "x": 12,
+            "y": 748,
+            "width": 351,
+            "height": 52,
+            "right": 363,
+            "bottom": 800
+          },
+          "menu": [],
+          "active": "",
+          "note": [
+            "读取对话 · 0 B",
+            ""
+          ],
+          "viewport": {
+            "width": 375,
+            "height": 812
+          },
+          "bodyWidth": 375
+        }
+      },
+      "interrupted": {
+        "main": "继续上传",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 4194304,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 24,
+          "y": 98,
+          "width": 327,
+          "height": 500,
+          "right": 351,
+          "bottom": 598
+        },
+        "host": {
+          "x": 218,
+          "y": 690,
+          "width": 145,
+          "height": 46,
+          "right": 363,
+          "bottom": 736
+        },
+        "composer": {
+          "x": 12,
+          "y": 748,
+          "width": 351,
+          "height": 52,
+          "right": 363,
+          "bottom": 800
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "bodyWidth": 375
+      },
+      "resumed": {
+        "main": "正在保存…",
+        "text": "上传到 Reader · 9.0 MiB / 125.0 MiB",
+        "progressHidden": false,
+        "meterHidden": false,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": "reader-transfer-description",
+        "disabled": true,
+        "line": {
+          "x": 24,
+          "y": 98,
+          "width": 327,
+          "height": 500,
+          "right": 351,
+          "bottom": 598
+        },
+        "host": {
+          "x": 148.84375,
+          "y": 646,
+          "width": 214.15625,
+          "height": 90,
+          "right": 363,
+          "bottom": 736
+        },
+        "composer": {
+          "x": 12,
+          "y": 748,
+          "width": 351,
+          "height": 52,
+          "right": 363,
+          "bottom": 800
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "上传到 Reader · 9.0 MiB / 125.0 MiB",
+          ""
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "bodyWidth": 375
+      },
+      "receiptAttemptAfterVirtualization": "synthetic-attempt",
+      "afterRealBranchChange": {
+        "main": "打开已存版本",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 24,
+          "y": 98,
+          "width": 327,
+          "height": 500,
+          "right": 351,
+          "bottom": 598
+        },
+        "host": {
+          "x": 171,
+          "y": 690,
+          "width": 192,
+          "height": 46,
+          "right": 363,
+          "bottom": 736
+        },
+        "composer": {
+          "x": 12,
+          "y": 748,
+          "width": 351,
+          "height": 52,
+          "right": 363,
+          "bottom": 800
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "bodyWidth": 375
+      },
+      "deniedBeforeReading": {
+        "main": "重新连接 Reader",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": false,
+        "line": {
+          "x": 24,
+          "y": 98,
+          "width": 327,
+          "height": 500,
+          "right": 351,
+          "bottom": 598
+        },
+        "host": {
+          "x": 170,
+          "y": 690,
+          "width": 193,
+          "height": 46,
+          "right": 363,
+          "bottom": 736
+        },
+        "composer": {
+          "x": 12,
+          "y": 748,
+          "width": 351,
+          "height": 52,
+          "right": 363,
+          "bottom": 800
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "bodyWidth": 375
+      },
+      "afterRealContentEdit": {
+        "main": "正在保存…",
+        "text": "",
+        "progressHidden": true,
+        "meterHidden": true,
+        "meterValue": 9437184,
+        "meterMax": 131072000,
+        "described": null,
+        "disabled": true,
+        "line": {
+          "x": 24,
+          "y": 98,
+          "width": 327,
+          "height": 500,
+          "right": 351,
+          "bottom": 598
+        },
+        "host": {
+          "x": 206.609375,
+          "y": 690,
+          "width": 156.390625,
+          "height": 46,
+          "right": 363,
+          "bottom": 736
+        },
+        "composer": {
+          "x": 12,
+          "y": 748,
+          "width": 351,
+          "height": 52,
+          "right": 363,
+          "bottom": 800
+        },
+        "menu": [
+          "在资料库查看",
+          "在此对话隐藏按钮"
+        ],
+        "active": "",
+        "note": [
+          "",
+          ""
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "bodyWidth": 375
+      },
+      "maxWidthChange": 0,
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "browser": "Edg/158.0.4370.33",
+  "pass": true
+}

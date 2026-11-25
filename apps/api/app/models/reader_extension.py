@@ -21,6 +21,18 @@ class ExtensionDevice(Base):
     access_until: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    device_name: Mapped[str | None] = mapped_column(String(80))
+
+
+class ExtensionPairing(Base):
+    __tablename__ = "extension_pairings"
+    secret_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    code_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    client: Mapped[str] = mapped_column(String(32))
+    device_name: Mapped[str] = mapped_column(String(80))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    next_poll: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    device_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("extension_devices.id", ondelete="CASCADE"))
 
 
 class ExtensionSource(Base):

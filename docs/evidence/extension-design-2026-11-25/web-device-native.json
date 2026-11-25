@@ -1,0 +1,303 @@
+{
+  "config": {
+    "argv": [
+      "E:\\node.js\\node.exe",
+      "<READER_REPO>\\apps\\web\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--config=playwright.config.ts",
+      "e2e/extension-consent.spec.ts"
+    ],
+    "configFile": "<READER_REPO>\\apps\\web\\playwright.config.ts",
+    "rootDir": "E:/1project/chat-reader/apps/web/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "E:/1project/chat-reader/apps/web/test-results/extension-review-final",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "E:/1project/chat-reader/apps/web/e2e",
+        "testIgnore": [
+          "**/pwa-negative.spec.ts"
+        ],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "<READER_REPO>\\apps\\web\\e2e\\gate-evidence-reporter.ts",
+        {
+          "gateId": "extension-review-final",
+          "outputFile": "test-results/extension-review-final/gate-evidence.json"
+        }
+      ],
+      [
+        "json",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.0",
+    "workers": 1,
+    "webServer": {
+      "command": "corepack pnpm exec next start --hostname 127.0.0.1 -p 3107",
+      "url": "http://127.0.0.1:3107/library",
+      "timeout": 180000,
+      "reuseExistingServer": false
+    }
+  },
+  "suites": [
+    {
+      "title": "extension-consent.spec.ts",
+      "file": "extension-consent.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "en-US: a device-limit 409 gives the user an actionable recovery path",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 972,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-25T10:26:53.955Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fb4b5e9f754ee42178ed-30f3bb036f78188bbfbd",
+          "file": "extension-consent.spec.ts",
+          "line": 72,
+          "column": 7
+        },
+        {
+          "title": "zh-CN: a device-limit 409 gives the user an actionable recovery path",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 700,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-25T10:26:55.191Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fb4b5e9f754ee42178ed-ed8b193222e3b3f1622f",
+          "file": "extension-consent.spec.ts",
+          "line": 72,
+          "column": 7
+        },
+        {
+          "title": "an unrelated authorization error keeps the existing generic message",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 703,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-25T10:26:55.907Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fb4b5e9f754ee42178ed-157e36867670acde692c",
+          "file": "extension-consent.spec.ts",
+          "line": 93,
+          "column": 5
+        },
+        {
+          "title": "en-US: short code requires explicit review and approval; a changed account cannot approve",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 949,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-25T10:26:56.621Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fb4b5e9f754ee42178ed-296fdd59f3aeb6f53a8a",
+          "file": "extension-consent.spec.ts",
+          "line": 103,
+          "column": 7
+        },
+        {
+          "title": "zh-CN: short code requires explicit review and approval; a changed account cannot approve",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 993,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-25T10:26:57.582Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fb4b5e9f754ee42178ed-6251246e799eb7eabe41",
+          "file": "extension-consent.spec.ts",
+          "line": 103,
+          "column": 7
+        },
+        {
+          "title": "short-code approval refreshes the device list and revocation has an explicit recovery",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 90000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 970,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-25T10:26:58.586Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fb4b5e9f754ee42178ed-1fe59bf127b0d7cbdfd2",
+          "file": "extension-consent.spec.ts",
+          "line": 141,
+          "column": 5
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-25T10:26:51.142Z",
+    "duration": 8865.215999999999,
+    "expected": 6,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

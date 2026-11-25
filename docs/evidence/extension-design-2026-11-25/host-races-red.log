@@ -1,0 +1,7 @@
+{"kind":"environment","node":"v24.22.3","at":"2026-11-25T09:38:05.376Z","scope":"Synthetic current-code reproductions; no real accounts, network or repository writes.","sources":{"center.js":"f583a894efe74d7461b0ab562ca7b8c8177955094dc2b07b2e04d571dfb7ec46","host.js":"57679d7a8b25d8b2218e162f8b1ccffd6c3f57516c011df7473f7e193b832275","background.js":"ccd4c7b072245962b9adcd5a672bf22e0b318d6c46d442b1f06518cd666a70ba","batch-model.js":"ad4ee08746a21731205b5698299c0cbbf2646629751bdae022b47bb8316f47fc","source-file.js":"699eb47d8061197542edc13c7d29f22196ac533feaad361d5329a2f3809bd4f4","upload.js":"d39a57336958d91d99ec1102b2767dc1afa88fa0cd0428324bfd03cfdf1c11e7"}}
+{"finding":"cancelResumeRace","reproduced":true,"result":{"cancel_returned_ok":true,"later_uploaded":true,"events":["delete-404","local-removed","cancel-confirmed","created-after-cancel","local-removed"]}}
+{"finding":"cancelledTicket","reproduced":true,"result":{"source_starting_is_pending":false,"cancelled_item_ticket_authorized":true}}
+{"finding":"cancelledQueueItem","reproduced":true,"result":{"second_item_cancelled":true,"built":["first","second"],"submitted_items":2}}
+{"finding":"staleCleanup","reproduced":true,"result":{"package_sealed_after_snapshot":true,"ready_package_deleted":true}}
+{"finding":"retainedPageBuffers","reproduced":true,"result":{"pages":12,"single_message_bytes":3145728,"retained_parser_buffers":12,"retained_parser_bytes":37750096}}
+EXIT_CODE=0

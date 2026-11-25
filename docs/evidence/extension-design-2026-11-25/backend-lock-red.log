@@ -1,0 +1,62 @@
+synthetic_context_update_outcomes ['OperationalError:40P01', 'success']
+F
+================================== FAILURES ===================================
+__________ test_context_update_and_web_preset_write_have_no_deadlock __________
+
+database = (sessionmaker(class_='Session', bind=Engine(postgresql+psycopg://audit@127.0.0.1:56349/settings_formats_4f027ae4483b41...on_id=UUID('ad0f2964-f55f-4950-b51d-ba6687882d20'), user_id=UUID('ab3798df-4cbe-433b-bd65-25c60ef0d786'), role='USER'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FB8B1F20D0>
+
+    def test_context_update_and_web_preset_write_have_no_deadlock(database, monkeypatch):
+        from app.api.routes import reader_extension as route
+        from app.services import user_feature_entries as features
+        from app.services.preferences import get_or_create_preferences
+        factory, _, context = database
+        subject = str(context.user_id)
+        request = SimpleNamespace(state=SimpleNamespace(auth=context))
+        with factory() as db:
+            get_or_create_preferences(db, subject); db.commit()
+        preference_locked, collection_locked = Event(), Event()
+        real_preferences, real_entry = route.get_or_create_preferences, features._lock_entry
+        def observed_preferences(db, subject):
+            result = real_preferences(db, subject)
+            preference_locked.set()
+            assert collection_locked.wait(10)
+            return result
+        def observed_entry(db, subject, collection, entry):
+            real_entry(db, subject, collection, entry)
+            collection_locked.set()
+        monkeypatch.setattr(route, 'get_or_create_preferences', observed_preferences)
+        monkeypatch.setattr(features, '_lock_entry', observed_entry)
+        def extension():
+            with factory() as db:
+                try:
+                    route.update_options(route.QuickOptions(preset_id=None, revision=0, include_attachments=True, include_continuation=True), request, db)
+                    return 'success'
+                except Exception as exc:
+                    db.rollback()
+                    return type(exc).__name__ + ':' + str(getattr(getattr(exc, 'orig', None), 'sqlstate', ''))
+        def web():
+            assert preference_locked.wait(10)
+            with factory() as db:
+                try:
+                    features.write_entry(db, subject, 'export-preset', uuid.uuid4(), 0, {'format':'context', 'name':'Synthetic concurrent preset'})
+                    db.commit()
+                    return 'success'
+                except Exception as exc:
+                    db.rollback()
+                    return type(exc).__name__ + ':' + str(getattr(getattr(exc, 'orig', None), 'sqlstate', ''))
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            first, second = executor.submit(extension), executor.submit(web)
+            outcomes = [first.result(timeout=20), second.result(timeout=20)]
+        print('synthetic_context_update_outcomes', outcomes)
+>       assert outcomes == ['success', 'success'], outcomes
+E       AssertionError: ['OperationalError:40P01', 'success']
+E       assert ['Operational...1', 'success'] == ['success', 'success']
+E
+E         At index 0 diff: 'OperationalError:40P01' != 'success'
+E         Use -v to get more diff
+
+<TASK_EVIDENCE>\backend\test_backend_release_audit.py:85: AssertionError
+=========================== short test summary info ===========================
+FAILED ..\..\..\..\chat-reader-temp\extension-release-review-20261125\backend\test_backend_release_audit.py::test_context_update_and_web_preset_write_have_no_deadlock
+1 failed in 7.53s

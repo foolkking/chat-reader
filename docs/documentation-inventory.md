@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+2026-11-25（提交前）：[统一设计修复与效果复审](evidence/extension-design-2026-11-25/README.md)对应两个原分支，补充20状态、前后截图、授权/计划/内存红绿证据和完整CI覆盖新增151项。同步Project State、导航和Fork 0.3.0候选README；不将本地207通过/63跳过冒充全项成功，不删除历史失败或唯一生产备份。
+
+2026-11-25（复审后候选，未发布）：[统一设计 v2 修复前审查](execution/ux-audit-extension-design-v2-2026-11-25.md)保留全部初始失败；[候选交互、配对、目录与导入恢复合同](system/BROWSER_EXTENSION.md#unified-candidate)区分真实 API/worker 运行与合成来源、真实 ChatGPT 未核验范围。完整 CI/签名发布不得用本地测试替代。
+
+2026-11-25（本地未发布）：[浏览器采集与续传合同](system/BROWSER_EXTENSION.md#capture-streaming-candidate)、[长消息内部草稿兼容边界](system/ADAPTIVE_IMPORT_CONTRACT.md#reader-long-message-candidate)、[测试与失败证据](evidence/extension-capture-2026-11-25/README.md)。同步 Project State、导航及 Fork 的 `reader/README.md`；区分旧 0.2.0 已发布行为与候选，不用局部通过认证既有浮层／配对／批量导入改动。
+
 2026-11-25：[当前生产 v0.1.7 与升级前单套恢复点](deployment.md#v017-production) · [精确 CI、签名制品、同源探测与隔离恢复记录](evidence/reader-extension-append-2026-11-24/v0.1.7-production.json) · [私有浏览器包安装及设备授权](system/BROWSER_EXTENSION.md)。区分已启用的服务端、隔离环境 UI 验收与用户自己在生产进行的登录测试。
 
 2026-11-24：[签名发布的两次失败及隔离复现](evidence/reader-extension-append-2026-11-24/delivery-check.md#release-repair)记录侧栏拖放、迟到排序及生产旧版 Compose 的边界。[网页更新合同](system/ONLINE_UPDATES.md)说明迁移前的宿主机能力检查。

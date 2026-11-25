@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 
 export const BASE_SCHEDULE_SHA256 = "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee";
-export const COVERAGE_SHA256 = "d45b04df24fbe1eecd77672425810a901c4582155104006fbe24b3204bdaf822";
+export const COVERAGE_SHA256 = "6db3617f022f5cf70153b6c49f6bae19c196d74a1a9304a06bff73cb84349b71";
 export const ORIGINAL_SHA256 = "af1523d28f658f4bd3d1b3a6ad2f018250b5b909db0f7b81f4e00eeeb212084c";
 export const digest = (data) => crypto.createHash("sha256").update(data).digest("hex");
 export const SCHEDULE_SHA256 = digest(`${BASE_SCHEDULE_SHA256}:${COVERAGE_SHA256}`);

@@ -19,7 +19,7 @@ import { getCurrentOfflineRuntimeUserId } from "../../lib/auth-client";
 import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, DialogueIndexResponse, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput, TocResponse } from "../../lib/types";
 import { ContinuationWorkspace } from "../exporting/continuation-workspace";
 import type { ContinuationViewState } from "../exporting/continuation-index";
-import { ExportPanel, type ExportPanelState } from "../exporting/export-panel";
+import { ContextPackageDelivery, ExportPanel, type ExportPanelState } from "../exporting/export-panel";
 import { OfflineExportPanel } from "../exporting/offline-export-panel";
 import { useQuickContext } from "../browser-extension/quick-context";
 import { MobileSidebarTrigger, ProjectSidebar } from "../projects/project-sidebar";
@@ -3618,6 +3618,11 @@ export function ConversationReader({
           <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">{resolvedLocale === "zh-CN" ? "对话简介" : "Conversation description"}</h2><button type="button" className="min-h-11 px-3 text-sm text-secondary" onClick={() => setDescriptionDismissed(conversationId)}>{resolvedLocale === "zh-CN" ? "关闭" : "Close"}</button></div>
           <p className="whitespace-pre-wrap break-words text-sm leading-6">{conversation.description_markdown || (resolvedLocale === "zh-CN" ? "简介已移除。" : "The description has been removed.")}</p>
         </section> : null}
+        {quickContext.ready ? <aside aria-label={resolvedLocale==="zh-CN"?"上下文包已生成":"Context package ready"} className="absolute bottom-3 right-3 z-30 max-h-[55dvh] max-w-[min(23rem,calc(100%-1.5rem))] overflow-auto rounded-lg border border-ui bg-raised p-3 text-sm">
+          <strong>{resolvedLocale==="zh-CN"?"上下文包已生成":"Context package ready"}</strong> <button type="button" className="min-h-11 px-2 text-accent" onClick={quickContext.dismiss}>{resolvedLocale==="zh-CN"?"收起":"Dismiss"}</button>
+          <p>{quickContext.ready.summary}</p>
+          <ContextPackageDelivery downloadUrl="" defaultSkillLocale={resolvedLocale==="zh-CN"?"zh-CN":"en"} downloadControl={<button type="button" className="btn-secondary min-h-11 px-3" onClick={()=>void quickContext.download()}>{resolvedLocale==="zh-CN"?"下载上下文包":"Download context package"}</button>}/>
+        </aside>:null}
         {quickContext.error ? <p role="alert" className="absolute bottom-3 right-3 z-30 max-w-xs rounded-lg border border-ui bg-raised p-3 text-sm">
           {quickContext.error}</p> : null}
         {keyboardNavigationFeedback ? (

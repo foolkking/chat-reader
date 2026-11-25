@@ -1,0 +1,7 @@
+
+> chat-reader@0.0.0 typecheck <READER_REPO>
+> corepack pnpm --filter web typecheck
+
+
+> web@0.0.0 typecheck <READER_REPO>\apps\web
+> tsc --noEmit

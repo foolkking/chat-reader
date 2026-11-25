@@ -1,5 +1,11 @@
 # 文档导航
 
+- 浏览器插件复审收尾：[20状态对照、修复、真实隔离测试与未验证边界](evidence/extension-design-2026-11-25/README.md)。本地候选尚未通过正式CI/发布，保留原失败及真实ChatGPT/Chrome安装证据缺口。
+
+- 浏览器插件本轮：[统一设计 v2 初审失败表](execution/ux-audit-extension-design-v2-2026-11-25.md) · [修复后候选合同与真实来源边界](system/BROWSER_EXTENSION.md#unified-candidate)（未发布）。
+
+- [本地候选：长对话分块采集、续传与读取进度](system/BROWSER_EXTENSION.md#capture-streaming-candidate) · [跨仓大包、PostgreSQL、Edge 与失败记录](evidence/extension-capture-2026-11-25/README.md)。未发布部署，不代表完整插件优化计划完成。
+
 - [当前生产 v0.1.7：插件登记、末尾追加、项目导出及独立恢复](deployment.md#v017-production) · [CI、签名、生产实测与单份保留回执](evidence/reader-extension-append-2026-11-24/v0.1.7-production.json)。
 
 - [项目对话导出的范围和文件内容](system/DATA_ARCHIVE_CONTRACT.md) · [批量选择、范围复核与真实 ZIP 验收](evidence/project-batch-export-2026-11-23/README.md#implemented)。

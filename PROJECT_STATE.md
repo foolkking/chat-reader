@@ -1,5 +1,9 @@
 # Project State
 
+**2026-11-25 插件统一设计复审修复完成、本地候选未发布。** 实现名称搜索、共用浮层与项目入口、短码、AI包/Skill、真实命中导航及四步批量中心；补齐固定分页、跨项目核对、冲突跳过和恢复竞态。插件0.3.0仍同ID；API/worker/Web须先迁至单head0065，不走无迁移快路径。Node全仓207通过/63原有私有夹具跳过，真实Edge＋隔离API/PG/worker16项及canonical读回11项通过；真实ChatGPT与Chrome解压安装未认证。API完整CI覆盖清单增加151项至7267（原3跳过不变），不以本机中断的全量尝试宣称成功。[修复、20状态对照、失败和验证边界](docs/evidence/extension-design-2026-11-25/README.md) · [当前候选合同](docs/system/BROWSER_EXTENSION.md#unified-candidate)。
+
+**2026-11-25 本地候选，未发布：插件长对话采集与读取进度。** 两仓仍在 `codex/reader-extension`，取消插件原 8/32 MiB JSON、16 MiB 附件、100 MiB 包、2 MiB 正文及 50,000 条消息采集门槛，改为分块处理、OPFS 暂存和可续传收据；展示实测阶段与计数。Reader 对索引消息使用原子导入和长正文旁文件，保留实际内存、空间及管理员容量政策，不承诺无限资源。API/worker 必须同版后再更新插件。局部测试不代表之前完整浮层／配对／批量导入计划已交付，也不替代 CI 或真实账号验收。[合同与兼容边界](docs/system/BROWSER_EXTENSION.md#capture-streaming-candidate) · [测试、失败与截图](docs/evidence/extension-capture-2026-11-25/README.md)。
+
 **当前生产：`king` 已从 `v0.1.5` 升到 `v0.1.7` / `6da435a70f0485a116c84525da899bfd8f234434`。** 2026-11-25 10:37:13（北京时间），同源入口验证新版登录页及 API；数据库 `20261123_0064`，640 MiB worker 心跳正常，浏览器插件 0.2.0 的设备登记已配置。两仓 CI、标签资格及签名发布通过。只留一套升级前的已核验数据、配置和旧程序；跨 schema 不提供网页一键回滚。[本次上线与恢复边界](docs/deployment.md#v017-production) · [安装和授权](docs/system/BROWSER_EXTENSION.md#安装连接撤销)。
 
 **浏览器插件与末尾追加（已上线）：** [桌面浏览器插件](docs/system/BROWSER_EXTENSION.md)使用设备授权、已有来源保护和共享 Context 快捷出口。侧栏以对话为单位，缺附件的保存保持“部分完成”，项目和动作取自实际提交。ChatGPT 可先勾消息，Reader 正文也可固定目标从文件追加；只追加到末尾。已受理后刷新保留勾选与目标；末尾变化须重新确认，未归属的回答独立成轮。迁移单 head `20261123_0064`。[基线审查](docs/planning/ux-audit-reader-extension-2026-11-23.md) · [侧栏实测](docs/evidence/browser-extension-polish-2026-11-23/README.md) · [真实收件、末尾争用、Context 下载与门槛](docs/evidence/reader-extension-append-2026-11-24/README.md)。线上启用情况见上方部署记录；隔离浏览器结果不代替个人账号验收。

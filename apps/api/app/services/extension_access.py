@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.core.config import get_settings
-from app.models.auth import AuthPrincipal
+from app.models.auth import AuthPrincipal, AuthSession
 from app.models.reader_extension import ExtensionDevice
 from app.models.user import User
 from app.services.auth import AuthContext
@@ -50,20 +50,50 @@ def principal_for(db, grant):
     return user
 
 
-def issue_code(db, context, client, challenge):
-    check_client(client)
-    principal = db.get(AuthPrincipal, context.principal_id)
-    if not principal or not principal.user_id or principal.user_id != context.user_id:
-        raise HTTPException(403, "An active Reader account is required.")
+def lock_authorizing_session(db, context):
+    """Recheck the Web authority at grant creation, not just at middleware entry.
+
+    Match credential mutations' user -> principal -> session order. In particular,
+    never stamp an old, revoked request with the principal's newer credential version.
+    Keep these locks through grant publication (both pairing and legacy PKCE).
+    """
+    user = db.scalar(select(User).where(User.id == context.user_id)
+                     .with_for_update().execution_options(populate_existing=True))
+    principal = db.scalar(select(AuthPrincipal).where(AuthPrincipal.id == context.principal_id)
+                          .with_for_update().execution_options(populate_existing=True))
+    session = db.scalar(select(AuthSession).where(AuthSession.id == context.session_id)
+                        .with_for_update().execution_options(populate_existing=True))
     now = datetime.now(timezone.utc)
-    code = secrets.token_urlsafe(32)
+    if (not user or not user.can_login or not principal or principal.user_id != user.id
+            or not session or session.principal_id != principal.id or session.revoked_at is not None
+            or session.credential_version != principal.credential_version
+            or session.credential_version != user.credential_version
+            or not alive(session.last_activity_at + timedelta(
+                seconds=get_settings().auth_inactivity_timeout_seconds), now)):
+        raise HTTPException(401, "Sign in to Reader again before connecting a browser.")
+    return principal
+
+
+def reserve_device(db, context, client, *, until, challenge=None, code_hash=None, device_name=None):
+    check_client(client)
+    principal = lock_authorizing_session(db, context)
+    now = datetime.now(timezone.utc)
     db.query(ExtensionDevice).filter(ExtensionDevice.user_id == principal.user_id,
                                       ExtensionDevice.expires_at <= now).delete(synchronize_session=False)
     if db.query(ExtensionDevice).filter_by(user_id=principal.user_id).count() >= 32:
         raise HTTPException(409, "Disconnect an older browser first.")
-    db.add(ExtensionDevice(user_id=principal.user_id, client=client, credential_version=principal.credential_version,
-                           challenge=challenge, code_hash=digest(code), created_at=now,
-                           access_until=now + timedelta(minutes=2), expires_at=now + timedelta(minutes=2)))
+    grant = ExtensionDevice(user_id=principal.user_id, client=client, credential_version=principal.credential_version,
+                            challenge=challenge, code_hash=code_hash, created_at=now, device_name=device_name,
+                            access_until=until, expires_at=until)
+    db.add(grant)
+    db.flush()
+    return grant
+
+
+def issue_code(db, context, client, challenge):
+    code = secrets.token_urlsafe(32)
+    reserve_device(db, context, client, until=datetime.now(timezone.utc) + timedelta(minutes=2),
+                   code_hash=digest(code), challenge=challenge)
     db.commit()
     return code
 
@@ -79,13 +109,18 @@ def exchange(db, client, *, code=None, verifier=None, refresh=None):
         raise HTTPException(401, "Expired or invalid authorization.")
     if code:
         grant.expires_at = now + timedelta(days=30)
+    result = rotate_grant(grant, user, now)
+    db.commit()
+    return result
+
+
+def rotate_grant(grant, user, now):
     grant.code_hash = grant.challenge = None
     access, refresh = secrets.token_urlsafe(32), secrets.token_urlsafe(48)
     grant.access_hash, grant.refresh_hash = digest(access), digest(refresh)
     grant.access_until = now + timedelta(minutes=10)
     result = dict(access_token=access, refresh_token=refresh, expires_in=600, device_id=grant.id,
                   user_id=user.id, account=user.display_name or user.normalized_email or "Reader", scopes=SCOPES)
-    db.commit()
     return result
 
 

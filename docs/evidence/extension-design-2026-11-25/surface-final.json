@@ -1,0 +1,99 @@
+{
+  "at": "2026-11-25T10:13:38.261Z",
+  "kind": "real Edge unpacked extension; synthetic ChatGPT page + mock local Reader, no private account",
+  "screens": [
+    "<TASK_EVIDENCE>\\extension\\surface-release-221704d5\\surface-final-library-a.png"
+  ],
+  "errors": [],
+  "checks": [
+    {
+      "name": "common handle injected by packaged content scripts",
+      "pass": true
+    },
+    {
+      "name": "dynamic-WAR extension iframe loads",
+      "pass": true
+    },
+    {
+      "name": "real frame-claim gate populated private panel",
+      "pass": true
+    },
+    {
+      "name": "short code visible inside extension frame",
+      "pass": true
+    },
+    {
+      "name": "parent DOM excludes short code",
+      "pass": true
+    },
+    {
+      "name": "body width invariant",
+      "pass": true,
+      "baseline": 700
+    },
+    {
+      "name": "center file exists",
+      "pass": true
+    }
+  ],
+  "browser": "Edg/158.0.4370.33",
+  "frameURLs": [
+    "https://chatgpt.com/c/synthetic-review",
+    "chrome-extension://gihbiofiiflkckcmomddkkjkoifkddfi/frame.html#REDACTED-TICKET"
+  ],
+  "frameState": {
+    "title": "Chat Reader",
+    "connect": "连接 Reader",
+    "body": "\nChat Reader导入\n\n  http://127.0.0.1:43187连接 Reader在 Reader 的账号安全 → 浏览器插件中输入短码。10 分钟有效。在 Reader 核对并授权 取消配对\n  重新读取资料\n  \n    \n    \n      \n    选择新对话的保存位置\n    \n    \n    加载更多\n  \n  \n\n\n  设置\n  连接与授权管理已授权设备\n  导入到 Reader\n  新对话保存到确认\n    在 ChatGPT 页内显示此项目名称\n    仅保存正文（不下载附件）\n  打开 ChatGPT 对话时，将当前对话标识发给 Reader 以查找已存版本\n  交给 AI\n    包含可导出的附件原文件\n    包含已保存的 Current 和 Index\n    保存账号预设\n  最近任务断开此设备\n\n最近任务\n\n\n\n"
+  },
+  "workerURL": "chrome-extension://gihbiofiiflkckcmomddkkjkoifkddfi/background.js",
+  "grantDebug": [
+    {
+      "kind": "surface-tab",
+      "sameID": true,
+      "frame": 0,
+      "framePage": false,
+      "hasTab": true,
+      "senderURL": "https://chatgpt.com/c/synthetic-review",
+      "expectedURL": "chrome-extension://2e3f7b60-2adc-493f-a47c-738bebe95ed1/frame.html"
+    },
+    {
+      "kind": "surface-tab",
+      "sameID": true,
+      "frame": 0,
+      "framePage": false,
+      "hasTab": true,
+      "senderURL": "https://chatgpt.com/c/synthetic-review",
+      "expectedURL": "chrome-extension://2e3f7b60-2adc-493f-a47c-738bebe95ed1/frame.html"
+    },
+    {
+      "kind": "frame-ticket",
+      "sameID": true,
+      "frame": 0,
+      "framePage": false,
+      "hasTab": true,
+      "senderURL": "https://chatgpt.com/c/synthetic-review",
+      "expectedURL": "chrome-extension://2e3f7b60-2adc-493f-a47c-738bebe95ed1/frame.html"
+    },
+    {
+      "kind": "frame-claim",
+      "sameID": true,
+      "frame": 3,
+      "framePage": true,
+      "hasTab": true,
+      "senderURL": "chrome-extension://gihbiofiiflkckcmomddkkjkoifkddfi/frame.html",
+      "expectedURL": "chrome-extension://2e3f7b60-2adc-493f-a47c-738bebe95ed1/frame.html",
+      "ticketShape": true,
+      "ticketExists": true,
+      "tabSame": true,
+      "ownerLive": true,
+      "expired": false
+    }
+  ],
+  "scope": {
+    "registeredFrames": 1,
+    "pairingExists": true
+  },
+  "centerURL": "chrome-extension://gihbiofiiflkckcmomddkkjkoifkddfi/center.html?tab=44341591",
+  "centerText": "\nChat Reader导入到 ReaderReader 资料库\n\n  1  选择来源2  选择对话3  确认 Reader 目标4  查看任务\n  \n  \n    从哪里导入？\n      ChatGPT 网页只读取你选择的标签页中已发现的对话；目录不完整时不提供整个项目选择。选择 ChatGPT 标签页\n      官方导出包在本机读取 ZIP；只有确认后的对话及所选附件会发送到 Reader。选择 ZIP 或 conversations.json\n    \n    有保留的导入计划已接收的"
+}

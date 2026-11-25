@@ -129,7 +129,7 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
     if not export_dir.is_relative_to(export_root):
         raise ContextPackageError("Invalid export storage path.")
     export_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{_safe_filename(conversation.display_title)}.context.zip"
+    filename = f"{_safe_filename(conversation.display_title or conversation.title)}.context.zip"
     # A failed retry must never overwrite another still-referenced result.
     destination = export_dir / f"{package_id.hex}-{filename}"
     temporary = staging_path(destination)
@@ -505,6 +505,14 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
         byte_size=published.byte_size,
         expires_at=exported_at + timedelta(hours=24),
     )
+    # Copy only bounded, non-sensitive outcomes from the exact published manifest.
+    artifact.context_delivery = {
+        "records": attachment_count, "files": len(asset_entries),
+        "partial": manifest["asset_completeness"] == "partial",
+        "current": "continuation/current.md" in continuation_members,
+        "index": "continuation/index.json" in continuation_members,
+        "continuation": manifest["extensions"]["chat_reader_continuation_export"]["status"],
+    }
     if not record_artifact:
         _report(progress_callback, "publishing", 99, total, total)
         cleanup_paths.remove(destination)

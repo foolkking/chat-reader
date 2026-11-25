@@ -31,6 +31,14 @@ ASSET_LINE_RE = re.compile(
     r'^ {0,3}(?P<image>!)?\[(?P<label>[^\]]*)\]\(cr-asset://(?P<attachment_id>[A-Za-z0-9._:-]+)(?:\s+["\'][^"\']*["\'])?\)\s*$'
 )
 TASK_LINE_RE = re.compile(r"^(?P<prefix>\s*[-+*]\s+)\[(?P<checked>[ xX])\](?P<label>(?:\s+.*)?)$")
+SOURCE_LINE_RE = re.compile(r".*?(?:\r\n|[\n\r\v\f\x1c-\x1e\x85\u2028\u2029]|\Z)", re.DOTALL)
+
+
+def _source_lines(text):
+    """str.splitlines(keepends=True) semantics without retaining every line."""
+    for match in SOURCE_LINE_RE.finditer(text):
+        if match.end() > match.start():
+            yield match.group()
 
 
 def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
@@ -49,13 +57,21 @@ def iter_basic_render_blocks(display_text: str):
     from app.services.adaptive_import.memory_budget import MAX_BLOCKS, checkpoint, current_budget, enforce_limit
 
     class BoundedBlocks(list):
+        def __init__(self):
+            super().__init__()
+            self.total = 0
+
         def append(self, block) -> None:
-            enforce_limit(len(self) + 1, MAX_BLOCKS)
-            if len(self) % 64 == 0:
+            # This queue is drained after every source line. Its current length
+            # is neither the total block count nor a useful checkpoint cadence.
+            enforce_limit(self.total + 1, MAX_BLOCKS)
+            if self.total % 64 == 0:
                 checkpoint()
+            self.total += 1
             super().append(block)
 
-    blocks: list[RenderBlockDraft] = BoundedBlocks() if current_budget() is not None else []
+    bounded = current_budget() is not None
+    blocks: list[RenderBlockDraft] = BoundedBlocks() if bounded else []
     paragraph_lines: list[tuple[str, int]] = []
     code_lines: list[str] = []
     in_code = False
@@ -105,7 +121,11 @@ def iter_basic_render_blocks(display_text: str):
             )
 
     source_offset = 0
-    for source_line in display_text.splitlines(keepends=True):
+    for source_line_number, source_line in enumerate(_source_lines(display_text), 1):
+        # A long paragraph/code fence may not emit a block for many lines.
+        # Check its growing line buffer too, not just completed blocks.
+        if bounded and source_line_number % 256 == 0:
+            checkpoint()
         yield from blocks
         blocks.clear()
         line = source_line.rstrip("\r\n")
@@ -224,7 +244,7 @@ def _iter_markdown_tasks(display_text: str):
     fence_character = ""
     fence_length = 0
     source_offset = 0
-    for source_line in display_text.splitlines(keepends=True):
+    for source_line in _source_lines(display_text):
         line = source_line.rstrip("\r\n")
         stripped = line.strip()
         if in_code:

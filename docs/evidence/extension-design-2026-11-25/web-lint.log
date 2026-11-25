@@ -1,0 +1,7 @@
+
+> chat-reader@0.0.0 lint <READER_REPO>
+> corepack pnpm --filter web lint
+
+
+> web@0.0.0 lint <READER_REPO>\apps\web
+> eslint . --max-warnings=0

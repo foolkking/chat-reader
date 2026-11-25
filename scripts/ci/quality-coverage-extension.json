@@ -1,27 +1,52 @@
 {
   "schema_version": 1,
   "base_schedule_sha256": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
-  "reason": "Add navigation, find, imports, extension, project export, selective append and admin update cases; retain baseline assignments, timeouts and skips",
+  "reason": "Add device pairing, name-only catalogue, resumable capture, retained retry and bounded long-message regressions; retain all baseline assignments, assertions, timeouts and skips. Migration fixtures additionally require 0065 pairing rows.",
   "api": {
     "tests/test_admin_updates.py": {
       "count": 9,
       "shard": 3,
       "source_lf_sha256": "d3fe97e563fda817de2ea8079a786f27b955ddfcd4058f5c5f7ea7bfccd96f57"
     },
+    "tests/test_extension_release_postgres.py": {
+      "count": 18,
+      "shard": 1,
+      "source_lf_sha256": "6ccd07a793219e2c4eaed4cf0e34918dbdf61dd3aaa25c16dc9af2b9d8fc33f9"
+    },
+    "tests/test_extension_retry.py": {
+      "count": 18,
+      "shard": 2,
+      "source_lf_sha256": "7e7b27617fe6cde8b158c975e1ab8aceb589f8f6d4f99acec1e5b5323b998853"
+    },
+    "tests/test_extension_transfer.py": {
+      "count": 4,
+      "shard": 3,
+      "source_lf_sha256": "64072778862e20a6f4d1954b65974ff2cf6f422494665f11eedbfcbd05a14676"
+    },
+    "tests/test_extension_transfer_postgres.py": {
+      "count": 2,
+      "shard": 4,
+      "source_lf_sha256": "cd8b95bac5f5905302e2115bc8475007bd559a098c47847ddf7320c275ae3b12"
+    },
     "tests/test_grouped_search.py": {
       "count": 8,
       "shard": 3,
       "source_lf_sha256": "28295dcb23b7387120375a15546bb1d13bbf8158cd259172cda73fa59f733cee"
+    },
+    "tests/test_import_batch_experience.py": {
+      "count": 7,
+      "shard": 4,
+      "source_lf_sha256": "ee8c2304fc0dcb0769ace3bba5dcc0de1044c19bd9347240773bf229425fac92"
     },
     "tests/test_import_message_units.py": {
       "count": 39,
       "shard": 3,
       "source_lf_sha256": "e52248badeeb23593366864d03d4444de575b1d8bb84ff08b9c9733f7e3619f3"
     },
-    "tests/test_import_batch_experience.py": {
-      "count": 7,
-      "shard": 4,
-      "source_lf_sha256": "ee8c2304fc0dcb0769ace3bba5dcc0de1044c19bd9347240773bf229425fac92"
+    "tests/test_memory_probe_windows.py": {
+      "count": 5,
+      "shard": 1,
+      "source_lf_sha256": "510ef1ee03d985e0528f5038af8b1bea92d7c2148659e20128c70c4fd12d9a26"
     },
     "tests/test_navigation_search_postgres.py": {
       "count": 4,
@@ -43,20 +68,30 @@
       "shard": 1,
       "source_lf_sha256": "166964b5b2889d6e3ab1f7fa47728ae4a141adcd43598448ed201a3ad9810efa"
     },
-    "tests/test_selective_append.py": {
-      "count": 6,
-      "shard": 2,
-      "source_lf_sha256": "895a6eb312bb1d3320ec61642121e66871e8625dc5ce3a406f32055a99c31cbf"
-    },
     "tests/test_reader_extension.py": {
-      "count": 15,
+      "count": 17,
       "shard": 4,
-      "source_lf_sha256": "dd086dd6840835f84af86e420bd637f1c88b4845f8f8f70084db0f76539c7ade"
+      "source_lf_sha256": "37ea08feafb1034dc8ad609377d9850928b7228d4c3139535f9a25782ae876f4"
     },
     "tests/test_reader_find.py": {
       "count": 6,
       "shard": 3,
       "source_lf_sha256": "386a5d2c95f0dd481ba47e3e6651fb692c0be67e8a631e2a3bea18785033c20a"
+    },
+    "tests/test_reader_index_metadata.py": {
+      "count": 19,
+      "shard": 2,
+      "source_lf_sha256": "568f8c3f1cc372d8081ddc4f51b5f295f43ae4bad8107187e9028de0c557b7d3"
+    },
+    "tests/test_reader_long_message_storage.py": {
+      "count": 83,
+      "shard": 3,
+      "source_lf_sha256": "4d9ac64945a6f817ca89d6c3f13e1ceae85d5ad89301221f59f9c9fef4956675"
+    },
+    "tests/test_selective_append.py": {
+      "count": 6,
+      "shard": 2,
+      "source_lf_sha256": "895a6eb312bb1d3320ec61642121e66871e8625dc5ce3a406f32055a99c31cbf"
     }
   },
   "api_fixture_revisions": {
@@ -150,7 +185,7 @@
     },
     "tests/test_supervised_execution_postgres.py": {
       "previous_source_lf_sha256": "596204ef9aab0ac2b7e06b14348dbef59df242e6638c59e33a0ecdf3d38d3a9d",
-      "source_lf_sha256": "c7d52d63e79186182cbb60dca58c2d3ab79ce9e41a2a812750c3db900ff0cec8",
+      "source_lf_sha256": "b817f75acef1ac3fb24ed6b0e55242796331d78da912d55ab2f8ea3bf0994669",
       "nodeids": [
         "tests/test_supervised_execution_postgres.py::test_repeated_progress_and_heartbeat_are_not_business_progress",
         "tests/test_supervised_execution_postgres.py::test_cancellation_is_independent_of_locked_canonical_row",
@@ -166,11 +201,11 @@
         "tests/test_supervised_execution_postgres.py::test_actual_supervisor_process_drains_two_jobs_without_overlapping[1]",
         "tests/test_supervised_execution_postgres.py::test_actual_supervisor_process_drains_two_jobs_without_overlapping[20]"
       ],
-      "reason": "Bind the single Alembic head to 0064; retain the original navigation/execution assertions, exercise the selective-append ledger and extension tables on the same downgrade/upgrade roundtrip."
+      "reason": "Bind the single Alembic head to 0065 and additionally require extension_pairings; preserve every original node ID, execution, navigation, downgrade and upgrade assertion."
     },
     "tests/test_worker_model_registration.py": {
       "previous_source_lf_sha256": "388401a205c3e4c57eac2407aef276049464007aa41f387490dc2f91fe704988",
-      "source_lf_sha256": "85c325de7e34b2e36bdb391b8b3abb0ec6e8b3981e2a5ec8a93479c0cdb4fc88",
+      "source_lf_sha256": "1b5a53219dd3a297f6a811256cbef96f63c807552f1476fe50e13755978f044e",
       "nodeids": [
         "tests/test_worker_model_registration.py::test_default_and_nonworker_registration_keep_every_declared_table[none]",
         "tests/test_worker_model_registration.py::test_default_and_nonworker_registration_keep_every_declared_table[uvicorn.__main__]",
@@ -190,7 +225,7 @@
         "tests/test_worker_model_registration.py::test_selected_service_reexports_are_the_original_objects[app.services.sharing.share_service-hash_password-app.services.auth]",
         "tests/test_worker_model_registration.py::test_selected_service_reexports_are_the_original_objects[app.services.sharing.share_service-verify_password-app.services.auth]"
       ],
-      "reason": "Migrations 0063/0064 add two device/source tables and the append receipt. Require these three named tables/exports in addition to the original ninety exports. Keep all 17 original node IDs, worker profiles, FK and class identity checks, eager-worker budgets, and skip policy."
+      "reason": "Migration 0065 adds ExtensionPairing. Require its table/export and exactly 96 complete mappers (previously 95). Preserve all 17 original node IDs, the original ninety exports, complete FK/class identity, worker eager-module budgets and skip policy."
     }
   },
   "settings_fixture_revisions": {

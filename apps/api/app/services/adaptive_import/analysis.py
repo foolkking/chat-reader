@@ -30,6 +30,9 @@ def signature_digest(signature: dict[str, Any]) -> str:
 
 
 def analyze_documents(documents: list[SourceDocument]) -> AnalysisResult:
+    if len(documents) == 1 and documents[0].reader_archive is not None:
+        from app.services.adaptive_import.reader_package import analyze_index
+        return analyze_index(documents[0].reader_archive)
     if len(documents) == 1 and documents[0].path is not None:
         from app.services.adaptive_import.stream_markdown import analyze_path
         return analyze_path(documents[0])

@@ -1,7 +1,7 @@
 """Narrow, owner-only facade. No generic method/URL forwarding."""
 from datetime import datetime, timezone
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, Request, Response, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
@@ -14,6 +14,7 @@ from app.models.background_job import BackgroundJob
 from app.models.reader_extension import ExtensionDevice
 from app.models.user_feature_entry import UserFeatureEntry
 from app.services import extension_access as access
+from app.services import extension_pairing as pairing
 from app.services.ownership import ownership_scope_from_request, subject_key_from_request, get_owned
 from app.services.preferences import get_or_create_preferences
 from app.api.routes import archive_exports, attachments, conversations, projects
@@ -56,7 +57,7 @@ def devices(request: Request, db: Session = DB):
         ExtensionDevice.expires_at > datetime.now(timezone.utc), ExtensionDevice.code_hash.is_(None))
         .order_by(ExtensionDevice.created_at.desc())).all()
     return {"enabled": bool(get_settings().reader_extension_ids), "items": [
-        {"id": g.id, "created_at": g.created_at, "expires_at": g.expires_at} for g in rows]}
+        {"id": g.id, "name": g.device_name or "Chat Reader", "created_at": g.created_at, "expires_at": g.expires_at} for g in rows]}
 
 
 @router.delete("/api/extension-devices/{device_id}", status_code=204)
@@ -75,6 +76,66 @@ class Exchange(Strict):
     refresh: str | None = Field(None, pattern="^[A-Za-z0-9_-]{64}$")
 
 
+class PairStart(Strict):
+    client: str = Field(pattern="^[a-p]{32}$")
+    device_name: Literal["Chat Reader · Chrome", "Chat Reader · Edge", "Chat Reader · Chromium"]
+
+
+class PairTicket(Strict):
+    client: str = Field(pattern="^[a-p]{32}$")
+    device_code: str = Field(pattern="^[A-Za-z0-9_-]{43}$")
+
+
+class PairCode(Strict):
+    code: str = Field(pattern=r"^[A-HJ-NP-Za-hj-np-z2-9]{4}-?[A-HJ-NP-Za-hj-np-z2-9]{4}$")
+    expected_user_id: UUID
+
+
+def pair_client(request, client, db, action, limit):
+    access.check_client(client)
+    if request.headers.get("origin") != "chrome-extension://" + client:
+        raise HTTPException(403)
+    pairing.throttle(db, action, request.client.host if request.client else "local", limit)
+
+
+@api.post("/pair/start")
+def pair_start(body: PairStart, request: Request, db: Session = DB):
+    pair_client(request, body.client, db, "start", 30)
+    return pairing.start(db, body.client, body.device_name)
+
+
+@api.post("/pair/poll")
+def pair_poll(body: PairTicket, request: Request, db: Session = DB):
+    pair_client(request, body.client, db, "poll", 2400)
+    return pairing.poll(db, body.client, body.device_code)
+
+
+@api.post("/pair/cancel")
+def pair_cancel(body: PairTicket, request: Request, db: Session = DB):
+    pair_client(request, body.client, db, "cancel", 120)
+    return pairing.poll(db, body.client, body.device_code, cancel=True)
+
+
+def pair_user(request, body, db):
+    auth = getattr(request.state, "auth", None)
+    if not auth or not auth.user_id or auth.user_id != body.expected_user_id:
+        raise HTTPException(401)
+    pairing.throttle(db, "check", str(auth.user_id), 24)
+    return auth
+
+
+@router.post("/api/extension-devices/pair/preview")
+def pair_preview(body: PairCode, request: Request, db: Session = DB):
+    pair_user(request, body, db)
+    row = pairing.by_code(db, body.code)
+    return {"device_name": row.device_name, "expires_at": row.expires_at, "scopes": access.SCOPES}
+
+
+@router.post("/api/extension-devices/pair/approve", status_code=204)
+def pair_approve(body: PairCode, request: Request, db: Session = DB):
+    pairing.approve(db, pair_user(request, body, db), body.code)
+
+
 @api.post("/token")
 def token(body: Exchange, request: Request, db: Session = DB):
     origin = request.headers.get("origin")
@@ -90,7 +151,8 @@ def capabilities(db: Session = DB):
     from app.services.feature_policies import get_feature_policy
     return {"protocol": 1, "import_profile": "reader-chat-v1",
             "capture": get_settings().reader_extension_capture and get_feature_policy(db).allow_user_import,
-            "catalog_details": True, "save_receipts": True, "source_lookup": True,
+            "catalog_details": True, "catalog_names": True, "context_settings": True, "save_receipts": True, "source_lookup": True,
+            "resumable_capture": True, "import_retry": True,
             "selective_append": get_settings().reader_extension_capture and get_feature_policy(db).allow_user_import,
             "project_discovery": False, "account_discovery": False}
 
@@ -122,9 +184,11 @@ def catalog_projects(request: Request, db: Session = DB):
 @api.get("/conversations")
 def catalog(request: Request, q: str = Query("", max_length=200), project_id: UUID | None = None,
             scope: Literal["all", "unclassified"] = "all", offset: int = Query(0, ge=0),
-            view: Literal["library", "recent", "pinned"] = "library", limit: int = Query(40, ge=1, le=80), db: Session = DB):
+            view: Literal["library", "recent", "pinned"] = "library", limit: int = Query(40, ge=1, le=80),
+            match: Literal["full", "names"] = "full", db: Session = DB):
     from app.services.extension_catalog import catalog as list_catalog
-    return list_catalog(db, ownership_scope_from_request(request), q, project_id, scope, view, offset, limit)
+    return list_catalog(db, ownership_scope_from_request(request), q, project_id, scope, view, offset, limit,
+                        names_only=match == "names")
 
 
 @api.get("/files")
@@ -165,7 +229,7 @@ def preset_options(db, subject, preset_id):
         value = entry.value
     return ExportRequest(format="context_package", context_scope="full_conversation",
         continuation_policy="auto" if value.get("include_continuation", True) else "raw_only",
-        context_attachment_policy="include" if value.get("include_attachments", False) else "metadata_only")
+        context_attachment_policy="include" if value.get("include_attachments", preset_id is None) else "metadata_only")
 
 
 class Preset(Strict):
@@ -194,7 +258,57 @@ def context_scope(options):
 @api.get("/context/options")
 def context_options(request: Request, db: Session = DB):
     subject = subject_key_from_request(request)
-    return context_scope(preset_options(db, subject, get_or_create_preferences(db, subject).context_quick_preset))
+    preset = get_or_create_preferences(db, subject).context_quick_preset
+    options = preset_options(db, subject, preset)
+    entry = db.get(UserFeatureEntry, preset) if preset else None
+    return {**context_scope(options), "preset_id": preset, "revision": entry.revision if entry else 0}
+
+
+class QuickOptions(Strict):
+    preset_id: UUID | None
+    revision: int = Field(ge=0)
+    include_attachments: bool
+    include_continuation: bool
+
+
+@api.put("/context/options")
+def update_options(body: QuickOptions, request: Request, db: Session = DB):
+    from app.services.user_feature_entries import write_entry, UserFeatureEntryConflict, lock_feature_collection
+    subject = subject_key_from_request(request)
+    # The Web preset writer takes collection -> preferences -> account locks.
+    # Use that order before reading the pointer/revision, not just before saving.
+    lock_feature_collection(db, subject, "export-preset")
+    pref = get_or_create_preferences(db, subject)
+    if pref.context_quick_preset != body.preset_id:
+        raise HTTPException(409, "The quick preset changed.")
+    preset_options(db, subject, body.preset_id)
+    old = db.get(UserFeatureEntry, body.preset_id) if body.preset_id else None
+    value = dict(old.value) if old else {"format": "context", "name": "Chat Reader · AI"}
+    value.update(include_attachments=body.include_attachments, include_continuation=body.include_continuation)
+    try:
+        entry = write_entry(db, subject, "export-preset", body.preset_id or uuid4(), body.revision, value)
+    except UserFeatureEntryConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    pref.context_quick_preset = entry.id
+    db.commit()
+    return context_options(request, db)
+
+
+@api.get("/context/skill")
+def context_skill(request: Request, locale: Literal["zh-CN", "en"] = "en", db: Session = DB):
+    from app.api.routes import skills
+    selected = skills.resolve_skill(db, category="EXPORT_CONTEXT", locale=locale, subject_key=subject_key_from_request(request))
+    db.commit()
+    url = selected.get("bundle_url") or ""
+    if url == "/skills/context-acquisition.zip":
+        return {"builtin": url}
+    if selected["source"] == "USER":
+        return skills.bundle_download(UUID(selected["id"]), request, selected["bundle_revision"], db)
+    import re
+    match = re.fullmatch(r"/api/skills/system/([0-9a-f-]{36})/bundle\?revision=\d+", url)
+    if not match:
+        raise HTTPException(404, "Selected Skill unavailable.")
+    return skills.system_bundle_download(UUID(match[1]), selected["bundle_revision"], db)
 
 
 @router.post("/api/conversations/{cid}/quick-context", status_code=202)
@@ -211,7 +325,8 @@ def export_status(jid: UUID, request: Request, db: Session = DB):
     job = get_owned(db, BackgroundJob, jid, ownership_scope_from_request(request))
     if not job or job.job_type != "conversation_export" or (job.payload or {}).get("export_format") != "context_package":
         raise HTTPException(404)
-    return {"id": job.id, "status": job.status, "artifact_id": (job.result or {}).get("artifact_id")}
+    result = job.result or {}
+    return {"id": job.id, "status": job.status, "artifact_id": result.get("artifact_id"), "delivery": result.get("context_delivery")}
 
 
 @api.post("/artifacts/{aid}/claim")
@@ -221,7 +336,7 @@ def claim(aid: UUID, body: archive_exports.ExportUsage, request: Request, db: Se
     if artifact.format != archive_exports.CONTEXT_PACKAGE_FORMAT:
         raise HTTPException(404)
     result = archive_exports.reserve_download(aid, body, db, scope)
-    return {"claim": UUID(result["download_url"].split("?claim=")[1])}
+    return {"claim": UUID(result["download_url"].split("?claim=")[1]), "filename": artifact.filename}
 
 
 @api.get("/artifacts/{aid}/download")
@@ -250,6 +365,40 @@ def upload(request: Request, files: list[UploadFile] = File(...), target_project
     result = stage_import_session(files, None, target_project_id, key, db, ownership_scope_from_request(request),
                                   device=request.state.auth.session_id)
     return {"id": result["import_id"], "state": result["state"]}
+
+
+class TransferStart(Strict):
+    size: int = Field(gt=0)
+    sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    project: UUID | None = None
+    excerpt: bool = False
+
+
+@api.post("/transfers/{key}")
+def transfer_start(key: UUID, body: TransferStart, request: Request, db: Session = DB):
+    from app.services import extension_transfer as tx
+    return tx.begin(db, ownership_scope_from_request(request), request.state.auth.session_id, key, body.size,
+                    body.sha256, body.project, body.excerpt)
+
+
+@api.post("/transfers/{key}/chunks")
+def transfer_chunk(key: UUID, request: Request, offset: int = Form(ge=0), sha256: str = Form(pattern=r"^[a-f0-9]{64}$"),
+                   chunk: UploadFile = File(...), db: Session = DB):
+    from app.services import extension_transfer as tx
+    return tx.chunk(db, ownership_scope_from_request(request), request.state.auth.session_id, key, offset, sha256, chunk)
+
+
+@api.post("/transfers/{key}/finish")
+def transfer_finish(key: UUID, request: Request, db: Session = DB):
+    from app.services import extension_transfer as tx
+    return tx.finish(db, ownership_scope_from_request(request), request.state.auth.session_id, key)
+
+
+@api.delete("/transfers/{key}", status_code=204)
+def transfer_discard(key: UUID, request: Request, db: Session = DB):
+    from app.services import extension_transfer as tx
+    tx.discard(tx._record(db, ownership_scope_from_request(request), request.state.auth.session_id, key))
+    db.commit()
 
 
 @api.post("/append-imports", status_code=201)
@@ -300,6 +449,12 @@ def import_state(iid: UUID, request: Request, db: Session = DB):
             "conversation_id": saved.id if saved and not saved.deleted_at else None,
             "title": (saved.display_title or saved.title) if saved and not saved.deleted_at else None,
             "result": public_result(db, record, saved)}
+
+
+@api.post("/imports/{iid}/retry", status_code=202)
+def retry_import(iid: UUID, request: Request, db: Session = DB):
+    from app.services.extension_retry import retry
+    return retry(db, request.state.auth, iid)
 
 
 class Decision(Strict):

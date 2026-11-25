@@ -1,0 +1,54 @@
+{
+  "kind": "independent canonical/asset readback; synthetic test user only",
+  "checks": [
+    {
+      "name": "one canonical record for each selected source after repeated receipt recovery",
+      "pass": true
+    },
+    {
+      "name": "exactly one associated attachment, not a standalone conversation",
+      "pass": true
+    },
+    {
+      "name": "source-a-assets: both ordered message roles",
+      "pass": true
+    },
+    {
+      "name": "source-a-assets: exact canonical source text and attachment marker",
+      "pass": true
+    },
+    {
+      "name": "source-a-assets: fixed Reader project",
+      "pass": true
+    },
+    {
+      "name": "source-b-assets: both ordered message roles",
+      "pass": true
+    },
+    {
+      "name": "source-b-assets: exact canonical source text and attachment marker",
+      "pass": true
+    },
+    {
+      "name": "source-b-assets: fixed Reader project",
+      "pass": true
+    },
+    {
+      "name": "stored attachment exact bytes and independently recomputed hash",
+      "pass": true
+    },
+    {
+      "name": "attachment linked to the source user message",
+      "pass": true
+    },
+    {
+      "name": "unselected source conversations never uploaded",
+      "pass": true
+    }
+  ],
+  "asset": {
+    "bytes": 20,
+    "sha256": "12ae20765caeae368acc74fca52164bd1d22bb6285355e8f6825f730f8a60a32",
+    "links": 1
+  }
+}

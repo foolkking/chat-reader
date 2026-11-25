@@ -56,8 +56,8 @@ def test_default_and_nonworker_registration_keep_every_declared_table(role, tmp_
         print(json.dumps(facts()))
     """, role)
     assert result["tables"] == _declared_tables()
-    assert {"extension_devices", "extension_sources", "conversation_append_items"} <= set(result["tables"])
-    assert result["mappers"] == len(result["tables"]) == 95
+    assert {"extension_devices", "extension_sources", "extension_pairings", "conversation_append_items"} <= set(result["tables"])
+    assert result["mappers"] == len(result["tables"]) == 96
     assert len(result["modules"]) == 42
 
 
@@ -107,7 +107,7 @@ def test_maintenance_and_complete_upgrade_preserve_class_identity_and_all_tables
     """)
     assert result["maintenance"] == 55
     assert result["tables"] == _declared_tables()
-    assert result["mappers"] == 95
+    assert result["mappers"] == 96
 
 
 @pytest.mark.parametrize("name", ["ContextBinding", "EmailVerificationGrant", "ContentCleanupRulePublication"])
@@ -130,7 +130,7 @@ def test_explicit_legacy_package_export_upgrades_worker_to_complete_registration
 def test_complete_exports_keep_the_original_ninety_genuine_class_objects():
     import app.models as models
     from app.models._loading import MODULE_EXPORTS, PUBLIC_NAMES
-    extension_exports = {"ExtensionDevice", "ExtensionSource", "AppendItem"}
+    extension_exports = {"ExtensionDevice", "ExtensionSource", "ExtensionPairing", "AppendItem"}
     assert extension_exports <= PUBLIC_NAMES
     assert len(PUBLIC_NAMES - extension_exports) == 90
     assert len(models.__all__) == 75

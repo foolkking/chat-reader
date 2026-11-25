@@ -1,0 +1,81 @@
+Ffirst_index_memory_guard {'code': 'IMPORT_WORKSPACE_EXCEEDED', 'rss_delta': 101785600, 'workspace': 67108864}
+F.
+================================== FAILURES ===================================
+__________ test_context_update_and_web_preset_write_have_no_deadlock __________
+
+database = (sessionmaker(class_='Session', bind=Engine(postgresql+psycopg://audit@127.0.0.1:56349/settings_formats_551030f3b5884f...on_id=UUID('96b57202-651d-4eb7-b9c2-c78de0b4e170'), user_id=UUID('3c17860c-b894-4422-9c3b-542046eebdce'), role='USER'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FD76392150>
+
+    def test_context_update_and_web_preset_write_have_no_deadlock(database, monkeypatch):
+        from app.api.routes import reader_extension as route
+        from app.services import user_feature_entries as features
+        from app.services.preferences import get_or_create_preferences
+        factory, _, context = database
+        subject = 'user:' + str(context.user_id)
+        request = SimpleNamespace(state=SimpleNamespace(auth=context))
+        with factory() as db:
+>           get_or_create_preferences(db, subject); db.commit()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+<TASK_EVIDENCE>\backend\test_backend_release_audit.py:50:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app\services\preferences.py:34: in get_or_create_preferences
+    lock_subject_account(db, subject_key, allow_inactive=allow_inactive, nowait=nowait)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+db = <sqlalchemy.orm.session.Session object at 0x000001FD767920D0>
+subject_key = 'user:3c17860c-b894-4422-9c3b-542046eebdce'
+
+    def lock_subject_account(db: Session, subject_key: str, *, allow_inactive: bool = False, nowait: bool = False) -> None:
+        # AUTH_ENABLED=false retains the pre-account development/test namespace.
+        if not get_settings().auth_enabled:
+            return
+        from fastapi import HTTPException
+
+        try:
+            user_id = uuid.UUID(subject_key)
+        except ValueError:
+>           raise HTTPException(401, "Account is no longer available.") from None
+E           fastapi.exceptions.HTTPException: 401: Account is no longer available.
+
+app\services\subject_account.py:21: HTTPException
+_______ test_reader_index_checks_workspace_before_large_line_allocation _______
+
+tmp_path = WindowsPath('<TASK_EVIDENCE>/backend/pytest-audit-01/test_reader_index_checks_works0')
+
+    def test_reader_index_checks_workspace_before_large_line_allocation(tmp_path):
+        from app.services.adaptive_import import memory_budget as budget
+        from app.services.adaptive_import.reader_package import messages, package_header
+        from app.services.uploads import UploadLimitError
+        title, body = 'Synthetic metadata audit', 'Synthetic body'
+        head = {'version':'reader-chat-v1','source_id':'synthetic-review','title':title,'lineage':'tree','messages':[], 'assets':[], 'partial':False}
+        prefix = ('# ' + title + '\n\n## User\n\n').encode()
+        row = {'id':'m0','parent':None,'source_path':['m0'],'role':'user','offset':len(prefix),'bytes':len(body), 'sha256':hashlib.sha256(body.encode()).hexdigest(),'assets':[], 'at':None}
+        path=tmp_path/'large-whitespace-index.zip'
+        with zipfile.ZipFile(path, 'w', compression=zipfile.ZIP_STORED) as archive:
+            archive.writestr('manifest.json', json.dumps(head))
+            archive.writestr('conversation.md', prefix + body.encode() + b'\n\n')
+            with archive.open('reader/source.jsonl','w') as index:
+                for _ in range(96*16): index.write(b' ' * 65536)
+                index.write(json.dumps(row).encode()+b'\n')
+        # Legal JSON whitespace must be stopped by incremental budget checkpoints,
+        # not after allocating an archive-member-sized byte string.
+        with zipfile.ZipFile(path) as archive:
+            header=package_header(archive)
+            baseline=process_resident_memory_bytes()
+            token=budget._active.set(budget.SmallImportBudget(baseline,'audit',streaming=True))
+            try:
+                with pytest.raises(UploadLimitError) as caught:
+                    list(messages(archive,header))
+                delta=process_resident_memory_bytes()-baseline
+                print('first_index_memory_guard', {'code':caught.value.code,'rss_delta':delta,'workspace':budget.WORKSPACE_BYTES})
+>               assert delta <= budget.WORKSPACE_BYTES + 1024*1024, 'workspace was exceeded by whole-line allocation before the first checkpoint'
+E               AssertionError: workspace was exceeded by whole-line allocation before the first checkpoint
+E               assert 101785600 <= (67108864 + (1024 * 1024))
+E                +  where 67108864 = <module 'app.services.adaptive_import.memory_budget' from '<READER_REPO>\\apps\\api\\app\\services\\adaptive_import\\memory_budget.py'>.WORKSPACE_BYTES
+
+<TASK_EVIDENCE>\backend\test_backend_release_audit.py:114: AssertionError
+=========================== short test summary info ===========================
+FAILED ..\..\..\..\chat-reader-temp\extension-release-review-20261125\backend\test_backend_release_audit.py::test_context_update_and_web_preset_write_have_no_deadlock
+FAILED ..\..\..\..\chat-reader-temp\extension-release-review-20261125\backend\test_backend_release_audit.py::test_reader_index_checks_workspace_before_large_line_allocation
+2 failed, 1 passed in 23.14s

@@ -1,0 +1,6 @@
+{
+  "changed_after_full_node": [],
+  "additional_validation_script": "scripts/reader-navigation-boundaries-check.cjs",
+  "script_sha256": "1d7ae188e7d17143cedd3bfc5863c3b30936da8c38b90e4b23c9ea6a8d6c9365",
+  "script_browser_checks": 42
+}

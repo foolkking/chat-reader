@@ -1,0 +1,100 @@
+inflight_authorization_result password new_30_day_grant_usable
+Finflight_authorization_result session new_30_day_grant_usable
+F
+================================== FAILURES ===================================
+_ test_inflight_pairing_approval_cannot_outlive_revoked_web_authorization[password] _
+
+database = (sessionmaker(class_='Session', bind=Engine(postgresql+psycopg://audit@127.0.0.1:56349/settings_formats_50fcd69054b547...on_id=UUID('27a9aa3f-dc28-41c5-974b-efea97f62b26'), user_id=UUID('f5cf1e4f-a48e-4056-86eb-e85477de8ec1'), role='USER'))
+revocation = 'password'
+
+    @pytest.mark.parametrize('revocation', ['password', 'session'])
+    def test_inflight_pairing_approval_cannot_outlive_revoked_web_authorization(database, revocation):
+        from app.services import extension_pairing as pairing, extension_access as access
+        from app.services.auth import issue_session, authenticate_session, change_password, revoke_session, hash_password
+        from fastapi import HTTPException
+        factory, _, context = database
+        password = 'synthetic previous password 2026'
+        with factory() as db:
+            principal=db.get(AuthPrincipal,context.principal_id)
+            principal.password_hash=hash_password(password)
+            token, _=issue_session(db,principal,get_settings())
+            db.commit()
+            # Snapshot the actual auth middleware result before the concurrent account change.
+            auth=authenticate_session(db,token,get_settings()).context
+            ticket=pairing.start(db,'a'*32,'Chat Reader �� Edge')
+        with factory() as db:
+            if revocation=='password':
+                assert change_password(db,password,'synthetic replacement password 2026',principal_id=auth.principal_id)
+            else:
+                revoke_session(db,token,get_settings())
+        with factory() as db:
+            assert authenticate_session(db,token,get_settings()) is None
+        result='refused'
+        with factory() as db:
+            try:
+                pairing.approve(db,auth,ticket['code'])
+                grant=pairing.poll(db,'a'*32,ticket['device_code'])
+                accepted=access.authenticate_device(db,'Bearer '+grant['access_token'],'chrome-extension://'+'a'*32)
+                assert accepted.user_id==auth.user_id
+                result='new_30_day_grant_usable'
+            except HTTPException:
+                db.rollback()
+        print('inflight_authorization_result',revocation,result)
+>       assert result=='refused', 'revoked Web session minted a new persistent grant'
+E       AssertionError: revoked Web session minted a new persistent grant
+E       assert 'new_30_day_grant_usable' == 'refused'
+E
+E         - refused
+E         + new_30_day_grant_usable
+
+<TASK_EVIDENCE>\backend\test_backend_release_audit.py:186: AssertionError
+_ test_inflight_pairing_approval_cannot_outlive_revoked_web_authorization[session] _
+
+database = (sessionmaker(class_='Session', bind=Engine(postgresql+psycopg://audit@127.0.0.1:56349/settings_formats_61e3b4684fb442...on_id=UUID('2e2a0783-3e77-456c-a683-fc593dda066e'), user_id=UUID('2184b626-0792-4fab-ad53-966f0c89da70'), role='USER'))
+revocation = 'session'
+
+    @pytest.mark.parametrize('revocation', ['password', 'session'])
+    def test_inflight_pairing_approval_cannot_outlive_revoked_web_authorization(database, revocation):
+        from app.services import extension_pairing as pairing, extension_access as access
+        from app.services.auth import issue_session, authenticate_session, change_password, revoke_session, hash_password
+        from fastapi import HTTPException
+        factory, _, context = database
+        password = 'synthetic previous password 2026'
+        with factory() as db:
+            principal=db.get(AuthPrincipal,context.principal_id)
+            principal.password_hash=hash_password(password)
+            token, _=issue_session(db,principal,get_settings())
+            db.commit()
+            # Snapshot the actual auth middleware result before the concurrent account change.
+            auth=authenticate_session(db,token,get_settings()).context
+            ticket=pairing.start(db,'a'*32,'Chat Reader �� Edge')
+        with factory() as db:
+            if revocation=='password':
+                assert change_password(db,password,'synthetic replacement password 2026',principal_id=auth.principal_id)
+            else:
+                revoke_session(db,token,get_settings())
+        with factory() as db:
+            assert authenticate_session(db,token,get_settings()) is None
+        result='refused'
+        with factory() as db:
+            try:
+                pairing.approve(db,auth,ticket['code'])
+                grant=pairing.poll(db,'a'*32,ticket['device_code'])
+                accepted=access.authenticate_device(db,'Bearer '+grant['access_token'],'chrome-extension://'+'a'*32)
+                assert accepted.user_id==auth.user_id
+                result='new_30_day_grant_usable'
+            except HTTPException:
+                db.rollback()
+        print('inflight_authorization_result',revocation,result)
+>       assert result=='refused', 'revoked Web session minted a new persistent grant'
+E       AssertionError: revoked Web session minted a new persistent grant
+E       assert 'new_30_day_grant_usable' == 'refused'
+E
+E         - refused
+E         + new_30_day_grant_usable
+
+<TASK_EVIDENCE>\backend\test_backend_release_audit.py:186: AssertionError
+=========================== short test summary info ===========================
+FAILED ..\..\..\..\chat-reader-temp\extension-release-review-20261125\backend\test_backend_release_audit.py::test_inflight_pairing_approval_cannot_outlive_revoked_web_authorization[password]
+FAILED ..\..\..\..\chat-reader-temp\extension-release-review-20261125\backend\test_backend_release_audit.py::test_inflight_pairing_approval_cannot_outlive_revoked_web_authorization[session]
+2 failed, 3 deselected in 10.03s
