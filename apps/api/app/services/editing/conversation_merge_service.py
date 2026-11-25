@@ -1,8 +1,8 @@
 import uuid
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.annotation import ConversationAnnotation
 from app.models.attachment import Attachment, MessageVersionAttachment
@@ -15,6 +15,8 @@ from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
 from app.models.source_message_ref import SourceMessageRef
 from app.services.database.bulk_insert import insert_rows
+from app.services.assets.scanner import scan_status_allows_use
+from app.services.editing.merge_attachment_recovery import MergeAttachmentRecovery, recover_occurrences
 from app.services.import_pipeline.canonical_draft import content_hash, normalize_text
 from app.services.search.search_indexer import rebuild_search_documents_for_conversation
 from app.services.editing.attachment_reference_rewriter import (
@@ -33,7 +35,17 @@ VERSION_BATCH_SIZE = 50
 
 
 def _block_projection(row) -> dict:
-    return {field: getattr(row, field) for field in ("block_type", "plain_text", "data", "sanitized_html")}
+    return {field: getattr(row, field) for field in ("block_index", "block_type", "plain_text", "data", "sanitized_html")}
+
+
+def _version_reference_context(db: Session, version):
+    projections = version.blocks or []
+    if not projections and "<" in (version.display_text or ""):
+        # Bounded imports may persist only the RenderBlock projection.
+        projections = [_block_projection(block) for block in db.query(RenderBlock).filter(
+            RenderBlock.message_version_id == version.id,
+        ).order_by(RenderBlock.block_index).all()]
+    return markdown_reference_context(version.display_text or "", blocks=projections)
 
 
 @dataclass(frozen=True)
@@ -44,6 +56,7 @@ class MergeCopyResult:
     annotation_count: int
     heading_count: int
     attachment_count: int
+    attachment_recovery: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -79,12 +92,9 @@ def copy_conversation_history(
     message_id_map = {plan.source_id: plan.target_id for plan in plans}
     version_rows = _version_identity_rows(db, source_message_ids)
     version_id_map = {row.id: uuid.uuid4() for row in version_rows}
-    validate_source_attachment_integrity(
-        db,
-        {plan.source_id: plan.source_conversation_id for plan in plans},
-        list(version_id_map),
-    )
-    attachment_id_map = _insert_attachments(db, target, sources)
+    source_conversation_by_message = {plan.source_id: plan.source_conversation_id for plan in plans}
+    recovery = _insert_attachments(db, target, sources)
+    _prepare_attachment_recovery(db, source_conversation_by_message, list(version_id_map), recovery)
     block_id_map: dict[uuid.UUID, uuid.UUID] = {}
     for plan in plans:
         if plan.source_current_version_id not in version_id_map:
@@ -98,7 +108,7 @@ def copy_conversation_history(
         version_rows=version_rows,
         message_id_map=message_id_map,
         version_id_map=version_id_map,
-        attachment_id_map=attachment_id_map,
+        recovery=recovery,
         progress_callback=progress_callback,
     )
     _update_current_message_hashes(db, current_content_hashes)
@@ -107,12 +117,18 @@ def copy_conversation_history(
         source_version_ids=list(version_id_map),
         version_id_map=version_id_map,
         block_id_map=block_id_map,
-        attachment_id_map=attachment_id_map,
+        source_conversation_by_message=source_conversation_by_message,
+        recovery=recovery,
         total_messages=total,
         progress_callback=progress_callback,
     )
-    attachment_count = _insert_attachment_links(db, version_id_map, attachment_id_map)
-    _validate_attachment_copy(db, target, version_id_map, block_id_map, attachment_id_map)
+    attachment_count = _insert_attachment_links(
+        db, version_id_map, source_conversation_by_message, recovery, progress_callback, total,
+    )
+    _validate_attachment_copy(
+        db, target, version_id_map, block_id_map,
+        {value for mapping in recovery.maps_by_source.values() for value in mapping.values()},
+    )
     annotation_count = _insert_annotations(
         db,
         target=target,
@@ -146,60 +162,67 @@ def copy_conversation_history(
         annotation_count=annotation_count,
         heading_count=heading_count,
         attachment_count=attachment_count,
+        attachment_recovery=recovery.summary(),
     )
 
 
 def _insert_attachment_links(
     db: Session,
     version_id_map: dict[uuid.UUID, uuid.UUID],
-    attachment_id_map: dict[uuid.UUID, uuid.UUID],
+    source_conversation_by_message: dict[uuid.UUID, uuid.UUID],
+    recovery: MergeAttachmentRecovery,
+    progress_callback: MergeProgressCallback | None,
+    total_messages: int,
 ) -> int:
     copied = 0
     source_version_ids = list(version_id_map)
     for version_ids in _batches(source_version_ids, VERSION_BATCH_SIZE):
-        rows = (
-            db.query(
-                MessageVersionAttachment.message_version_id,
-                MessageVersionAttachment.attachment_id,
-                MessageVersionAttachment.occurrence_key,
-                MessageVersionAttachment.placement,
-                MessageVersionAttachment.relation_type,
-                MessageVersionAttachment.display_order,
-                MessageVersionAttachment.block_index,
-                MessageVersionAttachment.display_mode,
-                MessageVersionAttachment.alt_text,
-                MessageVersionAttachment.caption,
+        for row in db.query(MessageVersion.id, MessageVersion.message_id).filter(
+            MessageVersion.id.in_(version_ids),
+        ).all():
+            copied += recover_occurrences(
+                db,
+                source_version_id=row.id,
+                target_version_id=version_id_map[row.id],
+                attachment_id_map=recovery.mapping_for(source_conversation_by_message[row.message_id]),
+                recovery=recovery,
             )
-            .filter(MessageVersionAttachment.message_version_id.in_(version_ids))
-            .yield_per(MERGE_BATCH_SIZE)
-        )
-        output = [
-            {
-                "id": uuid.uuid4(),
-                "message_version_id": version_id_map[row.message_version_id],
-                "attachment_id": _mapped_attachment_id(row.attachment_id, attachment_id_map),
-                "occurrence_key": row.occurrence_key,
-                "placement": row.placement,
-                "relation_type": row.relation_type,
-                "display_order": row.display_order,
-                "block_index": row.block_index,
-                "display_mode": row.display_mode,
-                "alt_text": row.alt_text,
-                "caption": row.caption,
-            }
-            for row in rows
-        ]
-        if output:
-            insert_rows(db, MessageVersionAttachment, output)
-            copied += len(output)
+        _report(progress_callback, "blocks", 62, total_messages, total_messages)
     return copied
 
 
-def _mapped_attachment_id(source_id: uuid.UUID, attachment_id_map: dict[uuid.UUID, uuid.UUID]) -> uuid.UUID:
-    target_id = attachment_id_map.get(source_id)
-    if target_id is None:
-        raise ValueError(f"Attachment occurrence {source_id} cannot be mapped during merge.")
-    return target_id
+def _prepare_attachment_recovery(
+    db: Session,
+    source_conversation_by_message: dict[uuid.UUID, uuid.UUID],
+    source_version_ids: list[uuid.UUID],
+    recovery: MergeAttachmentRecovery,
+) -> None:
+    """Plan target-only placeholders; never repair or read a foreign source file."""
+    for version_ids in _batches(source_version_ids, VERSION_BATCH_SIZE):
+        blocks_by_version: dict[uuid.UUID, list] = {}
+        for block in db.query(RenderBlock).filter(RenderBlock.message_version_id.in_(version_ids)).order_by(
+            RenderBlock.message_version_id, RenderBlock.block_index,
+        ).all():
+            blocks_by_version.setdefault(block.message_version_id, []).append(block)
+        linked_by_version: dict[uuid.UUID, set[uuid.UUID]] = {}
+        for link in db.query(MessageVersionAttachment.message_version_id, MessageVersionAttachment.attachment_id).filter(
+            MessageVersionAttachment.message_version_id.in_(version_ids),
+        ).all():
+            linked_by_version.setdefault(link.message_version_id, set()).add(link.attachment_id)
+        for version in db.query(MessageVersion).filter(MessageVersion.id.in_(version_ids)).all():
+            source_id = source_conversation_by_message.get(version.message_id)
+            if source_id is None:
+                raise ValueError("Source message version is outside the selected merge conversations.")
+            projections = [_block_projection(block) for block in blocks_by_version.get(version.id, [])]
+            context = markdown_reference_context(version.display_text or "", blocks=version.blocks or projections)
+            references = (
+                attachment_markdown_ids(version.display_text or "")
+                | attachment_blocks_ids(version.blocks or [], context)
+                | attachment_blocks_ids(projections, context)
+                | linked_by_version.get(version.id, set())
+            )
+            recovery.ensure_references(db, source_id, references)
+    db.flush()
 
 
 def validate_source_attachment_integrity(
@@ -259,7 +282,11 @@ def validate_source_attachment_integrity(
         references_by_version: dict[uuid.UUID, set[uuid.UUID]] = {}
         block_references_by_version: dict[uuid.UUID, dict[int, set[uuid.UUID]]] = {}
         for version in versions:
-            context = markdown_reference_context(version.display_text or "")
+            context = markdown_reference_context(
+                version.display_text or "", blocks=version.blocks or [
+                    _block_projection(block) for block in sorted(blocks_by_version.get(version.id, []), key=lambda b: b.block_index)
+                ],
+            )
             version_references = (
                 attachment_markdown_ids(version.display_text or "")
                 | attachment_blocks_ids(version.blocks or [], context)
@@ -311,10 +338,9 @@ def _validate_attachment_copy(
     target: Conversation,
     version_id_map: dict[uuid.UUID, uuid.UUID],
     block_id_map: dict[uuid.UUID, uuid.UUID],
-    attachment_id_map: dict[uuid.UUID, uuid.UUID],
+    target_attachment_ids: set[uuid.UUID],
 ) -> None:
     """Verify copied references and occurrence links are scoped to the target conversation."""
-    target_attachment_ids = set(attachment_id_map.values())
     actual_target_attachment_ids = {
         row.id for row in db.query(Attachment.id).filter(Attachment.conversation_id == target.id).all()
     }
@@ -356,7 +382,11 @@ def _validate_attachment_copy(
         for version in versions:
             if version.message_id not in target_message_ids:
                 raise ValueError("Merged message version is outside the target conversation.")
-            context = markdown_reference_context(version.display_text or "")
+            context = markdown_reference_context(
+                version.display_text or "", blocks=version.blocks or [
+                    _block_projection(block) for block in sorted(blocks_by_version.get(version.id, []), key=lambda b: b.block_index)
+                ],
+            )
             referenced_ids = attachment_markdown_ids(version.display_text) | attachment_blocks_ids(version.blocks or [], context)
             if not referenced_ids.issubset(target_attachment_ids):
                 raise ValueError("Merged message contains an attachment reference outside the target conversation.")
@@ -388,14 +418,29 @@ def _insert_attachments(
     db: Session,
     target: Conversation,
     sources: Sequence[Conversation],
-) -> dict[uuid.UUID, uuid.UUID]:
+) -> MergeAttachmentRecovery:
     rows = (
         db.query(Attachment)
+        .options(joinedload(Attachment.asset_object))
         .filter(Attachment.conversation_id.in_([source.id for source in sources]), Attachment.deleted_at.is_(None))
         .order_by(Attachment.created_at, Attachment.id)
         .all()
     )
     attachment_id_map = {row.id: uuid.uuid4() for row in rows}
+    recovery = MergeAttachmentRecovery(
+        target_id=target.id, maps_by_source={source.id: {} for source in sources},
+        missing_attachment_ids=set(),
+    )
+    for row in rows:
+        recovery.mapping_for(row.conversation_id)[row.id] = attachment_id_map[row.id]
+        asset = row.asset_object
+        if (
+            row.status not in {"available", "detached"} or row.resolution_status != "resolved"
+            or not scan_status_allows_use(row.scan_status)
+            or asset is None or asset.status != "available" or asset.deleted_at is not None
+            or asset.storage_deleted_at is not None or not scan_status_allows_use(asset.scan_status)
+        ):
+            recovery.missing_attachment_ids.add(attachment_id_map[row.id])
     if rows:
         insert_rows(db, Attachment, [{
             "id": attachment_id_map[row.id],
@@ -415,7 +460,7 @@ def _insert_attachments(
             "created_at": row.created_at,
             "deleted_at": None,
         } for row in rows])
-    return attachment_id_map
+    return recovery
 
 
 def _message_plans(db: Session, sources: Sequence[Conversation]) -> list[_MessagePlan]:
@@ -624,11 +669,12 @@ def _insert_versions(
     version_rows,
     message_id_map: dict[uuid.UUID, uuid.UUID],
     version_id_map: dict[uuid.UUID, uuid.UUID],
-    attachment_id_map: dict[uuid.UUID, uuid.UUID],
+    recovery: MergeAttachmentRecovery,
     progress_callback: MergeProgressCallback | None,
 ) -> tuple[dict[uuid.UUID, str], dict[uuid.UUID, str], int]:
     current_versions = {plan.source_current_version_id: plan.target_id for plan in plans}
     role_by_message = {plan.source_id: plan.role for plan in plans}
+    source_by_message = {plan.source_id: plan.source_conversation_id for plan in plans}
     current_plain_text: dict[uuid.UUID, str] = {}
     current_content_hashes: dict[uuid.UUID, str] = {}
     source_version_ids = [row.id for row in version_rows]
@@ -659,7 +705,8 @@ def _insert_versions(
         )
         output: list[dict] = []
         for row in rows:
-            context = markdown_reference_context(row.display_text or "")
+            attachment_id_map = recovery.mapping_for(source_by_message[row.message_id])
+            context = _version_reference_context(db, row)
             assert_attachment_ids_mapped(
                 attachment_markdown_ids(row.display_text or "") | attachment_blocks_ids(row.blocks or [], context),
                 attachment_id_map,
@@ -717,17 +764,18 @@ def _insert_render_blocks(
     source_version_ids: list[uuid.UUID],
     version_id_map: dict[uuid.UUID, uuid.UUID],
     block_id_map: dict[uuid.UUID, uuid.UUID],
-    attachment_id_map: dict[uuid.UUID, uuid.UUID],
+    source_conversation_by_message: dict[uuid.UUID, uuid.UUID],
+    recovery: MergeAttachmentRecovery,
     total_messages: int,
     progress_callback: MergeProgressCallback | None,
 ) -> int:
     copied = 0
     for version_ids in _batches(source_version_ids, VERSION_BATCH_SIZE):
-        contexts = {
-            row.id: markdown_reference_context(row.display_text or "")
-            for row in db.query(MessageVersion.id, MessageVersion.display_text)
-            .filter(MessageVersion.id.in_(version_ids)).yield_per(1)
-        }
+        versions = db.query(MessageVersion.id, MessageVersion.message_id, MessageVersion.display_text, MessageVersion.blocks).filter(
+            MessageVersion.id.in_(version_ids),
+        ).all()
+        contexts = {row.id: _version_reference_context(db, row) for row in versions}
+        mappings = {row.id: recovery.mapping_for(source_conversation_by_message[row.message_id]) for row in versions}
         rows = (
             db.query(
                 RenderBlock.id,
@@ -750,6 +798,7 @@ def _insert_render_blocks(
         output: list[dict] = []
         for row in rows:
             context = contexts[row.message_version_id]
+            attachment_id_map = mappings[row.message_version_id]
             projection = _block_projection(row)
             assert_attachment_ids_mapped(attachment_block_ids(projection, context), attachment_id_map)
             rewritten = rewrite_attachment_block(projection, attachment_id_map, context)

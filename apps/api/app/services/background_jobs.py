@@ -1035,6 +1035,7 @@ def process_background_job(
                     "source_conversation_ids": [str(value) for value in conversation_ids],
                     "title": result.conversation.display_title,
                     "message_count": result.message_count,
+                    "attachment_recovery": result.attachment_recovery,
                 }
                 processed_items = result.message_count
                 report("publishing", 99, processed_items, processed_items)

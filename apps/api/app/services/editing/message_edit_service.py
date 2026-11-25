@@ -45,13 +45,13 @@ from app.services.editing.attachment_reference_rewriter import (
     assert_attachment_ids_mapped,
     attachment_markdown_ids,
     attachment_blocks_ids,
+    attachment_source_references,
     markdown_reference_context,
     rewrite_attachment_markdown,
 )
 from app.services.assets.scanner import scan_status_allows_use
 from app.services.database.bulk_insert import insert_rows
 from app.services.editing.transient_upload_references import find_transient_upload_references
-from app.services.editing.markdown_attachment_references import attachment_references
 from app.services.editing.errors import MessageEditError
 
 MAX_EDIT_TEXT_LENGTH = 200_000
@@ -88,6 +88,7 @@ class MessageMergeResult:
 class ConversationTransformResult:
     conversation: Conversation
     message_count: int
+    attachment_recovery: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -504,6 +505,7 @@ def merge_conversations(
                 "annotation_count": copy_result.annotation_count,
                 "heading_count": copy_result.heading_count,
                 "attachment_count": copy_result.attachment_count,
+                "attachment_recovery": copy_result.attachment_recovery,
             },
             created_by="user",
         )
@@ -520,7 +522,11 @@ def merge_conversations(
         )
     new_conversation.status = "active"
     db.flush()
-    return ConversationTransformResult(conversation=new_conversation, message_count=copied_count)
+    return ConversationTransformResult(
+        conversation=new_conversation,
+        message_count=copied_count,
+        attachment_recovery=copy_result.attachment_recovery,
+    )
 
 
 def split_conversation(
@@ -1098,7 +1104,7 @@ def _sync_version_attachment_links(
             MessageVersionAttachment.message_version_id == version_id
         ).delete(synchronize_session=False)
     references: list[tuple[int, uuid.UUID, object]] = []
-    source_references = attachment_references(source_text)
+    source_references = attachment_source_references(source_text)
     for index, block in enumerate(block_drafts):
         # Attachment URLs may be standalone image/file blocks or inline inside
         # a paragraph. Keep one row per URL occurrence, including repeated URLs
@@ -1119,7 +1125,7 @@ def _sync_version_attachment_links(
                 line_number = _attachment_reference_line(source_text, raw_id)
                 raise MessageEditError(f"Line {line_number} contains an invalid attachment reference.", 422) from exc
         elif block.block_type != "code" and isinstance(block.plain_text, str):
-            ids.extend(uuid.UUID(ref.identifier) for ref in attachment_references(block.plain_text)
+            ids.extend(uuid.UUID(ref.identifier) for ref in attachment_source_references(block.plain_text)
                        if ASSET_REFERENCE_RE.fullmatch(f"cr-asset://{ref.identifier}"))
         for attachment_id in ids:
             references.append((index, attachment_id, block))
@@ -1254,7 +1260,7 @@ def _render_block_rows(version_id: uuid.UUID, block_drafts) -> list[dict]:
 
 def _attachment_reference_line(source_text: str, attachment_id: str) -> int:
     return next(
-        (ref.line_number for ref in attachment_references(source_text)
+        (ref.line_number for ref in attachment_source_references(source_text)
          if ref.identifier.lower() == attachment_id.lower()),
         1,
     )
@@ -1701,7 +1707,7 @@ def _copy_messages_to_conversation(
     )
     count = 0
     for index, (source_message, version) in enumerate(zip(source_messages, source_versions, strict=True), start=1):
-        context = markdown_reference_context(version.display_text or "")
+        context = markdown_reference_context(version.display_text or "", blocks=version.blocks or [])
         assert_attachment_ids_mapped(
             attachment_markdown_ids(version.display_text or "") | attachment_blocks_ids(version.blocks or [], context),
             attachment_id_map,

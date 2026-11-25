@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "base_schedule_sha256": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
-  "reason": "Add device pairing, name-only catalogue, resumable capture, retained retry and bounded long-message regressions; retain all baseline assignments, assertions, timeouts and skips. Migration fixtures additionally require 0065 pairing rows.",
+  "reason": "Add merge HTML literal/source-coordinate, target-only missing reference recovery and result regressions to the existing extension qualification. Preserve original collection and source-audit detection; whole-merge reference failure behavior is changed only with explicit user approval. No timeouts, skips or security gates relaxed.",
   "api": {
     "tests/test_admin_updates.py": {
       "count": 9,
@@ -92,6 +92,26 @@
       "count": 6,
       "shard": 2,
       "source_lf_sha256": "895a6eb312bb1d3320ec61642121e66871e8625dc5ce3a406f32055a99c31cbf"
+    },
+    "tests/test_merge_html_attachment_api.py": {
+      "count": 28,
+      "shard": 2,
+      "source_lf_sha256": "9c8f8c5d016bfed71fb1d4392280da463b9de90382b8c21335b64d8f7124221d"
+    },
+    "tests/test_merge_html_attachment_references.py": {
+      "count": 83,
+      "shard": 3,
+      "source_lf_sha256": "b166728cedc3ebbefbc70bb0338d8b01aea4bfa713df85296d297de5f369de0c"
+    },
+    "tests/test_merge_reference_recovery.py": {
+      "count": 14,
+      "shard": 2,
+      "source_lf_sha256": "a6ffc806ea2b72dc3c9acce4986a859295d67ea4a0863127ef071c73655f49ff"
+    },
+    "tests/test_merge_reference_recovery_helper.py": {
+      "count": 26,
+      "shard": 3,
+      "source_lf_sha256": "eca505d6c9b4c1ace938eeb881ffbedfb3110b5319b1a93a8a94ac93cc2af395"
     }
   },
   "api_fixture_revisions": {
@@ -226,6 +246,24 @@
         "tests/test_worker_model_registration.py::test_selected_service_reexports_are_the_original_objects[app.services.sharing.share_service-verify_password-app.services.auth]"
       ],
       "reason": "Migration 0065 adds ExtensionPairing. Require its table/export and exactly 96 complete mappers (previously 95). Preserve all 17 original node IDs, the original ninety exports, complete FK/class identity, worker eager-module budgets and skip policy."
+    },
+    "tests/test_merge_history_and_cancellation.py": {
+      "previous_source_lf_sha256": "087558388abadd0481874e534c153d342430180be5550de807c8b534014b579d",
+      "source_lf_sha256": "481f4382e7433beb20821c85b0383ab0f60285e490cfe54ad61e5e476c16922c",
+      "nodeids": [
+        "tests/test_merge_history_and_cancellation.py::test_merge_rejects_message_count_above_administrator_limit",
+        "tests/test_merge_history_and_cancellation.py::test_merge_validation_batches_large_render_block_graph",
+        "tests/test_merge_history_and_cancellation.py::test_merge_copies_all_versions_blocks_current_pointer_and_annotations",
+        "tests/test_merge_history_and_cancellation.py::test_merge_rewrites_attachment_references_and_blocks_without_mutating_source",
+        "tests/test_merge_history_and_cancellation.py::test_merge_fails_closed_for_broken_source_attachment_graph[inactive_attachment-missing, inactive, or belongs to another conversation]",
+        "tests/test_merge_history_and_cancellation.py::test_merge_fails_closed_for_broken_source_attachment_graph[missing_occurrence-has no occurrence link]",
+        "tests/test_merge_history_and_cancellation.py::test_merge_fails_closed_for_broken_source_attachment_graph[missing_block-points to a missing render block]",
+        "tests/test_merge_history_and_cancellation.py::test_merge_fails_closed_for_broken_source_attachment_graph[cross_conversation-missing, inactive, or belongs to another conversation]",
+        "tests/test_merge_history_and_cancellation.py::test_merge_worker_rolls_back_target_when_source_occurrence_is_missing",
+        "tests/test_merge_history_and_cancellation.py::test_cancel_endpoint_and_stale_retry_limit",
+        "tests/test_merge_history_and_cancellation.py::test_merge_cancellation_rolls_back_target_conversation"
+      ],
+      "reason": "Explicit November 25 user-approved merge-only recovery semantics: keep all original case IDs and strict source audit, replace whole-task rejection for ordinary reference defects with valid target-only recovery or missing placeholders. Strengthen source preservation, no foreign asset access, target graph and receipt checks; cancellation/rollback gates and skips unchanged."
     }
   },
   "settings_fixture_revisions": {

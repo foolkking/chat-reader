@@ -259,6 +259,12 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reading-feedback-browser.mjs
 
+      - name: Merged attachment recovery result and retained original navigation
+        if: ${{ inputs.shard == 3 }}
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/merge-attachment-result-browser.mjs
+
       - name: Context and Skill upload proxy transport
         if: ${{ inputs.shard == 1 }}
         run: |
@@ -552,6 +558,18 @@ jobs:
             apps/web/playwright-report
             apps/web/test-results
           if-no-files-found: warn
+          retention-days: 14
+
+      - name: Preserve merge attachment result evidence
+        if: ${{ always() && inputs.shard == 3 }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: merge-attachment-result-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/merge-attachment-result-browser/result.json
+            ${{ runner.temp }}/merge-attachment-result-browser/failure.json
+            ${{ runner.temp }}/merge-attachment-result-browser/*.png
+          if-no-files-found: error
           retention-days: 14
 
       - name: Preserve device authorization native results

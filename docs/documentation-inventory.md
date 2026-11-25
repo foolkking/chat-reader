@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-25（合并修复候选）：[生产只读诊断与合成 HTML 卡片回归](evidence/merge-html-2026-11-25/README.md)及[合并引用合同](system/BACKEND_AND_API.md#conversation-merge-execution-current)。统一源引用识别，不改权限、迁移或原对话；前一候选完整 CI 通过不代替本次新增修复的资格。
+
 2026-11-25（提交前）：[统一设计修复与效果复审](evidence/extension-design-2026-11-25/README.md)对应两个原分支，补充20状态、前后截图、授权/计划/内存红绿证据和完整CI覆盖新增151项。同步Project State、导航和Fork 0.3.0候选README；不将本地207通过/63跳过冒充全项成功，不删除历史失败或唯一生产备份。
 
 2026-11-25（复审后候选，未发布）：[统一设计 v2 修复前审查](execution/ux-audit-extension-design-v2-2026-11-25.md)保留全部初始失败；[候选交互、配对、目录与导入恢复合同](system/BROWSER_EXTENSION.md#unified-candidate)区分真实 API/worker 运行与合成来源、真实 ChatGPT 未核验范围。完整 CI/签名发布不得用本地测试替代。

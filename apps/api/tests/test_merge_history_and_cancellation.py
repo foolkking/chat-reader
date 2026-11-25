@@ -481,11 +481,32 @@ def test_merge_fails_closed_for_broken_source_attachment_graph(
         db.commit()
 
         merged_before = db.query(Conversation).filter(Conversation.source_type == "merged").count()
+        # The strict diagnostic remains available, but the merge-only recovery
+        # contract now repairs its new target instead of rejecting source text.
+        from app.services.editing.conversation_merge_service import validate_source_attachment_integrity
         with pytest.raises(ValueError, match=error_match):
-            merge_conversations(db, [source_uuid, other_uuid], title="Must roll back")
+            validate_source_attachment_integrity(
+                db, {uuid.UUID(source_message["id"]): source_uuid}, [version_id],
+            )
         db.rollback()
 
         assert db.query(Conversation).filter(Conversation.source_type == "merged").count() == merged_before
+        result = merge_conversations(db, [source_uuid, other_uuid], title="Preserve text and references")
+        db.commit()
+        assert db.query(Conversation).filter(Conversation.source_type == "merged").count() == merged_before + 1
+        recovery = result.attachment_recovery
+        assert recovery["unlocated_occurrences"] == 0
+        if corruption in {"inactive_attachment", "cross_conversation"}:
+            assert recovery["missing_attachments"] == 1
+            missing = db.query(Attachment).filter_by(conversation_id=result.conversation.id, status="missing").one()
+            assert missing.asset_object_id is None and missing.resolution_status == "missing"
+        else:
+            assert recovery["missing_attachments"] == 0 and recovery["repaired_occurrences"] == 1
+        targets = db.query(Message).filter_by(conversation_id=result.conversation.id).all()
+        target_versions = db.query(MessageVersion).filter(MessageVersion.message_id.in_([m.id for m in targets])).all()
+        validate_source_attachment_integrity(
+            db, {m.id: m.conversation_id for m in targets}, [v.id for v in target_versions],
+        )
         source_after = db.get(MessageVersion, version_id)
         assert source_after is not None
         assert attachment_id in source_after.display_text
@@ -533,20 +554,24 @@ def test_merge_worker_rolls_back_target_when_source_occurrence_is_missing(client
 
     queued = client.post(
         "/api/conversations/merge",
-        json={"conversation_ids": [source_id, peer_id], "title": "Must not publish"},
+        json={"conversation_ids": [source_id, peer_id], "title": "Recover missing occurrence"},
     )
     assert queued.status_code == 202, queued.text
     _complete_background_job(queued.json()["job_id"])
     task = client.get(f"/api/tasks/{queued.json()['job_id']}")
     assert task.status_code == 200
-    assert task.json()["status"] == "failed"
-    assert task.json()["result"] == {}
+    assert task.json()["status"] == "committed"
+    assert task.json()["result"]["message_count"] == 2
+    assert task.json()["result"]["attachment_recovery"] == {
+        "missing_attachments": 0, "repaired_occurrences": 1, "unlocated_occurrences": 0,
+    }
 
     with _database_session() as db:
-        assert db.query(Conversation).filter(Conversation.source_type == "merged").count() == merged_before
+        assert db.query(Conversation).filter(Conversation.source_type == "merged").count() == merged_before + 1
         source_after = db.get(MessageVersion, version_id)
         assert source_after is not None
         assert attachment_id in source_after.display_text
+        assert db.query(MessageVersionAttachment).filter_by(message_version_id=version_id).count() == 0
 
 
 def test_cancel_endpoint_and_stale_retry_limit(client: TestClient) -> None:

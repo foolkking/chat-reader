@@ -1,5 +1,7 @@
 # Project State
 
+**2026-11-25 合并失败修复中，尚未上线：** `king` 两次 376 条消息合并在附件源校验阶段失败。只读定位到同一正文 HTML 卡片中的四个有效 `href/src` 被 Markdown-only 识别漏掉，非已证实 OOM；原任务未发布目标、未重试。候选统一 HTML/Markdown 引用识别及字面示例保全；按用户追加要求，仅为合并补齐目标侧引用恢复，缺件复用已有 missing 表达，不借用其他来源文件、不改原对话。任务区分已修复关联与附件待核对；导入原有容错不另改。[真实诊断、红绿回归及发布边界](docs/evidence/merge-html-2026-11-25/README.md)。前一候选 `64577ea` 完整 CI `45595805439/1` 已 19/19，通过结果不覆盖这次新增修复。
+
 **2026-11-25 插件统一设计复审修复完成、本地候选未发布。** 实现名称搜索、共用浮层与项目入口、短码、AI包/Skill、真实命中导航及四步批量中心；补齐固定分页、跨项目核对、冲突跳过和恢复竞态。插件0.3.0仍同ID；API/worker/Web须先迁至单head0065，不走无迁移快路径。Node全仓207通过/63原有私有夹具跳过，真实Edge＋隔离API/PG/worker16项及canonical读回11项通过；真实ChatGPT与Chrome解压安装未认证。API完整CI覆盖清单增加151项至7267（原3跳过不变），不以本机中断的全量尝试宣称成功。[修复、20状态对照、失败和验证边界](docs/evidence/extension-design-2026-11-25/README.md) · [当前候选合同](docs/system/BROWSER_EXTENSION.md#unified-candidate)。
 
 **2026-11-25 本地候选，未发布：插件长对话采集与读取进度。** 两仓仍在 `codex/reader-extension`，取消插件原 8/32 MiB JSON、16 MiB 附件、100 MiB 包、2 MiB 正文及 50,000 条消息采集门槛，改为分块处理、OPFS 暂存和可续传收据；展示实测阶段与计数。Reader 对索引消息使用原子导入和长正文旁文件，保留实际内存、空间及管理员容量政策，不承诺无限资源。API/worker 必须同版后再更新插件。局部测试不代表之前完整浮层／配对／批量导入计划已交付，也不替代 CI 或真实账号验收。[合同与兼容边界](docs/system/BROWSER_EXTENSION.md#capture-streaming-candidate) · [测试、失败与截图](docs/evidence/extension-capture-2026-11-25/README.md)。
