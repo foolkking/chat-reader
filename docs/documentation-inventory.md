@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-25（v0.1.8 发布未通过）：合并提交的完整分支 CI 已通过，标签资格停在一次 Web DELETE 500。[失败与 TCP 回归](evidence/merge-html-2026-11-25/README.md#branch-ci-and-the-v018-release-attempt)保留精确运行和制品标识；[Next 代理约束](system/NEXT_LTS_MIGRATION_CONTRACT.md#upstream-mutation-proxy--candidate-2026-11-25)说明写请求新连接、无重放和升级依赖时的回归要求。未放宽浏览器 204 断言。
+
 2026-11-25（合并修复候选）：[生产只读诊断与合成 HTML 卡片回归](evidence/merge-html-2026-11-25/README.md)及[合并引用合同](system/BACKEND_AND_API.md#conversation-merge-execution-current)。统一源引用识别，不改权限、迁移或原对话；前一候选完整 CI 通过不代替本次新增修复的资格。
 
 2026-11-25（提交前）：[统一设计修复与效果复审](evidence/extension-design-2026-11-25/README.md)对应两个原分支，补充20状态、前后截图、授权/计划/内存红绿证据和完整CI覆盖新增151项。同步Project State、导航和Fork 0.3.0候选README；不将本地207通过/63跳过冒充全项成功，不删除历史失败或唯一生产备份。

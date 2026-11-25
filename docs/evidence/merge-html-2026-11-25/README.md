@@ -141,5 +141,47 @@ full CI `45595805439`, attempt 1, all 19 jobs. Extension
 Both were checked after a measured 1500.010-second command wait.
 **Those runs do not certify this later merge repair.**
 
-Current checkpoint: local repair/review complete, awaiting the exact new full
-CI. No new release, deployment or production retry is certified here.
+## Branch CI and the v0.1.8 release attempt
+
+The merge repair at `0411d4e140e7854c6c489afe21c3ec8a5afda7fa` passed
+all 19 jobs in branch run `45614605210`, attempt 1. The native API report
+recorded 7,415 passes and the three existing skips. The independently
+checked image artifact was `15023651335`.
+
+The same commit failed protected `v0.1.8` qualification `45619843202/1`.
+In Web shard 2, job `139224752776`, one of the 124 browser cases received
+HTTP 500 when deleting its synthetic conversation during cleanup. The case
+requires 204 for a single real request. The other 123 passed. Next logged
+`socket hang up` at 13:15:45 UTC while the API had no corresponding DELETE.
+A separate PostgreSQL deadlock happened at 13:09 UTC. The publish run
+`45619810971/1` stopped before signing. The failed tag remains available
+for inspection.
+
+With a real TCP relay, an expired connection in Next's upstream pool
+reproduced the missing request for POST, PATCH, PUT and DELETE. Each failed
+before reaching the test API. The CI artifact has application logs only,
+so the socket identity in the original job cannot be established.
+
+The pinned Next patch opens a fresh upstream connection for writes. It
+preserves pooled reads and streaming and never replays a write. The same
+regression suite produced four failures on the original dependency and
+11 passes with the patch on both Node 20.13.1 and 24.22.3. These include
+an upstream that loses its response after accepting a write. The API
+receives the operation once. The original browser assertion still requires
+204. On upgrading Next, run `node --test scripts/ux/upstream-mutation-proxy.test.mjs`
+against the candidate dependency before changing the patch.
+
+The final local candidate passed the **same 124 browser cases**, without
+retries, skips or assertion/timeout changes, against an isolated Linux
+Web/API/worker/PostgreSQL network and desktop Edge. The production Web
+Docker build, lint, typecheck, all **2,623 Node tests**, and all **11 proxy
+controls on the pinned Linux Node 22.13.1** passed. See
+[the source hashes and exact results](proxy-qualification-repair.json).
+
+The earlier Windows builds exhausted memory; the first full browser attempt
+used an unreliable Docker-to-Windows API bridge and was interrupted after
+connection timeouts and cleanup failures. Their logs remain retained. The
+successful rerun used a fresh synthetic database, not a changed assertion.
+The standalone runtime also lacks an unused ESM source file required by one
+source-equivalence control; the full dependency image passed all eleven.
+These local results do not replace the next exact-commit CI or signed release.

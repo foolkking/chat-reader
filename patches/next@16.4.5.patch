@@ -1,0 +1,26 @@
+diff --git a/dist/esm/server/lib/router-utils/proxy-request.js b/dist/esm/server/lib/router-utils/proxy-request.js
+index 44ee8af36de7e4e7d8a6888625ba1fe36e9d1ab4..c42fe813e7c7d24f51c66ef9ea85153af7d8a05f 100644
+--- a/dist/esm/server/lib/router-utils/proxy-request.js
++++ b/dist/esm/server/lib/router-utils/proxy-request.js
+@@ -101,6 +101,8 @@ export async function proxyRequest(req, res, parsedUrl, upgradeHead, reqBody, pr
+         // (e.g. an abrupt client disconnect) even when an `error` listener is
+         // registered.
+         proxy.web(req, res, {
++            // A mutation must use a fresh upstream socket when a pooled connection may have expired.
++            agent: req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS' ? undefined : false,
+             buffer: reqBody
+         }).catch(onProxyError);
+     }
+diff --git a/dist/server/lib/router-utils/proxy-request.js b/dist/server/lib/router-utils/proxy-request.js
+index 62acf58d72bb8ee101fbff98d5da1b62d587598c..8160d059446ea9a8f11e7799c988c7adb729b681 100644
+--- a/dist/server/lib/router-utils/proxy-request.js
++++ b/dist/server/lib/router-utils/proxy-request.js
+@@ -116,6 +116,8 @@ async function proxyRequest(req, res, parsedUrl, upgradeHead, reqBody, proxyTime
+         // (e.g. an abrupt client disconnect) even when an `error` listener is
+         // registered.
+         proxy.web(req, res, {
++            // A mutation must use a fresh upstream socket when a pooled connection may have expired.
++            agent: req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS' ? undefined : false,
+             buffer: reqBody
+         }).catch(onProxyError);
+     }
