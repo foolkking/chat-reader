@@ -1,5 +1,7 @@
 # 文档导航
 
+- **插件 `6725193` 验收候选（未上线）：** [已验证与待验证矩阵](evidence/extension-source-acceptance-2026-11-26/README.md) · [用户实机验收与可选离线对照](evidence/extension-source-acceptance-2026-11-26/manual.md)。
+
 - **0.3.0 核心整改候选已可本机验收。** [按来源项目选择或新建同名 Reader 项目的补充包](evidence/extension-core-2026-11-26/project-mapping.md) · [前版包与验收说明](evidence/extension-core-2026-11-26/README.md) · [真实短对话观察及九图对照](execution/ux-audit-extension-core-2026-11-26.md) · [客户端与 Reader 合同](system/BROWSER_EXTENSION.md#core-remediation-candidate)
 
 - **当前交付：[v0.1.10生产部署、两套恢复点的保留原因](deployment.md#v0110-production)** · [精确CI、签名、生产与插件0.3.0脱敏回执](evidence/merge-html-2026-11-25/v0.1.10-production.json)。用户实际加载目录已原位替换，仍需在浏览器重新加载；原失败合并未自动重试。

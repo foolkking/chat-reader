@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-26：[来源整改验收矩阵](evidence/extension-source-acceptance-2026-11-26/README.md)、[用户浏览器验收单](evidence/extension-source-acceptance-2026-11-26/manual.md)及[机器回执](evidence/extension-source-acceptance-2026-11-26/verification.json)区分精确插件 CI、离线对照、隔离服务端提交与未执行的个人实测。同步[插件来源合同](system/BROWSER_EXTENSION.md#source-acceptance)，新增只读对照工具；不改变服务部署、权限或 schema。
+
 2026-11-26 发布复审：补记[旧版读取范围决策的边界](system/BROWSER_EXTENSION.md#core-remediation-candidate)及[生产容量下界](deployment.md)，核心候选的本机验收与线上状态分开。
 
 2026-11-26 项目映射补充：[逐行映射与旧服务回退](system/BROWSER_EXTENSION.md#core-remediation-candidate)、[Web 会话创建合同](api-reference.md#插件导入项目确认2026-11-26-工作树未部署)及[独立安装包与测试回执](evidence/extension-core-2026-11-26/project-mapping.md)。旧包、旧失败与生产事实保留。

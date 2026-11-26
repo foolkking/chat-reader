@@ -1,0 +1,601 @@
+{
+  "recorded_at": "2026-11-26T22:01:55.928002+08:00",
+  "timezone": "Asia/Shanghai; GitHub timestamps are UTC",
+  "scope": "No real ChatGPT/Reader browser acceptance. Server data and fixtures are synthetic only.",
+  "fork": {
+    "sha": "6725193cfe6f34e8f15f40f3be0e6c5f775e0d4e",
+    "ssh_ref_match": true,
+    "tree": "42558493645ce18bd4b3aafc9d187109e650e219",
+    "verified": "2026-11-26T21:43:34.0670662+08:00",
+    "start": "2026-11-26T21:43:14.0133852+08:00",
+    "base": "b0b24fbee8e9261d468fcb394c3bbff294d97c46"
+  },
+  "reader_runtime": "41e0ebfd9e8a3f68f43645c84d333c616fde85be",
+  "exact_ci": {
+    "fork": {
+      "databaseId": 45831936898,
+      "attempt": 1,
+      "headSha": "6725193cfe6f34e8f15f40f3be0e6c5f775e0d4e",
+      "headBranch": "codex/reader-extension",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "createdAt": "2026-11-26T13:43:34Z",
+      "updatedAt": "2026-11-26T13:44:29Z",
+      "jobs": [
+        {
+          "databaseId": 139950668809,
+          "name": "test",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:44:29Z"
+        }
+      ]
+    },
+    "reader_runtime": {
+      "databaseId": 45823504461,
+      "attempt": 1,
+      "headSha": "41e0ebfd9e8a3f68f43645c84d333c616fde85be",
+      "headBranch": "codex/reader-extension",
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "createdAt": "2026-11-26T12:51:02Z",
+      "updatedAt": "2026-11-26T13:14:39Z",
+      "jobs": [
+        {
+          "databaseId": 139921580082,
+          "name": "settings-restore",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T12:53:54Z"
+        },
+        {
+          "databaseId": 139921580321,
+          "name": "image-preparation",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T12:56:53Z"
+        },
+        {
+          "databaseId": 139921580390,
+          "name": "settings-quality-shard-3 / matrix",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:04:51Z"
+        },
+        {
+          "databaseId": 139921580457,
+          "name": "api-quality-shard-2 / suite",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:05:30Z"
+        },
+        {
+          "databaseId": 139921580480,
+          "name": "settings-quality-shard-2 / matrix",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:05:39Z"
+        },
+        {
+          "databaseId": 139921580496,
+          "name": "web-quality-shard-1 / gates",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:13:04Z"
+        },
+        {
+          "databaseId": 139921580576,
+          "name": "api-quality-shard-1 / suite",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:04:53Z"
+        },
+        {
+          "databaseId": 139921580589,
+          "name": "api-quality-shard-4 / suite",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:08:20Z"
+        },
+        {
+          "databaseId": 139921580664,
+          "name": "web-quality-shard-3 / gates",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:08:05Z"
+        },
+        {
+          "databaseId": 139921580666,
+          "name": "settings-quality-shard-1 / matrix",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:06:37Z"
+        },
+        {
+          "databaseId": 139921580738,
+          "name": "web-quality-shard-2 / gates",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:07:52Z"
+        },
+        {
+          "databaseId": 139921580778,
+          "name": "api-quality-shard-3 / suite",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:03:09Z"
+        },
+        {
+          "databaseId": 139921580840,
+          "name": "reading-performance-comparison / compare",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T12:59:35Z"
+        },
+        {
+          "databaseId": 139921580873,
+          "name": "settings-quality-shard-4 / matrix",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:04:30Z"
+        },
+        {
+          "databaseId": 139929993294,
+          "name": "settings-quality",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:07:20Z"
+        },
+        {
+          "databaseId": 139930956206,
+          "name": "api-quality",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:08:35Z"
+        },
+        {
+          "databaseId": 139933580223,
+          "name": "web-quality",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:13:24Z"
+        },
+        {
+          "databaseId": 139933754568,
+          "name": "build-images",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:14:05Z"
+        },
+        {
+          "databaseId": 139934141708,
+          "name": "inspect-release-artifact",
+          "conclusion": "success",
+          "completedAt": "2026-11-26T13:14:38Z"
+        }
+      ]
+    }
+  },
+  "loopback_installer": {
+    "version": "0.3.0",
+    "files": 59,
+    "installSha256": "0eb8b879fe75d02857d968dc6249d66aeba88df76e5e46af24a220e19a3cbf98",
+    "referenceSha256": "1550d75e2f459942e96a894494293dc55a7dd1c45cf24e9e03131fde8fbcc281",
+    "origin": "http://127.0.0.1:28080",
+    "repeated_build_equal": true,
+    "neutral_ci_artifact": {
+      "id": 15122244228,
+      "name": "reader-reference-6725193cfe6f34e8f15f40f3be0e6c5f775e0d4e-45831936898-1",
+      "digest": "sha256:babc580739ee1f3be85c7d1f8f69a8e53e74de45435006136f8ec64a40157a46",
+      "created_at": "2026-11-26T13:44:27Z"
+    },
+    "artifact_is_reference_checksum_not_installer": true
+  },
+  "fork_full": {
+    "start": "2026-11-26T21:44:17.0136497+08:00",
+    "sha": "6725193cfe6f34e8f15f40f3be0e6c5f775e0d4e",
+    "exit": 0,
+    "end": "2026-11-26T21:44:54.9749198+08:00",
+    "node": "v24.22.3",
+    "tests": 472,
+    "pass": 409,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 63,
+    "log_sha256": "4c765f4cdf297ddf5555efae75ceea28a9247919d3cf8274a4fdf0e862d8c31f",
+    "command": "node --test --test-force-exit \"tests/*.test.cjs\""
+  },
+  "wire_fixture": {
+    "installer": "0eb8b879fe75d02857d968dc6249d66aeba88df76e5e46af24a220e19a3cbf98",
+    "executedModules": 16,
+    "partial": "a830254431dea4346f033fd768181fa45c5916b9fa772152d1a47a2c3462c500",
+    "append251": "2886c8f86341256278ca5c6dbb3c4f29d8de8a7fdb131a2f4a90f8c80aa1e825"
+  },
+  "preserved_intermediate_runs": [
+    {
+      "test": "parser-range-red.log",
+      "exit": 1,
+      "result": {
+        "tests": 9,
+        "pass": 4,
+        "fail": 5,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "log_sha256": "158b45ca4caaf34a968af037ded9fa6f9762cc220908cab84d163b6987a68dd1",
+      "note": "Baseline range, record equivalence, order, identity and reason contract."
+    },
+    {
+      "test": "progress-red.log",
+      "exit": 1,
+      "result": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "log_sha256": "4013c5d3fdfe3ac5dd624511999707142b7bfdb8c188138f02b65f54858f80ce",
+      "note": "Baseline omitted the terminal diagnostic and pending counter."
+    },
+    {
+      "test": "nav-red.log",
+      "exit": 1,
+      "result": {
+        "tests": 3,
+        "pass": 0,
+        "fail": 3,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "log_sha256": "97003e762b19e591566ecd4dadad0ffea858447d16599d188a222bd52901fe12",
+      "note": "Baseline chapter union, text anchor and progress-paced history."
+    },
+    {
+      "test": "nav-01.log",
+      "exit": 1,
+      "result": {
+        "tests": 88,
+        "pass": 87,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "log_sha256": "a2a913d29cbe0a02f198bb6d85d0b93ba966106e537d77811366ca40d5c0c143",
+      "note": "Intermediate repeated edge probes. Superseded stalled child was stopped; not a green run."
+    }
+  ],
+  "web_at_same_reader_runtime": [
+    {
+      "gate": "lint",
+      "sha": "41e0ebfd9e8a3f68f43645c84d333c616fde85be",
+      "start": "2026-11-26T20:41:05.3904434+08:00",
+      "end": "2026-11-26T20:41:37.2495863+08:00",
+      "exit": 0
+    },
+    {
+      "gate": "typecheck",
+      "sha": "41e0ebfd9e8a3f68f43645c84d333c616fde85be",
+      "start": "2026-11-26T20:41:37.2723756+08:00",
+      "end": "2026-11-26T20:42:23.6203320+08:00",
+      "exit": 0
+    },
+    {
+      "gate": "build",
+      "sha": "41e0ebfd9e8a3f68f43645c84d333c616fde85be",
+      "start": "2026-11-26T20:42:23.6225221+08:00",
+      "end": "2026-11-26T20:44:32.2953258+08:00",
+      "exit": 0
+    }
+  ],
+  "isolated_source": {
+    "reader": "41e0ebfd9e8a3f68f43645c84d333c616fde85be",
+    "end": "2026-11-26T21:48:35.9767952+08:00",
+    "start": "2026-11-26T21:45:35.0960410+08:00",
+    "exit": 0,
+    "fork": "6725193cfe6f34e8f15f40f3be0e6c5f775e0d4e",
+    "project": "reader-g1-b530b90997d9",
+    "dependency_images": {
+      "api": "sha256:95421c45d01d07915c66e5e3855b4a4bcfe3cde62cb1800167054099d645e9ed",
+      "postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+    },
+    "source_manifest_sha256": "ed33f2edb775442544fe37fb1f23c7bc2ecaa7be7b02396af3276517923025c4",
+    "passed": true,
+    "synthetic_device_revoked": true,
+    "unrelated_containers_unchanged": true,
+    "owned_services_removed": true,
+    "postgres_passed": 20,
+    "receipt_sha256": "97bbe497dd7f7d7bdfa05592ef55c9b3a39f4dd2662c6a27d09783f00ba3e4bf",
+    "postgres_log_sha256": "2275fa663014087b7616625cc42b7f40155a4e5177e63690c61ab1866b84fd44",
+    "steps": [
+      {
+        "name": "fresh-postgres",
+        "at": "2026-11-26T13:45:45.294948+00:00"
+      },
+      {
+        "name": "postgres-regressions",
+        "at": "2026-11-26T13:47:37.975717+00:00",
+        "exit_code": 0
+      },
+      {
+        "name": "fresh-api-worker",
+        "at": "2026-11-26T13:47:53.731464+00:00",
+        "worker_memory_bytes": 671088640
+      },
+      {
+        "name": "project-confirmation",
+        "at": "2026-11-26T13:47:54.303584+00:00"
+      },
+      {
+        "name": "receive-complete",
+        "at": "2026-11-26T13:47:55.422957+00:00"
+      },
+      {
+        "name": "complete-canonical-readback",
+        "at": "2026-11-26T13:48:03.306000+00:00",
+        "messages": 2,
+        "attachments": 2,
+        "analysis_states": [
+          [
+            "analyzing",
+            "ANALYZING"
+          ],
+          [
+            "previewed",
+            "READY"
+          ]
+        ],
+        "commit_states": [
+          [
+            "queued",
+            "READY"
+          ],
+          [
+            "processing",
+            "IMPORTING"
+          ],
+          [
+            "committed",
+            "COMPLETED"
+          ]
+        ],
+        "canonical_sha256": "03296a851168552f5c3266fb1da83d02c9c180b5686b149c68fec0b13f73f11d"
+      },
+      {
+        "name": "receive-complete",
+        "at": "2026-11-26T13:48:04.004425+00:00"
+      },
+      {
+        "name": "duplicate-source",
+        "at": "2026-11-26T13:48:10.393190+00:00"
+      },
+      {
+        "name": "receive-partial",
+        "at": "2026-11-26T13:48:10.605932+00:00"
+      },
+      {
+        "name": "mapped-projects-canonical",
+        "at": "2026-11-26T13:48:16.286015+00:00"
+      },
+      {
+        "name": "partial-missing-image",
+        "at": "2026-11-26T13:48:16.412393+00:00",
+        "messages": 2,
+        "attachments": 0,
+        "partial_consent_required": true,
+        "completeness": "partial",
+        "analysis_states": [
+          [
+            "analyzing",
+            "ANALYZING"
+          ],
+          [
+            "previewed",
+            "READY"
+          ]
+        ],
+        "commit_states": [
+          [
+            "queued",
+            "READY"
+          ],
+          [
+            "processing",
+            "IMPORTING"
+          ],
+          [
+            "committed",
+            "COMPLETED"
+          ]
+        ],
+        "canonical_sha256": "eef18622098554fbfed358145568cd655ae9f24e4473fd1aed89526916643a32"
+      },
+      {
+        "name": "receive-parser-partial",
+        "at": "2026-11-26T13:48:16.597508+00:00"
+      },
+      {
+        "name": "actual-parser-missing-image-canonical",
+        "at": "2026-11-26T13:48:25.191993+00:00",
+        "messages": 2,
+        "attachments": 0,
+        "partial_consent_required": true,
+        "completeness": "partial",
+        "analysis_states": [
+          [
+            "analyzing",
+            "ANALYZING"
+          ],
+          [
+            "previewed",
+            "READY"
+          ]
+        ],
+        "commit_states": [
+          [
+            "queued",
+            "READY"
+          ],
+          [
+            "processing",
+            "IMPORTING"
+          ],
+          [
+            "committed",
+            "COMPLETED"
+          ]
+        ],
+        "canonical_sha256": "753f8608afb52715ffe584b2f17e90fd7631cf583583b9b5bb590c846808729d"
+      },
+      {
+        "name": "receive-invalid-index",
+        "at": "2026-11-26T13:48:25.793771+00:00"
+      },
+      {
+        "name": "invalid-index-diagnostic",
+        "at": "2026-11-26T13:48:29.148291+00:00",
+        "analysis_states": [
+          [
+            "analyzing",
+            "ANALYZING"
+          ],
+          [
+            "failed",
+            "FAILED"
+          ]
+        ],
+        "canonical_writes": 0,
+        "failure": {
+          "code": "READER_PACKAGE_INVALID",
+          "stage": "archive",
+          "recovery": "system_support"
+        },
+        "other_paired_device_status": 404,
+        "same_invalid_artifact_retry_status": 409
+      },
+      {
+        "name": "live-schema-worker-and-single-receipts",
+        "at": "2026-11-26T13:48:33.091809+00:00",
+        "schema": "20261125_0065",
+        "fresh_worker_heartbeat": true,
+        "parser_source_digest_verified": true,
+        "analysis_jobs": {
+          "committed": 4,
+          "failed": 1
+        }
+      }
+    ]
+  },
+  "isolated_append": {
+    "reader": "41e0ebfd9e8a3f68f43645c84d333c616fde85be",
+    "end": "2026-11-26T21:54:27.0511871+08:00",
+    "start": "2026-11-26T21:48:36.0260223+08:00",
+    "exit": 0,
+    "fork": "6725193cfe6f34e8f15f40f3be0e6c5f775e0d4e",
+    "project": "reader-g1-36e66da1f28f",
+    "dependency_images": {
+      "api": "sha256:95421c45d01d07915c66e5e3855b4a4bcfe3cde62cb1800167054099d645e9ed",
+      "postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+    },
+    "source_manifest_sha256": "ed33f2edb775442544fe37fb1f23c7bc2ecaa7be7b02396af3276517923025c4",
+    "passed": true,
+    "synthetic_device_revoked": true,
+    "unrelated_containers_unchanged": true,
+    "owned_services_removed": true,
+    "postgres_passed": 38,
+    "receipt_sha256": "bbebf6a775612158529bb9e41cb59c730df343577b343b764ace099578b32e9c",
+    "postgres_log_sha256": "6f31ac8eedba409699c52fb742832963082d86ec24fda770593932706c6b1541",
+    "steps": [
+      {
+        "name": "fresh-postgres",
+        "at": "2026-11-26T13:48:45.275622+00:00"
+      },
+      {
+        "name": "g4-postgres-regressions",
+        "at": "2026-11-26T13:51:55.166195+00:00",
+        "exit_code": 0
+      },
+      {
+        "name": "fresh-api-worker",
+        "at": "2026-11-26T13:52:11.574595+00:00",
+        "worker_memory_bytes": 671088640
+      },
+      {
+        "name": "range-http-1001-canonical",
+        "at": "2026-11-26T13:53:13.990479+00:00",
+        "count": 1001,
+        "duplicate_confirm": true,
+        "canonical_body_hashes_matched": true,
+        "old_indexes_250": 200,
+        "old_indexes_251": 422
+      },
+      {
+        "name": "range-http-duplicates",
+        "at": "2026-11-26T13:53:47.081817+00:00",
+        "added": 0,
+        "skipped": 1001,
+        "canonical_unchanged": true
+      },
+      {
+        "name": "installed-251-append",
+        "at": "2026-11-26T13:54:08.771335+00:00",
+        "added": 251,
+        "skipped": 0,
+        "original_unchanged": true,
+        "same_order_roles_body_hashes": true,
+        "device_commit": 409,
+        "duplicate_confirm": true
+      },
+      {
+        "name": "installed-251-duplicate",
+        "at": "2026-11-26T13:54:20.950743+00:00",
+        "added": 0,
+        "skipped": 251,
+        "original_unchanged": true,
+        "same_order_roles_body_hashes": true,
+        "device_commit": 409,
+        "duplicate_confirm": true
+      },
+      {
+        "name": "g4-runtime-and-source",
+        "at": "2026-11-26T13:54:23.176220+00:00",
+        "schema": "20261125_0065",
+        "worker_memory_bytes": 671088640,
+        "worker_oom_killed": false
+      }
+    ]
+  },
+  "offline_comparator_selftest": {
+    "candidate": "6725193cfe6f34e8f15f40f3be0e6c5f775e0d4e",
+    "selfTests": "passed"
+  },
+  "offline_comparator_cli": [
+    {
+      "name": "tree",
+      "expected_exit": 0,
+      "actual_exit": 0,
+      "redaction": "pass"
+    },
+    {
+      "name": "overlap",
+      "expected_exit": 0,
+      "actual_exit": 0,
+      "redaction": "pass"
+    },
+    {
+      "name": "changed-overlap",
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "redaction": "pass"
+    },
+    {
+      "name": "missing-page",
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "redaction": "pass"
+    },
+    {
+      "name": "extra-page",
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "redaction": "pass"
+    },
+    {
+      "name": "wrong-input",
+      "expected_exit": 2,
+      "actual_exit": 2,
+      "redaction": "pass"
+    }
+  ],
+  "operational_boundaries": {
+    "personal_source_committed": "not verified",
+    "personal_long_navigation": "not verified",
+    "real_browser_screenshots": "user-owned, not collected",
+    "complete_live_account_catalog": false,
+    "production_deployed": false,
+    "desktop_extension_replaced": false
+  }
+}

@@ -1,5 +1,7 @@
 # Project State
 
+**来源整改验收候选（2026-11-26，未发布）。** 插件 `6725193` 已修复分页重叠和顺序、失败进度、区间勾选及章节定位。配套 Reader 运行基线 `41e0ebf` 没有新增应用代码或 migration。两份精确 CI 绿色；新版插件包的合成缺图导入、251 条追加及去重在隔离 API/worker/PostgreSQL 完成，不能代替个人账号实测。真实来源导入、长对话双向跳转和截图由用户执行。[状态矩阵、回执与安装包摘要](docs/evidence/extension-source-acceptance-2026-11-26/README.md) · [浏览器验收单](docs/evidence/extension-source-acceptance-2026-11-26/manual.md)
+
 **发布复审（2026-11-26，未上线）。** 复现 v0.1.10 读取新版未完成范围追加时缺少 `indexes`；候选已分开保存两种决策，旧 worker 不会执行范围，新版可恢复原选择。`king` 20:22（北京时间）只读测得仅新备份下界就超过剩余容量；两套恢复点均保留。[容量与部署边界](docs/deployment.md) · [新旧版本合同](docs/system/BROWSER_EXTENSION.md#core-remediation-candidate)
 
 **2026-11-26 项目映射补充候选（未部署）。** 批量导入确认页可逐行选用已有 Reader 项目，或由配对账号在 Reader 确认新建同名项目。只有编号时手填，旧服务可手动新建后刷新。创建不触发导入，不移动已有对话；设备权限和 schema 不变。[补充安装包、回归与边界](docs/evidence/extension-core-2026-11-26/project-mapping.md)
