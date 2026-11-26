@@ -52,6 +52,13 @@ def retry(db, auth, iid):
     summary = record.analysis_summary or {}
     if record.owner_user_id != auth.user_id or summary.get("extension_device") != str(auth.session_id):
         raise HTTPException(404)
+    from app.services.extension_results import public_failure
+    failure = public_failure(record)
+    if failure and failure["code"] == "READER_PACKAGE_INVALID":
+        # Retain the same receipt and failed artifact for investigation. Replaying
+        # an immutable invalid package is not recovery, even if legacy metadata
+        # incorrectly advertised it as retryable.
+        raise HTTPException(409, detail=failure)
     if (summary.get("analysis_task_id") != str(jid)
             or (job.payload or {}).get("import_id") != str(iid)
             or record.committed_at is not None or record.conversation_id is not None

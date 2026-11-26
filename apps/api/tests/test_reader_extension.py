@@ -99,12 +99,26 @@ def paired(auth_client, monkeypatch, tmp_path):
 def test_scope_rotation_and_revocation(paired):
     c,h,grant=paired
     assert c.get(EXT+"/capabilities",headers=h).json()["account_discovery"] is False
+    assert c.get(EXT+"/capabilities",headers=h).json()["web_import_project"] is True
     assert c.get(EXT+"/projects",headers=h).status_code == 200
     assert c.get(EXT+"/files",headers=h).status_code == 200
     assert c.get(EXT+"/conversations",headers=h).status_code == 200
     assert c.get(EXT+"/projects").status_code in (401,403)
     assert c.get(EXT+"/projects",headers={**h,"Origin":"https://example.invalid"}).status_code == 403
+    path = "/api/extension-devices/import-project"
+    body = {"device_id": grant["device_id"], "expected_user_id": grant["user_id"], "name": "Synthetic project"}
+    assert c.post(EXT+"/projects", json=body, headers=h).status_code == 405
+    assert c.post(path, json=body, headers=h).status_code == 403
+    assert c.post(path, json={**body, "name": " \t "}).status_code == 422
+    confirmed = c.post(path, json=body)
+    assert confirmed.status_code == 200 and confirmed.json()["client"] == CLIENT
+    assert c.post(path, json={**body, "name": "  Synthetic project  "}).json() == confirmed.json()
+    pid = confirmed.json()["id"]
+    assert [p["id"] for p in c.get(EXT+"/projects",headers=h).json() if p["name"] == body["name"]] == [pid]
+    assert c.patch("/api/projects/"+pid, json={"is_archived": True}).status_code == 200
+    assert c.post(path, json=body).status_code == 409
     assert c.delete("/api/extension-devices/"+grant["device_id"]).status_code == 204
+    assert c.post(path, json={**body, "name": "After revocation"}).status_code == 403
     c.cookies.clear()
     assert c.get("/api/preferences",headers=h).status_code == 401
     assert c.get(EXT+"/projects",headers=h).status_code == 401
@@ -373,6 +387,11 @@ def test_foreign_library_file_organize_and_context_are_not_capabilities(paired):
     project=c.post("/api/projects",json={"name":"Separate private project"})
     assert project.status_code==201
     pid=project.json()["id"]
+    for owner in (grant["user_id"], c.get("/api/auth/session").json()["user_id"]):
+        assert c.post("/api/extension-devices/import-project", json={
+            "device_id":grant["device_id"], "expected_user_id":owner, "name":"Wrong account project"
+        }).status_code == 403
+    assert all(p["name"]!="Wrong account project" for p in c.get("/api/projects").json())
     assert c.get(EXT+"/conversations?q=distinctive",headers=h).json()["items"]==[]
     assert all(p["id"]!=pid for p in c.get(EXT+"/projects",headers=h).json())
     assert c.get(f"{EXT}/conversations?project_id={pid}",headers=h).status_code==404

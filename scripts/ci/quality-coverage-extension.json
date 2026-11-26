@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "base_schedule_sha256": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
-  "reason": "Add merge HTML literal/source-coordinate, target-only missing reference recovery and result regressions to the existing extension qualification. Preserve original collection and source-audit detection; whole-merge reference failure behavior is changed only with explicit user approval. No timeouts, skips or security gates relaxed.",
+  "reason": "Add merge HTML literal/source-coordinate, target-only missing reference recovery and result regressions to the existing extension qualification. Also bind 77 collected extension-diagnostic, append-range, tail-concurrency, device-receipt and append-recovery cases from five new files. Preserve original collection and source-audit detection; whole-merge reference failure behavior is changed only with explicit user approval. No timeouts, skips or security gates relaxed.",
   "api": {
     "tests/test_admin_updates.py": {
       "count": 9,
@@ -71,7 +71,7 @@
     "tests/test_reader_extension.py": {
       "count": 17,
       "shard": 4,
-      "source_lf_sha256": "37ea08feafb1034dc8ad609377d9850928b7228d4c3139535f9a25782ae876f4"
+      "source_lf_sha256": "e34580d3be081149d3412b18a54153b1c4b72ca24bbac2e180c68db952d28684"
     },
     "tests/test_reader_find.py": {
       "count": 6,
@@ -112,6 +112,31 @@
       "count": 26,
       "shard": 3,
       "source_lf_sha256": "eca505d6c9b4c1ace938eeb881ffbedfb3110b5319b1a93a8a94ac93cc2af395"
+    },
+    "tests/test_extension_diagnostics.py": {
+      "count": 34,
+      "shard": 1,
+      "source_lf_sha256": "34cc2e3651928c2b45d7b83b23947ff3b003947fab9460ecb8a15c0503233c4b"
+    },
+    "tests/test_append_selection_ranges.py": {
+      "count": 24,
+      "shard": 4,
+      "source_lf_sha256": "1540907249059b565e52e4f3f3794496308653993f7666081da50bbfeabba671"
+    },
+    "tests/test_selective_append_postgres.py": {
+      "count": 8,
+      "shard": 4,
+      "source_lf_sha256": "23c81b933ee9607c2188bbf3543dfe988ca4dcd7cb8ba4ef6d743f77d7649bba"
+    },
+    "tests/test_append_ranges_postgres.py": {
+      "count": 6,
+      "shard": 4,
+      "source_lf_sha256": "a953c6017fcd6bc6acf786df10c381e1e59b54380194c12a7fd2f5b90887c76f"
+    },
+    "tests/test_append_recovery.py": {
+      "count": 7,
+      "shard": 2,
+      "source_lf_sha256": "d2b706c5c743b042952f2ffc4505dc32a292a02ab02cd6dcd0ea1d7396c53e6d"
     }
   },
   "api_fixture_revisions": {

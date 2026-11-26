@@ -11,8 +11,13 @@ test("product coverage is additive; frozen scheduling and original skips remain 
   assert.deepEqual(active.settings, base.settings);
   assert.deepEqual(active.web, base.web);
   assert.deepEqual(active.api.allowed_skips, base.api.allowed_skips);
-  assert.equal(active.api.collected_count, base.api.collected_count + 257);
-  assert.equal(active.api.expected_passed, base.api.expected_passed + 257);
+  assert.equal(active.api.collected_count, base.api.collected_count + 487);
+  assert.equal(active.api.expected_passed, base.api.expected_passed + 487);
+  for (const [file, count] of Object.entries({
+    "test_extension_diagnostics.py": 34, "test_append_selection_ranges.py": 24,
+    "test_selective_append_postgres.py": 8, "test_append_ranges_postgres.py": 6,
+    "test_append_recovery.py": 7,
+  })) assert.equal(active.api.added_file_counts[`tests/${file}`], count);
   assert.equal(active.api.added_file_counts["tests/test_project_export_scope.py"], 6);
   assert.equal(active.api.added_file_counts["tests/test_selective_append.py"], 6);
   assert.equal(active.api.added_file_counts["tests/test_reader_extension.py"], 17);

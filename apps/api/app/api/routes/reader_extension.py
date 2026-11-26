@@ -1,10 +1,10 @@
 """Narrow, owner-only facade. No generic method/URL forwarding."""
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, Request, Response, UploadFile
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -46,6 +46,43 @@ def authorize(body: Consent, request: Request, db: Session = DB):
         raise HTTPException(401)
     code = access.issue_code(db, auth, body.client, body.challenge)
     return {"redirect": f"https://{body.client}.chromiumapp.org/reader?code={code}&state={body.state}"}
+
+
+class ImportProject(Strict):
+    expected_user_id: UUID
+    device_id: UUID
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120, pattern=r"^[^\x00]+$")]
+
+
+@router.post("/api/extension-devices/import-project")
+def confirm_import_project(body: ImportProject, request: Request, db: Session = DB):
+    """An explicit Web-session confirmation for one paired device and project name."""
+    from app.models.project import Project
+    from app.services.navigation_order_lock import lock_navigation_order
+    from app.services.projects.project_service import create_project, ensure_default_project
+
+    auth = getattr(request.state, "auth", None)
+    if not auth or auth.user_id != body.expected_user_id:
+        raise HTTPException(403, "Use the Reader account connected to the import.")
+    principal = access.lock_authorizing_session(db, auth)
+    device = db.scalar(select(ExtensionDevice).where(
+        ExtensionDevice.id == body.device_id, ExtensionDevice.user_id == auth.user_id
+    ).with_for_update())
+    if (not device or not device.refresh_hash or device.credential_version != principal.credential_version
+            or not access.alive(device.expires_at, datetime.now(timezone.utc))):
+        raise HTTPException(403, "Reconnect the browser in the import center.")
+    access.check_client(device.client)
+    owner = ownership_scope_from_request(request)
+    lock_navigation_order(db.connection(), owner.owner_user_id)
+    ensure_default_project(db, owner)
+    project = db.scalar(select(Project).where(Project.owner_user_id == auth.user_id, Project.name == body.name))
+    if project is None:
+        project = create_project(db, name=body.name, description=None, color=None, icon=None, ownership_scope=owner)
+    elif project.is_archived or project.is_default:
+        raise HTTPException(409, "Project name belongs to an archived or default project.")
+    result = {"id": project.id, "client": device.client}
+    db.commit()
+    return result
 
 
 @router.get("/api/extension-devices")
@@ -152,7 +189,8 @@ def capabilities(db: Session = DB):
     return {"protocol": 1, "import_profile": "reader-chat-v1",
             "capture": get_settings().reader_extension_capture and get_feature_policy(db).allow_user_import,
             "catalog_details": True, "catalog_names": True, "context_settings": True, "save_receipts": True, "source_lookup": True,
-            "resumable_capture": True, "import_retry": True,
+            "resumable_capture": True, "import_retry": True, "import_diagnostics": True,
+            "selective_append_ranges": True, "web_import_project": True,
             "selective_append": get_settings().reader_extension_capture and get_feature_policy(db).allow_user_import,
             "project_discovery": False, "account_discovery": False}
 
@@ -437,10 +475,11 @@ def upload_receipt(key: UUID, request: Request, db: Session = DB):
 def import_state(iid: UUID, request: Request, db: Session = DB):
     from app.services.extension_import import inspect
     from app.services.adaptive_import.resource_wait import public_wait
-    from app.services.extension_results import public_result
+    from app.services.extension_results import public_append_status, public_failure, public_result
     record = _record(db, request, iid)
     if (record.analysis_summary or {}).get("append_only"):
-        return {"id": iid, "state": record.session_state, "status": record.status, "mode": "selective_append"}
+        return {"id": iid, "state": record.session_state, "status": record.status, "mode": "selective_append",
+                "failure": public_failure(record), **public_append_status(record)}
     info = inspect(db, record)[0] if record.status == "previewed" and record.session_state == "READY" else None
     from app.models.conversation import Conversation
     saved = get_owned(db, Conversation, record.conversation_id, ownership_scope_from_request(request)) if record.status == "committed" and record.conversation_id else None
@@ -448,7 +487,7 @@ def import_state(iid: UUID, request: Request, db: Session = DB):
             "progress": record.progress, "review": info, "wait": public_wait(record.analysis_summary),
             "conversation_id": saved.id if saved and not saved.deleted_at else None,
             "title": (saved.display_title or saved.title) if saved and not saved.deleted_at else None,
-            "result": public_result(db, record, saved)}
+            "result": public_result(db, record, saved), "failure": public_failure(record)}
 
 
 @api.post("/imports/{iid}/retry", status_code=202)

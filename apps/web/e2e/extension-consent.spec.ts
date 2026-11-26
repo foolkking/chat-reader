@@ -164,3 +164,42 @@ test("short-code approval refreshes the device list and revocation has an explic
   await expect(page.getByText("No authorized extensions.")).toBeVisible();
   expect(revoked).toBe(true);
 });
+
+for (const locale of ["en-US", "zh-CN"] as const) {
+  test(`${locale}: creating a mapped project needs explicit same-account confirmation and returns the project to that request`, async ({ page, context, baseURL }) => {
+    const zh = locale === "zh-CN";
+    await openConsent(page, context, baseURL!, locale, 403);
+    const device = "00000000-0000-4000-8000-00000000000d", attempt = "00000000-0000-4000-8000-0000000000aa";
+    const project = "00000000-0000-4000-8000-00000000000c", name = "海洋 / Ocean & Ice";
+    const path = `${baseURL}/extension/import-project#` + new URLSearchParams({ device, owner: userId, name, state: attempt });
+    let requests = 0, replyStatus = 409, correctAccount = false;
+    await page.route("**/api/auth/session", route => route.fulfill({ json: correctAccount ? session : { ...session, user_id: device } }));
+    await page.route("**/api/extension-devices/import-project", async route => {
+      requests++;
+      expect(route.request().method()).toBe("POST");
+      expect(route.request().postDataJSON()).toEqual({ name, device_id: device, expected_user_id: userId });
+      await route.fulfill({ status: replyStatus, json: replyStatus === 200 ? { id: project, client } : {} });
+    });
+    // Don't contact the real browser identity redirect host from this synthetic Web test.
+    await page.route(`https://${client}.chromiumapp.org/reader-project**`, route => route.fulfill({ contentType: "text/html", body: "<p>Callback</p>" }));
+    await page.goto(path);
+    await expect(page.getByText(zh ? /请在 Reader 登录插件连接的账号/ : /Sign in to Reader with the account connected/)).toBeVisible();
+    const action = page.getByRole("button", { name: zh ? "确认并返回导入" : "Confirm and return to import" });
+    await expect(action).toHaveCount(0);
+    await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+    correctAccount = true;
+    await page.reload(); await expect(action).toBeEnabled();
+    await expect(page.getByText(name, { exact: true })).toBeVisible();
+    expect(requests).toBe(0);
+    await action.click(); await expect(page.getByText(zh ? /名称已用于归档项目/ : /archived or default project uses this name/)).toBeVisible();
+    expect(requests).toBe(1);
+    replyStatus = 503; await page.reload(); await action.click();
+    await expect(page.getByText(zh ? /项目可能已创建/ : /project may already exist/)).toBeVisible();
+    await expect(action).toHaveCount(0);
+    await expect(page.getByRole("button", { name: zh ? "关闭窗口" : "Close window" })).toBeEnabled();
+    expect(requests).toBe(2);
+    replyStatus = 200; await page.reload(); await action.click();
+    await expect(page).toHaveURL(`https://${client}.chromiumapp.org/reader-project#state=${attempt}&project=${project}`);
+    expect(requests).toBe(3);
+  });
+}

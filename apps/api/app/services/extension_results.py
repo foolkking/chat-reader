@@ -1,4 +1,5 @@
 """Receipts describe a committed Reader operation, not a requested destination."""
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -6,6 +7,69 @@ from sqlalchemy import select
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.models.import_record import ImportRecord
+from app.services.task_errors import adaptive_import_failure, public_import_failure
+
+
+def public_append_status(record):
+    """Device-visible telemetry, not the owner's selection, target or review."""
+    from app.services.adaptive_import.resource_wait import public_wait
+
+    summary = record.analysis_summary if isinstance(record.analysis_summary, dict) else {}
+    phases = {"receiving", "analyzing", "grouping", "profile_resolution", "input_recovery", "ready", "queued",
+              "waiting_resources", "resource_paused", "parsing", "persisting", "paused", "canceled",
+              "analysis_failed", "failed", "completed"}
+    phase = record.phase if isinstance(record.phase, str) and record.phase in phases else None
+    progress = record.progress if type(record.progress) is int and 0 <= record.progress <= 100 else None
+    wait = result = None
+    raw = summary.get("resource_wait")
+    if (phase == "waiting_resources" and record.status in {"queued", "analyzing"} and isinstance(raw, dict)
+            and isinstance(raw.get("reason"), str) and type(raw.get("remaining_seconds")) in (int, float)):
+        wait = public_wait(summary)
+        if wait is not None:
+            stamp = wait["next_retry_at"]
+            try:
+                parsed = datetime.fromisoformat(stamp) if isinstance(stamp, str) and len(stamp) <= 40 else None
+            except ValueError:
+                parsed = None
+            wait["next_retry_at"] = parsed.isoformat() if parsed and parsed.utcoffset() is not None else None
+    raw = summary.get("append_result")
+    if (record.status == "committed" and isinstance(raw, dict) and type(raw.get("partial")) is bool
+            and all(type(raw.get(key)) is int and 0 <= raw[key] <= 2**53 - 1 for key in ("added", "skipped"))):
+        result = {key: raw[key] for key in ("added", "skipped", "partial")}
+    return {"progress": progress, "phase": phase, "wait": wait, "result": result}
+
+
+def public_failure(record):
+    """Device diagnostics are finite metadata, never exception text or source details.
+
+    Recovery describes the next user action, not permission to enqueue work. The
+    existing retry endpoint still checks ownership, retained source and task locks.
+    A package integrity failure cannot be repaired by replaying the same bytes.
+    """
+    if record.status != "failed":
+        return None
+    summary = record.analysis_summary if isinstance(record.analysis_summary, dict) else {}
+    stage = "commit" if record.phase == "failed" else "analysis"
+    failure = public_import_failure(summary.get("failure"), error_message=record.error_message, stage=stage)
+    if failure is None:
+        failure = adaptive_import_failure("TASK_FAILED", stage, False)
+    code = failure["code"]
+    recovery = "system_support"
+    if code == "IMPORT_STORAGE_FULL":
+        recovery = "free_storage"
+    elif code in {
+        "UPLOAD_MEMORY_PRESSURE", "SMALL_IMPORT_BUDGET_EXCEEDED",
+        "UPLOAD_QUEUE_FULL", "UPLOAD_QUEUE_TIMEOUT", "IMPORT_RESOURCE_WAIT_EXPIRED",
+    }:
+        recovery = "review_in_reader" if summary.get("append_only") else "retry_existing"
+    elif code in {
+        "APPEND_REVIEW_CHANGED",
+        "NO_MESSAGE_STRUCTURE", "DOCUMENT_NOT_TRANSCRIPT", "IMPORT_PLAN_INVALID",
+        "SOURCE_MISSING", "MARKDOWN_EMPTY", "MARKDOWN_ENCODING_INVALID",
+        "MARKDOWN_FENCE_UNCLOSED", "ZIP_MARKDOWN_REQUIRED",
+    }:
+        recovery = "review_in_reader"
+    return {"code": code, "stage": failure["stage"], "recovery": recovery}
 
 
 def project_at(db, owner_id, cid):

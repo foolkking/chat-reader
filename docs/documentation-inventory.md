@@ -1,5 +1,13 @@
 # Markdown 文档台账
 
+2026-11-26 发布复审：补记[旧版读取范围决策的边界](system/BROWSER_EXTENSION.md#core-remediation-candidate)及[生产容量下界](deployment.md)，核心候选的本机验收与线上状态分开。
+
+2026-11-26 项目映射补充：[逐行映射与旧服务回退](system/BROWSER_EXTENSION.md#core-remediation-candidate)、[Web 会话创建合同](api-reference.md#插件导入项目确认2026-11-26-工作树未部署)及[独立安装包与测试回执](evidence/extension-core-2026-11-26/project-mapping.md)。旧包、旧失败与生产事实保留。
+
+2026-11-26 核心整改交接新增本机安装包及源码指纹索引、隔离服务回归、原失败和真实账号验收单，补齐追加设备收据、范围能力绑定和来源任务隔离说明。资格数量和已实际运行的数量分开记录。[候选交接](evidence/extension-core-2026-11-26/README.md) · [精确运行索引](evidence/extension-core-2026-11-26/verification.json) · [接口合同](system/BROWSER_EXTENSION.md#core-remediation-candidate)
+
+2026-11-26（核心整改候选，未发布）：[改前审查及实施记录](execution/ux-audit-extension-core-2026-11-26.md)区分真实测试 Chromium、合成浏览器、隔离 API/PG 与未验证的端到端导入；保留超时、计数及选错控件的原失败。[插件合同](system/BROWSER_EXTENSION.md#core-remediation-candidate)新增范围追加与统一工作区，明确 `sidePanel` 只在站外主动工具栏入口使用、旧250条合同仍兼容、设备不获最终追加权。同步 Project State 和导航；未改变生产安装或发布事实。
+
 2026-11-26（已交付）：[v0.1.10生产与插件0.3.0回执](evidence/merge-html-2026-11-25/v0.1.10-production.json)绑定精确两次完整CI、签名发布、生产迁移与独立复核、同ID原位替换及清理。同步Project State、[部署](deployment.md#v0110-production)、导航与[插件合同](system/BROWSER_EXTENSION.md)。未移动master或宣称个人浏览器验收；新备份未实际隔离恢复，保留旧验证点，不将“可清理”当“已安全删除”。
 
 2026-11-26（v0.1.9 发布未通过）：[精确失败与归档导航审查](evidence/merge-html-2026-11-25/archive-navigation-audit.md)记录归档项目晚到位移、偏好换查询卸载链接，以及独立审查发现的失联交互锁。[交互合同](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#对话原生链接与迟到列表读取2026-11-26-候选)同步候选行为；保留原14/60/124门禁，新增独立12项检查而不增加默认PWA跳过。[本地验收及源码摘要](evidence/merge-html-2026-11-25/archive-navigation-local-verification.json)保留首次定位GET 500与最终原套件结果。Project State 区分候选和当前生产，不以本地结果代替精确CI与部署。

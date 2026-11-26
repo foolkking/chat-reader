@@ -3,6 +3,7 @@ import { observeSessionResponse, serverSession } from "./server-session";
 import { archiveRequestSignal } from "./archive-task-state";
 import { withRequestDeadline } from "./request-deadline";
 import { sendUpload, type UploadProgress } from "./upload-transport";
+import type {AppendSelection} from "./append-selection";
 import type {
   CommitImportResponse,
   CleanupApplyResult,
@@ -974,9 +975,12 @@ export function getBatchExportRequest(key: string, signal: AbortSignal) {
 }
 
 export type AppendStatus = {id:string;target:string|null;excerpt:boolean;edition:string|null;state:string;status:string;phase:string;progress:number;
-  error:string|null;pending_receipt:string|null;submitted_selection?:AppendInput|null;result:{target:string;added:number;skipped:number;partial:boolean}|null;sources:{ordinal:number;title:string;count:number}[]};
+  error:string|null;pending_receipt:string|null;submitted_selection?:AppendInput|null;
+  failure?:{code:string;stage:string;recovery:"system_support"|"free_storage"|"review_in_reader"|"retry_existing"}|null;
+  selection_capabilities?:{ranges:boolean;max_ranges:number;legacy_max_indexes:number};
+  result:{target:string;added:number;skipped:number;partial:boolean}|null;sources:{ordinal:number;title:string;count:number}[]};
 export type AppendChoice = {index:number;role:string;text:string;assets:number;turn:number|null;missing:number};
-export type AppendInput = {target:string;edition:string;volume:number;indexes:number[]};
+export type AppendInput = {target:string;edition:string;volume:number}&AppendSelection;
 export type AppendReview = {title:string;tail:{role:string;text:string|null}|null;live_share:boolean;receipt:string;add:number;skip:number;changed:number;missing:number;partial:boolean};
 export const appendImportApi = {
   stage:(cid:string,files:File[],key:string,signal:AbortSignal) => {
