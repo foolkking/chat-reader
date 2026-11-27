@@ -1,0 +1,134 @@
+{
+  "at": "2026-11-25T09:28:33.203Z",
+  "kind": "Actual packaged extension in isolated Edge; 150 synthetic export rows and synthetic conflict journal. No real ChatGPT, no real Reader API.",
+  "observations": [
+    {
+      "name": "first page has 50 rows but primary action outside viewport",
+      "value": {
+        "renderedRows": 50,
+        "listOverflow": "visible",
+        "listClientHeight": 3870,
+        "documentHeight": 4422,
+        "footerTop": 4338.03125,
+        "footerBottom": 4382.03125,
+        "viewport": 900,
+        "footerVisible": false,
+        "selected": "已勾选 0 条",
+        "buttons": [
+          "选择筛选结果",
+          "清空勾选",
+          "显示更多",
+          "重新选择来源",
+          "选择 Reader 目标"
+        ]
+      }
+    },
+    {
+      "name": "select filtered selects all 150 although only 50 mounted; no page-scoped action exists",
+      "value": {
+        "renderedRows": 50,
+        "listOverflow": "visible",
+        "listClientHeight": 3870,
+        "documentHeight": 4422,
+        "footerTop": 4338.03125,
+        "footerBottom": 4382.03125,
+        "viewport": 900,
+        "footerVisible": false,
+        "selected": "已勾选 150 条",
+        "buttons": [
+          "选择筛选结果",
+          "清空勾选",
+          "显示更多",
+          "重新选择来源",
+          "选择 Reader 目标"
+        ]
+      }
+    },
+    {
+      "name": "Show more retains all 150 DOM rows",
+      "value": {
+        "renderedRows": 150,
+        "listOverflow": "visible",
+        "listClientHeight": 11609,
+        "documentHeight": 12111,
+        "footerTop": 4635.09375,
+        "footerBottom": 4679.09375,
+        "viewport": 900,
+        "footerVisible": false,
+        "selected": "已勾选 150 条",
+        "buttons": [
+          "选择筛选结果",
+          "清空勾选",
+          "重新选择来源",
+          "选择 Reader 目标"
+        ]
+      }
+    },
+    {
+      "name": "narrow selection geometry",
+      "value": {
+        "renderedRows": 50,
+        "listOverflow": "visible",
+        "listClientHeight": 3870,
+        "documentHeight": 4425,
+        "footerTop": 4352.53125,
+        "footerBottom": 4396.53125,
+        "viewport": 800,
+        "footerVisible": false,
+        "selected": "已勾选 150 条",
+        "buttons": [
+          "选择筛选结果",
+          "清空勾选",
+          "重新选择来源",
+          "选择 Reader 目标"
+        ]
+      }
+    },
+    {
+      "name": "conflict actions",
+      "value": {
+        "buttons": [
+          "新的导入",
+          "确认另存"
+        ],
+        "cancelHidden": true,
+        "reviewText": "Synthetic conflict需要核对，尚未保存分支或原文改变；只能另存，不覆盖确认另存"
+      }
+    },
+    {
+      "name": "new import blocked by unresolved review",
+      "value": "请先处理或取消未完成项；已接收的任务不能在这里取消。"
+    },
+    {
+      "name": "end retained plan blocked by review",
+      "value": "先在任务页处理已接收、待核对或可恢复的上传。"
+    }
+  ],
+  "errors": [],
+  "screens": [
+    "selection-wide-first50.png",
+    "selection-filtered-hidden-selected.png",
+    "selection-375.png",
+    "conflict-no-skip.png"
+  ],
+  "inputHashes": {
+    "reader/center.js": "f583a894efe74d7461b0ab562ca7b8c8177955094dc2b07b2e04d571dfb7ec46",
+    "reader/center.html": "1fac9939f41172b6a42a46e8f41d01adc781e1aac0c57dda16a0d2eb3d334d18",
+    "reader/center.css": "1ded708adf3adc05babc46e47ad3f488ec10d43ce552742d78a38fdd5498b1b8",
+    "reader/batch-model.js": "ad4ee08746a21731205b5698299c0cbbf2646629751bdae022b47bb8316f47fc",
+    "reader/routes.js": "9a24ee4e5a958037fdb6fe1413a18c824908ad3d175578e89ada9000c6d71b45",
+    "reader/surfaces.js": "4615cc3e4f939d0d952c3c00d2825c1d80484e0efcdadb4e116496ac593bb865",
+    "reader/workspace.js": "84e24ae780e52d94528e13ab0747bbf19abe6c4efbc4409d2b06b8a0e7d32777"
+  },
+  "browser": "Edg/158.0.4370.33",
+  "outputHashes": {
+    "reader/center.js": "f583a894efe74d7461b0ab562ca7b8c8177955094dc2b07b2e04d571dfb7ec46",
+    "reader/center.html": "1fac9939f41172b6a42a46e8f41d01adc781e1aac0c57dda16a0d2eb3d334d18",
+    "reader/center.css": "1ded708adf3adc05babc46e47ad3f488ec10d43ce552742d78a38fdd5498b1b8",
+    "reader/batch-model.js": "ad4ee08746a21731205b5698299c0cbbf2646629751bdae022b47bb8316f47fc",
+    "reader/routes.js": "9a24ee4e5a958037fdb6fe1413a18c824908ad3d175578e89ada9000c6d71b45",
+    "reader/surfaces.js": "4615cc3e4f939d0d952c3c00d2825c1d80484e0efcdadb4e116496ac593bb865",
+    "reader/workspace.js": "84e24ae780e52d94528e13ab0747bbf19abe6c4efbc4409d2b06b8a0e7d32777"
+  },
+  "sourceUnchanged": true
+}

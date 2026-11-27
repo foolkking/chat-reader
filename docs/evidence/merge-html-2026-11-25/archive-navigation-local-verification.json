@@ -1,0 +1,121 @@
+{
+  "recorded_at_utc": "2026-11-25T17:31:37.797289+00:00",
+  "base_sha": "97e19367b0ce48886a8b4f4e6e597694105056db",
+  "scope": "Local synthetic Linux production build, real PostgreSQL/API/worker and desktop Edge. Remote qualification is independent.",
+  "source_sha256_lf": {
+    "apps/web/components/app-shell.tsx": "ddbf6f259dda40a3b90a975097a2992c9dbeaf0a8ad3cfed3bf476ded33287bc",
+    "apps/web/features/conversations/conversation-list.tsx": "c8278e9bee0bd15f6c70a74690c734d7e2ef34d47554db9dd043d8c4b5372a05",
+    "apps/web/archive-navigation.config.ts": "d732f75b68374ca91955f738c40d33c978501ec2dfb17a3219fd250315be9bb6",
+    "apps/web/e2e/archive-navigation.browser.ts": "a9cf09ccf095a2d2b79bc5caab1fcfb3c4ef94a16d90fdede67ad160d2ef8236",
+    "scripts/ux/archive-link-order.test.mjs": "390dbf193f9c9ebac52e6d7cd723d86aac1f823000cc9f97455070427d70c207",
+    "scripts/ux/upstream-mutation-proxy.test.mjs": "da785a828950f36867c3aa52ab9431bff43ff6f853bf3ab2ea8c4695b87b457d",
+    "patches/next@16.4.5.patch": "038537d273c95303d42dd1e5fde3053fb77152027571b244db11a3fc6dfd48b3",
+    "pnpm-lock.yaml": "a5ce91defe7fdaf520065a72d860bd2a1b3be9e9a437be9dbc3a39d26a04c41d",
+    ".github/workflows/web-quality.yml": "556924dbd3a5f354ec8108ebce4013468c7c5d4eff9377d44b51cef805add0a0"
+  },
+  "failures_retained": {
+    "original_tag": {
+      "tag": "v0.1.9",
+      "sha": "97e19367b0ce48886a8b4f4e6e597694105056db",
+      "run": 45644445123,
+      "attempt": 1,
+      "job": 139311528820,
+      "artifact": 15036978832,
+      "artifact_sha256": "9624bcfdcbf814222d5ecebb58c2290b5ddec8456339f6791e530a305055a659",
+      "reading_expected": 59,
+      "reading_unexpected": 1
+    },
+    "intermediate_recovery": {
+      "expected": 123,
+      "unexpected": 1,
+      "flaky": 0,
+      "skipped": 0,
+      "duration": 763746.495,
+      "duration_unit": "ms",
+      "exit_code": 1,
+      "start": "2026-11-26T00:49:53.3684359+08:00",
+      "finish": "2026-11-26T01:02:38.7222904+08:00",
+      "report_sha256": "e7d01f75d679c50ce900dcb557fc3434c97b21c3daf8c83d08e49a8d27371f01"
+    },
+    "intermediate_trace_sha256": "237d27e8439f2f57bbc5f70b4f9cbedcc5745b7f1560b4e518abc83093d65206",
+    "tcp_api_red": {
+      "pass": 11,
+      "fail": 3,
+      "exit_code": 1,
+      "log_sha256": "c1a20f83142dcbb08aac20f08843347cdbe891229900f6437879ed9c26c090eb"
+    }
+  },
+  "candidate": {
+    "web_image": "sha256:53c13bf1e8a26722aebeac1eb5c62fae3466568a4e2aa7d2e59f6ce11d6c4760",
+    "frozen_install_lint_typecheck": {
+      "at": "2026-11-26T01:13:58.8329658+08:00",
+      "install": 0,
+      "lint": 0,
+      "typecheck": 0
+    },
+    "node": {
+      "passed": 2642,
+      "skipped": 0,
+      "failure": 0,
+      "output_sha256": "4f1c6bbccaf7480dce16cba862fa4e9380a91f1931bb428730a78e1d1dde032a"
+    },
+    "tcp_windows_node24": {
+      "passed": 14,
+      "skipped": 0,
+      "failure": 0,
+      "output_sha256": "480b90087825e66a348b6355e61ddb7dc84efc1ba33ec1b6f6d81d4f98c871c2"
+    },
+    "tcp_pinned_linux_node22": {
+      "passed": 14,
+      "skipped": 0,
+      "failure": 0,
+      "output_sha256": "eff0c811428d8329cdc43de8642dfcafd3b3db4dba83c888d282dc8b09ccd590"
+    },
+    "archive": {
+      "expected": 12,
+      "unexpected": 0,
+      "flaky": 0,
+      "skipped": 0,
+      "duration": 55228.416999999994,
+      "duration_unit": "ms",
+      "exit_code": 0,
+      "start": "2026-11-26T01:11:39.6264908+08:00",
+      "finish": "2026-11-26T01:12:37.7390768+08:00",
+      "report_sha256": "94d9d467f02ee4080cf31d7732aa8471c2b8d255f67750702076c2912ce540a1"
+    },
+    "reading": {
+      "expected": 60,
+      "unexpected": 0,
+      "flaky": 0,
+      "skipped": 0,
+      "duration": 405633.593,
+      "duration_unit": "ms",
+      "exit_code": 0,
+      "start": "2026-11-26T01:12:37.7798049+08:00",
+      "finish": "2026-11-26T01:19:25.2825479+08:00",
+      "report_sha256": "b2ef128775eca60896ca876c744d39c44be297b480c9ca134846fe3d7080e555"
+    },
+    "reading_evidence": "reading-stability: required cases, original 64 traces, 12 collapse plus 4 passive traces and cold Viewer shell verified",
+    "mutation_recovery": {
+      "expected": 124,
+      "unexpected": 0,
+      "flaky": 0,
+      "skipped": 0,
+      "duration": 722479.7690000001,
+      "duration_unit": "ms",
+      "exit_code": 0,
+      "start": "2026-11-26T01:19:25.6001103+08:00",
+      "finish": "2026-11-26T01:31:29.4612774+08:00",
+      "report_sha256": "fee00dbc646015ed2745b232e86524650bc26356e7a6eb1f22ccd801cdb319ca"
+    }
+  },
+  "commands": [
+    "corepack pnpm install --frozen-lockfile --offline",
+    "corepack pnpm run lint",
+    "corepack pnpm run typecheck",
+    "node --test scripts/ux/*.test.mjs",
+    "node --test scripts/ux/upstream-mutation-proxy.test.mjs",
+    "corepack pnpm --filter web exec playwright test --config=<isolated Edge config> (archive, reading, recovery suites)",
+    "node scripts/ci/verify-reading-stability.mjs <reading result directory>"
+  ]
+}

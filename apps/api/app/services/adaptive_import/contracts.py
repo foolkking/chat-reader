@@ -17,6 +17,7 @@ class SourceDocument:
     extension: str
     content: bytes
     path: Path | None = None
+    reader_archive: Path | None = None
 
 
 @dataclass(frozen=True)

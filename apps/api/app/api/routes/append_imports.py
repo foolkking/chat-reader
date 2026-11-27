@@ -1,8 +1,10 @@
 """The web session reviews the destination; device grants may only stage an explicitly selected excerpt."""
 from uuid import UUID
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, Response, UploadFile
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi.routing import APIRoute
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -12,10 +14,31 @@ from app.models.import_record import ImportRecord
 from app.services.adaptive_import import append_choices as choices
 from app.services.adaptive_import.contracts import AdaptiveImportError
 from app.services.import_queue import queue_import
+from app.services.extension_results import public_failure
 from app.services.ownership import ownership_scope_from_request
 from app.services import selective_append as service
 
-router = APIRouter(tags=["Selective append"])
+class SelectionRoute(APIRoute):
+    def get_route_handler(self):
+        handler = super().get_route_handler()
+        if self.endpoint.__name__ not in {"preview", "confirm"}:
+            return handler
+
+        async def bounded(request):
+            # Bound actual bytes, including chunked/incorrect Content-Length.
+            # Upload staging retains its existing independent upload admission.
+            parts, size = [], 0
+            async for part in request.stream():
+                size += len(part)
+                if size > choices.MAX_SELECTION_BYTES:
+                    raise HTTPException(413, {"code": "APPEND_SELECTION_TOO_LARGE"})
+                parts.append(part)
+            request._body = b"".join(parts)
+            return await handler(request)
+        return bounded
+
+
+router = APIRouter(tags=["Selective append"], route_class=SelectionRoute)
 DB = Depends(get_db)
 
 
@@ -49,15 +72,17 @@ def stage(cid: UUID, request: Request, files: list[UploadFile] = File(...),
 
 def metadata(r):
     s = r.analysis_summary or {}
-    decision = s.get("append_decision") or {}
+    failure = public_failure(r)
+    decision = service.submitted_decision(s)
     # Only the authenticated owner reads this projection. A reopened tab needs
     # the exact staged coordinates, not yesterday's consent to modify the tail.
-    submitted = {k: decision[k] for k in ("edition", "target", "volume", "indexes")} if (
+    submitted = {k: decision[k] for k in ("edition", "target", "volume", "indexes", "ranges", "selected_count") if k in decision} if (
         decision and not s.get("append_result") and decision.get("edition") == r.draft_sha256) else None
     return {"id": str(r.id), "target": s["append_only"].get("target"), "excerpt": bool(s["append_only"].get("device")),
             "edition": r.draft_sha256, "state": r.session_state, "status": r.status, "phase": r.phase,
-            "progress": r.progress, "error": (s.get("failure") or {}).get("code"),
+            "progress": r.progress, "error": failure["code"] if failure else None, "failure": failure,
             "result": s.get("append_result"), "pending_receipt": decision.get("receipt"), "submitted_selection": submitted,
+            "selection_capabilities": {"ranges": True, "max_ranges": choices.MAX_RANGES, "legacy_max_indexes": choices.MAX_SELECTION},
             "sources": [{k: b[k] for k in ("ordinal", "title", "count")}
                         for b in (r.draft_summary or {}).get("append_choices", [])]}
 
@@ -107,12 +132,35 @@ def page(iid: UUID, request: Request, response: Response, edition: str = Query(p
             "page_size": choices.PAGE}
 
 
+RangeIndex = Annotated[int, Field(strict=True, ge=0, le=choices.MAX_ORDINAL)]
+
+
 class Selection(BaseModel):
     model_config = ConfigDict(extra="forbid")
     target: UUID
     edition: str = Field(pattern=r"^[a-f0-9]{64}$")
     volume: int = Field(ge=0)
-    indexes: list[int] = Field(min_length=1, max_length=choices.MAX_SELECTION)
+    indexes: list[int] | None = Field(default=None, min_length=1, max_length=choices.MAX_SELECTION)
+    ranges: list[tuple[RangeIndex, RangeIndex]] | None = Field(default=None, min_length=1, max_length=choices.MAX_RANGES)
+    selected_count: RangeIndex | None = None
+
+    @model_validator(mode="after")
+    def selection_encoding(self):
+        if self.ranges is None:
+            if self.indexes is None or self.selected_count is not None:
+                raise ValueError("Provide indexes or ranges with selected_count.")
+        else:
+            if self.indexes is not None:
+                raise ValueError("Use only one selection encoding.")
+            try:
+                self.ranges = [tuple(pair) for pair in choices.selection_ranges(
+                    ranges=self.ranges, selected_count=self.selected_count)]
+            except AdaptiveImportError:
+                raise ValueError("Ranges must be ordered, non-overlapping and match selected_count.") from None
+        return self
+
+    def coordinates(self):
+        return {"indexes": self.indexes} if self.ranges is None else {"ranges": self.ranges, "selected_count": self.selected_count}
 
 
 class Confirm(Selection):
@@ -124,10 +172,18 @@ class Confirm(Selection):
 
 def reviewed(db, r, body, *, lock=False):
     check_edition(r, body.edition)
-    if r.status not in {"previewed", "failed"} or r.status == "failed" and not (r.analysis_summary or {}).get("append_decision"):
+    if r.status not in {"previewed", "failed"} or r.status == "failed" and not service.submitted_decision(r.analysis_summary):
         raise HTTPException(409, {"code": "APPEND_NOT_READY"})
+    failure = public_failure(r)
+    if failure and failure["code"] in {
+        "READER_PACKAGE_INVALID", "SOURCE_CHANGED", "SOURCE_PATH_INVALID", "ZIP_SOURCE_CHANGED",
+        "ZIP_CRC_INVALID", "ZIP_INVALID", "ZIP_MANIFEST_INVALID",
+    }:
+        # An intact choice spool is not proof that its durable draft/ZIP is
+        # intact. Reconfirming the same failed bytes cannot repair integrity.
+        raise HTTPException(409, {"code": "APPEND_SOURCE_CHANGED"})
     try:
-        return service.review(db, r, body.target, body.volume, body.indexes, lock=lock)[0]
+        return service.review(db, r, body.target, body.volume, **body.coordinates(), lock=lock)[0]
     except AdaptiveImportError as exc:
         raise HTTPException(409, {"code": exc.code}) from exc
 
@@ -140,17 +196,18 @@ def preview(iid: UUID, body: Selection, request: Request, db: Session = DB):
 @router.post("/api/append-imports/{iid}/confirm", status_code=202)
 def confirm(iid: UUID, body: Confirm, request: Request, response: Response, db: Session = DB):
     r = source(db, request, iid, lock=True)
-    decision = body.model_dump(mode="json")
-    decision["indexes"] = sorted(decision["indexes"])
+    decision = body.model_dump(mode="json", exclude_none=True)
+    if "indexes" in decision:
+        decision["indexes"] = sorted(decision["indexes"])
     if r.status in {"committed", "queued", "processing"}:
-        if (r.analysis_summary or {}).get("append_decision") != decision:
+        if service.submitted_decision(r.analysis_summary) != decision:
             raise HTTPException(409, {"code": "APPEND_ALREADY_SUBMITTED"})
         response.status_code = 200 if r.status == "committed" else 202
         return metadata(r)
     current = reviewed(db, r, body, lock=True)
     if not service.consent(current, decision):
         raise HTTPException(409, {"code": "APPEND_REVIEW_CHANGED", "review": current})
-    r.analysis_summary = {**r.analysis_summary, "append_decision": decision}
+    r.analysis_summary = service.with_submitted_decision(r.analysis_summary, decision)
     queue_import(r, db)
     db.commit()
     return metadata(r)

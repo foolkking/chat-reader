@@ -99,9 +99,14 @@ def audit_conversation_attachment_integrity(
             version_blocks = blocks_by_version.get(version.id, [])
             version_links = links_by_version.get(version.id, [])
             block_ids = set()
-            context = markdown_reference_context(version.display_text)
+            context = markdown_reference_context(version.display_text, blocks=version.blocks or [
+                {"block_index": block.block_index, "block_type": block.block_type,
+                 "data": block.data, "plain_text": block.plain_text}
+                for block in sorted(version_blocks, key=lambda row: row.block_index)
+            ])
             for block in version_blocks:
                 block_ids.update(attachment_block_ids({
+                    "block_index": block.block_index,
                     "block_type": block.block_type, "data": block.data,
                     "plain_text": block.plain_text, "sanitized_html": block.sanitized_html,
                 }, context))

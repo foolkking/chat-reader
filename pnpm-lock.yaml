@@ -20,6 +20,9 @@ patchedDependencies:
   braces@3.0.3:
     hash: npp7dfpdc4f6vmmxjno6cxxfvm
     path: patches/braces@3.0.3.patch
+  next@16.4.5:
+    hash: nct7s3oipmviqxj2dkyprhx5wi
+    path: patches/next@16.4.5.patch
 
 importers:
 
@@ -98,7 +101,7 @@ importers:
         version: 11.16.1
       next:
         specifier: 16.4.5
-        version: 16.4.5(@playwright/test@1.62.0)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 16.4.5(patch_hash=nct7s3oipmviqxj2dkyprhx5wi)(@playwright/test@1.62.0)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       pdfjs-dist:
         specifier: 6.2.108
         version: 6.2.108
@@ -6221,7 +6224,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next@16.4.5(@playwright/test@1.62.0)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+  next@16.4.5(patch_hash=nct7s3oipmviqxj2dkyprhx5wi)(@playwright/test@1.62.0)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
       '@next/env': 16.4.5
       '@swc/helpers': 0.5.23

@@ -1,0 +1,108 @@
+{
+  "at": "2026-11-25T10:20:39.243Z",
+  "kind": "Actual isolated Edge, real navigation/control scripts with synthetic page and chrome.runtime stub. Not live ChatGPT or Reader E2E.",
+  "before": {
+    "glyphs.js": "f54acfefd6aa182d1b3d79a66a10bd38e153204058c2ca3b6282746e509753c5",
+    "progress.js": "73fd3d3523373501300116d1f6ee46688b5e8abd1c7a01b59d63c80de38d924b",
+    "routes.js": "1a94a580d3717b475ae41227a339b7fda34ef59d454854b0171285f0dd0d1049",
+    "page-index.js": "16389a240646caace507a444431a6d0348212ddccff67c3ac6cc4d05fc1ad0ee",
+    "overlay.js": "7c754d3009f6efe6189a0b97c521fe658a32e640df8629da834bc2772390fd0a",
+    "source-control.js": "6d173cd444bf7fb47d2a23a6d47679feaf4e1c9ff93c0f679b792606a7edbcea"
+  },
+  "scenarios": [
+    {
+      "width": 1440,
+      "height": 900,
+      "locale": "en-US",
+      "dark": false,
+      "checks": [
+        "no eager body preload",
+        "hover reveals exact full question with tail",
+        "Escape releases full body and restores question focus without reloading",
+        "files page one is bounded at 64",
+        "files page two replaces page one",
+        "final file page reaches all 150 exactly once",
+        "previous file page is reachable",
+        "open preview/files never change article width",
+        "frame is within viewport and above composer",
+        "project homepage exposes one import action",
+        "project action only requests center; no capture or discovery",
+        "project chat retains exact URL hint without claiming a complete directory",
+        "shared/noneligible route removes both tools",
+        "no runtime errors"
+      ],
+      "errors": [],
+      "screens": [
+        "1440-en-US-light-full-question.png",
+        "1440-en-US-light-files-fixed-page.png",
+        "1440-en-US-light-project-entry.png"
+      ]
+    },
+    {
+      "width": 375,
+      "height": 800,
+      "locale": "zh-CN",
+      "dark": false,
+      "checks": [
+        "no eager body preload",
+        "hover reveals exact full question with tail",
+        "Escape releases full body and restores question focus without reloading",
+        "files page one is bounded at 64",
+        "files page two replaces page one",
+        "final file page reaches all 150 exactly once",
+        "previous file page is reachable",
+        "open preview/files never change article width",
+        "frame is within viewport and above composer",
+        "project homepage exposes one import action",
+        "project action only requests center; no capture or discovery",
+        "project chat retains exact URL hint without claiming a complete directory",
+        "shared/noneligible route removes both tools",
+        "no runtime errors"
+      ],
+      "errors": [],
+      "screens": [
+        "375-zh-CN-light-full-question.png",
+        "375-zh-CN-light-files-fixed-page.png",
+        "375-zh-CN-light-project-entry.png"
+      ]
+    },
+    {
+      "width": 320,
+      "height": 568,
+      "locale": "en-US",
+      "dark": true,
+      "checks": [
+        "no eager body preload",
+        "hover reveals exact full question with tail",
+        "Escape releases full body and restores question focus without reloading",
+        "files page one is bounded at 64",
+        "files page two replaces page one",
+        "final file page reaches all 150 exactly once",
+        "previous file page is reachable",
+        "open preview/files never change article width",
+        "frame is within viewport and above composer",
+        "project homepage exposes one import action",
+        "project action only requests center; no capture or discovery",
+        "project chat retains exact URL hint without claiming a complete directory",
+        "shared/noneligible route removes both tools",
+        "no runtime errors"
+      ],
+      "errors": [],
+      "screens": [
+        "320-en-US-dark-full-question.png",
+        "320-en-US-dark-files-fixed-page.png",
+        "320-en-US-dark-project-entry.png"
+      ]
+    }
+  ],
+  "browser": "Edg/158.0.4370.33",
+  "after": {
+    "glyphs.js": "f54acfefd6aa182d1b3d79a66a10bd38e153204058c2ca3b6282746e509753c5",
+    "progress.js": "73fd3d3523373501300116d1f6ee46688b5e8abd1c7a01b59d63c80de38d924b",
+    "routes.js": "1a94a580d3717b475ae41227a339b7fda34ef59d454854b0171285f0dd0d1049",
+    "page-index.js": "16389a240646caace507a444431a6d0348212ddccff67c3ac6cc4d05fc1ad0ee",
+    "overlay.js": "7c754d3009f6efe6189a0b97c521fe658a32e640df8629da834bc2772390fd0a",
+    "source-control.js": "6d173cd444bf7fb47d2a23a6d47679feaf4e1c9ff93c0f679b792606a7edbcea"
+  },
+  "pass": 42
+}

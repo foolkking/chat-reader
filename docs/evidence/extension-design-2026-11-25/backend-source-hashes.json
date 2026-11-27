@@ -1,0 +1,50 @@
+{
+  "captured_at": "2026-11-25T16:45:49+08:00",
+  "base_head": "c9cfb131d6704f2d2c095b93355629740e95cac5",
+  "files": [
+    {
+      "path": "<READER_REPO>\\apps\\api\\app\\services\\extension_access.py",
+      "sha256": "36b841dfa94204fef71106ed505f6ec5951983972b828769bfa71e5253e4a06a"
+    },
+    {
+      "path": "<READER_REPO>\\apps\\api\\app\\services\\extension_pairing.py",
+      "sha256": "0601329698b47669cd597e8f6dd45466cd094ac463587b7fa32547373fcbf564"
+    },
+    {
+      "path": "<READER_REPO>\\apps\\api\\app\\api\\routes\\reader_extension.py",
+      "sha256": "182e30e4e9bc07bcc2881256b729f3edfedff74f719fb5c60fbf48a3ffe8e818"
+    },
+    {
+      "path": "<READER_REPO>\\apps\\api\\app\\services\\adaptive_import\\manifest_stream.py",
+      "sha256": "240c245d90caacbc082ee25b8f6f8ff63eb99e54a5d7c9568ef9ca88f2d5232e"
+    },
+    {
+      "path": "<READER_REPO>\\apps\\api\\app\\services\\adaptive_import\\reader_package.py",
+      "sha256": "6ca6cf473ebf42f0461f1261b997ed7efb65f1e430758dc1c9e3b28a1b396d8e"
+    },
+    {
+      "path": "<READER_REPO>\\apps\\api\\app\\services\\extension_import.py",
+      "sha256": "fd0a84416feef11730ebe1e7ba11f717c6aa808279a6a26fc283cc06e9d94145"
+    },
+    {
+      "path": "<READER_REPO>\\apps\\api\\app\\services\\extension_retry.py",
+      "sha256": "fe5f7382c087f9db3bd2a39ed4d4a8dc483c674f35d1d04bf24abf4a150eb3f7"
+    },
+    {
+      "path": "<READER_REPO>\\apps\\api\\tests\\test_extension_release_postgres.py",
+      "sha256": "6ccd07a793219e2c4eaed4cf0e34918dbdf61dd3aaa25c16dc9af2b9d8fc33f9"
+    },
+    {
+      "path": "<READER_REPO>\\apps\\api\\tests\\test_reader_index_metadata.py",
+      "sha256": "568f8c3f1cc372d8081ddc4f51b5f295f43ae4bad8107187e9028de0c557b7d3"
+    },
+    {
+      "path": "<READER_REPO>\\apps\\api\\tests\\test_extension_retry.py",
+      "sha256": "7e7b27617fe6cde8b158c975e1ab8aceb589f8f6d4f99acec1e5b5323b998853"
+    },
+    {
+      "path": "<READER_REPO>\\apps\\api\\tests\\test_reader_long_message_storage.py",
+      "sha256": "4d9ac64945a6f817ca89d6c3f13e1ceae85d5ad89301221f59f9c9fef4956675"
+    }
+  ]
+}

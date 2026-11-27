@@ -1,0 +1,86 @@
+{
+  "at": "2026-11-25T10:02:02.066Z",
+  "kind": "real Edge unpacked extension; synthetic directory and journal, not real accounts",
+  "checks": [
+    {
+      "name": "source reads show zero initial selection",
+      "pass": true
+    },
+    {
+      "name": "page select fixes exactly 50",
+      "pass": true
+    },
+    {
+      "name": "next page keeps exactly 50 DOM rows",
+      "pass": true
+    },
+    {
+      "name": "cross-page selection retains 100",
+      "pass": true
+    },
+    {
+      "name": "selected view removes one selected reference",
+      "pass": true
+    },
+    {
+      "name": "only proven local project permits whole-export project action",
+      "pass": true
+    },
+    {
+      "name": "whole-export project preserves prior selections and fixes 149 IDs",
+      "pass": true
+    },
+    {
+      "name": "1280px bounded list, visible main action and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "375px bounded list, visible main action and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "320px bounded list, visible main action and no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "150 receipt rows render one bounded page",
+      "pass": true
+    },
+    {
+      "name": "review filter isolates the real conflict",
+      "pass": true
+    },
+    {
+      "name": "skip records no canonical cancellation and leaves the original receipt",
+      "pass": true
+    },
+    {
+      "name": "a skipped conflict no longer traps the import center",
+      "pass": true
+    },
+    {
+      "name": "no browser runtime errors",
+      "pass": true
+    },
+    {
+      "name": "tested product snapshot unchanged during browser run",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "inputHashes": {
+    "center.js": "ded0c745d8505d9167d66927fa860f2ebaf4216db3560693e74d80025484667a",
+    "center.html": "5abe662097b50fa11bc51923a2e01f3e6920bc498140251e9c3e7d2680f5f7bb",
+    "center.css": "539b92b9d5446b3ffd278c0f8f32e98ba056cde9eaa76143bc92e3b420e0c7ef",
+    "center-selection.js": "6350cd2a83906b8367aa4931d2c676ac66b6bc89f18c3c2566029dcc4331bbf5",
+    "batch-model.js": "a4f7153ddcaf5cf617be2c3048876743b1460f5178da0e5cf88a6ce0505dad52"
+  },
+  "browser": "Edg/158.0.4370.33",
+  "outputHashes": {
+    "center.js": "ded0c745d8505d9167d66927fa860f2ebaf4216db3560693e74d80025484667a",
+    "center.html": "5abe662097b50fa11bc51923a2e01f3e6920bc498140251e9c3e7d2680f5f7bb",
+    "center.css": "539b92b9d5446b3ffd278c0f8f32e98ba056cde9eaa76143bc92e3b420e0c7ef",
+    "center-selection.js": "6350cd2a83906b8367aa4931d2c676ac66b6bc89f18c3c2566029dcc4331bbf5",
+    "batch-model.js": "a4f7153ddcaf5cf617be2c3048876743b1460f5178da0e5cf88a6ce0505dad52"
+  }
+}

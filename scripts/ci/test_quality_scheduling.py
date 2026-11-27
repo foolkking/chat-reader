@@ -163,6 +163,42 @@ class QualitySchedulingTests(unittest.TestCase):
             with self.subTest(kind=kind), self.assertRaises(AssertionError):
                 check(copy_web)
 
+    def test_merge_recovery_browser_is_required_with_separate_evidence(self):
+        def check(web):
+            validate_dag(self.main)
+            steps = web["jobs"]["gates"]["steps"]
+            gate = named(steps, "Merged attachment recovery result and retained original navigation")
+            self.assertEqual(gate, {
+                "name": "Merged attachment recovery result and retained original navigation",
+                "if": "${{ inputs.shard == 3 }}",
+                "env": {"PLAYWRIGHT_USE_BUNDLED_CHROMIUM": "1"},
+                "run": "node scripts/ux/merge-attachment-result-browser.mjs",
+            })
+            upload = named(steps, "Preserve merge attachment result evidence")
+            self.assertEqual(upload["if"], "${{ always() && inputs.shard == 3 }}")
+            self.assertNotIn("continue-on-error", upload)
+            self.assertEqual(upload["with"]["if-no-files-found"], "error")
+            for suffix in ("result.json", "failure.json", "*.png"):
+                self.assertIn("${{ runner.temp }}/merge-attachment-result-browser/" + suffix,
+                              upload["with"]["path"].splitlines())
+        check(self.web)
+        for kind in ("missing", "shard", "swallow", "continue", "evidence"):
+            changed = copy.deepcopy(self.web)
+            steps = changed["jobs"]["gates"]["steps"]
+            gate = named(steps, "Merged attachment recovery result and retained original navigation")
+            if kind == "missing":
+                steps.remove(gate)
+            elif kind == "shard":
+                gate["if"] = "${{ inputs.shard == 1 }}"
+            elif kind == "swallow":
+                gate["run"] += " || true"
+            elif kind == "continue":
+                gate["continue-on-error"] = True
+            else:
+                named(steps, "Preserve merge attachment result evidence")["with"]["path"] = "missing"
+            with self.subTest(kind=kind), self.assertRaises(AssertionError):
+                check(changed)
+
     def test_web_gate_partition_and_all_node_browser_evidence_paths_are_retained(self):
         original_ids = [gate for group in self.contract["web_gate_groups"] for gate in group]
         self.assertEqual(len(original_ids), 14)

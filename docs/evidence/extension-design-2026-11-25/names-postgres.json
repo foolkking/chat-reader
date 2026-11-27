@@ -1,0 +1,39 @@
+{
+  "counts": [
+    10000,
+    100000
+  ],
+  "hot_samples": 20,
+  "results": {
+    "full:tide project": {
+      "p95_ms": 19.11,
+      "first_page": 0,
+      "more": false
+    },
+    "full:abyssal": {
+      "p95_ms": 14245.43,
+      "first_page": 40,
+      "more": true
+    },
+    "full:Synthetic 89-18": {
+      "p95_ms": 20.53,
+      "first_page": 0,
+      "more": false
+    },
+    "names:tide project": {
+      "p95_ms": 11.8,
+      "first_page": 29,
+      "more": false
+    },
+    "names:abyssal": {
+      "p95_ms": 10.08,
+      "first_page": 0,
+      "more": false
+    },
+    "names:Synthetic 89-18": {
+      "p95_ms": 10.56,
+      "first_page": 1,
+      "more": false
+    }
+  }
+}

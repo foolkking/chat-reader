@@ -1,5 +1,10 @@
 # API 参考
 
+## 插件导入项目确认（2026-11-26 工作树，未部署）
+
+- 设备仍通过 `GET /api/extension/v1/projects` 读取本账号活动项目；没有对应的设备创建接口。`capabilities.web_import_project` 表示此实例提供已登录 Web 确认页。
+- `POST /api/extension-devices/import-project` 是 **Reader 同源 Web 会话** 的操作。请求仅含 `expected_user_id`、`device_id`、`name`（去首尾空白，1–120 字符）。重新核对 Web 会话以及同账号、未过期、已兑换的设备，按 Reader 现有项目顺序锁复用同名活动项目或创建一个，返回 `{id, client}`。归档／默认重名 409；不匹配账号或无有效设备 403。仅返回项目，不提交导入。[用户流程](system/BROWSER_EXTENSION.md#core-remediation-candidate)
+
 ## 用户任务中断恢复 — 2026-11-13（本地，未部署）
 
 - `/api/tasks/{id}/cancel`的独立执行快路仍检查原取消能力。正在受监督执行的导出、

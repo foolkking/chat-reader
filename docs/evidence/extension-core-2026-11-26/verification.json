@@ -1,0 +1,727 @@
+{
+  "as_of": "2026-11-26T18:54:49+08:00",
+  "branch": "codex/reader-extension",
+  "reader_base_commit": "61daf63338b89e47c02ef6624ffa4487d11e2b8c",
+  "extension_base_commit": "e18bb4cae7674af66a08fd3be50c113475f34e5a",
+  "local_uncommitted": true,
+  "official_remote_ci": null,
+  "production_deployment": false,
+  "personal_browser_final_candidate": null,
+  "evidence_file_root": "E:/chat-reader-temp",
+  "delivery_directory": "extension-resume-20261126/delivery-final",
+  "package": {
+    "started": "2026-11-26T18:45:01.9675333+08:00",
+    "finished": "2026-11-26T18:45:03.2814815+08:00",
+    "forkHead": "e18bb4cae7674af66a08fd3be50c113475f34e5a",
+    "node": "v24.22.3",
+    "independentPrivateRebuild": true,
+    "verifiedLocally": {
+      "private": {
+        "version": "0.3.0",
+        "files": 58,
+        "installSha256": "eb5b31061f2f325581faccab6bbef4dc98530bef9671ce6f1e2120472c69be67",
+        "referenceSha256": "236f50cbd0c112ac9416917d9cd5c9eec156773a83f723276a451a137c525ec4"
+      },
+      "loopback-18383": {
+        "version": "0.3.0",
+        "files": 58,
+        "installSha256": "642dc54f631780cbe241adfdcaef2e690d3ec50a1fe78b4fc1c6e70371ac5eb0",
+        "referenceSha256": "236f50cbd0c112ac9416917d9cd5c9eec156773a83f723276a451a137c525ec4"
+      }
+    },
+    "userInstalledIdentityMatched": true,
+    "ciQualified": false,
+    "sourcePackagerSHA256": "c164ddbe68d0292de61cae33c5332c65d157980bcd3410493adb90d1cd35345b"
+  },
+  "packaged_file_sha256": {
+    "LICENSE": "664c44eb8eb099d1d137bbf21d4101efeb213489937bc55c9b2f3b4a3b2ffc48",
+    "THIRD_PARTY_NOTICES.md": "903addc6066697294242049b4920fd0d467c451655b40911d51a03edf38813a7",
+    "append-picker.js": "21bedbf7f50cbdf848a05ceafc4d489ce5d5d29f5de67708eb4dcdebb8ad88c2",
+    "archive-source.js": "647bcf0cd1555da8552be3c24e5d232b75eb1304b9532948b6356281b4e3f769",
+    "background.js": "f7a601d2921ad7b11ac76171e2bc3207f1727f278bb3aae5eb02deb24303ca9e",
+    "batch-model.js": "a4f7153ddcaf5cf617be2c3048876743b1460f5178da0e5cf88a6ce0505dad52",
+    "batch-worker.js": "e2faad979e3b3724c568d5a047d82e46192ce1984c89fa0377e48a5c57ff4815",
+    "capture.js": "7f3c13f2828332be00110a364494554ac7ed42d0927cb711ff9ad010ddcb00d1",
+    "center-selection.js": "b7a3461fd83ef5401f03e3cb1124389defae17d6457f73275ecf72f1acfe40f8",
+    "center.css": "2683c7a9a254e2b57b0b785f93a119d042802b0f761768958ff022c7423ffcdc",
+    "center.html": "2e02e9b35946978b7fed7216eed37bfdb932468f2f81d016794ec8f22362db95",
+    "center.js": "cd3da72a3a3d15e6291313ab81a87f9dddae7abcaa670acbf3e8883df063abd5",
+    "client.js": "05b5cedbe492b9a1e3fbdacc6290853f36ce1bb8018dcbdb07aa7f0a2cd1dd30",
+    "config.js": "413c4b42cf28a718f600c6af99150b944f391d6e66042fff2bb2371cd538c774",
+    "fast-text.js": "ed0f8ee500a7bfc50c43886cf19fffeb61c66ab48bba7affc48734aef56fa38f",
+    "frame.html": "744c7a2c221016b3348a71be88d260ef4b16e9f1fc9f9a98ebe3e59939aac95a",
+    "frame.js": "62e0caae5802c7930a13dc9c5bdf7e7c311eaf6bd2480b55970ee905ff4a62f1",
+    "glyphs.js": "f54acfefd6aa182d1b3d79a66a10bd38e153204058c2ca3b6282746e509753c5",
+    "host.html": "71cbb37d26639572b052d420532a82e75e91f82a0ea202a9a0cac1988bde1f3c",
+    "host.js": "387cc0b4b0ddb5644a890eb26f7dc87d13a13cd9e2fc53064be39a587b4b3be6",
+    "i18n.js": "71c776151b7eff621f768131aff3c9ea503fda0cb6c6e870a78f8d75fd25d0af",
+    "icons/icon128.png": "75cc760f4362998a26644b9dd06d2b6fa37ee8257f63de735a47d4fdc3cd2dd3",
+    "icons/icon16.png": "5485d3c170463390e92e1d365c477a68a4912a0e4a5abe819c98dd0efc817a0b",
+    "icons/icon32.png": "af00d4fa6c9e7d34ee632738f96de0b56a23b88582ae3bb458a5544d5b638f12",
+    "icons/icon48.png": "29d9732b824d3e51e85e981984516fd7aa25f98f2e205b35e9217c190100225f",
+    "licenses/JSZip-LICENSE.md": "566c953c6090b1218ca6217dd7359d45dde46581968586dc607d59a78af6a9c4",
+    "licenses/lucide-LICENSE.txt": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
+    "licenses/marked-LICENSE.md": "8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c",
+    "licenses/otaliptus-MIT.txt": "b4665e15ad69c7c444e2e9214c10b45f139c221255510b867ef7fb071654f010",
+    "locales/en.js": "83d0f746f90a3e71fa9c0fb85a749ecc069ac3fe0d2cefe424a58c92204a767c",
+    "locales/zh_CN.js": "b882dc8e521c4798659b7628d1dc97863a24020b90cc60d7c5c532acf54662df",
+    "manifest.json": "265da6cd49d88be66215dba15a6e5959a2b5e922c8bebbfa43195763d319a6e4",
+    "outline-tree.js": "3519b0b83e2b2882e10fb44f6e2877d36491eb288ba52e098e6001ac414d8080",
+    "overlay.js": "8b3a64630a5bad148b6fa4aca7ca6ec628bb15ae887fd6eba9f653b64677be20",
+    "package.js": "c7d5ae51df5689bfe9b209041c292f1e29466b21e5ac401353587eaf680d5222",
+    "page-index.js": "542beff323cb8eaae2eb95ebcd0b50ac7010c7c192ccec0bb083a78f9134c47e",
+    "panel-export.js": "ead4fcb63714b8f59e5fafb57b978c9ad008e2ab00094d909a5b5b39b09a9588",
+    "panel-jobs.js": "80e058497b2fb17214ca7152332526a35fb051d1c1b0e9e9e1be3fca824cd63e",
+    "panel.css": "79bfbde54f65ca28891713aa7a3b018ef60a23f0ea6f96b66d4b3a7e537d3c71",
+    "panel.html": "9bd65273b6593b6b5ef5db87e01b06e5b74ee10d8be213bab577241d750846bf",
+    "panel.js": "3dbc7ce901a77759289106b54f8c734d47fcc87eadb580f633bb21f7d5415548",
+    "progress-view.js": "44200045047cebd1b7a311efa6a4e56ba9dc413b5897714fe40ef494eeb8f7a9",
+    "progress.js": "3668a43b6c777ce19e2d61aa812384a264bb541b94ec600b0f189b229823f368",
+    "routes.js": "1a94a580d3717b475ae41227a339b7fda34ef59d454854b0171285f0dd0d1049",
+    "sha256.js": "b4a619895d7d843bf77bdd6a700cc1bdc99a1b5da942248aeb398fc355105d26",
+    "source-actions.js": "2627928b19888b48fac3469e6a023aca22c55e35816f5385bf6d5a0e29d02d53",
+    "source-control.js": "a8dc958f2b305c606c4b5e00d64736fd64f9eb69f720191c2661e4e204623b76",
+    "source-dom.js": "38778e80739cfd3a3cc387a23a7a629a70e3eca0ea14f34a3121839ede0109fe",
+    "source-file.js": "f92ab9cf6881780966203cd8b59bb135902ad13d69063a2998904dd15179a5cc",
+    "surface-state.js": "8754f5a93ba4061897e6c78c6aecd0fc99e8d10af90e04656ecb40a04f74298f",
+    "surfaces.js": "2ed5f63e6d215010c63f5d7b60b374e93e0314f1ff257a3f9a468d63a830908a",
+    "transfer-state.js": "5c471c5a2833d3f854b606aba1baf1e7f953372112a22e4e7a0378b1b5bfc084",
+    "upload.js": "8aa575ca3906125f6352f4ac2891ebcc3ae80ba501a137213e11888a94dfb607",
+    "vendor/fflate-0.8.3.js": "462ef8041fc970e3615a20a9dd2b2e3047a073b2da729ef4f02b634bba8b7b83",
+    "vendor/fflate-LICENSE.txt": "0a1df3a083d0c010560aa342e87959c8c1070e6fd54545741f083f22d0c8b551",
+    "visible.js": "22bdfa3e59271a7e673ef988f6a85f6c062db20265945c2dced0f28f7500f3a4",
+    "workspace.js": "1d92be007f08dd2c19a309c3b3e8d95771459ff8a999ae0aae1ff5658e06b0fa",
+    "zip-source.js": "0df02a3e216d33fa5d4f1f19685be47ebb87bad65ac08a82d8284e35db6a5870"
+  },
+  "capture_bridge": {
+    "installer": "eb5b31061f2f325581faccab6bbef4dc98530bef9671ce6f1e2120472c69be67",
+    "executed_modules": {
+      "reader/vendor/fflate-0.8.3.js": "462ef8041fc970e3615a20a9dd2b2e3047a073b2da729ef4f02b634bba8b7b83",
+      "reader/sha256.js": "b4a619895d7d843bf77bdd6a700cc1bdc99a1b5da942248aeb398fc355105d26",
+      "reader/package.js": "c7d5ae51df5689bfe9b209041c292f1e29466b21e5ac401353587eaf680d5222",
+      "reader/progress.js": "3668a43b6c777ce19e2d61aa812384a264bb541b94ec600b0f189b229823f368",
+      "reader/upload.js": "8aa575ca3906125f6352f4ac2891ebcc3ae80ba501a137213e11888a94dfb607",
+      "reader/transfer-state.js": "5c471c5a2833d3f854b606aba1baf1e7f953372112a22e4e7a0378b1b5bfc084",
+      "reader/host.js": "387cc0b4b0ddb5644a890eb26f7dc87d13a13cd9e2fc53064be39a587b4b3be6",
+      "extension/locales/en.js": "83d0f746f90a3e71fa9c0fb85a749ecc069ac3fe0d2cefe424a58c92204a767c",
+      "extension/i18n.js": "71c776151b7eff621f768131aff3c9ea503fda0cb6c6e870a78f8d75fd25d0af",
+      "extension/fast-text.js": "ed0f8ee500a7bfc50c43886cf19fffeb61c66ab48bba7affc48734aef56fa38f",
+      "extension/source-dom.js": "38778e80739cfd3a3cc387a23a7a629a70e3eca0ea14f34a3121839ede0109fe",
+      "reader/source-file.js": "f92ab9cf6881780966203cd8b59bb135902ad13d69063a2998904dd15179a5cc",
+      "reader/visible.js": "22bdfa3e59271a7e673ef988f6a85f6c062db20265945c2dced0f28f7500f3a4",
+      "reader/page-index.js": "542beff323cb8eaae2eb95ebcd0b50ac7010c7c192ccec0bb083a78f9134c47e",
+      "reader/append-picker.js": "21bedbf7f50cbdf848a05ceafc4d489ce5d5d29f5de67708eb4dcdebb8ad88c2",
+      "reader/capture.js": "7f3c13f2828332be00110a364494554ac7ed42d0927cb711ff9ad010ddcb00d1"
+    },
+    "synthetic_source_and_browser_boundaries": true,
+    "parser_partial": {
+      "zip_sha256": "a830254431dea4346f033fd768181fa45c5916b9fa772152d1a47a2c3462c500",
+      "bytes": 1118,
+      "messages": 2,
+      "metadata": {
+        "path_under_temp_root": "extension-resume-20261126/delivery-final/fixture/installed-image-partial.expected.json",
+        "sha256": "64e0c6b351d498bbfb4e15119c5928f836b3aa6878ab177defacd03cc1bcb600"
+      }
+    },
+    "append_251": {
+      "zip_sha256": "2886c8f86341256278ca5c6dbb3c4f29d8de8a7fdb131a2f4a90f8c80aa1e825",
+      "bytes": 63016,
+      "messages": 251,
+      "metadata": {
+        "path_under_temp_root": "extension-resume-20261126/delivery-final/fixture/installed-append-251.expected.json",
+        "sha256": "940ac32bfdba0159ebeff345f67bff0b1bcac856de9ba76a6837cb92e1619857"
+      }
+    },
+    "generator_sha256": "6ff2ca652e2e58c82f33727f6de169d3ce5c3530f7ee0873cc422dc030aa491a",
+    "harness_sha256": "205b25a1c5029325517900b4466f2b21cc3e00f2fd9c513bbcb669a2bcf9f977"
+  },
+  "full_extension": {
+    "started": "2026-11-26T18:45:28.0674872+08:00",
+    "finished": "2026-11-26T18:46:04.1376711+08:00",
+    "exit": 0,
+    "node": "v24.22.3",
+    "summary": [
+      "# tests 449",
+      "# pass 386",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 63",
+      "# todo 0",
+      "# duration_ms 35623.6984"
+    ],
+    "input_drift": [],
+    "original": {
+      "path_under_temp_root": "extension-resume-20261126/extension-full-final.json",
+      "sha256": "db03a49bed84f963452fb41c62d83dffc63e0463802cf4f99ef1a31548cd1518"
+    },
+    "log": {
+      "path_under_temp_root": "extension-resume-20261126/extension-full-final.log",
+      "sha256": "edb30fd32357bb5d9382c4a7a081fc2f7d20356750841633a4155e3968aefc1d"
+    },
+    "tracked_and_visible_worktree_inputs": 213,
+    "inputs_compact_sorted_json_sha256": "d1fbe8a6db0e6a28ecaccc6f2171a886b159d67200f66d31cd5a3ef3af1eabc5",
+    "command": [
+      "C:\\Users\\86182\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--test",
+      "--test-force-exit",
+      "--test-reporter=tap",
+      "tests/appblock-preview.test.cjs",
+      "tests/card-snapshot.test.cjs",
+      "tests/components.test.cjs",
+      "tests/data-first.test.cjs",
+      "tests/dil-render.test.cjs",
+      "tests/edge-cases.test.cjs",
+      "tests/fast-panel.test.cjs",
+      "tests/fast-text-repairs.test.cjs",
+      "tests/fast-text.test.cjs",
+      "tests/html-cards.test.cjs",
+      "tests/html-export.test.cjs",
+      "tests/i18n.test.cjs",
+      "tests/lab-energy.test.cjs",
+      "tests/lab-survey.test.cjs",
+      "tests/obsidian-send.test.cjs",
+      "tests/panel-redesign.test.cjs",
+      "tests/pdf-export.test.cjs",
+      "tests/picture-table.test.cjs",
+      "tests/pro-cases.test.cjs",
+      "tests/profiles.test.cjs",
+      "tests/reader-append-selection.test.cjs",
+      "tests/reader-batch-ticket.test.cjs",
+      "tests/reader-batch.test.cjs",
+      "tests/reader-capture.test.cjs",
+      "tests/reader-center-lifecycle.test.cjs",
+      "tests/reader-center-selection.test.cjs",
+      "tests/reader-contract.test.cjs",
+      "tests/reader-distribution.test.cjs",
+      "tests/reader-excerpt-capture.test.cjs",
+      "tests/reader-frame-views.test.cjs",
+      "tests/reader-host-progress.test.cjs",
+      "tests/reader-host-surface-acl.test.cjs",
+      "tests/reader-host.test.cjs",
+      "tests/reader-image-capture.test.cjs",
+      "tests/reader-navigation-boundaries.test.cjs",
+      "tests/reader-navigation-identity.test.cjs",
+      "tests/reader-navigation-jump.test.cjs",
+      "tests/reader-navigation-source.test.cjs",
+      "tests/reader-navigation.test.cjs",
+      "tests/reader-outline-overlay.test.cjs",
+      "tests/reader-outline-tree.test.cjs",
+      "tests/reader-progress-state.test.cjs",
+      "tests/reader-progress-view.test.cjs",
+      "tests/reader-source-alias.test.cjs",
+      "tests/reader-source-cache.test.cjs",
+      "tests/reader-source-dom.test.cjs",
+      "tests/reader-source-progress.test.cjs",
+      "tests/reader-source-response-dom.test.cjs",
+      "tests/reader-stream.test.cjs",
+      "tests/reader-surface-package.test.cjs",
+      "tests/reader-surface-views.test.cjs",
+      "tests/reader-transfer.test.cjs",
+      "tests/reader-workspace-state.test.cjs",
+      "tests/survey-formats.test.cjs",
+      "tests/version.test.cjs"
+    ]
+  },
+  "targeted_extension": [
+    {
+      "started": "2026-11-26T18:22:42.8613538+08:00",
+      "finished": "2026-11-26T18:23:06.6832155+08:00",
+      "exit": 0,
+      "node": "v24.22.3",
+      "summary": [
+        "# tests 57",
+        "# pass 57",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 23523.6336"
+      ],
+      "input_drift": [],
+      "original": {
+        "path_under_temp_root": "extension-resume-20261126/source-progress-host-final.json",
+        "sha256": "f6524c30c972bb3ca8b8fbb706b3899ca7daa11af279d45baf0b2bedd474346d"
+      },
+      "log": {
+        "path_under_temp_root": "extension-resume-20261126/source-progress-host-final.log",
+        "sha256": "d8b729b6718d29c99beb4395d14f530cf1b8800ada03b7249027493fcf9ba4da"
+      }
+    },
+    {
+      "started": "2026-11-26T18:43:07.7599811+08:00",
+      "finished": "2026-11-26T18:43:14.8689445+08:00",
+      "exit": 0,
+      "node": "v24.22.3",
+      "summary": [
+        "# tests 61",
+        "# pass 61",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 6829.8863"
+      ],
+      "input_drift": [],
+      "original": {
+        "path_under_temp_root": "extension-resume-20261126/navigation-reverse-final.json",
+        "sha256": "f5d303d01503a7c41d8c520100ff304228af4816bb493679de722c9e2c07cdf6"
+      },
+      "log": {
+        "path_under_temp_root": "extension-resume-20261126/navigation-reverse-final.log",
+        "sha256": "7763c34c40e3c24d17da23ed635a18204d37995a7457df88955f95b15ba5440c"
+      }
+    }
+  ],
+  "batch_workspace": {
+    "started": "2026-11-26T17:52:02.3892897+08:00",
+    "finished": "2026-11-26T17:52:09.0592581+08:00",
+    "summary": [
+      "# tests 48",
+      "# pass 48",
+      "# fail 0",
+      "# cancelled 0",
+      "# skipped 0",
+      "# todo 0"
+    ],
+    "exit": 0,
+    "receipt": {
+      "path_under_temp_root": "extension-handoff-20261126/batch/workspace-final.json",
+      "sha256": "28f45d01a6ded83cc9fe9d6c4748f2ad845e180f2d75c9268797c4eb83f99e88"
+    },
+    "handoff": {
+      "path_under_temp_root": "extension-handoff-20261126/batch/handoff.md",
+      "sha256": "681b70c91eb16b0e8cadb2c5f9c883533e9a23d26190ed94e13b51e78dff9470"
+    }
+  },
+  "isolated_reader": [
+    {
+      "gate": "save",
+      "run_directory": "http-20261126T104554Z-6aa3a3",
+      "started": "2026-11-26T18:45:54+08:00",
+      "finished": "2026-11-26T18:48:49+08:00",
+      "exit_code": 0,
+      "command": [
+        "E:\\anaconda\\python.exe",
+        "-B",
+        "scripts/extension-beta/backend-gate.py",
+        "--parent",
+        "E:\\chat-reader-temp\\extension-resume-20261126\\delivery-final\\lab-save",
+        "--fork",
+        "E:\\1project\\chat-intelligent-ui-exporter",
+        "--diagnostics",
+        "--parser-fixture",
+        "E:\\chat-reader-temp\\extension-resume-20261126\\delivery-final\\fixture\\installed-image-partial.expected.json"
+      ],
+      "reader_source_manifest": "70bcef7240f90c720bdb7eb99a3f05b8e21e46948620f81b0dcfd5666b52ce6a",
+      "api_input_files": 420,
+      "api_hash_manifest": {
+        "path_under_temp_root": "extension-resume-20261126/delivery-final/lab-save/http-20261126T104554Z-6aa3a3/source-hashes.json",
+        "sha256": "1e6e4e3bed723943a420dc2ef133ab84c224eed47c6dc1a7383d1810c0dc9432"
+      },
+      "receipt": {
+        "path_under_temp_root": "extension-resume-20261126/delivery-final/lab-save/http-20261126T104554Z-6aa3a3/receipt.json",
+        "sha256": "fcc8bbd87eb6321ed307afa5b6d79c215e52137744410aed7af026148eb6b080"
+      },
+      "postgres": {
+        "tests_passed": 20,
+        "path_under_temp_root": "extension-resume-20261126/delivery-final/lab-save/http-20261126T104554Z-6aa3a3/postgres-tests.log",
+        "sha256": "8281dba8d872e0dd4ebd6f0c8df9abc4d347557fae5493cd55ffe1b1f404e66b"
+      },
+      "checks": {
+        "fresh-api-worker": {
+          "worker_memory_bytes": 671088640,
+          "normal_http_pairing": true
+        },
+        "receive-complete": {
+          "chunks": 2,
+          "bytes": 5601765,
+          "sha256": "306dc70a5a0eaae307142349555aa63997a73f851862cdc327ac1e95104dfbf7",
+          "original_receipt_reused": true,
+          "interruption_controls": false
+        },
+        "complete-canonical-readback": {
+          "messages": 2,
+          "attachments": 2,
+          "canonical_sha256": "c836fb73a5cbb31cd4d32c92697f2ca044a19369ee96008f6417aa93d6d7b088",
+          "analysis_states": [
+            [
+              "analyzing",
+              "ANALYZING"
+            ],
+            [
+              "previewed",
+              "READY"
+            ]
+          ],
+          "commit_states": [
+            [
+              "queued",
+              "READY"
+            ],
+            [
+              "processing",
+              "IMPORTING"
+            ],
+            [
+              "committed",
+              "COMPLETED"
+            ]
+          ]
+        },
+        "duplicate-source": {
+          "existing_conversation_reused": true,
+          "canonical_identity_unchanged": true
+        },
+        "receive-partial": {
+          "chunks": 1,
+          "bytes": 1158,
+          "sha256": "3c470635665a7d1c3d54d8cae3431e4d2f26e4df17d2df2c9e6887928d89e9c8",
+          "original_receipt_reused": true,
+          "interruption_controls": false
+        },
+        "partial-missing-image": {
+          "messages": 2,
+          "attachments": 0,
+          "partial_consent_required": true,
+          "completeness": "partial",
+          "canonical_sha256": "f9fdd74fd1006b81ed8ab0ea24f3afefd5afb2ca20370d3992fd1b37d218b7a1",
+          "analysis_states": [
+            [
+              "analyzing",
+              "ANALYZING"
+            ],
+            [
+              "previewed",
+              "READY"
+            ]
+          ],
+          "commit_states": [
+            [
+              "queued",
+              "READY"
+            ],
+            [
+              "processing",
+              "IMPORTING"
+            ],
+            [
+              "committed",
+              "COMPLETED"
+            ]
+          ]
+        },
+        "receive-parser-partial": {
+          "chunks": 1,
+          "bytes": 1118,
+          "sha256": "a830254431dea4346f033fd768181fa45c5916b9fa772152d1a47a2c3462c500",
+          "original_receipt_reused": true,
+          "interruption_controls": false
+        },
+        "actual-parser-missing-image-canonical": {
+          "messages": 2,
+          "attachments": 0,
+          "partial_consent_required": true,
+          "completeness": "partial",
+          "source_digest": "afc016cea1c22b272e9f2433bbe6cab5c81b843b064312e69eb0cf37190c2714",
+          "canonical_sha256": "7400d4549f9df3ec3ed5a42638fc2e78ab9ccf40458648ce868873c39f9d6bde",
+          "analysis_states": [
+            [
+              "analyzing",
+              "ANALYZING"
+            ],
+            [
+              "previewed",
+              "READY"
+            ]
+          ],
+          "commit_states": [
+            [
+              "queued",
+              "READY"
+            ],
+            [
+              "processing",
+              "IMPORTING"
+            ],
+            [
+              "committed",
+              "COMPLETED"
+            ]
+          ]
+        },
+        "receive-invalid-index": {
+          "chunks": 2,
+          "bytes": 5601685,
+          "sha256": "7fa614c90e76e9b42260e4512797f15eb61d1815ebd9d54876bc488930d69c6c",
+          "original_receipt_reused": true,
+          "interruption_controls": false
+        },
+        "invalid-index-diagnostic": {
+          "failure": {
+            "code": "READER_PACKAGE_INVALID",
+            "stage": "archive",
+            "recovery": "system_support"
+          },
+          "analysis_states": [
+            [
+              "analyzing",
+              "ANALYZING"
+            ],
+            [
+              "failed",
+              "FAILED"
+            ]
+          ],
+          "same_invalid_artifact_retry_status": 409,
+          "other_paired_device_status": 404,
+          "original_receipt_reused": true,
+          "canonical_writes": 0
+        },
+        "live-schema-worker-and-single-receipts": {
+          "schema": "20261125_0065",
+          "counts": {
+            "conversations": 3,
+            "messages": 6,
+            "attachments": 2,
+            "imports": 5,
+            "source_message_refs": 12
+          },
+          "source_profiles": {
+            "conversation-zip-markdown-v1": 6,
+            "reader-chat-v1": 6
+          },
+          "analysis_jobs": {
+            "committed": 4,
+            "failed": 1
+          },
+          "fresh_worker_heartbeat": true,
+          "parser_source_digest_verified": true
+        }
+      },
+      "dependency_images": {
+        "api": "sha256:95421c45d01d07915c66e5e3855b4a4bcfe3cde62cb1800167054099d645e9ed",
+        "postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+      },
+      "unrelated_containers_unchanged": true,
+      "owned_services_removed": true
+    },
+    {
+      "gate": "append",
+      "run_directory": "http-20261126T104850Z-aec497",
+      "started": "2026-11-26T18:48:50+08:00",
+      "finished": "2026-11-26T18:54:11+08:00",
+      "exit_code": 0,
+      "command": [
+        "E:\\anaconda\\python.exe",
+        "-B",
+        "scripts/extension-beta/installed-append-gate.py",
+        "--parent",
+        "E:\\chat-reader-temp\\extension-resume-20261126\\delivery-final\\lab-append",
+        "--fork",
+        "E:\\1project\\chat-intelligent-ui-exporter",
+        "--evidence",
+        "E:\\chat-reader-temp\\extension-resume-20261126\\delivery-final\\fixture\\installed-append-251.expected.json"
+      ],
+      "reader_source_manifest": "70bcef7240f90c720bdb7eb99a3f05b8e21e46948620f81b0dcfd5666b52ce6a",
+      "api_input_files": 420,
+      "api_hash_manifest": {
+        "path_under_temp_root": "extension-resume-20261126/delivery-final/lab-append/http-20261126T104850Z-aec497/source-hashes.json",
+        "sha256": "1e6e4e3bed723943a420dc2ef133ab84c224eed47c6dc1a7383d1810c0dc9432"
+      },
+      "receipt": {
+        "path_under_temp_root": "extension-resume-20261126/delivery-final/lab-append/http-20261126T104850Z-aec497/receipt.json",
+        "sha256": "c7546914551e593b1cdfa07d7d5e23939cf676f3bb0464cf98548a56eeb7952a"
+      },
+      "postgres": {
+        "tests_passed": 36,
+        "path_under_temp_root": "extension-resume-20261126/delivery-final/lab-append/http-20261126T104850Z-aec497/postgres-tests.log",
+        "sha256": "03ac8e2660fb34e8108bf69d4695ce734a146a39217900c1c5872981ba9d130c"
+      },
+      "checks": {
+        "fresh-api-worker": {
+          "worker_memory_bytes": 671088640,
+          "normal_http_pairing": true
+        },
+        "range-http-1001-canonical": {
+          "count": 1001,
+          "duplicate_confirm": true,
+          "last_page": [
+            1000
+          ],
+          "old_indexes_250": 200,
+          "old_indexes_251": 422,
+          "canonical_body_hashes_matched": true
+        },
+        "range-http-duplicates": {
+          "added": 0,
+          "skipped": 1001,
+          "canonical_unchanged": true
+        },
+        "installed-251-append": {
+          "added": 251,
+          "skipped": 0,
+          "original_unchanged": true,
+          "same_order_roles_body_hashes": true,
+          "device_commit": 409,
+          "duplicate_confirm": true
+        },
+        "installed-251-duplicate": {
+          "added": 0,
+          "skipped": 251,
+          "original_unchanged": true,
+          "same_order_roles_body_hashes": true,
+          "device_commit": 409,
+          "duplicate_confirm": true
+        },
+        "g4-runtime-and-source": {
+          "schema": "20261125_0065",
+          "worker_memory_bytes": 671088640,
+          "worker_oom_killed": false,
+          "source_stable": true,
+          "cgroup_peak_bytes": 200171520
+        }
+      },
+      "dependency_images": {
+        "api": "sha256:95421c45d01d07915c66e5e3855b4a4bcfe3cde62cb1800167054099d645e9ed",
+        "postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685"
+      },
+      "unrelated_containers_unchanged": true,
+      "owned_services_removed": true
+    }
+  ],
+  "web": {
+    "build": {
+      "command": "corepack pnpm --filter web build",
+      "node": "v24.22.3",
+      "started": "2026-11-26T18:26:58.9480072+08:00",
+      "finished": "2026-11-26T18:29:41.5297192+08:00",
+      "exitCode": 0,
+      "head": "61daf63338b89e47c02ef6624ffa4487d11e2b8c",
+      "inputManifestSHA256": "7279e0d35c9fe5ec0db2eab1d8ac29a757e59bc0c314d0fcb172f02578fd7cad",
+      "boundedBuildCpus": 1,
+      "networkInstallAllowed": false,
+      "cwd": "E:\\chat-reader-temp\\extension-resume-20261126\\web-build-01"
+    },
+    "lint_and_typecheck": [
+      {
+        "command": "corepack pnpm run lint",
+        "cwd": "E:\\chat-reader-temp\\extension-resume-20261126\\web-build-01",
+        "started": "2026-11-26T18:46:48.8158454+08:00",
+        "finished": "2026-11-26T18:47:19.3147041+08:00",
+        "exitCode": 0
+      },
+      {
+        "command": "corepack pnpm run typecheck",
+        "cwd": "E:\\chat-reader-temp\\extension-resume-20261126\\web-build-01",
+        "started": "2026-11-26T18:47:19.3591602+08:00",
+        "finished": "2026-11-26T18:47:55.5220584+08:00",
+        "exitCode": 0
+      }
+    ],
+    "inputs": 586,
+    "source_hashes": {
+      "path_under_temp_root": "extension-resume-20261126/web-build-01/build-input-hashes.json",
+      "sha256": "7279e0d35c9fe5ec0db2eab1d8ac29a757e59bc0c314d0fcb172f02578fd7cad"
+    }
+  },
+  "reader_targeted": {
+    "api": {
+      "tests_passed": 69,
+      "path_under_temp_root": "extension-handoff-20261126/reader/audit-20261126T171435-6aef76/api-sealed.log",
+      "sha256": "e15d300c6db6c5f68ef9d2fb47f7e5816e2b7151aeaa3bdd0320178241b88baf"
+    },
+    "api_and_web_scope_manifest_sha256": "3c36b8d61491c5a0fc10ae14d9d1fd5087906d8106281bfaee0642a483d10547",
+    "handoff": {
+      "path_under_temp_root": "extension-handoff-20261126/reader/handoff.md",
+      "sha256": "70286b7e351f3c64be4f7c65e0eb4e60869cf82cc746812640aa52625e401fe4"
+    },
+    "web_logic_pass": 18,
+    "snapshot_unit_pass": 3,
+    "qualification_self_tests": {
+      "python_pass": 6,
+      "js_pass": 3
+    },
+    "qualification_expected_collection_only": {
+      "collected": 7495,
+      "passed_if_complete": 7492,
+      "existing_skips": 3
+    }
+  },
+  "historical_live_short_browser": {
+    "obs": {
+      "path_under_temp_root": "extension-core-20261126/live-chromium/control-and-navigation.json",
+      "sha256": "a39222e073781d04a87c36f6c8204f4301f67c3f456be57c145ec71cce13cd04"
+    },
+    "messages": 4,
+    "utf8_body_bytes": 12484,
+    "source_bytes": 263779,
+    "mapping_nodes": 17,
+    "headings": 27,
+    "limitations": "Earlier working copy, normal foreground window; no final private-account end-to-end acceptance or real attachment proof."
+  },
+  "known_reference_repositories": {
+    "ICermanRan/ChatGPT-Mini-Map": {
+      "commit": "b935e3fae2c9fa28ac230ceb0ad13712dc291296",
+      "observed": "2026-11-26T18:32:55.1152344+08:00",
+      "method": "Git over configured SSH; source inspected without executing it",
+      "files": [
+        "LICENSE (MIT)",
+        "navigation.js"
+      ]
+    },
+    "boabab/conversation-overview": {
+      "commit": "445a0e2d53fcfcf57b6297efc56346b2a773213a",
+      "observed": "2026-11-26T18:33:10.6735323+08:00",
+      "method": "Git over configured SSH; source inspected without executing it",
+      "files": [
+        "conversation-overview.user.js",
+        "no LICENSE file in the inspected tree or @license header"
+      ]
+    },
+    "bujue3709/GPT-Conversation-Toolkit": {
+      "commit": "4037e77f46ab1ffc9f8e1e4a49912b8a4ce70cdd",
+      "observed": "2026-11-26T18:33:00.1299950+08:00",
+      "method": "Git over configured SSH; source inspected without executing it",
+      "files": [
+        "LICENSE (MIT)",
+        "features/virtualized-jump.js",
+        "features/virtualizer-bridge-page.js"
+      ]
+    }
+  },
+  "earlier_failures": {
+    "host-251": {
+      "path_under_temp_root": "extension-handoff-20261126/core/host-append-red.log",
+      "sha256": "cd395433c28f563c3f983adab7f06e1250edd9811512d3e0908d01904309f8ce"
+    },
+    "source-progress-isolation": {
+      "path_under_temp_root": "extension-resume-20261126/progress-tree-red.log",
+      "sha256": "0836b79e2cd46f92f61dde62370d9e6408ea3c5328bdfe3780778e190041c9d8"
+    },
+    "reverse-flex-coordinates": {
+      "path_under_temp_root": "extension-resume-20261126/reverse-red.log",
+      "sha256": "30caa96309db8c008d6ad7c08c2c029cf4949ea1c361462e44be12f1529a5762"
+    },
+    "html-card-perf-6.26ms": {
+      "path_under_temp_root": "extension-resume-20261126/extension-full-01.json",
+      "sha256": "720a92f31bc15203d5a63e51c8f5efdddbd7781f81f22dafeecdfc9f04a276e3"
+    },
+    "missing-fixture-input-metadata": {
+      "path_under_temp_root": "extension-resume-20261126/lab-save/http-20261126T102433Z-fdbab9/receipt.json",
+      "sha256": "6e79935d972f2aa8d1029b9b71be153f9b858c2a7ba02862501553349ea39dae"
+    },
+    "invalid-single-message-test-target": {
+      "path_under_temp_root": "extension-resume-20261126/lab-append/http-20261126T103142Z-b65f0c/receipt.json",
+      "sha256": "45fc393da869246c1a4e0d307cbe715627a528e7f0c8cddb8e79eb5f85d9b8cf"
+    }
+  },
+  "alembic_heads": {
+    "started": "2026-11-26T18:52:47.7914339+08:00",
+    "finished": "2026-11-26T18:52:49.0123404+08:00",
+    "command": "python -B -m alembic heads",
+    "exitCode": 0,
+    "output": [
+      "20261125_0065 (head)"
+    ]
+  }
+}

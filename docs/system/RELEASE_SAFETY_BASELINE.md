@@ -15,6 +15,9 @@ The frozen API base retains7010 collected/7007pass/3 exact skips with full colle
 actual per-case native JUnit/lifecycle proof. Settings retains470+restore1 and
 source-bound native timeouts; four original blobs must independently merge to
 the same attempts without missing, duplicated, skipped, failed or retried cases.
+The API shard collects Python cycles between test modules, during recorded
+setup. It does not disable automatic GC, select or retry cases, or move a
+worker call outside its original wall-clock assertion.
 Reader baseline→candidate ordering and all five real memory gates are unchanged.
 The navigation/search/import candidate adds24 source-bound API cases (7034/7031/3).
 Its reviewed extension rebinds six legacy API fixtures without changing their28

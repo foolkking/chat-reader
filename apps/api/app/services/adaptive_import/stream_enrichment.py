@@ -58,7 +58,8 @@ def enrich_stream(record, source, draft, conversation_index):
                  "source_type": "adaptive_archive", "source_profile": "conversation-zip-markdown-v1",
                  "source_metadata": {"archive_member_id": member, "conversation_index": conversation_index}},
             ]}
-    spool = RecordSpool.write(draft.stream_records.path.parent, records(), prefix="enriched")
+    spool = RecordSpool.write(draft.stream_records.path.parent, records(), prefix="enriched",
+                             spill_text=bool(getattr(draft.stream_records, "text_sidecars", False)))
     return replace(draft, source_type="adaptive_archive", source_profile="conversation-zip-markdown-v1",
                    warnings=warnings, attachments=attachments, source_refs=[],
                    stream_records=spool, messages=MappedSequence(spool, lambda raw: decode_message(raw["message"])))

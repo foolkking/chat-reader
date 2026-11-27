@@ -1,0 +1,8 @@
+.....................                                                    [100%]
+============================== warnings summary ===============================
+tests/test_supervised_execution_postgres.py::test_control_migration_roundtrip_keeps_one_head
+  E:\anaconda\Lib\site-packages\alembic\config.py:612: DeprecationWarning: No path_separator found in configuration; falling back to legacy splitting on spaces, commas, and colons for prepend_sys_path.  Consider adding path_separator=os to Alembic config.
+    util.warn_deprecated(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+21 passed, 1 warning in 109.21s (0:01:49)

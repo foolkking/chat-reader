@@ -14,6 +14,41 @@ from app.services.reader_preview import dialogue_preview
 
 PAGE = 40
 MAX_SELECTION = 250
+MAX_RANGES = 4096
+MAX_ORDINAL = 2**53 - 1
+MAX_SELECTION_BYTES = 256 * 1024
+
+
+def selection_ranges(indexes=None, *, ranges=None, selected_count=None, count=None):
+    """Canonical half-open coordinates; limits bound encoding, not message count."""
+    if ranges is None:
+        if (not isinstance(indexes, list) or not indexes or len(indexes) > MAX_SELECTION
+                or selected_count is not None or any(type(i) is not int for i in indexes)
+                or len(set(indexes)) != len(indexes)):
+            invalid()
+        values = [[i, i + 1] for i in sorted(indexes)]
+    else:
+        if (indexes is not None or not isinstance(ranges, list) or not ranges or len(ranges) > MAX_RANGES
+                or type(selected_count) is not int or selected_count <= 0):
+            invalid()
+        values = ranges
+    normalized, total, previous = [], 0, -1
+    for pair in values:
+        if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+            invalid()
+        start, end = pair
+        if (type(start) is not int or type(end) is not int or not 0 <= start < end <= MAX_ORDINAL
+                or start < previous or count is not None and end > count):
+            invalid()
+        total += end - start
+        if normalized and start == previous:
+            normalized[-1][1] = end
+        else:
+            normalized.append([start, end])
+        previous = end
+    if ranges is not None and total != selected_count:
+        invalid()
+    return normalized
 
 
 def digest(value):
@@ -160,17 +195,17 @@ def read_page(record, source, page):
     return json.loads(raw)
 
 
-def selected(record, source, indexes):
-    if not indexes or len(indexes) > MAX_SELECTION or len(set(indexes)) != len(indexes):
-        invalid()
+def selected(record, source, indexes=None, *, ranges=None, selected_count=None):
+    intervals = selection_ranges(indexes, ranges=ranges, selected_count=selected_count, count=source["count"])
     group, rows = -1, []
-    for i in sorted(indexes):
-        if not 0 <= i < source["count"]:
-            invalid()
-        if i // PAGE != group:
-            group = i // PAGE
-            rows = read_page(record, source, group)
-        row = rows[i % PAGE]
-        if row["index"] != i:
-            invalid()
-        yield row
+    for start, end in intervals:
+        for i in range(start, end):
+            if i // PAGE != group:
+                group = i // PAGE
+                rows = read_page(record, source, group)
+            if i % PAGE >= len(rows):
+                invalid()
+            row = rows[i % PAGE]
+            if row["index"] != i:
+                invalid()
+            yield row

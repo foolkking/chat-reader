@@ -1,8 +1,36 @@
 # Next LTS Migration Contract
 
-Last synchronized: 2026-11-19
+Last synchronized: 2026-11-26
 
-Current deployed26b35501 pins **Next 16.4.5**, **React/react-dom 19.2.8** in
+<a id="upstream-mutation-proxy--candidate-2026-11-25"></a>
+### Upstream mutation proxy — deployed in v0.1.10
+
+The locked dependency remains Next 16.4.5. The `pnpm` patch uses a fresh
+upstream connection for every Reader `/api` or `/api/*` rewrite, including
+the GET that resolves a Reader deep link. An expired pool connection caused
+an observed `reader-turn` 500 before the API saw the request. The browser
+displayed the later ordinary window, while the explicit navigation correctly
+reported failure. A fresh local HTTP connection avoids handing that request
+to an expired socket. The proxy sends each operation once. Unknown write
+outcomes still use the existing receipt/read paths. Outside the Reader API,
+GET, HEAD and OPTIONS retain their pool, and other ordinary HTTP methods use
+a fresh connection. Streaming, headers, configured timeouts and WebSocket
+handling retain the original implementation.
+
+The patch covers the shipped CJS and ESM HTTP proxy entry points.
+`scripts/ux/upstream-mutation-proxy.test.mjs` exercises real local TCP/HTTP,
+including expired sockets for all three Reader API read methods, credentials,
+streaming, upstream errors and a lost
+response after one accepted write. Both the package metadata and the lockfile
+must retain the patch for frozen installs and Docker builds. Re-evaluate it
+with that regression suite when upgrading Next. See the
+[failed release and local controls](../evidence/merge-html-2026-11-25/README.md#branch-ci-and-the-v018-release-attempt)
+and the [v0.1.10 production receipt](../evidence/merge-html-2026-11-25/v0.1.10-production.json).
+Deployment status is maintained in `PROJECT_STATE.md`.
+
+The following paragraph records the November 19 dependency checkpoint.
+
+The then-deployed 26b35501 pins **Next 16.4.5**, **React/react-dom 19.2.8** in
 `apps/web/package.json` and `pnpm-lock.yaml`. Web CI and image runtime use
 **Node 22.13.1** in the workflow and Dockerfile. The locked Next upgrade is outside
 the affected range of GHSA-mfr8-8qww-v76h; the November 18 official-registry

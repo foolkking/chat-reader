@@ -14,7 +14,7 @@ from app.services.ownership import get_owned
 from app.services.search.search_service import SearchServiceError, _escape_like_pattern, query_terms, search
 
 
-def catalog(db, owner, q, project_id, scope, view, offset, limit):
+def catalog(db, owner, q, project_id, scope, view, offset, limit, *, names_only=False):
     if project_id is not None:
         project = get_owned(db, Project, project_id, owner)
         if not project or project.is_archived:
@@ -35,7 +35,17 @@ def catalog(db, owner, q, project_id, scope, view, offset, limit):
         base = base.where(pin.is_(True))
     hits = {}
     listing = view
-    if q.strip():
+    if q.strip() and names_only:
+        term = _escape_like_pattern(q.strip().lower())
+        title = func.lower(func.coalesce(func.nullif(C.display_title, ""), C.title))
+        project_name = func.lower(Project.name)
+        where_name = and_(Project.is_archived.is_(False), Project.is_default.is_(False),
+                          project_name.like(f"%{term}%", escape="\\"))
+        base = base.where(or_(title.like(f"%{term}%", escape="\\"), where_name))
+        base = base.order_by((title == q.strip().lower()).desc(), func.coalesce(C.updated_at, C.imported_at).desc(), C.id)
+        page = db.execute(base.offset(offset).limit(limit + 1)).all()
+        rows, more, listing = page[:limit], len(page) > limit, "search"
+    elif q.strip():
         try:
             page = search(db, q, limit=limit, offset=offset, project_id=project_id, grouped=True, terms_mode=True,
                           unclassified_only=scope == "unclassified", pinned_only=view == "pinned", ownership_scope=owner)

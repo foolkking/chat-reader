@@ -6,6 +6,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 from api_shard_evidence import validate
@@ -44,18 +46,37 @@ def fixture():
 
 
 class ApiShardTests(unittest.TestCase):
+    def test_shard_collects_previous_module_cycles_once_at_the_boundary(self):
+        from api_shard_plugin import ExecutionRecorder
+
+        recorder = ExecutionRecorder(None)
+        with patch("api_shard_plugin.gc.collect") as collect:
+            for name, calls in (("a.py", 0), ("a.py", 0), ("b.py", 1), ("b.py", 1), ("c.py", 2)):
+                recorder.pytest_runtest_setup(SimpleNamespace(path=Path(name)))
+                self.assertEqual(collect.call_count, calls)
+
     def test_reviewed_sources_and_deterministic_complete_partitions(self):
         plan = load_schedule()
         validate_api_sources(plan)
         original = json.loads((ROOT / "scripts/ci/quality-schedule-v2.json").read_text("utf8"))
         self.assertEqual(original["api"]["collected_count"], 7010)
         self.assertEqual(original["api"]["expected_passed"], 7007)
-        self.assertEqual(plan["api"]["collected_count"], 7116)
-        self.assertEqual(plan["api"]["expected_passed"], 7113)
-        self.assertEqual(sum(plan["api"]["added_file_counts"].values()), 106)
+        self.assertEqual(plan["api"]["collected_count"], 7500)
+        self.assertEqual(plan["api"]["expected_passed"], 7497)
+        self.assertEqual(sum(plan["api"]["added_file_counts"].values()), 490)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_project_export_scope.py"], 6)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_selective_append.py"], 6)
-        self.assertEqual(plan["api"]["added_file_counts"]["tests/test_reader_extension.py"], 15)
+        self.assertEqual(plan["api"]["added_file_counts"]["tests/test_reader_extension.py"], 17)
+        for file, count in {
+            "test_extension_release_postgres.py": 18, "test_extension_retry.py": 18,
+            "test_extension_transfer.py": 4, "test_extension_transfer_postgres.py": 2,
+            "test_memory_probe_windows.py": 5, "test_reader_index_metadata.py": 19,
+            "test_reader_long_message_storage.py": 83,
+            "test_extension_diagnostics.py": 34, "test_append_selection_ranges.py": 24,
+            "test_selective_append_postgres.py": 8, "test_append_ranges_postgres.py": 6,
+            "test_append_recovery.py": 7, "test_derived_rebuild_delete_postgres.py": 3,
+        }.items():
+            self.assertEqual(plan["api"]["added_file_counts"]["tests/" + file], count)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_program_update_confirmation.py"], 1)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_reader_find.py"], 6)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_admin_updates.py"], 9)

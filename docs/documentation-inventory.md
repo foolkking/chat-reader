@@ -1,5 +1,33 @@
 # Markdown 文档台账
 
+2026-11-27，`45923416147` 两次完整运行均在 API 分片 3 的同一项 2 秒领取门槛失败。独立诊断 `45927769711/1` 在同组用例记录到 2.104 秒的全堆回收（149,898 个对象）；该次观测在领取窗口外，不能作为原两次超时的直接栈证据。[分片按测试模块回收垃圾的边界](system/RELEASE_SAFETY_BASELINE.md)，原计时、断言、调度和 worker 均不变。
+
+2026-11-27，`v0.1.11` 资格运行 `45857898638/1` 的 Web 分片 2 在插入消息后删除对话时返回 500。PostgreSQL 记录了搜索索引写入与消息版本级联删除之间的死锁。修复及真实 PostgreSQL 并发回归见[后台重建的事务边界](system/BACKEND_AND_API.md)和 `apps/api/tests/test_derived_rebuild_delete_postgres.py`。
+
+2026-11-26 发布复审：补记[旧版读取范围决策的边界](system/BROWSER_EXTENSION.md#core-remediation-candidate)及[生产容量下界](deployment.md)，核心候选的本机验收与线上状态分开。
+
+2026-11-26 项目映射补充：[逐行映射与旧服务回退](system/BROWSER_EXTENSION.md#core-remediation-candidate)、[Web 会话创建合同](api-reference.md#插件导入项目确认2026-11-26-工作树未部署)及[独立安装包与测试回执](evidence/extension-core-2026-11-26/project-mapping.md)。旧包、旧失败与生产事实保留。
+
+2026-11-26 核心整改交接新增本机安装包及源码指纹索引、隔离服务回归、原失败和真实账号验收单，补齐追加设备收据、范围能力绑定和来源任务隔离说明。资格数量和已实际运行的数量分开记录。[候选交接](evidence/extension-core-2026-11-26/README.md) · [精确运行索引](evidence/extension-core-2026-11-26/verification.json) · [接口合同](system/BROWSER_EXTENSION.md#core-remediation-candidate)
+
+2026-11-26（核心整改候选，未发布）：[改前审查及实施记录](execution/ux-audit-extension-core-2026-11-26.md)区分真实测试 Chromium、合成浏览器、隔离 API/PG 与未验证的端到端导入；保留超时、计数及选错控件的原失败。[插件合同](system/BROWSER_EXTENSION.md#core-remediation-candidate)新增范围追加与统一工作区，明确 `sidePanel` 只在站外主动工具栏入口使用、旧250条合同仍兼容、设备不获最终追加权。同步 Project State 和导航；未改变生产安装或发布事实。
+
+2026-11-26（已交付）：[v0.1.10生产与插件0.3.0回执](evidence/merge-html-2026-11-25/v0.1.10-production.json)绑定精确两次完整CI、签名发布、生产迁移与独立复核、同ID原位替换及清理。同步Project State、[部署](deployment.md#v0110-production)、导航与[插件合同](system/BROWSER_EXTENSION.md)。未移动master或宣称个人浏览器验收；新备份未实际隔离恢复，保留旧验证点，不将“可清理”当“已安全删除”。
+
+2026-11-26（v0.1.9 发布未通过）：[精确失败与归档导航审查](evidence/merge-html-2026-11-25/archive-navigation-audit.md)记录归档项目晚到位移、偏好换查询卸载链接，以及独立审查发现的失联交互锁。[交互合同](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#对话原生链接与迟到列表读取2026-11-26-候选)同步候选行为；保留原14/60/124门禁，新增独立12项检查而不增加默认PWA跳过。[本地验收及源码摘要](evidence/merge-html-2026-11-25/archive-navigation-local-verification.json)保留首次定位GET 500与最终原套件结果。Project State 区分候选和当前生产，不以本地结果代替精确CI与部署。
+
+2026-11-25（v0.1.8 发布未通过）：合并提交的完整分支 CI 已通过，标签资格停在一次 Web DELETE 500。[失败与 TCP 回归](evidence/merge-html-2026-11-25/README.md#branch-ci-and-the-v018-release-attempt)保留精确运行和制品标识；[Next 代理约束](system/NEXT_LTS_MIGRATION_CONTRACT.md#upstream-mutation-proxy--candidate-2026-11-25)说明写请求新连接、无重放和升级依赖时的回归要求。未放宽浏览器 204 断言。
+
+2026-11-25（合并修复候选）：[生产只读诊断与合成 HTML 卡片回归](evidence/merge-html-2026-11-25/README.md)及[合并引用合同](system/BACKEND_AND_API.md#conversation-merge-execution-current)。统一源引用识别，不改权限、迁移或原对话；前一候选完整 CI 通过不代替本次新增修复的资格。
+
+2026-11-25（提交前）：[统一设计修复与效果复审](evidence/extension-design-2026-11-25/README.md)对应两个原分支，补充20状态、前后截图、授权/计划/内存红绿证据和完整CI覆盖新增151项。同步Project State、导航和Fork 0.3.0候选README；不将本地207通过/63跳过冒充全项成功，不删除历史失败或唯一生产备份。
+
+2026-11-25（复审后候选，未发布）：[统一设计 v2 修复前审查](execution/ux-audit-extension-design-v2-2026-11-25.md)保留全部初始失败；[候选交互、配对、目录与导入恢复合同](system/BROWSER_EXTENSION.md#unified-candidate)区分真实 API/worker 运行与合成来源、真实 ChatGPT 未核验范围。完整 CI/签名发布不得用本地测试替代。
+
+2026-11-25（本地未发布）：[浏览器采集与续传合同](system/BROWSER_EXTENSION.md#capture-streaming-candidate)、[长消息内部草稿兼容边界](system/ADAPTIVE_IMPORT_CONTRACT.md#reader-long-message-candidate)、[测试与失败证据](evidence/extension-capture-2026-11-25/README.md)。同步 Project State、导航及 Fork 的 `reader/README.md`；区分旧 0.2.0 已发布行为与候选，不用局部通过认证既有浮层／配对／批量导入改动。
+
+2026-11-25：[当前生产 v0.1.7 与升级前单套恢复点](deployment.md#v017-production) · [精确 CI、签名制品、同源探测与隔离恢复记录](evidence/reader-extension-append-2026-11-24/v0.1.7-production.json) · [私有浏览器包安装及设备授权](system/BROWSER_EXTENSION.md)。区分已启用的服务端、隔离环境 UI 验收与用户自己在生产进行的登录测试。
+
 2026-11-24：[签名发布的两次失败及隔离复现](evidence/reader-extension-append-2026-11-24/delivery-check.md#release-repair)记录侧栏拖放、迟到排序及生产旧版 Compose 的边界。[网页更新合同](system/ONLINE_UPDATES.md)说明迁移前的宿主机能力检查。
 
 2026-11-24：[只追加到末尾：插件选择与 Reader 固定目标、保留旧笔记和附件、排队后刷新与重新确认、双端 Context 文件](evidence/reader-extension-append-2026-11-24/README.md)；[收据丢失后的查找、设备级隐私选项及交付前测试](evidence/reader-extension-append-2026-11-24/delivery-check.md)；[安装和权限合同](system/BROWSER_EXTENSION.md)。这一记录不将隔离实验当成线上 CI 或生产部署。

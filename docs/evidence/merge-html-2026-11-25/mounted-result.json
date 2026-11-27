@@ -1,0 +1,1629 @@
+{
+  "status": "passed",
+  "startedAt": "2026-11-25T11:42:57.365Z",
+  "browser": "158.0.4370.33",
+  "sources": {
+    "E:\\1project\\chat-reader\\apps\\web\\features\\import\\import-task-monitor.tsx": "42a3634f0465a8cbc6dcb5b4ca84b56074b702da0bb5031f7e32645b20b16368",
+    "E:\\1project\\chat-reader\\apps\\web\\lib\\types.ts": "d52a36d3cded5b476d8c563ccb54e6bb2d39293bf6df48694f672103079ab3ce",
+    "E:\\1project\\chat-reader\\scripts\\ux\\merge-attachment-result-browser.mjs": "622accaea01d8ad4c9aed02b15a597e98a5c6c57b709a221726e890125c3a7fc"
+  },
+  "results": [
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "missing",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "unlocated",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "mixed",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "repaired",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "legacy"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "zero"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "import"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "failed"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "processing"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "cancelled"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "missing",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "unlocated",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "mixed",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "repaired",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "legacy"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "zero"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "import"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "failed"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "processing"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "cancelled"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "missing",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "unlocated",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "mixed",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "repaired",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "legacy"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "zero"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "import"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "failed"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "processing"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "cancelled"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "missing",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "unlocated",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "mixed",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "repaired",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "legacy"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "zero"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "import"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "failed"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "processing"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "cancelled"
+    },
+    {
+      "width": 320,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "missing",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "unlocated",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "mixed",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 124,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "repaired",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "legacy"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "zero"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "import"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "failed"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "processing"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "cancelled"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "missing",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "unlocated",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "mixed",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 104,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "repaired",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "legacy"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "zero"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "import"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "failed"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "processing"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "cancelled"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "missing",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "unlocated",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "mixed",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 124,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "repaired",
+      "geometry": {
+        "left": 29,
+        "right": 291,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "legacy"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "zero"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "import"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "failed"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "processing"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "cancelled"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "missing",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "unlocated",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "mixed",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 104,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "repaired",
+      "geometry": {
+        "left": 12,
+        "right": 308,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "legacy"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "zero"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "import"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "failed"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "processing"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "cancelled"
+    },
+    {
+      "width": 320,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "missing",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "unlocated",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "mixed",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "repaired",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "legacy"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "zero"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "import"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "failed"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "processing"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "cancelled"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": false,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "missing",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "unlocated",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "mixed",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "repaired",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "legacy"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "zero"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "import"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "failed"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "processing"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "cancelled"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "compact": true,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "missing",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "unlocated",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "mixed",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "repaired",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "legacy"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "zero"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "import"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "failed"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "processing"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "cancelled"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": false,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "missing",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "unlocated",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "mixed",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 44,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "repaired",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "legacy"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "zero"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "import"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "failed"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "processing"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "cancelled"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "compact": true,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "missing",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "unlocated",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "mixed",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 104,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "repaired",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "legacy"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "zero"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "import"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "failed"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "processing"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "cancelled"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": false,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "missing",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "unlocated",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "mixed",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "repaired",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "legacy"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "zero"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "import"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "failed"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "processing"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "cancelled"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "compact": true,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "missing",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "unlocated",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "mixed",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 104,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "repaired",
+      "geometry": {
+        "left": 29,
+        "right": 346,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "legacy"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "zero"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "import"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "failed"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "processing"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "cancelled"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": false,
+      "case": "batch-semantics"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "missing",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "unlocated",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 64,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "mixed",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 84,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "repaired",
+      "geometry": {
+        "left": 12,
+        "right": 363,
+        "height": 20,
+        "overflow": false
+      }
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "legacy"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "zero"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "import"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "failed"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "processing"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "cancelled"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "compact": true,
+      "case": "batch-semantics"
+    }
+  ],
+  "errors": []
+}

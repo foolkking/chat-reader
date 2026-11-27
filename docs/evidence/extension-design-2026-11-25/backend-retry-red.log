@@ -1,0 +1,54 @@
+F............                                                            [100%]
+================================== FAILURES ===================================
+_ test_retry_analysis_reuses_import_receipt_without_canonical_writes[FAILED] __
+
+paired = (<starlette.testclient.TestClient object at 0x000001C02DB72450>, {'Authorization': 'Bearer eAZyJkUwSVz_97EsJ41dKLxn55G...cgizdn9dmvQ', 'account': 'Administrator', 'device_id': 'a8b88eca-7686-4dc5-a11c-f1134c111be2', 'expires_in': 600, ...})
+state = 'FAILED'
+
+    @pytest.mark.parametrize("state", ["FAILED", "PAUSED"])
+    def test_retry_analysis_reuses_import_receipt_without_canonical_writes(paired, state):
+        c, h, _ = paired
+        iid, key = stage(c, h)
+        original_job = stop_analysis(iid, state)
+        with auth_middleware.SessionLocal() as db:
+            record = db.get(ImportRecord, uuid.UUID(iid))
+            record.analysis_summary = {**record.analysis_summary, "extension_decision": {
+                "accept_partial": True, "accept_share": True, "separate": True}}
+            fingerprint = record.source_fingerprint
+            originals = [(a.id, a.sha256, a.safe_filename) for a in record.artifacts]
+            db.commit()
+        response = c.post(f"{EXT}/imports/{iid}/retry", headers=h)
+        assert response.status_code == 202, response.text
+        assert response.json()["state"] == "ANALYZING"
+        assert response.json()["id"] == iid
+        assert c.get(f"{EXT}/requests/{key}", headers=h).json()["id"] == iid
+        # An unknown response is resolved by GET, never a second import/job.
+        assert c.post(f"{EXT}/imports/{iid}/retry", headers=h).status_code == 409
+        with auth_middleware.SessionLocal() as db:
+            record = db.get(ImportRecord, uuid.UUID(iid))
+            assert db.query(ImportRecord).count() == 1
+            assert db.query(Conversation).count() == 0
+            assert record.source_fingerprint == fingerprint
+            assert [(a.id, a.sha256, a.safe_filename) for a in record.artifacts] == originals
+>           assert "extension_decision" not in record.analysis_summary
+E           AssertionError: assert 'extension_decision' not in {'analysis_task_id': 'a9a63362-e3e0-4f7f-a5db-6cc43396f1ab', 'extension_decision': {'accept_partial': True, 'accept_sh...tension_device': 'a8b88eca-7686-4dc5-a11c-f1134c111be2', 'source_order': ['3eff2c6b-e459-48d9-8e30-06923e0ffd08'], ...}
+E            +  where {'analysis_task_id': 'a9a63362-e3e0-4f7f-a5db-6cc43396f1ab', 'extension_decision': {'accept_partial': True, 'accept_sh...tension_device': 'a8b88eca-7686-4dc5-a11c-f1134c111be2', 'source_order': ['3eff2c6b-e459-48d9-8e30-06923e0ffd08'], ...} = <app.models.import_record.ImportRecord object at 0x000001C02F65C790>.analysis_summary
+
+tests\test_extension_retry.py:69: AssertionError
+----------------------------- Captured log setup ------------------------------
+INFO     chat_reader.auth:observability.py:126 {"event":"login_succeeded","request_id":"e171be19-01cd-4f5a-94ce-24ee4740e1d2","timestamp":"2026-11-25T08:25:50.918676+00:00"}
+INFO     chat_reader.request:observability.py:126 {"duration_ms":514.834,"event":"api_request_completed","method":"POST","request_id":"e171be19-01cd-4f5a-94ce-24ee4740e1d2","route_template":"/api/auth/login","status":200,"timestamp":"2026-11-25T08:25:50.922694+00:00"}
+INFO     chat_reader.request:observability.py:126 {"duration_ms":9.808,"event":"api_request_completed","method":"GET","request_id":"c524588b-7166-4713-a6c4-3b2e81682ef3","route_template":"/api/auth/session","status":200,"timestamp":"2026-11-25T08:25:50.935682+00:00"}
+INFO     chat_reader.request:observability.py:126 {"duration_ms":22.928,"event":"api_request_completed","method":"POST","request_id":"5fbb4638-fae8-4152-804a-976f3828d9fd","route_template":"/api/extension-devices/authorize","status":200,"timestamp":"2026-11-25T08:25:50.961518+00:00"}
+INFO     chat_reader.request:observability.py:126 {"duration_ms":7.563,"event":"api_request_completed","method":"POST","request_id":"5fe02a2e-0150-491b-8014-da149d354c8b","route_template":"/api/extension/v1/token","status":401,"timestamp":"2026-11-25T08:25:50.970521+00:00"}
+INFO     chat_reader.request:observability.py:126 {"duration_ms":11.341,"event":"api_request_completed","method":"POST","request_id":"dded8ddc-3601-4244-95c0-ac9289e0748f","route_template":"/api/extension/v1/token","status":200,"timestamp":"2026-11-25T08:25:50.983296+00:00"}
+INFO     chat_reader.request:observability.py:126 {"duration_ms":3.059,"event":"api_request_completed","method":"POST","request_id":"c511ef99-2ca3-45a2-9117-8cfe237c948f","route_template":"/api/extension/v1/token","status":401,"timestamp":"2026-11-25T08:25:50.989301+00:00"}
+------------------------------ Captured log call ------------------------------
+INFO     chat_reader.request:observability.py:126 {"duration_ms":48.275,"event":"api_request_completed","method":"POST","request_id":"91fa3f9f-6ffc-4758-89cd-d9cf18185396","route_template":"/api/extension/v1/imports","status":201,"timestamp":"2026-11-25T08:25:51.040651+00:00"}
+INFO     app.services.background_jobs:observability.py:126 {"event":"background_job_manual_retry","job_id":"a9a63362-e3e0-4f7f-a5db-6cc43396f1ab","job_type":"adaptive_import_analysis","request_id":"958b0f20-d77d-4ad6-9ae6-9cd5968b274c","timestamp":"2026-11-25T08:25:51.083553+00:00"}
+INFO     chat_reader.request:observability.py:126 {"duration_ms":24.912,"event":"api_request_completed","method":"POST","request_id":"958b0f20-d77d-4ad6-9ae6-9cd5968b274c","route_template":"/api/extension/v1/imports/{iid}/retry","status":202,"timestamp":"2026-11-25T08:25:51.091521+00:00"}
+INFO     chat_reader.request:observability.py:126 {"duration_ms":6.285,"event":"api_request_completed","method":"GET","request_id":"2b9ed2cf-98a1-42e1-9c59-cf05213acec2","route_template":"/api/extension/v1/requests/{key}","status":200,"timestamp":"2026-11-25T08:25:51.100021+00:00"}
+INFO     chat_reader.request:observability.py:126 {"duration_ms":6.059,"event":"api_request_completed","method":"POST","request_id":"eb35fe74-93ad-49d2-9ce8-3cb967997c15","route_template":"/api/extension/v1/imports/{iid}/retry","status":409,"timestamp":"2026-11-25T08:25:51.108011+00:00"}
+=========================== short test summary info ===========================
+FAILED tests/test_extension_retry.py::test_retry_analysis_reuses_import_receipt_without_canonical_writes[FAILED]
+1 failed, 12 passed in 62.18s (0:01:02)

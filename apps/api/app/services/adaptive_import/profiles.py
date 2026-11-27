@@ -156,6 +156,9 @@ def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> 
 
 
 def normalize_builtin(key: str, documents: list[SourceDocument]):
+    if len(documents) == 1 and documents[0].reader_archive is not None:
+        # _enrich_archive_drafts replaces this template from the verified index.
+        return [_draft_conversation("Reader indexed source", [], "Conversation export ZIP", source_type="adaptive_markdown")]
     json_doc = next((item for item in documents if item.extension in {".json", ".jsonl", ".gz"}), None)
     markdown_doc = next((item for item in documents if item.extension in {".md", ".markdown"}), None)
     if markdown_doc is not None and markdown_doc.path is not None:

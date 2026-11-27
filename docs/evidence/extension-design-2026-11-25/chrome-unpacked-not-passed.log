@@ -1,0 +1,8 @@
+{
+  "report": "<TASK_EVIDENCE>\\main\\center-browser-XHytFy\\report.json",
+  "checks": [],
+  "fatal": {
+    "message": "Timed out after waiting 30000ms",
+    "stack": "TimeoutError: Timed out after waiting 30000ms\n    at file:///E:/1project/chat-intelligent-ui-exporter/node_modules/puppeteer-core/lib/puppeteer/common/util.js:221:19\n    at file:///E:/1project/chat-intelligent-ui-exporter/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1944:31\n    at OperatorSubscriber2._this._next (file:///E:/1project/chat-intelligent-ui-exporter/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1001:9)\n    at Subscriber2.next (file:///E:/1project/chat-intelligent-ui-exporter/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:704:12)\n    at AsyncAction2.<anonymous> (file:///E:/1project/chat-intelligent-ui-exporter/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:2288:20)\n    at AsyncAction2._execute (file:///E:/1project/chat-intelligent-ui-exporter/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1368:12)\n    at AsyncAction2.execute (file:///E:/1project/chat-intelligent-ui-exporter/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1357:22)\n    at AsyncScheduler2.flush (file:///E:/1project/chat-intelligent-ui-exporter/node_modules/puppeteer-core/lib/third_party/rxjs/rxjs.js:1435:26)\n    at listOnTimeout (node:internal/timers:685:17)\n    at process.processTimers (node:internal/timers:618:7)"
+  }
+}

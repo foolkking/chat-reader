@@ -1,0 +1,115 @@
+{
+  "at": "2026-11-25T09:11:39.573Z",
+  "kind": "real Edge + local PostgreSQL/API, 10000 synthetic chats /100000 body-index rows",
+  "samples": [
+    {
+      "query": "title project",
+      "count": 29,
+      "input_to_paint_ms": 217.1
+    },
+    {
+      "query": "abyssal",
+      "count": 0,
+      "input_to_paint_ms": 206.7
+    },
+    {
+      "query": "benchmark 89-18",
+      "count": 1,
+      "input_to_paint_ms": 211.3
+    },
+    {
+      "query": "title project",
+      "count": 29,
+      "input_to_paint_ms": 226.1
+    },
+    {
+      "query": "abyssal",
+      "count": 0,
+      "input_to_paint_ms": 211.5
+    },
+    {
+      "query": "benchmark 89-18",
+      "count": 1,
+      "input_to_paint_ms": 212.1
+    },
+    {
+      "query": "title project",
+      "count": 29,
+      "input_to_paint_ms": 215.8
+    },
+    {
+      "query": "abyssal",
+      "count": 0,
+      "input_to_paint_ms": 209.7
+    },
+    {
+      "query": "benchmark 89-18",
+      "count": 1,
+      "input_to_paint_ms": 225
+    },
+    {
+      "query": "title project",
+      "count": 29,
+      "input_to_paint_ms": 238.9
+    },
+    {
+      "query": "abyssal",
+      "count": 0,
+      "input_to_paint_ms": 211.9
+    },
+    {
+      "query": "benchmark 89-18",
+      "count": 1,
+      "input_to_paint_ms": 239.4
+    },
+    {
+      "query": "title project",
+      "count": 29,
+      "input_to_paint_ms": 239
+    },
+    {
+      "query": "abyssal",
+      "count": 0,
+      "input_to_paint_ms": 238.5
+    },
+    {
+      "query": "benchmark 89-18",
+      "count": 1,
+      "input_to_paint_ms": 225.4
+    },
+    {
+      "query": "title project",
+      "count": 29,
+      "input_to_paint_ms": 215.7
+    },
+    {
+      "query": "abyssal",
+      "count": 0,
+      "input_to_paint_ms": 222.2
+    },
+    {
+      "query": "benchmark 89-18",
+      "count": 1,
+      "input_to_paint_ms": 211.4
+    },
+    {
+      "query": "title project",
+      "count": 29,
+      "input_to_paint_ms": 225.6
+    },
+    {
+      "query": "abyssal",
+      "count": 0,
+      "input_to_paint_ms": 212.4
+    }
+  ],
+  "checks": [
+    {
+      "name": "input-ended to visible results P95 <=400ms",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "browser": "Edg/158.0.4370.33",
+  "p95_ms": 239
+}

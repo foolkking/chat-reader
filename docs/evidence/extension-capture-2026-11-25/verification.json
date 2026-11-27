@@ -1,0 +1,580 @@
+{
+  "recorded_at": "2026-11-25T15:21:20.895154+08:00",
+  "scope": "local long-capture and reading-progress changes only; not the full prior extension implementation plan",
+  "agents_used": 2,
+  "web_search_used": false,
+  "new_branch": false,
+  "committed": false,
+  "ci_run": null,
+  "released": false,
+  "deployed": false,
+  "repositories": {
+    "reader": {
+      "base_sha": "c9cfb131d6704f2d2c095b93355629740e95cac5",
+      "branch": "codex/reader-extension",
+      "dirty": true,
+      "files": [
+        {
+          "path": "apps/api/alembic/versions/20261125_0065_extension_pairings.py",
+          "sha256": "217da545b7cbf2eb4d890193419e1f10c6eab27d1f3dedee3a451d191e93991e"
+        },
+        {
+          "path": "apps/api/app/api/routes/reader_extension.py",
+          "sha256": "a02eeb9767f49bc0b887862f297180459233117564a6558bc23750920491615d"
+        },
+        {
+          "path": "apps/api/app/core/auth_middleware.py",
+          "sha256": "dff13d1c55b2e8942c71742a9742653a4eb55f76cd5286626130749f43045233"
+        },
+        {
+          "path": "apps/api/app/core/memory.py",
+          "sha256": "c2a5eee9a83b83866f5c42d5885e19bfeaf38dd9244b2d0db32711dd39648c34"
+        },
+        {
+          "path": "apps/api/app/models/_loading.py",
+          "sha256": "da23a7e98d6ced22336266470e594fecf114bb6b557ff9baf92db9d83c5f1ba3"
+        },
+        {
+          "path": "apps/api/app/models/reader_extension.py",
+          "sha256": "51efc7aa88e2a544298fd912dc10fdf7d3385f42cca4f4a5a00f92fd72092ff1"
+        },
+        {
+          "path": "apps/api/app/services/adaptive_import/analysis.py",
+          "sha256": "0a88303a8a8172dfcdcd87b668eeed9f0a9f871aa70ffcffc484fcd6b3391ed9"
+        },
+        {
+          "path": "apps/api/app/services/adaptive_import/archive_sources.py",
+          "sha256": "50ada992a01fdc9187247927eded6adc495b4b2b10ae96371a031711a4a5f609"
+        },
+        {
+          "path": "apps/api/app/services/adaptive_import/contracts.py",
+          "sha256": "3221f24603e25b829c073a3cf7e435e8b20d3a69552ddfb8aeba4e9adf7e3d67"
+        },
+        {
+          "path": "apps/api/app/services/adaptive_import/profiles.py",
+          "sha256": "0ee2cd7315b7378ddd8d5df575c6ae7ee95070b38fdf1413e83073eb6f4e9ce3"
+        },
+        {
+          "path": "apps/api/app/services/adaptive_import/reader_package.py",
+          "sha256": "d8c1d020d6bf0104ee1626daf4fd63fee099c0901a0e921358e8a495f51fe624"
+        },
+        {
+          "path": "apps/api/app/services/adaptive_import/service.py",
+          "sha256": "674997fe7d7ba70be336498f561e3dc763c6652303b658fc160689dc4823be92"
+        },
+        {
+          "path": "apps/api/app/services/adaptive_import/stream_enrichment.py",
+          "sha256": "645cb54461080c118ce78203400998736692a491a34a82676c92ea97c937a0ba"
+        },
+        {
+          "path": "apps/api/app/services/background_jobs.py",
+          "sha256": "2c1ee6c4e57e579b453e4e0c279b72cf8d4bb0e72cba04e08ce351fdd3854d9b"
+        },
+        {
+          "path": "apps/api/app/services/canonical/block_builder.py",
+          "sha256": "f19bb12ded6dd823b8ed6e6999b186a9f123dea993f8309ba4f239b614113e05"
+        },
+        {
+          "path": "apps/api/app/services/exporting/context_package.py",
+          "sha256": "6febc6522f9f8f171937d9ef9c01f81a6204ef1c7b6d7bd7b00b476fccfbd8c6"
+        },
+        {
+          "path": "apps/api/app/services/extension_access.py",
+          "sha256": "8ed7bdb030ff3d56185261ff73c94dadfba9fe4c8433e0164523cffdbdc7c543"
+        },
+        {
+          "path": "apps/api/app/services/extension_catalog.py",
+          "sha256": "066e15f14992913a8c403c7f717474fdca3600617b5729043468ed0259cb656e"
+        },
+        {
+          "path": "apps/api/app/services/extension_import.py",
+          "sha256": "476838fae5e1d85000110b4cf3978b81d1e85658c7ff9fa5887d6db58520b8c6"
+        },
+        {
+          "path": "apps/api/app/services/extension_pairing.py",
+          "sha256": "1016d341ae60763aee93c2295601519cd88f2eecd47ac1f72d33ee6f16173a20"
+        },
+        {
+          "path": "apps/api/app/services/extension_transfer.py",
+          "sha256": "fb5ece5c539bbe0eb5f8c0b2efcc5b8c90fae4d9c23fdb44893b72390aa73a1c"
+        },
+        {
+          "path": "apps/api/app/services/import_pipeline/record_spool.py",
+          "sha256": "772bdfe0b3845d27dadd4388f6109a2ed337ba1c58270071b33185a81cf71581"
+        },
+        {
+          "path": "apps/api/tests/test_extension_transfer.py",
+          "sha256": "64072778862e20a6f4d1954b65974ff2cf6f422494665f11eedbfcbd05a14676"
+        },
+        {
+          "path": "apps/api/tests/test_extension_transfer_postgres.py",
+          "sha256": "cd8b95bac5f5905302e2115bc8475007bd559a098c47847ddf7320c275ae3b12"
+        },
+        {
+          "path": "apps/api/tests/test_memory_probe_windows.py",
+          "sha256": "510ef1ee03d985e0528f5038af8b1bea92d7c2148659e20128c70c4fd12d9a26"
+        },
+        {
+          "path": "apps/api/tests/test_reader_extension.py",
+          "sha256": "37ea08feafb1034dc8ad609377d9850928b7228d4c3139535f9a25782ae876f4"
+        },
+        {
+          "path": "apps/api/tests/test_reader_long_message_storage.py",
+          "sha256": "4d9ac64945a6f817ca89d6c3f13e1ceae85d5ad89301221f59f9c9fef4956675"
+        },
+        {
+          "path": "apps/api/tests/test_supervised_execution_postgres.py",
+          "sha256": "b817f75acef1ac3fb24ed6b0e55242796331d78da912d55ab2f8ea3bf0994669"
+        },
+        {
+          "path": "apps/api/tests/test_worker_model_registration.py",
+          "sha256": "1b5a53219dd3a297f6a811256cbef96f63c807552f1476fe50e13755978f044e"
+        }
+      ]
+    },
+    "extension": {
+      "base_sha": "be5e8dabd772809635db345a51c8c15c26b468ed",
+      "branch": "codex/reader-extension",
+      "dirty": true,
+      "files": [
+        {
+          "path": "extension/fast-text.js",
+          "sha256": "fd0f589eb09188ef7178a6050307d54ec34706609d88acb5d67899412e84a6d2"
+        },
+        {
+          "path": "reader/background.js",
+          "sha256": "2389e4d905383ee3c32eec5ec8f4bbd05f7e21e301d545d1a7c4b33a3bab97ab"
+        },
+        {
+          "path": "reader/capture.js",
+          "sha256": "e6e2cce299d3895eac56fb4704cf555c63729467ef28d127f794429c3c73ba7c"
+        },
+        {
+          "path": "reader/client.js",
+          "sha256": "05b5cedbe492b9a1e3fbdacc6290853f36ce1bb8018dcbdb07aa7f0a2cd1dd30"
+        },
+        {
+          "path": "reader/frame.html",
+          "sha256": "744c7a2c221016b3348a71be88d260ef4b16e9f1fc9f9a98ebe3e59939aac95a"
+        },
+        {
+          "path": "reader/frame.js",
+          "sha256": "102a825751a167e4844387e9749aa947323b1588727f446278569e5b7808a7a5"
+        },
+        {
+          "path": "reader/host.html",
+          "sha256": "71cbb37d26639572b052d420532a82e75e91f82a0ea202a9a0cac1988bde1f3c"
+        },
+        {
+          "path": "reader/host.js",
+          "sha256": "0eb8f0f44d7e50599ca3082bb305f892fb89f0d98bb19af2e78cbb45bf5757b0"
+        },
+        {
+          "path": "reader/local-picker.js",
+          "sha256": "c3fa0bcf481df79937c408c8c61653124726544b3dcbe475614304d5a86929c8"
+        },
+        {
+          "path": "reader/local-source.js",
+          "sha256": "3d6d9124da7eaf71f58a8adde1bc362e2e8b978911f11182db64bbf94df69949"
+        },
+        {
+          "path": "reader/overlay.js",
+          "sha256": "efe3e56bd39c82f1f084c523950efaaded3377e416fac8b43c05f08c82df2491"
+        },
+        {
+          "path": "reader/package.js",
+          "sha256": "c7d5ae51df5689bfe9b209041c292f1e29466b21e5ac401353587eaf680d5222"
+        },
+        {
+          "path": "reader/page-index.js",
+          "sha256": "8e1a5b91403ca5d2e776d404383a8cad324c557db6dfb8ed38059e5e546387e8"
+        },
+        {
+          "path": "reader/panel-export.js",
+          "sha256": "ead4fcb63714b8f59e5fafb57b978c9ad008e2ab00094d909a5b5b39b09a9588"
+        },
+        {
+          "path": "reader/panel-jobs.js",
+          "sha256": "8099a7b9dfe1b336389848a777380fa65d4961653f0d31de3bfe40604c326dbe"
+        },
+        {
+          "path": "reader/panel.css",
+          "sha256": "b065077355c4927858c6ef7063239b563487de202f6ad4211ea2bf00a6ce0e5d"
+        },
+        {
+          "path": "reader/panel.html",
+          "sha256": "1483cf084c67fa3a20ff589433429250722e0e744a841f6ff61ebfc9e11a437b"
+        },
+        {
+          "path": "reader/panel.js",
+          "sha256": "345222c3d21511448d09b87b8d235e07833596247eff44d64b65688efe54656d"
+        },
+        {
+          "path": "reader/progress.js",
+          "sha256": "73fd3d3523373501300116d1f6ee46688b5e8abd1c7a01b59d63c80de38d924b"
+        },
+        {
+          "path": "reader/routes.js",
+          "sha256": "9a24ee4e5a958037fdb6fe1413a18c824908ad3d175578e89ada9000c6d71b45"
+        },
+        {
+          "path": "reader/sha256.js",
+          "sha256": "b4a619895d7d843bf77bdd6a700cc1bdc99a1b5da942248aeb398fc355105d26"
+        },
+        {
+          "path": "reader/source-actions.js",
+          "sha256": "cb2b70148f7c7ce5811d02aae5d3fd625213970a9663832bf0423d0ff8b1b015"
+        },
+        {
+          "path": "reader/source-control.js",
+          "sha256": "1fa517ad79f2eb1f44bae7cb5b9c36287637a7bab6a90b6f14ad87df51c78989"
+        },
+        {
+          "path": "reader/source-file.js",
+          "sha256": "67bb412160a646e7690c2f3e43a44d596af4b502490b9f71fe3235a1d23d5d89"
+        },
+        {
+          "path": "reader/surfaces.js",
+          "sha256": "2791bbaa625ccf10e2b5e4a15d972720ab1662e55bd55f7d2262882a29f25a3c"
+        },
+        {
+          "path": "reader/upload.js",
+          "sha256": "d39a57336958d91d99ec1102b2767dc1afa88fa0cd0428324bfd03cfdf1c11e7"
+        },
+        {
+          "path": "scripts/package-reader.cjs",
+          "sha256": "c4d68d460c19d9488e1536d0ab76c04cd28f9c2e0f6bffa883dba880279fdbf4"
+        },
+        {
+          "path": "scripts/reader-progress-check.cjs",
+          "sha256": "137c89e1291d1688f092374af6de74c085ea20190486cd357d60d5c35fac66ad"
+        },
+        {
+          "path": "tests/reader-capture.test.cjs",
+          "sha256": "63f67d72f34ce86ee0d3bff27608ef199fa4f99cb8ee4b118c7b4f2b0b36f5a1"
+        },
+        {
+          "path": "tests/reader-contract.test.cjs",
+          "sha256": "fc8d90b8e1624a6eec414af9d726063b43d1ec9ee8743bead8b9dfb211ae73ff"
+        },
+        {
+          "path": "tests/reader-host.test.cjs",
+          "sha256": "e2fde77d2869cf10445141929c09d4021b792c7c6a960db32c5100ec8b204109"
+        },
+        {
+          "path": "tests/reader-stream.test.cjs",
+          "sha256": "2ca810a6aea3d402316d0ef4688755e8e41387dc5205081838efcb126c1b2b4b"
+        },
+        {
+          "path": "tests/reader-transfer.test.cjs",
+          "sha256": "2b3dd486ec241cf70ccca2ff154bb5776c7b8c322ae704389ea8550be06777bf"
+        }
+      ]
+    }
+  },
+  "checks": [
+    {
+      "name": "final-node-suite",
+      "command": "Node 24.22.3 --test --test-force-exit tests/*.test.cjs",
+      "repository": "extension",
+      "exit_code": 0,
+      "tests": 203,
+      "passed": 140,
+      "skipped": 63,
+      "failed": 0,
+      "seconds": 25.188,
+      "log": {
+        "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\node-full-final3.log",
+        "sha256": "a548f946f3159a08bb7fc77302de51e094e40e424ad20771966b28c060cf4de9",
+        "bytes": 28990
+      },
+      "skip_reason": "Existing upstream private fixtures unavailable; not waived or counted as passes."
+    },
+    {
+      "name": "api-final",
+      "command": "python -m pytest tests/test_memory_probe_windows.py tests/test_diagnostics_safety.py tests/test_extension_transfer.py tests/test_reader_long_message_storage.py tests/test_small_zip_memory_budget.py -q --tb=short --basetemp <task>/pytest-final-memory",
+      "repository": "Reader/apps/api",
+      "exit_code": 0,
+      "passed": 148,
+      "seconds": 103.48,
+      "log": {
+        "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\api-final-memory.log",
+        "sha256": "cbd5a2554d6f97c7282be6d806c475bb36b09597ace75ddf53f09198389ba896",
+        "bytes": 276
+      }
+    },
+    {
+      "name": "postgres-final",
+      "command": "SETTINGS_POSTGRES_INTEGRATION=1; python -m pytest tests/test_extension_transfer_postgres.py -q --tb=short --basetemp <task>/pytest-pg-final",
+      "repository": "Reader/apps/api",
+      "exit_code": 0,
+      "passed": 2,
+      "seconds": 11.38,
+      "log": {
+        "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\transfer-pg-final.log",
+        "sha256": "fc1807874774c52ea0d56e2f56d5caf0835f3342c189327a5e27ab852bc76824",
+        "bytes": 101
+      },
+      "database": "disposable PostgreSQL 17; loopback 56328; task-owned; stopped after testing"
+    },
+    {
+      "name": "edge-final",
+      "command": "Node 24 scripts/reader-progress-check.cjs <task>/agent-extension",
+      "repository": "extension",
+      "exit_code": 0,
+      "log": {
+        "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\edge-progress-final.log",
+        "sha256": "040d6d84997d108ab13175c91f4eff84e97a4027634a466faa819deef12bdbd9",
+        "bytes": 324
+      },
+      "kind": "real Edge 158.0.4370.33 rendering, synthetic source and runtime",
+      "scenarios": 4,
+      "width_delta_css_px": 0,
+      "source_hashes": {
+        "glyphs.js": "cf2a12bc0ebd58374015add35e1be1cf06b7687a22b05dde26e36b62a659c06b",
+        "progress.js": "73fd3d3523373501300116d1f6ee46688b5e8abd1c7a01b59d63c80de38d924b",
+        "page-index.js": "8e1a5b91403ca5d2e776d404383a8cad324c557db6dfb8ed38059e5e546387e8",
+        "source-control.js": "1fa517ad79f2eb1f44bae7cb5b9c36287637a7bab6a90b6f14ad87df51c78989"
+      }
+    },
+    {
+      "name": "cross-repository-zip",
+      "exit_code": 0,
+      "log": {
+        "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\cross-repo-package.log",
+        "sha256": "553dc45c8b626fb77a80491e22facaf3501546dc6d2d56753dafb9b2f04a450d",
+        "bytes": 321
+      },
+      "result": {
+        "kind": "cross-repository actual ZIP protocol validation, not 50001-message database commit",
+        "zip_bytes": 121218852,
+        "sha256": "e71501690246fe4228843ddaf087a2efe0c9752a456f36407fca8567553795b6",
+        "messages": 50001,
+        "first_body_bytes": 3456033,
+        "asset_bytes": 105906195,
+        "asset_reference_valid": true,
+        "seconds": 5.204
+      }
+    },
+    {
+      "name": "actual-windows-memory-probes",
+      "exit_code": 0,
+      "result": {
+        "platform": "Windows, real system calls",
+        "repetitions": 20000,
+        "calls_per_iteration": 3,
+        "rss_before": 14893056,
+        "rss_after": 14893056,
+        "rss_delta": 0,
+        "cached_type_count": 2,
+        "constraint": "This is memory-probe stability, not whole import RSS."
+      },
+      "before": [
+        {
+          "calls": 0,
+          "rss": 14872576,
+          "pointer_cache": 21
+        },
+        {
+          "calls": 5000,
+          "rss": 54067200,
+          "pointer_cache": 5021
+        },
+        {
+          "calls": 10000,
+          "rss": 92958720,
+          "pointer_cache": 10021
+        },
+        {
+          "calls": 15000,
+          "rss": 132431872,
+          "pointer_cache": 15021
+        },
+        {
+          "calls": 20000,
+          "rss": 170508288,
+          "pointer_cache": 20021
+        }
+      ]
+    },
+    {
+      "name": "migration-head",
+      "command": "python -m alembic heads",
+      "exit_code": 0,
+      "head": "20261125_0065",
+      "note": "Pairing migration predates this capture/progress task; transfer itself needs no new migration."
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check in both repositories",
+      "exit_code": 0,
+      "logs": [
+        {
+          "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\reader-diff-check.log",
+          "sha256": "2e1ceccdafaa1ff45053ea3a4a48f226d37c228a618c44fe0a8d47594b3a2d2e",
+          "bytes": 4227
+        },
+        {
+          "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\extension-diff-check.log",
+          "sha256": "95fa7e518f4839addcc126c82c092b99cbdb7f8f51697a1cad3810f0278a24d1",
+          "bytes": 1930
+        }
+      ]
+    },
+    {
+      "name": "task-postgres-stopped",
+      "exit_code": 0,
+      "log": {
+        "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\pg-stop.log",
+        "sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb",
+        "bytes": 58
+      }
+    }
+  ],
+  "failed_attempts_retained": [
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\api-a.log",
+      "sha256": "c1a60ce6b1fbc2fcddc73fe95fcd0792c37aca5784ff04238dd35da221c2d6c1",
+      "bytes": 23833,
+      "reason": "Initial record session argument mismatch; later fixed."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\api-b.log",
+      "sha256": "cac19964eeeba457ab30ead1332968b7670f834df154d8099db7998bfed6a31b",
+      "bytes": 32658,
+      "reason": "Initial record/session and normalization integration failure; later fixed."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\api-c.log",
+      "sha256": "b28e091e84b722d3be76a8e37093720ca43414ce05bcedf8362d151385c6d975",
+      "bytes": 36838,
+      "reason": "Indexed normalization validation ordering; later fixed."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\api-d.log",
+      "sha256": "8fcf28d9db50288df9ff9c1f8be5b6ebd011816cd980845fb86883a779f64533",
+      "bytes": 6742,
+      "reason": "Long message exceeded workspace; retained."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\api-e.log",
+      "sha256": "8eb5ff00b778a52039a7420c45bd4a91f97c3f5dc365979fa822b3f4aaa2012c",
+      "bytes": 6729,
+      "reason": "Same workspace gate, not relaxed."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\api-trace.log",
+      "sha256": "1a28cfb779e33e085b62506b5d259600a9f79f711319bfe1e73b7286c2ab0a73",
+      "bytes": 9732,
+      "reason": "Workspace failure trace."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\api-trace2.log",
+      "sha256": "26ef5f7ae022c795d57dfb69aa6079bcee33df46da1fde982a8849b9cf915b96",
+      "bytes": 9730,
+      "reason": "Probe/checkpoint trace."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\node-full-a.log",
+      "sha256": "35c6d7a0c8278af23249584c755f21ac6be607a170c11ca422ecc93bbcb0fa2d",
+      "bytes": 52,
+      "reason": "PATH Node 20 unsupported --test-force-exit, exit 9."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\transfer-security.log",
+      "sha256": "2713335f4686991cd64b8a9b1e31ff94ce1b8964452018081e14ebb4d0219c48",
+      "bytes": 3331,
+      "reason": "Test expected 401 for Web Origin, actual 403; split Origin rejection and missing bearer assertions."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-b.log",
+      "sha256": "14db18d1af362ea35c87b9436cea3207942cc63f0604ba23b77626436038e8b1",
+      "bytes": 402,
+      "reason": "Browser test setup failure retained."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\edge-d-stale-before.log",
+      "sha256": "66addd42a0f2397ced3e6a892cfc5793490e15f720dc4137feb5d5423cec7001",
+      "bytes": 409,
+      "reason": "Virtualized history invalidated progress."
+    },
+    {
+      "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\reader-suite-b.log",
+      "sha256": "5eeaa56ad17e03957144068d65674ca80df787bbbe6f590db8287be785b81401",
+      "bytes": 9021,
+      "reason": "Initial transfer tests retained."
+    }
+  ],
+  "earlier_checks": [
+    {
+      "log": {
+        "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\import-regression.log",
+        "sha256": "f3d329932097f415cec3fd09098d55ab5a17599914bfc395e7ba62f6dcb5f3ba",
+        "bytes": 206
+      },
+      "passed": 127,
+      "skipped": 2,
+      "seconds": 243.66,
+      "note": "Earlier checkpoint; Windows symlink capability skips, not current exact snapshot certification."
+    },
+    {
+      "log": {
+        "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-api\\final-b.log",
+        "sha256": "ca23074eb8d5ed807e667150239fb10e673386d28fd94a27f9fb5d2c83eb729b",
+        "bytes": 276
+      },
+      "passed": 145,
+      "seconds": 390.11,
+      "note": "Agent-owned final before shared Windows probe correction; overlaps other checks."
+    },
+    {
+      "log": {
+        "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-api\\smallzip-final.log",
+        "sha256": "73e88caf6309b73110a07ecd5ffc04313f187242d815ac1d041204476ec258dc",
+        "bytes": 112
+      },
+      "passed": 31,
+      "seconds": 97.67
+    },
+    {
+      "log": {
+        "path": "E:\\chat-reader-temp\\capture-unbounded-20261125\\agent-extension\\reader-suite-e-resource-link.log",
+        "sha256": "0641c9af5cdbc9641b04b021f5def8be0385953728c4164d822e3b7133abb7ca",
+        "bytes": 7501
+      },
+      "passed": 28,
+      "note": "Corrected synthetic fixture has actual owning Markdown resource link; prior fixture was not Reader-valid."
+    }
+  ],
+  "unverified": [
+    "Real logged-in ChatGPT network capture",
+    "Chrome actual extension lifecycle in this round",
+    "Linux 640 MiB whole-path candidate qualification",
+    "50,001-message canonical database commit",
+    "Complete prior overlay/pairing/settings/batch-import plan",
+    "Full CI, signed release and production upgrade"
+  ],
+  "limits_retained": [
+    "Instance and account file policies",
+    "Archive member/reference/path/digest validation",
+    "64 MiB import workspace and live memory reserve",
+    "OPFS and server physical storage",
+    "250-message explicitly reviewed selective-append contract"
+  ],
+  "privacy": "Synthetic bodies and IDs only. No real account content, credentials or source session copied into repository evidence.",
+  "design_reference": {
+    "zip": "C:\\Users\\86182\\Downloads\\chat-reader-unified-design-v2.zip",
+    "sha256": "2cf7defd154ca146f53e83193579b4f121a748e74a2e559fccd3f92f793039a5",
+    "read": [
+      "DESIGN.md",
+      "CODEX_PROMPT.md",
+      "QA.md"
+    ],
+    "viewed": [
+      "05-save-menu.png",
+      "15-batch-queue.png"
+    ],
+    "scripts_executed": false,
+    "not_full_design_acceptance": true
+  }
+}

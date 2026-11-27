@@ -1,0 +1,449 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-25T19:21:43.168511+00:00",
+  "sha": "7c4574b005d663a79e99698a2fa7d9eabf3e4cc4",
+  "version": "v0.1.10",
+  "branch": "codex/reader-extension",
+  "master_moved": false,
+  "publication": {
+    "release_id": 458520473,
+    "published_at": "2026-11-25T18:54:21Z",
+    "branch_ci": [
+      45665830564,
+      1
+    ],
+    "tag_ci": [
+      45671364525,
+      1
+    ],
+    "publish_ci": [
+      45671333305,
+      1
+    ],
+    "branch_jobs": 19,
+    "tag_jobs": 19,
+    "publish_jobs": 4,
+    "api_collected": 7418,
+    "api_passed": 7415,
+    "api_preexisting_skips": 3,
+    "new_archive_gate": 12,
+    "wait_seconds": [
+      1500.0,
+      1502.963084
+    ],
+    "archive_sha256": "7396f1d46979f09ef8b47c0c946488ea96b73f588c7f1f20a2d30a7911b0609e",
+    "archive_bytes": 178260494,
+    "expanded_bytes": 179172352,
+    "assets": {
+      "chat-reader-images.tar.gz": {
+        "id": 792737521,
+        "size": 178260494,
+        "digest": "sha256:7396f1d46979f09ef8b47c0c946488ea96b73f588c7f1f20a2d30a7911b0609e"
+      },
+      "chat-reader-updater-linux-amd64.tar.gz": {
+        "id": 792737520,
+        "size": 7093821,
+        "digest": "sha256:c7b3253a0eedb7b0a9ffa388a884c1f7ee322805005727c86d358aede8228838"
+      },
+      "program-evidence.json": {
+        "id": 792737571,
+        "size": 322,
+        "digest": "sha256:2ed03b0345443d8bfeb3a09d3a59c726520e27822f5843f0193ebe5af9d27feb"
+      },
+      "update-v1.json": {
+        "id": 792737523,
+        "size": 3230,
+        "digest": "sha256:bbbea94cac3a2fff79f856af36032a1f515413fac97aa81b35ff91d979b1d491"
+      },
+      "update-v1.json.sig": {
+        "id": 792737513,
+        "size": 88,
+        "digest": "sha256:fb9b17650faf55de90d17d99ae22bb58562ae1551b437d9ab1112947d8a4df49"
+      },
+      "updater-kit.sha256": {
+        "id": 792737524,
+        "size": 105,
+        "digest": "sha256:5b46627f31ae57a046db07424dabd50ed32f0adb5529b5cb825456cdbab7a843"
+      },
+      "updater-kit.sha256.sig": {
+        "id": 792737567,
+        "size": 88,
+        "digest": "sha256:ff2f26996c05c8b61abc260f522385ff23856e50854d9aa39cc0049e84800f0a"
+      }
+    },
+    "registry": {
+      "api": {
+        "pinned_digest": "sha256:392358004a8cba713761d590966658f2ef97ec1154f58633ff35826c755ae1a0",
+        "config": "sha256:730e70324d112b2dfc82f907f20109f16e7bff9f0d7c38eceb5904c11bd251bd",
+        "rootfs_reread": true,
+        "layer_bytes_verified": [
+          {
+            "digest": "sha256:ecc510c1e359bdc007b39802570bb7e4dec7d6ebccf357c3201a74299113e05e",
+            "bytes": 29843350,
+            "diff_id": "sha256:15f1c8eb1ab18eae260c7fb6296434cbe1ff0e1e30fd814ae92a80dd54005e62",
+            "expanded_bytes": 81254400
+          },
+          {
+            "digest": "sha256:0f752a1982d6f819fc2c9e78ac1514c63f2f2e1dec7885ffd4cb6809ba4a26ca",
+            "bytes": 1294051,
+            "diff_id": "sha256:56864e09c37360dbf846cf5ac9fc3090034f02e382fd0fbe4c7b576207436200",
+            "expanded_bytes": 4127744
+          },
+          {
+            "digest": "sha256:759a7f30c31818dda4c97b407b24d93da479c306568d185ced927e1a749164f1",
+            "bytes": 14456911,
+            "diff_id": "sha256:ba18d048b43a42f86dc288babadbdfe01602571200fd60c9e172deb8abf4147f",
+            "expanded_bytes": 44257280
+          },
+          {
+            "digest": "sha256:496c1a902b3a93cea3e54b90b79dbcaa0e58ad90c3fe9dd0a43c9557dc47f17d",
+            "bytes": 250,
+            "diff_id": "sha256:020f37c339b9fc549a11bcc5a937b81e3500281270bb62edde29022b27919d86",
+            "expanded_bytes": 5120
+          },
+          {
+            "digest": "sha256:2493ed0c8cf557d9a4f222c925455c8e01a7bce1a99d6958bda001e950ff8168",
+            "bytes": 93,
+            "diff_id": "sha256:a7fa5a3a855b78bc99a589058155315f7c7f4c492b6062b66a85b0786bd1e0eb",
+            "expanded_bytes": 1536
+          },
+          {
+            "digest": "sha256:d17948707f9affe5d52191021e3f4d6e62162fcf200fb32b905599a7323f731f",
+            "bytes": 36638,
+            "diff_id": "sha256:6f7fc31f10e06160047ce5e89925e9fdc2f66a674a25c1e05a7917ed602cbee0",
+            "expanded_bytes": 89600
+          },
+          {
+            "digest": "sha256:b0e15a5a0383c7a761753e64ee3a7309e71a84ea0aad2078c867978e7a391d86",
+            "bytes": 729605,
+            "diff_id": "sha256:c9a253a34de38dffdcbd60e0d1333c092b7ebacca49b3e3340936d640ff9997f",
+            "expanded_bytes": 3687936
+          },
+          {
+            "digest": "sha256:bddcb5567d5edbb02e6324fa63e9474a3bb113e870a1e32518e65f39de3ccc24",
+            "bytes": 14479,
+            "diff_id": "sha256:0ff2b379642abbb0897767a6515ecd4b931ac230978309521939f61bd773c1eb",
+            "expanded_bytes": 74752
+          },
+          {
+            "digest": "sha256:5db940f37dc8fda60c5085dd07a572ac7a1ad5a277bbbb1297315248d737e60c",
+            "bytes": 31319,
+            "diff_id": "sha256:06766240006de0fb36782691707fa95c8a15377cd7afe8938b16b3f889738fee",
+            "expanded_bytes": 268288
+          },
+          {
+            "digest": "sha256:d448c4b1c936cec9670a858e56af5364bbde2fa11ea70c50d5bba37a0fef588a",
+            "bytes": 465,
+            "diff_id": "sha256:ff3fa86582627cdb883fac4a27b05ed641b18a21cd29d1ccfba8d63e408c0f7a",
+            "expanded_bytes": 3072
+          },
+          {
+            "digest": "sha256:aa6da545b2097b92aaa833bb567218267b177412d61abda441767f1561ea335d",
+            "bytes": 204,
+            "diff_id": "sha256:a249c9da00f7758ace579668bd4716fa1f9f4ff8c08ec98a4da1759bee841433",
+            "expanded_bytes": 3072
+          },
+          {
+            "digest": "sha256:f2c8d258c44278681a66e988514e3f1ee2b6fb888208187c1174fa873305e84d",
+            "bytes": 655129,
+            "diff_id": "sha256:7a9f6c79127e4c9f1f7032f7e2d8425d163d7a5670cd05f8530fb8fb25324763",
+            "expanded_bytes": 10959360
+          },
+          {
+            "digest": "sha256:6fd929cf9380f7157b2215735557d26035c4e5f27823743fe4daf0e545d8995e",
+            "bytes": 40895223,
+            "diff_id": "sha256:bc8b07ab27519b095e2544a09686bdc8d0751dc09bda0f3b6e060ff69ee3b96b",
+            "expanded_bytes": 135835648
+          },
+          {
+            "digest": "sha256:3ab44ca1ce1efe4c50cd51d875b47b10f459bda000130a56298bd14f0e2d59f7",
+            "bytes": 1547367,
+            "diff_id": "sha256:6da472d734c78388a2ef0a18a41d181651ad8e1ba483750b02bc3f17059828ed",
+            "expanded_bytes": 7837696
+          }
+        ],
+        "access": "anonymous-pull"
+      },
+      "web": {
+        "pinned_digest": "sha256:35b5a4673ce5eb6f7d7966e30dfb7cbaa76c018d64ea0fdbbbdb371befe1f034",
+        "config": "sha256:f328c2c1dfc02df90a2248d11f45a0f62873250ff35148125db9086b5a84a11d",
+        "rootfs_reread": true,
+        "layer_bytes_verified": [
+          {
+            "digest": "sha256:1f3e46996e2966e4faa5846e56e76e3748b7315e2ded61476c24403d592134f0",
+            "bytes": 3641715,
+            "diff_id": "sha256:a0904247e36a7726c03c71ee48f3e64462021c88dafeb13f37fdaf613b27f11c",
+            "expanded_bytes": 8120832
+          },
+          {
+            "digest": "sha256:1208b2c8ee11752eedc0a062e2ed09016338a11a9aa12c5c679ea4113965c71c",
+            "bytes": 50250844,
+            "diff_id": "sha256:0ac4251d3ceb1f9a47f7a4a2c3f0a11d2170e8f827a9e733e6278473d6c2674e",
+            "expanded_bytes": 147143168
+          },
+          {
+            "digest": "sha256:dfca9c0ec40b01da0a9a7300bf057e42dffcd607c33e50384da73d9042a4e728",
+            "bytes": 1260649,
+            "diff_id": "sha256:1e154f3abc96911e063658b8bc45e19c5a1a24cd6c68cbf87d8bfa1b28bc74b9",
+            "expanded_bytes": 5390336
+          },
+          {
+            "digest": "sha256:e363dc60a06219119e4134e6484c4afdcb94f73c0d13d973abb7543b3acb820a",
+            "bytes": 449,
+            "diff_id": "sha256:74e3c643bad513259e9f5190690801b63fc218d293f228213810f973ee3ae4cd",
+            "expanded_bytes": 3584
+          },
+          {
+            "digest": "sha256:2b336b18eb0912b3a79f3b76c455c715baf805daf2e0cf14b447a530dbadb3bb",
+            "bytes": 93,
+            "diff_id": "sha256:2beb8d33ec07021071f3cf5ab82704419ba9332daa02f0e76b9d679d27a06120",
+            "expanded_bytes": 1536
+          },
+          {
+            "digest": "sha256:d8c89b2ee982ff64e2b071f05eb92c193fa695e8c9dc13f6c882e4369ff210fd",
+            "bytes": 990,
+            "diff_id": "sha256:f65feefdbd1c8b353b627e95e29d8fd2f14d5d6f59d3ea398968da43a78dc157",
+            "expanded_bytes": 10752
+          },
+          {
+            "digest": "sha256:c2250f1ff895b073b10b65ffb9b81c18870a18fb7a564cbd4b102527aeaef5ac",
+            "bytes": 28318550,
+            "diff_id": "sha256:fbe914afbde4807aafe11291c928615b8839f01c24012a74e5f4a86c2e431722",
+            "expanded_bytes": 94144512
+          },
+          {
+            "digest": "sha256:8a5826790df19eb90a61cd97ed5942e11a6a98560448932e48c8e5482e39dc81",
+            "bytes": 5813561,
+            "diff_id": "sha256:d43664b3ac39df51788ce4545fa4879ad496f3312d404446f80a3474cb50ff2e",
+            "expanded_bytes": 21830656
+          },
+          {
+            "digest": "sha256:0d401599db9cefc3297b6c8045011a8f8d7a6d4c8715731dff5671564fb21750",
+            "bytes": 315326,
+            "diff_id": "sha256:c784a3192829b9b7e02b7f2d7d66ccaad6af3fa60c998a5ab40315a943e20576",
+            "expanded_bytes": 487936
+          }
+        ],
+        "access": "anonymous-pull"
+      }
+    },
+    "signature_issuer": "360cc2e019b6e810498993385e6fa3d38ac14295df13967fb066c8f0b9cbdce5",
+    "program_mode": "full",
+    "program_reason": "unproven_changes",
+    "rehearsal_samples": 30,
+    "rehearsal_fault_controls": 6,
+    "lab_max_ms": {
+      "confirmed": 8007,
+      "rollback": 7104,
+      "download": 747,
+      "visible": 8689,
+      "online_preparation": 11597
+    }
+  },
+  "production": {
+    "mode": "full; independent host updater via the enrolled API identity",
+    "source_revision": "6da435a70f0485a116c84525da899bfd8f234434",
+    "schema_before": "20261123_0064",
+    "schema_after": "20261125_0065",
+    "preflight_capacity": [
+      {
+        "available_kib": 8188224,
+        "components": {
+          "backup": 6641268,
+          "images": 699261,
+          "transfer": 305155
+        },
+        "margin_kib": 542540,
+        "required_kib": 7645684
+      }
+    ],
+    "download_ms": 6448,
+    "ready_ms": 54560,
+    "prepare_login_samples": {
+      "200": 24
+    },
+    "observed_success_at": "2026-11-25T19:14:40.125638+00:00",
+    "operator_request_to_observed_success_seconds": 375.126,
+    "accepted_to_observed_success_seconds": 358.265,
+    "timing_boundary": "2-second same-origin probe loop; not a physical browser click or exact downtime measurement",
+    "phases": [
+      [
+        "admission",
+        "2026-11-25T19:08:47.175320+00:00"
+      ],
+      [
+        "fencing",
+        "2026-11-25T19:09:09.619497+00:00"
+      ],
+      [
+        "draining",
+        "2026-11-25T19:09:11.662112+00:00"
+      ],
+      [
+        "backup",
+        "2026-11-25T19:09:13.716019+00:00"
+      ],
+      [
+        "migration",
+        "2026-11-25T19:14:14.840596+00:00"
+      ],
+      [
+        "switching",
+        "2026-11-25T19:14:20.985425+00:00"
+      ],
+      [
+        "health",
+        "2026-11-25T19:14:29.385183+00:00"
+      ],
+      [
+        "commit",
+        "2026-11-25T19:14:37.589346+00:00"
+      ],
+      [
+        "succeeded",
+        "2026-11-25T19:14:40.125638+00:00"
+      ]
+    ],
+    "phase_timings_ms": {
+      "admission": 27697,
+      "backup": 302672,
+      "commit": 1580,
+      "draining": 2132,
+      "fencing": 342,
+      "health": 8997,
+      "migration": 4211,
+      "switching": 8642
+    },
+    "login_samples": {
+      "200": 11,
+      "200:target": 2,
+      "503": 160
+    },
+    "images": {
+      "api": "sha256:730e70324d112b2dfc82f907f20109f16e7bff9f0d7c38eceb5904c11bd251bd",
+      "import-worker": "sha256:730e70324d112b2dfc82f907f20109f16e7bff9f0d7c38eceb5904c11bd251bd",
+      "web": "sha256:f328c2c1dfc02df90a2248d11f45a0f62873250ff35148125db9086b5a84a11d"
+    },
+    "health": {
+      "/login": 200,
+      "/api/health": 200,
+      "/api/admin/updates": 401,
+      "/api/admin/runtime-status": 401,
+      "/__updates/status": 404
+    },
+    "worker_heartbeat": true,
+    "configuration_unchanged": true,
+    "postgres_container_unchanged": true,
+    "business_volume_identity_unchanged": true,
+    "other_containers_unchanged": true,
+    "final_readonly_check_at": "2026-11-25T19:20:43.749426+00:00",
+    "available_kib": 3838868
+  },
+  "recovery": {
+    "backup_sets_retained": 2,
+    "new_backup": {
+      "name": "chat-reader-20261125T190912Z",
+      "source_sha": "6da435a70f0485a116c84525da899bfd8f234434",
+      "schema": "20261123_0064",
+      "manifest_sha256": "0b0d2c8c57dab3d7bbb4fa389ae606e78c2b5807108c2c584c8574377db16bd8",
+      "compressed_bytes": 4159442533,
+      "full_checksum_crc_tar_readback": true,
+      "isolated_restore_performed": false
+    },
+    "prior_backup": {
+      "name": "chat-reader-20261125T023127Z",
+      "source_sha": "b824ee949f03ec403e7e60beb677731c2fcff9c4",
+      "schema": "20261117_0062",
+      "manifest_sha256": "d0e94524f8e52a86856126d0cadec5ac3f8946de5168c716bf251a0deccb0a40",
+      "previous_actual_restore_preserved": true,
+      "fully_reread_before_deploy": true
+    },
+    "automatic_cross_schema_rollback": false,
+    "reason_two_sets_retained": "New backup passed full readback, but has no independent restore proof. Do not delete the sole previously validated restore point. Local plaintext-memory isolation could not be proven; no production bytes transferred for a new drill.",
+    "production_user_data_deleted": false,
+    "original_failed_merge_replayed": false
+  },
+  "cleanup": {
+    "old_image_ids_removed": 6,
+    "old_role_tags_removed": 14,
+    "observed_free_delta_kib": 902684,
+    "backup_sets_deleted": 0,
+    "user_volumes_deleted": 0,
+    "configs_or_logs_deleted": false,
+    "protected_snapshot_unchanged": true
+  },
+  "extension": {
+    "version": "0.3.0",
+    "sha": "e18bb4cae7674af66a08fd3be50c113475f34e5a",
+    "ci": [
+      45595745763,
+      1
+    ],
+    "extension_id": "gihbiofiiflkckcmomddkkjkoifkddfi",
+    "installed_file_count": 54,
+    "installer_sha256": "9e7f1609731fad784d4ba0df5c2b29daa334619503d6cb0546ec41723461ec22",
+    "loaded_directory": "Unchanged user-selected Desktop/chat-reader-0.2.0",
+    "same_id": true,
+    "browser_storage_touched": false,
+    "browser_reload_performed": false,
+    "server_capabilities": {
+      "api": {
+        "auth_enabled": true,
+        "extension_id_enabled": true,
+        "capture_enabled": true,
+        "pairing_schema_present": true,
+        "name_search": true,
+        "resumable_capture": true,
+        "selective_append": true,
+        "context_settings": true,
+        "extension_route_probed_in_readonly_transaction": true
+      },
+      "import-worker": {
+        "auth_enabled": true,
+        "extension_id_enabled": true,
+        "capture_enabled": true,
+        "pairing_schema_present": true,
+        "name_search": true,
+        "resumable_capture": true,
+        "selective_append": true,
+        "context_settings": true,
+        "extension_route_probed_in_readonly_transaction": true
+      }
+    },
+    "anonymous": {
+      "/api/extension-devices": 401,
+      "/api/extension/v1/capabilities": 401
+    },
+    "actual_personal_browser_flow_verified": false,
+    "obsolete_delivery_versions_removed": [
+      "0.2.0",
+      "0.3.0"
+    ],
+    "old_extension_recovery_retained": true
+  },
+  "retained_failures": [
+    "v0.1.8 and v0.1.9 protected tag failures unchanged",
+    "Intermediate local read-proxy and browser failures preserved",
+    "Cleanup plan03 refused before deletion; exact Mounts identity normalization corrected the runtime comparison",
+    "Publication network/TLS failures retained; full read-only verifier then completed, mutable release/tag/registry pointers rechecked"
+  ],
+  "evidence_sha256": {
+    "v019-qualification/sessions/7c4574b005d663a79e99698a2fa7d9eabf3e4cc4-branch-45665830564-1-20261125T175848108169Z/branch-qualification.json": "f1e0540dd7d06ce3601133bfc4fd674e1c5098b271d6765a2b1267d24532e9d2",
+    "v019-qualification/sessions/7c4574b005d663a79e99698a2fa7d9eabf3e4cc4-qualify-tag-45671364525-1-20261125T183135679494Z/qualification.json": "382733ac4c4504505efc07e9ca56bcbe9b69637ff6c7a8fc3c1f74d7012d2cc7",
+    "v019-qualification/sessions/7c4574b005d663a79e99698a2fa7d9eabf3e4cc4-qualify-tag-45671364525-1-20261125T183135679494Z/publication.json": "e20494464a031d9afad628868c32b3435675c6011aefd69a9e8db4d262443b42",
+    "v010-control/branch-wait.json": "c22614ba91f9befb2bbb362856ad214ac083189acbef532a08dc3c4c8c7833e4",
+    "v010-control/tag-wait.json": "84a6b600eac0fbae80b3fd613a00799c022d2c7a75e071af5f682da92cb09fcd",
+    "v010-host/run-7c4574b005d663a79e99698a2fa7d9eabf3e4cc4-45671333305-1/admission.json": "87ed375eea81cadb68f87d39141c2fb4198d838a1f9bc5bc86088a2307262f07",
+    "v010-host/run-7c4574b005d663a79e99698a2fa7d9eabf3e4cc4-45671333305-1/preflight.json": "58cdb742b842ec976b29156d58c2f705f1c920560347c3f4f99b3eae91571a41",
+    "v010-host/run-7c4574b005d663a79e99698a2fa7d9eabf3e4cc4-45671333305-1/prepare-ready.json": "c9221fbf977375b2bb883ffd13be68ba897664bd872f582fa2d2c4760ae5b916",
+    "v010-host/run-7c4574b005d663a79e99698a2fa7d9eabf3e4cc4-45671333305-1/receipt-watch-1795633721470990300-33c2d9.json": "1f527392553037aad142fd245b0d60c83783179ae833a3cd4d28855f90432b99",
+    "v010-host/run-7c4574b005d663a79e99698a2fa7d9eabf3e4cc4-45671333305-1/receipt-verify-1795634102044416600-33c2bb.json": "103109d9e7add605be637a8d82e15b919cc7c468290f0d0a7931449c72b93940",
+    "v010-control/final-online-readonly.json": "0a5d08a2f2563bbc6d73fcacb1b155126c908e46715707d381b15064b8aa33c5",
+    "v010-control/extension-live-confirmed.json": "51076d9cc1da456b70be1784cd7b53a23f99d9b266d11f8522d37b2c2c8d58fe",
+    "extension-030/extension-runtime-20261125T191632800310Z.json": "54331229b3808126e22f36bff4b9b79ad3810099c5ec897797b25bbf22eab96b",
+    "extension-030/independent-installed-verification.json": "e632c84e8fc18f805c136441e1d3ad5cc341db389457a457a04731ed39de6dbf",
+    "extension-030/obsolete-copies-removed.json": "084b94b85e49e6aa0147fd81586bac8c168c3eb75c2b60b72f8bac0a5795ae25",
+    "v010-capacity/cleanup-apply-20261125T182556Z-0209600.json": "0b82fe5a8b4248c9ae86177a600df79137b3387635fba78142d21de476738800",
+    "v010-post-cleanup/post-cleanup-20261125T183644149811Z.json": "4b2e29368dfcfeec91bbebe56a7cb8838b3c8c1f9f043646afabaf07993e9c54"
+  }
+}

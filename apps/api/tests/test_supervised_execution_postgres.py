@@ -242,8 +242,8 @@ def test_control_migration_roundtrip_keeps_one_head(isolated_schema):
     from sqlalchemy import inspect
     engine, migrate = isolated_schema
     migrate("head")
-    assert ScriptDirectory.from_config(Config("alembic.ini")).get_heads() == ["20261123_0064"]
-    extension_tables = {"extension_devices", "extension_sources", "conversation_append_items"}
+    assert ScriptDirectory.from_config(Config("alembic.ini")).get_heads() == ["20261125_0065"]
+    extension_tables = {"extension_devices", "extension_sources", "conversation_append_items", "extension_pairings"}
     assert extension_tables <= set(inspect(engine).get_table_names())
     assert "unclassified_sort_order" in {column["name"] for column in inspect(engine).get_columns("conversations")}
     assert "storage_deleted_at" in {column["name"] for column in inspect(engine).get_columns("asset_objects")}

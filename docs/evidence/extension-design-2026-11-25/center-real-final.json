@@ -1,0 +1,95 @@
+{
+  "kind": "real Edge + real FastAPI/PostgreSQL/worker, synthetic account/export and synthetic ChatGPT page",
+  "at": "2026-11-25T10:18:42.109Z",
+  "checks": [
+    {
+      "name": "standalone center exists before Reader connection",
+      "pass": true
+    },
+    {
+      "name": "initial catalogue has zero checked rows",
+      "pass": true
+    },
+    {
+      "name": "cross-project selection is retained",
+      "pass": true
+    },
+    {
+      "name": "unknown project is separate from unclassified",
+      "pass": true
+    },
+    {
+      "name": "files on; mapping persistence opt-in off",
+      "pass": true
+    },
+    {
+      "name": "separate target mapping per selected source project",
+      "pass": true
+    },
+    {
+      "name": "real PostgreSQL/worker commits both selected conversations",
+      "pass": true
+    },
+    {
+      "name": "real receipts report the fixed destination",
+      "pass": true
+    },
+    {
+      "name": "no implicit project mapping persisted",
+      "pass": true
+    },
+    {
+      "name": "reload restores both receipts without a new upload",
+      "pass": true
+    },
+    {
+      "name": "375px has no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "320px has no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "web directory initially empty selection and marked partial",
+      "pass": true
+    },
+    {
+      "name": "synthetic web source delivered through real API and worker",
+      "pass": true
+    },
+    {
+      "name": "account credential never leaves the source adapter",
+      "pass": true
+    },
+    {
+      "name": "no browser or API runtime errors",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "screens": [
+    "01-source.png",
+    "02-selection.png",
+    "03-target.png",
+    "04-results.png",
+    "05-results-375.png",
+    "05-results-320.png",
+    "06-web-results.png"
+  ],
+  "browser": "Edg/158.0.4370.33",
+  "actualReceipts": [
+    {
+      "status": "committed",
+      "action": "unchanged",
+      "complete": "complete",
+      "project": "00000000-0000-4000-8000-000000000010"
+    },
+    {
+      "status": "committed",
+      "action": "unchanged",
+      "complete": "complete",
+      "project": "00000000-0000-4000-8000-000000000010"
+    }
+  ]
+}

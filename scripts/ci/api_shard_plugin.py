@@ -1,6 +1,7 @@
 """Full collection, whole-file scheduling, and actual pytest lifecycle evidence."""
 from __future__ import annotations
 
+import gc
 import json
 import os
 from collections import Counter
@@ -58,6 +59,16 @@ def pytest_collection_modifyitems(config, items):
 class ExecutionRecorder:
     def __init__(self, config):
         self.config = config
+        self._module = None
+
+    def pytest_runtest_setup(self, item):
+        # The shard shares one interpreter across many disposable application
+        # and ORM fixtures. Pay for cycles from the previous file in setup,
+        # not inside an unrelated worker latency check. Normal GC stays on.
+        if self._module != item.path:
+            if self._module is not None:
+                gc.collect()
+            self._module = item.path
 
     def pytest_runtest_logreport(self, report):
         self.config._ci_evidence["reports"].append({

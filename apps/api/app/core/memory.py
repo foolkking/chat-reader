@@ -1,6 +1,36 @@
 """Dependency-free memory probe, shared by admission and operator commands."""
+from functools import cache
 from pathlib import PurePosixPath
 import sys
+
+
+@cache
+def _windows_counter_types():
+    # ctypes caches POINTER(T) globally. Creating T inside each RSS probe keeps
+    # every old type alive, so the admission probe itself used to consume RAM.
+    import ctypes
+
+    class Counters(ctypes.Structure):
+        _fields_ = [
+            ("cb", ctypes.c_uint32), ("PageFaultCount", ctypes.c_uint32),
+            *[(name, ctypes.c_size_t) for name in (
+                "PeakWorkingSetSize", "WorkingSetSize", "QuotaPeakPagedPoolUsage",
+                "QuotaPagedPoolUsage", "QuotaPeakNonPagedPoolUsage",
+                "QuotaNonPagedPoolUsage", "PagefileUsage", "PeakPagefileUsage",
+            )],
+        ]
+
+    class MemoryStatus(ctypes.Structure):
+        _fields_ = [
+            ("length", ctypes.c_uint32), ("memory_load", ctypes.c_uint32),
+            *[(name, ctypes.c_ulonglong) for name in (
+                "total_physical", "available_physical", "total_page_file",
+                "available_page_file", "total_virtual", "available_virtual",
+                "available_extended_virtual",
+            )],
+        ]
+
+    return Counters, MemoryStatus
 
 
 def process_resident_memory_bytes() -> int | None:
@@ -17,15 +47,7 @@ def process_resident_memory_bytes() -> int | None:
         import ctypes
         from ctypes import wintypes
 
-        class Counters(ctypes.Structure):
-            _fields_ = [
-                ("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
-                *[(name, ctypes.c_size_t) for name in (
-                    "PeakWorkingSetSize", "WorkingSetSize", "QuotaPeakPagedPoolUsage",
-                    "QuotaPagedPoolUsage", "QuotaPeakNonPagedPoolUsage",
-                    "QuotaNonPagedPoolUsage", "PagefileUsage", "PeakPagefileUsage",
-                )],
-            ]
+        Counters, _ = _windows_counter_types()
         counters = Counters()
         counters.cb = ctypes.sizeof(counters)
         try:
@@ -52,14 +74,7 @@ def available_memory_bytes() -> int | None:
     if sys.platform == "win32":
         import ctypes
 
-        class MemoryStatus(ctypes.Structure):
-            _fields_ = [
-                ("length", ctypes.c_ulong), ("memory_load", ctypes.c_ulong),
-                ("total_physical", ctypes.c_ulonglong), ("available_physical", ctypes.c_ulonglong),
-                ("total_page_file", ctypes.c_ulonglong), ("available_page_file", ctypes.c_ulonglong),
-                ("total_virtual", ctypes.c_ulonglong), ("available_virtual", ctypes.c_ulonglong),
-                ("available_extended_virtual", ctypes.c_ulonglong),
-            ]
+        _, MemoryStatus = _windows_counter_types()
         status = MemoryStatus()
         status.length = ctypes.sizeof(MemoryStatus)
         try:
@@ -79,16 +94,12 @@ def effective_total_memory_bytes() -> int | None:
     if sys.platform == "win32":
         import ctypes
 
-        class Status(ctypes.Structure):
-            _fields_ = [("length", ctypes.c_ulong), ("load", ctypes.c_ulong),
-                        *[(name, ctypes.c_ulonglong) for name in (
-                            "total", "available", "page_total", "page_available",
-                            "virtual_total", "virtual_available", "extended")]]
-        status = Status()
+        _, MemoryStatus = _windows_counter_types()
+        status = MemoryStatus()
         status.length = ctypes.sizeof(status)
         try:
             if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
-                return int(status.total)
+                return int(status.total_physical)
         except (AttributeError, OSError):
             return None
         return None

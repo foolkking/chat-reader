@@ -1,0 +1,101 @@
+UTC=2026-11-25T09:51:11.2018112Z
+COMMAND=node --test tests/reader-host.test.cjs tests/reader-center-lifecycle.test.cjs
+57679D7A8B25D8B2218E162F8B1CCFFD6C3F57516C011DF7473F7E193B832275 <EXTENSION_REPO>\reader\host.js
+25742C28EB3A0F8CBB6D05DBE7B8E5B7C4C829E5543DAD439AAD5234616C93D4 <EXTENSION_REPO>\reader\center.js
+A4F7153DDCAF5CF617BE2C3048876743B1460F5178DA0E5CF88A6CE0505DAD52 <EXTENSION_REPO>\reader\batch-model.js
+B1447764CB658DF011957E597E23E482BB338538ECC789CB0773C70357903D3D <EXTENSION_REPO>\tests\reader-host.test.cjs
+E5DAD260690A71F02C67A75D9207F6D06AEEA3A364661B78ADEB5F67B1404F28 <EXTENSION_REPO>\tests\reader-center-lifecycle.test.cjs
+✔ another selection cannot silently replace an unfinished durable plan (260.8521ms)
+✔ resume wakes the host even when every item already has an active server receipt (165.6814ms)
+✔ resume waits for an active capture without a receipt instead of staging it again (739.4795ms)
+✔ skip review only dismisses this plan item, preserves the original receipt and source, and allows a new plan (43.9852ms)
+✔ stale review skip is rejected after each receipt replacement, without commit, cancel or source removal (63.4953ms)
+✔ another center window can cancel the next item while the first is building; the running queue never submits that cancelled item (75.0738ms)
+✔ host restart keeps a sealed package but deletes unfinished capture; it queries before an explicit resume (70.7844ms)
+✔ host restart reconciles an accepted receipt without re-uploading, even when its final response was lost (2.6591ms)
+✔ disconnecting the Reader account removes its retained plaintext package without a network request (3.1999ms)
+✖ discard and resume are serialized; a cancelled package cannot be uploaded by a waiting check (8.6487ms)
+✔ a discard waiting behind an accepted upload cannot cancel or overwrite its receipt (7.8499ms)
+✖ check re-reads the ledger after its local lock, not the earlier panel snapshot (3.6884ms)
+✖ startup cleanup keeps a package sealed after the original ledger snapshot but before the OPFS lock (2.1044ms)
+✖ device cleanup re-reads sealed packages after the OPFS lock instead of using an old retained set (9.7648ms)
+✔ discard reconciles an accepted receipt without deleting the server import (2.3018ms)
+✔ a failed server cancellation preserves the resumable package and binding (4.7683ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 12
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2621.5596
+
+✖ failing tests:
+
+test at tests\reader-host.test.cjs:110:1
+✖ discard and resume are serialized; a cancelled package cannot be uploaded by a waiting check (8.6487ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + 'received'
+  - 'cancelled'
+
+      at TestContext.<anonymous> (<EXTENSION_REPO>\tests\reader-host.test.cjs:123:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'received',
+    expected: 'cancelled',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\reader-host.test.cjs:148:1
+✖ check re-reads the ledger after its local lock, not the earlier panel snapshot (3.6884ms)
+  AssertionError [ERR_ASSERTION]: check must acquire the per-item OPFS lock
+
+  true !== false
+
+      at TestContext.<anonymous> (<EXTENSION_REPO>\tests\reader-host.test.cjs:157:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\reader-host.test.cjs:161:1
+✖ startup cleanup keeps a package sealed after the original ledger snapshot but before the OPFS lock (2.1044ms)
+  AssertionError [ERR_ASSERTION]: freshly sealed package must survive cleanup
+      at TestContext.<anonymous> (<EXTENSION_REPO>\tests\reader-host.test.cjs:169:36)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\reader-host.test.cjs:174:1
+✖ device cleanup re-reads sealed packages after the OPFS lock instead of using an old retained set (9.7648ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+    assert.ok(e.directories.has(key))
+
+      at TestContext.<anonymous> (<EXTENSION_REPO>\tests\reader-host.test.cjs:183:41)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+EXIT_CODE=1

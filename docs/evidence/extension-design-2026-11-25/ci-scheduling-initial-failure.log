@@ -1,0 +1,14 @@
+...................F
+======================================================================
+FAIL: test_web_gate_partition_and_all_node_browser_evidence_paths_are_retained (test_quality_scheduling.QualitySchedulingTests.test_web_gate_partition_and_all_node_browser_evidence_paths_are_retained)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<READER_REPO>\scripts\ci\test_quality_scheduling.py", line 178, in test_web_gate_partition_and_all_node_browser_evidence_paths_are_retained
+    self.assertEqual(upload["with"]["path"], self.contract["web_original_artifact_paths"])
+AssertionError: '${{ [274 chars]p }}/extension-consent.json\n${{ runner.temp }[2087 chars]ts\n' != '${{ [274 chars]p }}/optimization-resource-measurement.json\n$[2044 chars]ts\n'
+Diff is 2463 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.477s
+
+FAILED (failures=1)

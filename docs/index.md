@@ -1,10 +1,26 @@
 # 文档导航
 
-- [开发：项目对话导出的范围和文件内容](system/DATA_ARCHIVE_CONTRACT.md) · [批量选择、范围复核与真实 ZIP 验收](evidence/project-batch-export-2026-11-23/README.md#implemented)。
+- **0.3.0 核心整改候选已可本机验收。** [按来源项目选择或新建同名 Reader 项目的补充包](evidence/extension-core-2026-11-26/project-mapping.md) · [前版包与验收说明](evidence/extension-core-2026-11-26/README.md) · [真实短对话观察及九图对照](execution/ux-audit-extension-core-2026-11-26.md) · [客户端与 Reader 合同](system/BROWSER_EXTENSION.md#core-remediation-candidate)
 
-- [Chat Reader 桌面浏览器插件：接入、使用与撤销](system/BROWSER_EXTENSION.md) · [改前审查与计划](planning/ux-audit-reader-extension-2026-11-23.md) · [侧栏和一键保存](evidence/browser-extension-polish-2026-11-23/README.md) · [选择性末尾追加、双端下载、设备上限恢复与分发包](evidence/reader-extension-append-2026-11-24/README.md) · [原始内测](evidence/browser-extension-2026-11-23/README.md)。非生产 v0.1.5 功能。
+- **当前交付：[v0.1.10生产部署、两套恢复点的保留原因](deployment.md#v0110-production)** · [精确CI、签名、生产与插件0.3.0脱敏回执](evidence/merge-html-2026-11-25/v0.1.10-production.json)。用户实际加载目录已原位替换，仍需在浏览器重新加载；原失败合并未自动重试。
 
-- [当前生产 v0.1.5：固定内存导入、完整维护实测与快路径边界](deployment.md#v015-production) · [签名发布与生产回执](evidence/import-units-2026-11-21/v0.1.5-production.json)。
+- 合并失败排查：[HTML 卡片附件引用误判、合成回归与发布边界](evidence/merge-html-2026-11-25/README.md)。生产只读查因，不跳过附件校验或修改用户原文。
+
+- 发布导航修复：[v0.1.9 归档首次点击失败、真实竞态及原生导航审查](evidence/merge-html-2026-11-25/archive-navigation-audit.md) · [已上线交互合同](system/NAVIGATION_SEARCH_IMPORT_EXPERIENCE.md#对话原生链接与迟到列表读取2026-11-26-候选)。保留失败标签；没有放宽阅读门槛。
+
+- 浏览器插件复审收尾：[20状态对照、修复、真实隔离测试与未验证边界](evidence/extension-design-2026-11-25/README.md)。功能已随v0.1.10/插件0.3.0交付；保留原失败及个人ChatGPT实机验收证据缺口。
+
+- 浏览器插件本轮：[统一设计 v2 初审失败表](execution/ux-audit-extension-design-v2-2026-11-25.md) · [0.3.0合同与真实来源边界](system/BROWSER_EXTENSION.md#unified-candidate)。
+
+- [已交付：长对话分块采集、续传与读取进度](system/BROWSER_EXTENSION.md#capture-streaming-candidate) · [跨仓大包、PostgreSQL、Edge 与失败记录](evidence/extension-capture-2026-11-25/README.md)。历史局部结果不替代最终精确资格。
+
+- [历史生产 v0.1.7：插件登记、末尾追加、项目导出及独立恢复](deployment.md#v017-production) · [CI、签名、生产实测与当时单份保留回执](evidence/reader-extension-append-2026-11-24/v0.1.7-production.json)。
+
+- [项目对话导出的范围和文件内容](system/DATA_ARCHIVE_CONTRACT.md) · [批量选择、范围复核与真实 ZIP 验收](evidence/project-batch-export-2026-11-23/README.md#implemented)。
+
+- [Chat Reader 桌面浏览器插件：接入、使用与撤销](system/BROWSER_EXTENSION.md) · [改前审查与计划](planning/ux-audit-reader-extension-2026-11-23.md) · [侧栏和一键保存](evidence/browser-extension-polish-2026-11-23/README.md) · [选择性末尾追加、双端下载、设备上限恢复与分发包](evidence/reader-extension-append-2026-11-24/README.md) · [原始内测](evidence/browser-extension-2026-11-23/README.md)。已在 `v0.1.7` 启用；个人账号实机操作由用户验收。
+
+- [历史 v0.1.5：固定内存导入、完整维护实测与快路径边界](deployment.md#v015-production) · [签名发布与生产回执](evidence/import-units-2026-11-21/v0.1.5-production.json)。
 - [固定内存下的消息级导入](system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [640 MiB 与 1280 MiB 对照](evidence/import-units-2026-11-21/README.md)。原始 JSON／混合分析仍有原内存门槛。
 - [历史 v0.1.4：搜索与阅读修复、实测时间及当时的容量门槛](deployment.md#v014-production) · [精确 CI、签名、备份与生产回执](evidence/search-reading-2026-11-20/v0.1.4-production.json)。
 - [v0.1.3 标签资格失败与修复](evidence/search-reading-2026-11-20/ci-44757335968-saved-search-placement.json)：该标签未发布；冷态检查修复和折叠的已保存搜索晚到造成的 32px 位移修复随后进入 v0.1.4。[浏览器前后对照](evidence/search-reading-2026-11-20/saved-search-late-read-before-after.png)。

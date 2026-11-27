@@ -624,7 +624,13 @@ def _replace_materialized_documents(
                         f"{Path(str(member['path'])).name}"
                 )
                 from app.services.adaptive_import.memory_budget import streaming_budget
-                if streaming_budget():
+                if catalog.get("reader_profile"):
+                    # Keep the actual source, without guessing boundaries or rewriting
+                    # parts of one long message. The indexed reader rewrites each verified row.
+                    with archive.open(str(member["zip_path"])) as raw:
+                        stored, digest = save_import_file_stream(record.id, filename, raw,
+                            max_bytes=get_settings().bundle_max_object_bytes, chunk_size=64 * 1024)
+                elif streaming_budget():
                     from app.services.adaptive_import.stream_markdown import resource_chunks
                     with _disk_member(record, archive, archive.getinfo(str(member["zip_path"]))) as text_path:
                         chunks = (_rewrite_document_references(text, str(member["path"]), members, catalog.get("unresolved_references")).encode("utf-8")
@@ -851,7 +857,14 @@ def _inspect_document_references(
     for document in documents:
         _small_import_checkpoint()
         info = archive.getinfo(str(document["zip_path"]))
-        if streaming_budget():
+        if catalog.get("reader_profile"):
+            from app.services.adaptive_import.reader_package import package_header, messages
+            line_offset = 0
+            for _, text, _ in messages(archive, package_header(archive)):
+                visible_messages += 1
+                register_references(text, document, line_offset)
+                line_offset += text.count("\n") + 4
+        elif streaming_budget():
             from app.services.adaptive_import.stream_markdown import resource_chunks
             with _disk_member(record, archive, info) as text_path:
                 line_offset = 0

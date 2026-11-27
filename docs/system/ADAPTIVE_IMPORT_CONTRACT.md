@@ -1,5 +1,34 @@
 # Adaptive Import Contract
 
+<a id="reader-long-message-candidate"></a>
+## Indexed Reader long messages — local candidate, 2026-11-25
+
+Reader `reader-chat-v1` archives are recognized by their verified byte index,
+not reparsed using generic Markdown headings or the generic per-message text
+limit. Source membership, byte ranges, UTF-8, SHA-256, tree lineage and resource
+references are still checked before canonical persistence. Existing ordinary
+Markdown / JSON parsers and their admission rules are unchanged.
+
+In the streaming path, `RecordSpool` may externalize long `plain_text` and
+`display_text` into checksum-named UTF-8 sidecars. The descriptor explicitly
+adds `text_sidecars: 1`; metadata keeps its original 16 MiB record guard.
+Equal plain/display bodies share one file and one decoded value. Each read
+checks the exact local path, length and digest; it never accepts caller-supplied
+external paths. Block iteration preserves original `splitlines(keepends=True)`
+offsets without materializing every line. Resource and workspace checks remain
+active, including inside a long code block, not only between messages.
+
+The current program still reads old descriptors with inline text. **Old workers
+cannot read new sidecars:** deploy API and worker together, complete or preserve
+new pending drafts before reverting, and do not advertise a Web-only compatible
+rollback. No user-visible export schema or canonical database schema changes
+for this storage change. Resumable extension upload reuses ordinary import
+sessions and only queues analysis after whole-file acceptance.
+
+[Extension contract](BROWSER_EXTENSION.md#capture-streaming-candidate) and
+[reproducible local evidence](../evidence/extension-capture-2026-11-25/README.md)
+separate this candidate from production and retain failed memory checks.
+
 <a id="message-sized-work-under-fixed-memory--candidate-2026-11-21"></a>
 ## Message-sized work under fixed memory — shipped in v0.1.5
 

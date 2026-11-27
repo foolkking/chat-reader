@@ -1,12 +1,28 @@
 # Project State
 
-**开发分支（非生产）：** [桌面浏览器插件](docs/system/BROWSER_EXTENSION.md)使用设备授权、已有来源保护和共享 Context 快捷出口。侧栏以对话为单位，缺附件的保存保持“部分完成”，项目和动作取自实际提交。ChatGPT 可先勾消息，Reader 正文也可固定目标从文件追加；只追加到末尾。已受理后刷新保留勾选与目标；末尾变化须重新确认，未归属的回答独立成轮。迁移单 head `20261123_0064`。[基线审查](docs/planning/ux-audit-reader-extension-2026-11-23.md) · [侧栏实测](docs/evidence/browser-extension-polish-2026-11-23/README.md) · [真实收件、末尾争用、Context 下载与门槛](docs/evidence/reader-extension-append-2026-11-24/README.md)。本记录不是生产启用凭据。
+**发布复审（2026-11-26，未上线）。** 复现 v0.1.10 读取新版未完成范围追加时缺少 `indexes`；候选已分开保存两种决策，旧 worker 不会执行范围，新版可恢复原选择。`king` 20:22（北京时间）只读测得仅新备份下界就超过剩余容量；两套恢复点均保留。[容量与部署边界](docs/deployment.md) · [新旧版本合同](docs/system/BROWSER_EXTENSION.md#core-remediation-candidate)
+
+**2026-11-26 项目映射补充候选（未部署）。** 批量导入确认页可逐行选用已有 Reader 项目，或由配对账号在 Reader 确认新建同名项目。只有编号时手填，旧服务可手动新建后刷新。创建不触发导入，不移动已有对话；设备权限和 schema 不变。[补充安装包、回归与边界](docs/evidence/extension-core-2026-11-26/project-mapping.md)
+
+**2026-11-26 插件核心整改候选已交本机验收。** 两仓 `codex/reader-extension` 的工作树实现新版来源识别、分阶段实测进度、多层目录、反向容器定位、默认全选的大范围追加及统一工作区。最终私有包 58 个文件，两次构建一致。隔离 Reader 已逐条核对安装包生成的缺件来源及 251 条追加，重复提交跳过 251 条，另验 1,001 条范围。插件全量 386 通过、63 个既有样本跳过、0 失败，Reader Web 构建通过。真实短对话的定向观察来自此前测试，最终包的个人账号、真实长对话及附件体验由用户验收。现网仍按下一段的历史部署记录；本候选未发布。[安装包摘要、三轮复审与人工验收](docs/evidence/extension-core-2026-11-26/README.md) · [改前审查](docs/execution/ux-audit-extension-core-2026-11-26.md) · [候选合同](docs/system/BROWSER_EXTENSION.md#core-remediation-candidate)
+
+**当前生产：`king` 已升级至 `v0.1.10` / `7c4574b005d663a79e99698a2fa7d9eabf3e4cc4`。** 2026-11-26 **03:14:40（北京时间）**观测宿主更新器成功，03:20:43再次独立复核；schema `20261125_0065`，登录/API、实际镜像、worker、配置与四卷身份均通过。分支CI `45665830564/1`、标签资格 `45671364525/1` 均19/19，签名发布 `45671333305/1` 4/4；失败标签保留。用户指定的桌面 `chat-reader-0.2.0` 已原位换成同ID插件 **0.3.0**（54文件一致），AppData重复交付副本已删除，浏览器存储未动；**仍需用户重新加载扩展并刷新ChatGPT**。完整维护未走15秒快路径。清理6个非保留旧镜像；新备份完整读回但尚无独立恢复证明，暂留旧已验证恢复集＋本次新备份，不能删唯一验证点。[发布、部署与恢复边界](docs/deployment.md#v0110-production) · [脱敏回执](docs/evidence/merge-html-2026-11-25/v0.1.10-production.json)。
+
+**合并与导航修复已随 v0.1.10 上线。** 合并支持 HTML `href/src` 与目标独立的缺件恢复，不改原对话；原失败任务未代用户重试。归档修复异步项目位移、偏好更换链接及失联排序锁；API代理新连接不重放操作。本机归档12/12、阅读60/60及逐帧证据、恢复124/124、Node2642/2642通过，最终标签完整CI再次通过，未放宽原门槛。[根因和失败保留](docs/evidence/merge-html-2026-11-25/README.md) · [归档导航审查](docs/evidence/merge-html-2026-11-25/archive-navigation-audit.md)。
+
+**2026-11-25 插件统一设计复审记录（现已随 v0.1.10 / 插件0.3.0交付）。** 实现名称搜索、共用浮层与项目入口、短码、AI包/Skill、真实命中导航及四步批量中心；补齐固定分页、跨项目核对、冲突跳过和恢复竞态。插件0.3.0保持同ID；本次已先升级API/worker/Web至0065，再替换插件，没有使用无迁移快路径。Node全仓207通过/63原有私有夹具跳过，真实Edge＋隔离API/PG/worker16项及canonical读回11项通过；真实ChatGPT与Chrome解压安装未认证。API完整CI覆盖清单增加151项至7267（原3跳过不变），不以本机中断的全量尝试宣称成功。[修复、20状态对照、失败和验证边界](docs/evidence/extension-design-2026-11-25/README.md) · [当前插件合同](docs/system/BROWSER_EXTENSION.md#unified-candidate)。
+
+**2026-11-25 插件长对话采集与读取进度记录（现已交付）。** 两仓仍在 `codex/reader-extension`，取消插件原 8/32 MiB JSON、16 MiB 附件、100 MiB 包、2 MiB 正文及 50,000 条消息采集门槛，改为分块处理、OPFS 暂存和可续传收据；展示实测阶段与计数。Reader 对索引消息使用原子导入和长正文旁文件，保留实际内存、空间及管理员容量政策，不承诺无限资源。API/worker 必须同版后再更新插件。局部测试不代表之前完整浮层／配对／批量导入计划已交付，也不替代 CI 或真实账号验收。[合同与兼容边界](docs/system/BROWSER_EXTENSION.md#capture-streaming-candidate) · [测试、失败与截图](docs/evidence/extension-capture-2026-11-25/README.md)。
+
+**历史生产：`king` 曾从 `v0.1.5` 升到 `v0.1.7` / `6da435a70f0485a116c84525da899bfd8f234434`。** 2026-11-25 10:37:13（北京时间），同源入口验证新版登录页及 API；数据库 `20261123_0064`，640 MiB worker 心跳正常，浏览器插件 0.2.0 的设备登记已配置。两仓 CI、标签资格及签名发布通过。只留一套升级前的已核验数据、配置和旧程序；跨 schema 不提供网页一键回滚。[本次上线与恢复边界](docs/deployment.md#v017-production) · [安装和授权](docs/system/BROWSER_EXTENSION.md#安装连接撤销)。
+
+**浏览器插件与末尾追加（已上线）：** [桌面浏览器插件](docs/system/BROWSER_EXTENSION.md)使用设备授权、已有来源保护和共享 Context 快捷出口。资料列表以对话为单位，缺附件的保存保持“部分完成”，项目和动作取自实际提交。ChatGPT 可先勾消息，Reader 正文也可固定目标从文件追加；只追加到末尾。已受理后刷新保留勾选与目标；末尾变化须重新确认，未归属的回答独立成轮。追加收据始于 `20261123_0064`，当前单 head 为 `20261125_0065`。[基线审查](docs/planning/ux-audit-reader-extension-2026-11-23.md) · [侧栏实测](docs/evidence/browser-extension-polish-2026-11-23/README.md) · [真实收件、末尾争用、Context 下载与门槛](docs/evidence/reader-extension-append-2026-11-24/README.md)。线上启用情况见上方部署记录；隔离浏览器结果不代替个人账号验收。
 
 **补充授权恢复复核（2026-11-24）：** 服务端设备上限仍为 32；Chrome/Edge 内测此前复现达到上限后页面误报“插件未登记”。现以 409 专属中英恢复提示指向账号安全中的设备撤销入口，不改变限额；真实隔离 API/浏览器测得 409 → 清理专用 32 条合成记录 → 正常授权 200，375px 无水平溢出、恢复链接 44px。新增 Web 回归 3/3 通过；见[改前审查、前后截图与失败保留](docs/evidence/reader-extension-append-2026-11-24/README.md#authorization-limit)及当前[浏览器扩展合同](docs/system/BROWSER_EXTENSION.md)。不代表完整扩展验收、CI 或发布。
 
-**项目导出（开发工作树）：** 区分「导出所选 N 条」与「导出整个项目的活动对话」。范围变化先复核；两者生成对话数据 ZIP，不是项目备份或 ChatGPT 项目采集。[合同](docs/system/DATA_ARCHIVE_CONTRACT.md) · [实际选择、任务、下载逐一对照](docs/evidence/project-batch-export-2026-11-23/README.md#implemented)。
+**项目导出（已上线）：** 区分「导出所选 N 条」与「导出整个项目的活动对话」。范围变化先复核；两者生成对话数据 ZIP，不是项目备份或 ChatGPT 项目采集。[合同](docs/system/DATA_ARCHIVE_CONTRACT.md) · [实际选择、任务、下载逐一对照](docs/evidence/project-batch-export-2026-11-23/README.md#implemented)。
 
-**当前生产：2026-11-22 01:48:57（北京时间），`king` 已上线 `v0.1.5` / `b824ee949f03ec403e7e60beb677731c2fcff9c4`。** PR #7 经限定授权合并，不改保护规则。标签完整 CI `44925538355/1` 19/19，签名发布 `44925521786/1` 4/4。镜像包、GHCR、生产同源构建标识、权限、worker 心跳、数据汇总及配置独立复核通过。数据库仍为 `20261117_0062`。下载 6.725 秒，本次涉及写入、走完整维护，确认到新版开放 452.871 秒；不把隔离快路径的 9.560 秒当成这次生产时间。[上线、边界与备份记录](docs/deployment.md#v015-production)。
+**历史生产：2026-11-22 01:48:57（北京时间），`king` 已上线 `v0.1.5` / `b824ee949f03ec403e7e60beb677731c2fcff9c4`。** PR #7 经限定授权合并，不改保护规则。标签完整 CI `44925538355/1` 19/19，签名发布 `44925521786/1` 4/4。镜像包、GHCR、生产同源构建标识、权限、worker 心跳、数据汇总及配置独立复核通过。数据库仍为 `20261117_0062`。下载 6.725 秒，本次涉及写入、走完整维护，确认到新版开放 452.871 秒；不把隔离快路径的 9.560 秒当成这次生产时间。[上线、边界与备份记录](docs/deployment.md#v015-production)。
 
 **固定内存导入已交付：** 服务器 worker 仍为 640 MiB；实际 API 与 worker 各核对七个改动文件。独立环境中同样 800 条消息，640 MiB 限额 JSON／Markdown 为 29.7／28.5 秒、worker 峰值约 139／140 MiB；1280 MiB 对照为 5.0／9.3 秒。正文及来源都保留，任务仍原子提交。任意原始 JSON／混合分析仍有原门槛。[合同](docs/system/ADAPTIVE_IMPORT_CONTRACT.md#message-sized-work-under-fixed-memory--candidate-2026-11-21) · [复核与失败记录](docs/evidence/import-units-2026-11-21/README.md#最终复核与交接)。
 

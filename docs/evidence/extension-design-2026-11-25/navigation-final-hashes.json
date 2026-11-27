@@ -1,0 +1,63 @@
+{
+  "at": "2026-11-25T18:15:34.8862770+08:00",
+  "head": "be5e8dabd772809635db345a51c8c15c26b468ed",
+  "branch": "codex/reader-extension",
+  "state": "dirty candidate; scoped specialist freeze; no commit/push/CI",
+  "hashes": {
+    "reader/center-selection.js": "6350cd2a83906b8367aa4931d2c676ac66b6bc89f18c3c2566029dcc4331bbf5",
+    "reader/center.html": "5abe662097b50fa11bc51923a2e01f3e6920bc498140251e9c3e7d2680f5f7bb",
+    "reader/center.css": "539b92b9d5446b3ffd278c0f8f32e98ba056cde9eaa76143bc92e3b420e0c7ef",
+    "reader/routes.js": "1a94a580d3717b475ae41227a339b7fda34ef59d454854b0171285f0dd0d1049",
+    "reader/workspace.js": "1d92be007f08dd2c19a309c3b3e8d95771459ff8a999ae0aae1ff5658e06b0fa",
+    "reader/overlay.js": "7c754d3009f6efe6189a0b97c521fe658a32e640df8629da834bc2772390fd0a",
+    "reader/source-control.js": "6d173cd444bf7fb47d2a23a6d47679feaf4e1c9ff93c0f679b792606a7edbcea",
+    "reader/page-index.js": "16389a240646caace507a444431a6d0348212ddccff67c3ac6cc4d05fc1ad0ee",
+    "reader/surfaces.js": "4615cc3e4f939d0d952c3c00d2825c1d80484e0efcdadb4e116496ac593bb865",
+    "reader/frame.js": "c453f4e38191981c5c4e1f3974a970a4780e24bb223a26e8011317650a9f7d7c",
+    "reader/glyphs.js": "f54acfefd6aa182d1b3d79a66a10bd38e153204058c2ca3b6282746e509753c5",
+    "reader/progress.js": "73fd3d3523373501300116d1f6ee46688b5e8abd1c7a01b59d63c80de38d924b",
+    "scripts/package-reader.cjs": "f3efd3ca5458cd052dda81ecd1c7cab928db4fe988f98be4f6c672d5754bf421",
+    "tests/reader-center-selection.test.cjs": "55f80cbedea6a3e8e146bf85dd9c650668a1dee48cb72899c41e91cf1f15a432",
+    "tests/reader-navigation-boundaries.test.cjs": "7664da4f19a330547a3b7aa36194420ce82c7e433fdeabbde2b2225250986bd5",
+    "tests/reader-navigation.test.cjs": "f308077e501ac99470da9c4a6c2f273cf4bbb1e251308284b714313c1001e825",
+    "tests/reader-surface-package.test.cjs": "e78086841c5afe31c0e5f71f7b3639f8b48d68c137f2e54db1b2c932f455a0e1",
+    "tests/reader-distribution.test.cjs": "9ff1b7edae2b002c154bc13fd392bc8f84f141f32764033bce71acf45d0a55b1",
+    "reader/capture.js": "9a83f8176d3758edc7b0e8b14d58a76f37bc7fb60b56c1d78166b94a09e1ab43",
+    "reader/source-file.js": "4cb8bbc563c24d18244733bd018018948e645b850978fcc97b658c46a0e8ada9",
+    "reader/center.js": "ded0c745d8505d9167d66927fa860f2ebaf4216db3560693e74d80025484667a"
+  },
+  "node": {
+    "log": "navigation-boundaries-final.log",
+    "failures": 0,
+    "exit": 0,
+    "skips": 0,
+    "count": 74,
+    "passed": 74
+  },
+  "browser": {
+    "packaged": {
+      "report": "surface-release-221704d5/surface-final-runtime-a.json",
+      "passed": 7,
+      "version": "0.3.0",
+      "id": "gihbiofiiflkckcmomddkkjkoifkddfi"
+    },
+    "navigation": {
+      "passed": 40,
+      "report": "edge-navigation-Dyn5jt/results.json"
+    },
+    "boundaries": {
+      "passed": 42,
+      "report": "nav-bound-entry-HTBptH/report.json"
+    }
+  },
+  "archive": {
+    "bytes": 121218852,
+    "path": "reader-transfer-2tXVdb/import.zip",
+    "sha256": "e71501690246fe4228843ddaf087a2efe0c9752a456f36407fca8567553795b6"
+  },
+  "limits": [
+    "Edge uses synthetic transcript; no live ChatGPT authorization/account/private data",
+    "Packaged Edge uses intercepted synthetic ChatGPT page plus mock loopback Reader; not actual production API",
+    "Real Chrome unpacked timeout remains non-pass; full frozen two-repository tests and CI belong to main"
+  ]
+}

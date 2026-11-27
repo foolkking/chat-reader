@@ -1,0 +1,1221 @@
+{
+  "at": "2026-11-25T10:11:09.692Z",
+  "kind": "real Edge, synthetic source and runtime; not private ChatGPT E2E",
+  "files": {
+    "glyphs.js": "f54acfefd6aa182d1b3d79a66a10bd38e153204058c2ca3b6282746e509753c5",
+    "progress.js": "73fd3d3523373501300116d1f6ee46688b5e8abd1c7a01b59d63c80de38d924b",
+    "routes.js": "1a94a580d3717b475ae41227a339b7fda34ef59d454854b0171285f0dd0d1049",
+    "page-index.js": "16389a240646caace507a444431a6d0348212ddccff67c3ac6cc4d05fc1ad0ee",
+    "overlay.js": "7c754d3009f6efe6189a0b97c521fe658a32e640df8629da834bc2772390fd0a",
+    "source-control.js": "6d173cd444bf7fb47d2a23a6d47679feaf4e1c9ff93c0f679b792606a7edbcea"
+  },
+  "scenarios": [
+    {
+      "name": "wide-en-light",
+      "width": 1440,
+      "locale": "en-US",
+      "checks": [
+        "120 turns: first/last/random real virtual IDs, no mass mount",
+        "all 111 matches across 64+47 bounded pages: no omission, duplicate or result cap",
+        "101st match resolves a visible real DOM Range, not message top",
+        "duplicate heading occurrence and same-name attachment use exact identity",
+        "ResizeObserver composer avoidance, both surfaces; zero column-width delta",
+        "keyboard collapse returns focus without moving the transcript",
+        "actual read cancellation retains partial outline; stale callback cannot overwrite status",
+        "wheel cancels actual result navigation; no late scroll restoration",
+        "an active capture blocks navigation without moving content",
+        "actual result click + compact collapse + focus return retain search state"
+      ],
+      "shots": [
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\wide-en-light-00-collapsed.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\wide-en-light-01-reading.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\wide-en-light-02-outline.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\wide-en-light-03-search.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\wide-en-light-04-mutual-exclusion.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\wide-en-light-05-tall-composer.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\wide-en-light-06-read-cancelled.png"
+      ],
+      "errors": [],
+      "before": {
+        "column": {
+          "x": 370,
+          "y": -356259,
+          "width": 700,
+          "height": 357063,
+          "right": 1070,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "right": 0,
+          "bottom": 0
+        },
+        "composer": {
+          "x": 380,
+          "y": 834,
+          "width": 680,
+          "height": 54,
+          "right": 1060,
+          "bottom": 888
+        },
+        "save": {
+          "x": 1244.453125,
+          "y": 776,
+          "width": 183.546875,
+          "height": 46,
+          "right": 1428,
+          "bottom": 822
+        },
+        "navHidden": true,
+        "menuHidden": true,
+        "status": "",
+        "overflow": false,
+        "rows": 0,
+        "active": "",
+        "scroll": 356259
+      },
+      "reading": {
+        "column": {
+          "x": 370,
+          "y": -356259,
+          "width": 700,
+          "height": 357063,
+          "right": 1070,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 1104,
+          "y": 207,
+          "width": 328,
+          "height": 508,
+          "right": 1432,
+          "bottom": 715
+        },
+        "composer": {
+          "x": 380,
+          "y": 834,
+          "width": 680,
+          "height": 54,
+          "right": 1060,
+          "bottom": 888
+        },
+        "save": {
+          "x": 1244.453125,
+          "y": 776,
+          "width": 183.546875,
+          "height": 46,
+          "right": 1428,
+          "bottom": 822
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "Reading conversation · 4.0 KiB",
+        "overflow": false,
+        "rows": 0,
+        "active": "icon",
+        "scroll": 356259
+      },
+      "open": {
+        "column": {
+          "x": 370,
+          "y": -356259,
+          "width": 700,
+          "height": 357063,
+          "right": 1070,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 1104,
+          "y": 207,
+          "width": 328,
+          "height": 508,
+          "right": 1432,
+          "bottom": 715
+        },
+        "composer": {
+          "x": 380,
+          "y": 834,
+          "width": 680,
+          "height": 54,
+          "right": 1060,
+          "bottom": 888
+        },
+        "save": {
+          "x": 1244.453125,
+          "y": 776,
+          "width": 183.546875,
+          "height": 46,
+          "right": 1428,
+          "bottom": 822
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "",
+        "overflow": false,
+        "rows": 0,
+        "active": "icon",
+        "scroll": 356259
+      },
+      "jumps": [
+        {
+          "id": "m0",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 1
+          },
+          "ms": 167.39999997615814,
+          "top": 0,
+          "mounted": 5
+        },
+        {
+          "id": "m137",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 3
+          },
+          "ms": 372.30000001192093,
+          "top": 12,
+          "mounted": 7
+        },
+        {
+          "id": "m239",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 1
+          },
+          "ms": 212.19999998807907,
+          "top": 12,
+          "mounted": 4
+        },
+        {
+          "id": "m54",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 2
+          },
+          "ms": 293,
+          "top": 12,
+          "mounted": 7
+        }
+      ],
+      "range": {
+        "result": {
+          "ok": true,
+          "kind": "text",
+          "probes": 1
+        },
+        "text": "needle",
+        "context": "Part 101: needle 潮汐 detail 101.",
+        "top": 11.796875
+      },
+      "heading": {
+        "ok": true,
+        "kind": "heading",
+        "probes": 0
+      },
+      "file": {
+        "result": {
+          "ok": true,
+          "kind": "file",
+          "probes": 0
+        },
+        "id": "file-two"
+      },
+      "expandedComposer": {
+        "column": {
+          "x": 370,
+          "y": -24,
+          "width": 700,
+          "height": 357063,
+          "right": 1070,
+          "bottom": 357039
+        },
+        "frame": {
+          "x": 1104,
+          "y": 207,
+          "width": 328,
+          "height": 449,
+          "right": 1432,
+          "bottom": 656
+        },
+        "composer": {
+          "x": 380,
+          "y": 668,
+          "width": 680,
+          "height": 220,
+          "right": 1060,
+          "bottom": 888
+        },
+        "save": {
+          "x": 1244.453125,
+          "y": 610,
+          "width": 183.546875,
+          "height": 46,
+          "right": 1428,
+          "bottom": 656
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "111 matches",
+        "overflow": false,
+        "rows": 47,
+        "active": "icon",
+        "scroll": 24
+      },
+      "stopped": {
+        "column": {
+          "x": 370,
+          "y": -24,
+          "width": 700,
+          "height": 357063,
+          "right": 1070,
+          "bottom": 357039
+        },
+        "frame": {
+          "x": 1104,
+          "y": 207,
+          "width": 328,
+          "height": 449,
+          "right": 1432,
+          "bottom": 656
+        },
+        "composer": {
+          "x": 380,
+          "y": 668,
+          "width": 680,
+          "height": 220,
+          "right": 1060,
+          "bottom": 888
+        },
+        "save": {
+          "x": 1244.453125,
+          "y": 610,
+          "width": 183.546875,
+          "height": 46,
+          "right": 1428,
+          "bottom": 656
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "Stopped; the available outline is retained. · Partial outline",
+        "overflow": false,
+        "rows": 0,
+        "active": "",
+        "scroll": 24
+      }
+    },
+    {
+      "name": "narrow-zh-light",
+      "width": 375,
+      "locale": "zh-CN",
+      "checks": [
+        "120 turns: first/last/random real virtual IDs, no mass mount",
+        "all 111 matches across 64+47 bounded pages: no omission, duplicate or result cap",
+        "101st match resolves a visible real DOM Range, not message top",
+        "duplicate heading occurrence and same-name attachment use exact identity",
+        "ResizeObserver composer avoidance, both surfaces; zero column-width delta",
+        "keyboard collapse returns focus without moving the transcript",
+        "actual read cancellation retains partial outline; stale callback cannot overwrite status",
+        "wheel cancels actual result navigation; no late scroll restoration",
+        "an active capture blocks navigation without moving content",
+        "actual result click + compact collapse + focus return retain search state"
+      ],
+      "shots": [
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-light-00-collapsed.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-light-01-reading.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-light-02-outline.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-light-03-search.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-light-04-mutual-exclusion.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-light-05-tall-composer.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-light-06-read-cancelled.png"
+      ],
+      "errors": [],
+      "before": {
+        "column": {
+          "x": 16,
+          "y": -356259,
+          "width": 343,
+          "height": 357063,
+          "right": 359,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "right": 0,
+          "bottom": 0
+        },
+        "composer": {
+          "x": 12,
+          "y": 834,
+          "width": 351,
+          "height": 54,
+          "right": 363,
+          "bottom": 888
+        },
+        "save": {
+          "x": 184,
+          "y": 776,
+          "width": 179,
+          "height": 46,
+          "right": 363,
+          "bottom": 822
+        },
+        "navHidden": true,
+        "menuHidden": true,
+        "status": "",
+        "overflow": false,
+        "rows": 0,
+        "active": "",
+        "scroll": 356259
+      },
+      "reading": {
+        "column": {
+          "x": 16,
+          "y": -356259,
+          "width": 343,
+          "height": 357063,
+          "right": 359,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 39,
+          "y": 207,
+          "width": 328,
+          "height": 508,
+          "right": 367,
+          "bottom": 715
+        },
+        "composer": {
+          "x": 12,
+          "y": 834,
+          "width": 351,
+          "height": 54,
+          "right": 363,
+          "bottom": 888
+        },
+        "save": {
+          "x": 184,
+          "y": 776,
+          "width": 179,
+          "height": 46,
+          "right": 363,
+          "bottom": 822
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "读取对话 · 4.0 KiB",
+        "overflow": false,
+        "rows": 0,
+        "active": "icon",
+        "scroll": 356259
+      },
+      "open": {
+        "column": {
+          "x": 16,
+          "y": -356259,
+          "width": 343,
+          "height": 357063,
+          "right": 359,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 39,
+          "y": 207,
+          "width": 328,
+          "height": 508,
+          "right": 367,
+          "bottom": 715
+        },
+        "composer": {
+          "x": 12,
+          "y": 834,
+          "width": 351,
+          "height": 54,
+          "right": 363,
+          "bottom": 888
+        },
+        "save": {
+          "x": 184,
+          "y": 776,
+          "width": 179,
+          "height": 46,
+          "right": 363,
+          "bottom": 822
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "",
+        "overflow": false,
+        "rows": 0,
+        "active": "icon",
+        "scroll": 356259
+      },
+      "jumps": [
+        {
+          "id": "m0",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 1
+          },
+          "ms": 163.80000001192093,
+          "top": 0,
+          "mounted": 5
+        },
+        {
+          "id": "m137",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 3
+          },
+          "ms": 372.5,
+          "top": 12,
+          "mounted": 7
+        },
+        {
+          "id": "m239",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 1
+          },
+          "ms": 212.5,
+          "top": 12,
+          "mounted": 4
+        },
+        {
+          "id": "m54",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 2
+          },
+          "ms": 292.19999998807907,
+          "top": 12,
+          "mounted": 7
+        }
+      ],
+      "range": {
+        "result": {
+          "ok": true,
+          "kind": "text",
+          "probes": 1
+        },
+        "text": "needle",
+        "context": "Part 101: needle 潮汐 detail 101.",
+        "top": 11.796875
+      },
+      "heading": {
+        "ok": true,
+        "kind": "heading",
+        "probes": 0
+      },
+      "file": {
+        "result": {
+          "ok": true,
+          "kind": "file",
+          "probes": 0
+        },
+        "id": "file-two"
+      },
+      "expandedComposer": {
+        "column": {
+          "x": 16,
+          "y": -24,
+          "width": 343,
+          "height": 357063,
+          "right": 359,
+          "bottom": 357039
+        },
+        "frame": {
+          "x": 39,
+          "y": 207,
+          "width": 328,
+          "height": 449,
+          "right": 367,
+          "bottom": 656
+        },
+        "composer": {
+          "x": 12,
+          "y": 668,
+          "width": 351,
+          "height": 220,
+          "right": 363,
+          "bottom": 888
+        },
+        "save": {
+          "x": 184,
+          "y": 610,
+          "width": 179,
+          "height": 46,
+          "right": 363,
+          "bottom": 656
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "111 处匹配",
+        "overflow": false,
+        "rows": 47,
+        "active": "icon",
+        "scroll": 24
+      },
+      "stopped": {
+        "column": {
+          "x": 16,
+          "y": -24,
+          "width": 343,
+          "height": 357063,
+          "right": 359,
+          "bottom": 357039
+        },
+        "frame": {
+          "x": 39,
+          "y": 207,
+          "width": 328,
+          "height": 449,
+          "right": 367,
+          "bottom": 656
+        },
+        "composer": {
+          "x": 12,
+          "y": 668,
+          "width": 351,
+          "height": 220,
+          "right": 363,
+          "bottom": 888
+        },
+        "save": {
+          "x": 184,
+          "y": 610,
+          "width": 179,
+          "height": 46,
+          "right": 363,
+          "bottom": 656
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "已停止；保留已读取的目录。 · 部分目录",
+        "overflow": false,
+        "rows": 0,
+        "active": "",
+        "scroll": 24
+      }
+    },
+    {
+      "name": "compact-en-light",
+      "width": 320,
+      "locale": "en-US",
+      "checks": [
+        "120 turns: first/last/random real virtual IDs, no mass mount",
+        "all 111 matches across 64+47 bounded pages: no omission, duplicate or result cap",
+        "101st match resolves a visible real DOM Range, not message top",
+        "duplicate heading occurrence and same-name attachment use exact identity",
+        "ResizeObserver composer avoidance, both surfaces; zero column-width delta",
+        "keyboard collapse returns focus without moving the transcript",
+        "actual read cancellation retains partial outline; stale callback cannot overwrite status",
+        "wheel cancels actual result navigation; no late scroll restoration",
+        "an active capture blocks navigation without moving content",
+        "actual result click + compact collapse + focus return retain search state"
+      ],
+      "shots": [
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\compact-en-light-00-collapsed.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\compact-en-light-01-reading.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\compact-en-light-02-outline.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\compact-en-light-03-search.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\compact-en-light-04-mutual-exclusion.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\compact-en-light-05-tall-composer.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\compact-en-light-06-read-cancelled.png"
+      ],
+      "errors": [],
+      "before": {
+        "column": {
+          "x": 16,
+          "y": -356259,
+          "width": 288,
+          "height": 357063,
+          "right": 304,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "right": 0,
+          "bottom": 0
+        },
+        "composer": {
+          "x": 12,
+          "y": 834,
+          "width": 296,
+          "height": 54,
+          "right": 308,
+          "bottom": 888
+        },
+        "save": {
+          "x": 124.453125,
+          "y": 776,
+          "width": 183.546875,
+          "height": 46,
+          "right": 308,
+          "bottom": 822
+        },
+        "navHidden": true,
+        "menuHidden": true,
+        "status": "",
+        "overflow": false,
+        "rows": 0,
+        "active": "",
+        "scroll": 356259
+      },
+      "reading": {
+        "column": {
+          "x": 16,
+          "y": -356259,
+          "width": 288,
+          "height": 357063,
+          "right": 304,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 8,
+          "y": 207,
+          "width": 304,
+          "height": 508,
+          "right": 312,
+          "bottom": 715
+        },
+        "composer": {
+          "x": 12,
+          "y": 834,
+          "width": 296,
+          "height": 54,
+          "right": 308,
+          "bottom": 888
+        },
+        "save": {
+          "x": 124.453125,
+          "y": 776,
+          "width": 183.546875,
+          "height": 46,
+          "right": 308,
+          "bottom": 822
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "Reading conversation · 4.0 KiB",
+        "overflow": false,
+        "rows": 0,
+        "active": "icon",
+        "scroll": 356259
+      },
+      "open": {
+        "column": {
+          "x": 16,
+          "y": -356259,
+          "width": 288,
+          "height": 357063,
+          "right": 304,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 8,
+          "y": 207,
+          "width": 304,
+          "height": 508,
+          "right": 312,
+          "bottom": 715
+        },
+        "composer": {
+          "x": 12,
+          "y": 834,
+          "width": 296,
+          "height": 54,
+          "right": 308,
+          "bottom": 888
+        },
+        "save": {
+          "x": 124.453125,
+          "y": 776,
+          "width": 183.546875,
+          "height": 46,
+          "right": 308,
+          "bottom": 822
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "",
+        "overflow": false,
+        "rows": 0,
+        "active": "icon",
+        "scroll": 356259
+      },
+      "jumps": [
+        {
+          "id": "m0",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 1
+          },
+          "ms": 165.5,
+          "top": 0,
+          "mounted": 5
+        },
+        {
+          "id": "m137",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 3
+          },
+          "ms": 371.19999998807907,
+          "top": 12,
+          "mounted": 7
+        },
+        {
+          "id": "m239",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 1
+          },
+          "ms": 212.89999997615814,
+          "top": 12,
+          "mounted": 4
+        },
+        {
+          "id": "m54",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 2
+          },
+          "ms": 292.10000002384186,
+          "top": 12,
+          "mounted": 7
+        }
+      ],
+      "range": {
+        "result": {
+          "ok": true,
+          "kind": "text",
+          "probes": 1
+        },
+        "text": "needle",
+        "context": "Part 101: needle 潮汐 detail 101.",
+        "top": 11.796875
+      },
+      "heading": {
+        "ok": true,
+        "kind": "heading",
+        "probes": 0
+      },
+      "file": {
+        "result": {
+          "ok": true,
+          "kind": "file",
+          "probes": 0
+        },
+        "id": "file-two"
+      },
+      "expandedComposer": {
+        "column": {
+          "x": 16,
+          "y": -24,
+          "width": 288,
+          "height": 357063,
+          "right": 304,
+          "bottom": 357039
+        },
+        "frame": {
+          "x": 8,
+          "y": 207,
+          "width": 304,
+          "height": 449,
+          "right": 312,
+          "bottom": 656
+        },
+        "composer": {
+          "x": 12,
+          "y": 668,
+          "width": 296,
+          "height": 220,
+          "right": 308,
+          "bottom": 888
+        },
+        "save": {
+          "x": 124.453125,
+          "y": 610,
+          "width": 183.546875,
+          "height": 46,
+          "right": 308,
+          "bottom": 656
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "111 matches",
+        "overflow": false,
+        "rows": 47,
+        "active": "icon",
+        "scroll": 24
+      },
+      "stopped": {
+        "column": {
+          "x": 16,
+          "y": -24,
+          "width": 288,
+          "height": 357063,
+          "right": 304,
+          "bottom": 357039
+        },
+        "frame": {
+          "x": 8,
+          "y": 207,
+          "width": 304,
+          "height": 449,
+          "right": 312,
+          "bottom": 656
+        },
+        "composer": {
+          "x": 12,
+          "y": 668,
+          "width": 296,
+          "height": 220,
+          "right": 308,
+          "bottom": 888
+        },
+        "save": {
+          "x": 124.453125,
+          "y": 610,
+          "width": 183.546875,
+          "height": 46,
+          "right": 308,
+          "bottom": 656
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "Stopped; the available outline is retained. · Partial outline",
+        "overflow": false,
+        "rows": 0,
+        "active": "",
+        "scroll": 24
+      }
+    },
+    {
+      "name": "narrow-zh-dark",
+      "width": 375,
+      "locale": "zh-CN",
+      "dark": true,
+      "checks": [
+        "120 turns: first/last/random real virtual IDs, no mass mount",
+        "all 111 matches across 64+47 bounded pages: no omission, duplicate or result cap",
+        "101st match resolves a visible real DOM Range, not message top",
+        "duplicate heading occurrence and same-name attachment use exact identity",
+        "ResizeObserver composer avoidance, both surfaces; zero column-width delta",
+        "keyboard collapse returns focus without moving the transcript",
+        "actual read cancellation retains partial outline; stale callback cannot overwrite status",
+        "wheel cancels actual result navigation; no late scroll restoration",
+        "an active capture blocks navigation without moving content",
+        "actual result click + compact collapse + focus return retain search state"
+      ],
+      "shots": [
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-dark-00-collapsed.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-dark-01-reading.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-dark-02-outline.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-dark-03-search.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-dark-04-mutual-exclusion.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-dark-05-tall-composer.png",
+        "<TASK_EVIDENCE>\\extension\\edge-navigation-Dyn5jt\\narrow-zh-dark-06-read-cancelled.png"
+      ],
+      "errors": [],
+      "before": {
+        "column": {
+          "x": 16,
+          "y": -356259,
+          "width": 343,
+          "height": 357063,
+          "right": 359,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "right": 0,
+          "bottom": 0
+        },
+        "composer": {
+          "x": 12,
+          "y": 834,
+          "width": 351,
+          "height": 54,
+          "right": 363,
+          "bottom": 888
+        },
+        "save": {
+          "x": 184,
+          "y": 776,
+          "width": 179,
+          "height": 46,
+          "right": 363,
+          "bottom": 822
+        },
+        "navHidden": true,
+        "menuHidden": true,
+        "status": "",
+        "overflow": false,
+        "rows": 0,
+        "active": "",
+        "scroll": 356259
+      },
+      "reading": {
+        "column": {
+          "x": 16,
+          "y": -356259,
+          "width": 343,
+          "height": 357063,
+          "right": 359,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 39,
+          "y": 207,
+          "width": 328,
+          "height": 508,
+          "right": 367,
+          "bottom": 715
+        },
+        "composer": {
+          "x": 12,
+          "y": 834,
+          "width": 351,
+          "height": 54,
+          "right": 363,
+          "bottom": 888
+        },
+        "save": {
+          "x": 184,
+          "y": 776,
+          "width": 179,
+          "height": 46,
+          "right": 363,
+          "bottom": 822
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "读取对话 · 4.0 KiB",
+        "overflow": false,
+        "rows": 0,
+        "active": "icon",
+        "scroll": 356259
+      },
+      "open": {
+        "column": {
+          "x": 16,
+          "y": -356259,
+          "width": 343,
+          "height": 357063,
+          "right": 359,
+          "bottom": 804
+        },
+        "frame": {
+          "x": 39,
+          "y": 207,
+          "width": 328,
+          "height": 508,
+          "right": 367,
+          "bottom": 715
+        },
+        "composer": {
+          "x": 12,
+          "y": 834,
+          "width": 351,
+          "height": 54,
+          "right": 363,
+          "bottom": 888
+        },
+        "save": {
+          "x": 184,
+          "y": 776,
+          "width": 179,
+          "height": 46,
+          "right": 363,
+          "bottom": 822
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "",
+        "overflow": false,
+        "rows": 0,
+        "active": "icon",
+        "scroll": 356259
+      },
+      "jumps": [
+        {
+          "id": "m0",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 1
+          },
+          "ms": 163.60000002384186,
+          "top": 0,
+          "mounted": 5
+        },
+        {
+          "id": "m137",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 3
+          },
+          "ms": 372.5999999642372,
+          "top": 12,
+          "mounted": 7
+        },
+        {
+          "id": "m239",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 1
+          },
+          "ms": 212.19999998807907,
+          "top": 12,
+          "mounted": 4
+        },
+        {
+          "id": "m54",
+          "result": {
+            "ok": true,
+            "kind": "message",
+            "probes": 2
+          },
+          "ms": 292.19999998807907,
+          "top": 12,
+          "mounted": 7
+        }
+      ],
+      "range": {
+        "result": {
+          "ok": true,
+          "kind": "text",
+          "probes": 1
+        },
+        "text": "needle",
+        "context": "Part 101: needle 潮汐 detail 101.",
+        "top": 11.796875
+      },
+      "heading": {
+        "ok": true,
+        "kind": "heading",
+        "probes": 0
+      },
+      "file": {
+        "result": {
+          "ok": true,
+          "kind": "file",
+          "probes": 0
+        },
+        "id": "file-two"
+      },
+      "expandedComposer": {
+        "column": {
+          "x": 16,
+          "y": -24,
+          "width": 343,
+          "height": 357063,
+          "right": 359,
+          "bottom": 357039
+        },
+        "frame": {
+          "x": 39,
+          "y": 207,
+          "width": 328,
+          "height": 449,
+          "right": 367,
+          "bottom": 656
+        },
+        "composer": {
+          "x": 12,
+          "y": 668,
+          "width": 351,
+          "height": 220,
+          "right": 363,
+          "bottom": 888
+        },
+        "save": {
+          "x": 184,
+          "y": 610,
+          "width": 179,
+          "height": 46,
+          "right": 363,
+          "bottom": 656
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "111 处匹配",
+        "overflow": false,
+        "rows": 47,
+        "active": "icon",
+        "scroll": 24
+      },
+      "stopped": {
+        "column": {
+          "x": 16,
+          "y": -24,
+          "width": 343,
+          "height": 357063,
+          "right": 359,
+          "bottom": 357039
+        },
+        "frame": {
+          "x": 39,
+          "y": 207,
+          "width": 328,
+          "height": 449,
+          "right": 367,
+          "bottom": 656
+        },
+        "composer": {
+          "x": 12,
+          "y": 668,
+          "width": 351,
+          "height": 220,
+          "right": 363,
+          "bottom": 888
+        },
+        "save": {
+          "x": 184,
+          "y": 610,
+          "width": 179,
+          "height": 46,
+          "right": 363,
+          "bottom": 656
+        },
+        "navHidden": false,
+        "menuHidden": true,
+        "status": "已停止；保留已读取的目录。 · 部分目录",
+        "overflow": false,
+        "rows": 0,
+        "active": "",
+        "scroll": 24
+      }
+    }
+  ],
+  "failures": [],
+  "browser": "Edg/158.0.4370.33"
+}

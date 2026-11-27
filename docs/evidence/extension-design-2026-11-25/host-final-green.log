@@ -1,0 +1,80 @@
+UTC=2026-11-25T10:10:45.6749058Z
+COMMAND=node --test tests/reader-host.test.cjs tests/reader-center-lifecycle.test.cjs tests/reader-center-selection.test.cjs tests/reader-batch.test.cjs tests/reader-batch-ticket.test.cjs tests/reader-source-cache.test.cjs
+HEAD=be5e8dabd772809635db345a51c8c15c26b468ed
+BRANCH=codex/reader-extension
+BB2E16C10152C96B09E78139E1C11C68EA01E10806E067A01190A7A2F488B7F1 <EXTENSION_REPO>\reader\host.js
+D39A57336958D91D99EC1102B2767DC1AFA88FA0CD0428324BFD03CFDF1C11E7 <EXTENSION_REPO>\reader\upload.js
+73FD3D3523373501300116D1F6EE46688B5E8ABD1C7A01B59D63C80DE38D924B <EXTENSION_REPO>\reader\progress.js
+BCFAE593C8ED6FEFB86BA7FA69CA3ABA443E639322C56BC989246A01E19FA1C2 <EXTENSION_REPO>\reader\transfer-state.js
+DED0C745D8505D9167D66927FA860F2EBAF4216DB3560693E74D80025484667A <EXTENSION_REPO>\reader\center.js
+5ABE662097B50FA11BC51923A2E01F3E6920BC498140251E9C3E7D2680F5F7BB <EXTENSION_REPO>\reader\center.html
+6350CD2A83906B8367AA4931D2C676AC66B6BC89F18C3C2566029DCC4331BBF5 <EXTENSION_REPO>\reader\center-selection.js
+A4F7153DDCAF5CF617BE2C3048876743B1460F5178DA0E5CF88A6CE0505DAD52 <EXTENSION_REPO>\reader\batch-model.js
+A16DD712A2051749CED75ECD90CF9071A15DE979903536B4352896384EC46EC6 <EXTENSION_REPO>\reader\background.js
+E9F9295B33B00D1CAF22D3FDCAF17BE8B7AF3127FA3A0005227444EA8C23B6DC <EXTENSION_REPO>\reader\batch-worker.js
+4CB8BBC563C24D18244733BD018018948E645B850978FCC97B658C46A0E8ADA9 <EXTENSION_REPO>\reader\source-file.js
+B1447764CB658DF011957E597E23E482BB338538ECC789CB0773C70357903D3D <EXTENSION_REPO>\tests\reader-host.test.cjs
+3BF6445C3FF410DA87FBB0C758154A4092A4B6003946C5DC0C0D82C364B0719F <EXTENSION_REPO>\tests\reader-center-lifecycle.test.cjs
+55F80CBEDEA6A3E8E146BF85DD9C650668A1DEE48CB72899C41E91CF1F15A432 <EXTENSION_REPO>\tests\reader-center-selection.test.cjs
+23AEC2505E2C1D6D249A3299C8FB2D34FA232B706AD8C9F54929CB802F1FCCC1 <EXTENSION_REPO>\tests\reader-batch.test.cjs
+9F033C1DE704CB88F24B5B189125453DB2FDE54AA52EF7685470082534FCE9F8 <EXTENSION_REPO>\tests\reader-batch-ticket.test.cjs
+5840C320BAF7AB6701185C7D743A9629832B48BE696DB4DAF4767033FA958434 <EXTENSION_REPO>\tests\reader-source-cache.test.cjs
+✔ a one-use batch ticket belongs to the current fixed, uncancelled plan item (14.8118ms)
+✔ ZIP local source indexes unknown membership separately, builds only selected chat and keeps exact lineage (46.9428ms)
+✔ official ZIP selected attachment bytes are verified; missing files are explicit partials, never fetched (26.7645ms)
+✔ local archive accepts a message over old 2 MiB and source over 8 MiB without an arbitrary conversation limit (1322.6075ms)
+✔ ZIP rejects traversal, symlinks, duplicated names and corrupt contents before claiming success (3.461ms)
+✔ catalogue rejects duplicate source identities and aborted reads retain no claimed result (5.3416ms)
+✔ fixed batch plan is account-scoped, holds cross-project ids and never changes existing destination (2.2037ms)
+✔ source workspace never guesses a default workspace or exposes its session credentials (674.6952ms)
+✔ another selection cannot silently replace an unfinished durable plan (251.7918ms)
+✔ resume wakes the host even when every item already has an active server receipt (163.0696ms)
+✔ resume waits for an active capture without a receipt instead of staging it again (743.4041ms)
+✔ skip review only dismisses this plan item, preserves the original receipt and source, and allows a new plan (38.4607ms)
+✔ stale review skip is rejected after each receipt replacement, without commit, cancel or source removal (68.4373ms)
+✔ another center window can cancel the next item while the first is building; the running queue never submits that cancelled item (94.6115ms)
+✔ a tab query is only a confirmed-source hint and never starts discovery automatically (42.8479ms)
+✔ saved-reference lookup requires an explicit click and sends only the selected source ids (267.07ms)
+✔ a Reader account change invalidates a held saved-reference response and stops the remaining lookups (62.5055ms)
+✔ a deleted Reader destination blocks confirmation instead of silently falling back to unclassified (49.1486ms)
+✔ refreshing Reader projects preserves the current per-project mapping, attachment choice and remember choice (43.2692ms)
+✔ fixed pages cover every row exactly once without accumulated DOM ranges or a result cap (106.4192ms)
+✔ empty and filtered pages expose truthful ranges, not fake totals (1.7245ms)
+✔ page selection chooses 50; filtered selection chooses the actual 150-id snapshot (1.8778ms)
+✔ cross-page/project filters retain the same Set; selected list removes hidden selections (1.8131ms)
+✔ selected list itself is fixed-page and adjusts after removing the final page (0.7935ms)
+✔ title search supports Chinese and identifiers without reading body, filename or project names (0.9421ms)
+✔ known metadata remains known; unknown attachment/time data is not invented as zero (0.7914ms)
+✔ local whole-project selection requires digest-bound completion and ignores only the title filter (1.4359ms)
+✔ web sources can never claim whole-project even with fabricated complete/digest flags (2.8074ms)
+✔ incomplete, unknown-membership, unclassified and digest-mismatched archives reject whole-project (2.4906ms)
+✔ frozen range is immutable, belongs to this model and does not adopt later source additions (1.011ms)
+✔ a changed catalogue cannot mint a new whole-project claim, while old fixed selections stay frozen (0.8007ms)
+✔ changed identity or missing/reassigned IDs fail atomically before shared choices change (2.0139ms)
+✔ source replacement clears old selection and invalidates old confirmation even for identical IDs (1.0942ms)
+✔ duplicate/invalid IDs are rejected without destroying prior source or selection (1.1979ms)
+✔ same-name projects remain independent; unknown membership is not unclassified (0.5673ms)
+✔ already-discovered long project identifiers are not silently truncated or capped (0.6293ms)
+✔ selection reconciles external Set changes and never retains bodies or source credentials (0.6752ms)
+✔ host restart keeps a sealed package but deletes unfinished capture; it queries before an explicit resume (66.5988ms)
+✔ host restart reconciles an accepted receipt without re-uploading, even when its final response was lost (5.2916ms)
+✔ disconnecting the Reader account removes its retained plaintext package without a network request (4.3248ms)
+✔ discard and resume are serialized; a cancelled package cannot be uploaded by a waiting check (10.2027ms)
+✔ a discard waiting behind an accepted upload cannot cancel or overwrite its receipt (8.0088ms)
+✔ check re-reads the ledger after its local lock, not the earlier panel snapshot (4.0267ms)
+✔ startup cleanup keeps a package sealed after the original ledger snapshot but before the OPFS lock (3.0994ms)
+✔ device cleanup re-reads sealed packages after the OPFS lock instead of using an old retained set (3.0737ms)
+✔ discard reconciles an accepted receipt without deleting the server import (4.2639ms)
+✔ a failed server cancellation preserves the resumable package and binding (5.1108ms)
+✔ file reader never caches a large record and paginated readers share a bounded window (18.0893ms)
+✔ twelve 3MiB pages do not retain twelve decoded parser buffers after GC (933.1801ms)
+ℹ tests 49
+ℹ suites 0
+ℹ pass 49
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2548.9857
+EXIT_CODE=0
+SOURCE_CHANGES_DURING_TEST=0

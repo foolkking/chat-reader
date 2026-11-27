@@ -1,0 +1,45 @@
+✖ another selection cannot silently replace an unfinished durable plan (240.9602ms)
+✖ resume wakes the host even when every item already has an active server receipt (162.8078ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 936.9517
+
+✖ failing tests:
+
+test at tests\reader-center-lifecycle.test.cjs:54:1
+✖ another selection cannot silently replace an unfinished durable plan (240.9602ms)
+  AssertionError [ERR_ASSERTION]: the old fixed selection must survive
+  + actual - expected
+
+  + 'cbc1c31a-bdc6-49f2-a7c2-578b8672204a'
+  - 'old-plan'
+
+      at TestContext.<anonymous> (<EXTENSION_REPO>\tests\reader-center-lifecycle.test.cjs:58:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'cbc1c31a-bdc6-49f2-a7c2-578b8672204a',
+    expected: 'old-plan',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\reader-center-lifecycle.test.cjs:63:1
+✖ resume wakes the host even when every item already has an active server receipt (162.8078ms)
+  AssertionError [ERR_ASSERTION]: queue continuation must not depend on a previous view opening the host
+      at TestContext.<anonymous> (<EXTENSION_REPO>\tests\reader-center-lifecycle.test.cjs:69:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -1,0 +1,128 @@
+{
+  "recorded_at": "2026-11-25T12:24:45.451248+00:00",
+  "base_sha": "64577eafaf06ae51b03c5c1b2f9c3175991467c7",
+  "boundary": "uncommitted candidate; no production writes, release or deployment; synthetic-only checks",
+  "source_lf_sha256": {
+    "apps/api/app/services/editing/attachment_reference_rewriter.py": "5b809a7106044d4f598962a0e18e37f52ee4cb1c0b0cd1a9de89dbb152c0d159",
+    "apps/api/app/services/editing/merge_attachment_recovery.py": "bbe20ddcb57b8af050f7288ee94f80844f476b33325ffd0267986db5a6347b23",
+    "apps/api/app/services/editing/conversation_merge_service.py": "c516958bfb8f513c477c5ecaa10fe2649cb17be38ea6f123d3c113637169a644",
+    "apps/api/app/services/editing/attachment_integrity.py": "98a73b317cdcedcedf6e49c3484ef907d75e60b206dd071400018dc7f5732ccb",
+    "apps/api/app/services/editing/message_edit_service.py": "8bae2df6df6a44091ee2fa84be6103dca63309f08b0a18bdf3976f88da7d3884",
+    "apps/api/app/services/background_jobs.py": "086d467f2782de49782fd9ed0608bcff6cc38a086c7c651a63b718166e7db62a",
+    "apps/web/features/import/import-task-monitor.tsx": "b321c38375d8fbb8008a2959f2e6bb9eeb0abb6b23e747a69fe0999310430ecc",
+    "apps/web/lib/types.ts": "a2606ef5820db39f5139c856197a710761995cec4a9c27a5dc4515e457f13eaf",
+    "scripts/ux/merge-attachment-result-browser.mjs": "622accaea01d8ad4c9aed02b15a597e98a5c6c57b709a221726e890125c3a7fc"
+  },
+  "tests": [
+    {
+      "name": "merge plus related import/edit/split/reference regressions",
+      "passed": 378,
+      "failed": 0,
+      "seconds": 880.93,
+      "evidence": "merge-frozen-regression3.log",
+      "boundary": "Before final resolution_status counter correction; exact affected paths rerun below"
+    },
+    {
+      "name": "exact final merge API/helper/parser/history suite",
+      "passed": 162,
+      "failed": 0,
+      "seconds": 331.05,
+      "evidence": "merge-final-exact.log"
+    },
+    {
+      "name": "PostgreSQL API plus fresh execution children",
+      "passed": 50,
+      "failed": 0,
+      "evidence": "postgres-worker-final.json"
+    },
+    {
+      "name": "unresolved owned asset summary, red to green",
+      "passed": 1,
+      "failed": 0,
+      "evidence": "unresolved-asset-green.json"
+    },
+    {
+      "name": "Edge mounted task result",
+      "passed": 176,
+      "failed": 0,
+      "layouts": 16,
+      "evidence": "mounted-result.json",
+      "boundary": "Synthetic task receipts in desktop Edge, not phone hardware or production"
+    },
+    {
+      "name": "Python CI source/collection gates",
+      "passed": 33,
+      "failed": 0,
+      "seconds": 4.91,
+      "evidence": "ci-scheduling-exact.log"
+    },
+    {
+      "name": "Node CI/task-state gates",
+      "passed": 124,
+      "failed": 0,
+      "evidence": "ci-node-controls.log"
+    },
+    {
+      "name": "Playwright release source controls",
+      "passed": 88,
+      "failed": 0,
+      "evidence": "release-source-controls-final.log",
+      "boundary": "Source controls, not browser end-to-end"
+    },
+    {
+      "name": "corepack pnpm run lint",
+      "exit_code": 0,
+      "evidence": "web-lint-final.log"
+    },
+    {
+      "name": "corepack pnpm run typecheck",
+      "exit_code": 0,
+      "evidence": "web-typecheck-final.log"
+    }
+  ],
+  "collection": {
+    "total": 7418,
+    "expected_passed": 7415,
+    "unchanged_allowed_skips": 3,
+    "added_cases": 151
+  },
+  "retained_failures": [
+    {
+      "evidence": "api-cross-paragraph-red.log",
+      "reason": "six literal/live projected-block cases failed before source-coordinate context"
+    },
+    {
+      "evidence": "merge-recovery-regression2.log",
+      "reason": "340 passed plus eight new-fixture setup errors: client fixture not imported; fixed and rerun"
+    },
+    {
+      "evidence": "merge-recovery-extra-final.log",
+      "reason": "34 passed plus four fixture filename errors: basename not archive path; fixed and rerun"
+    },
+    {
+      "evidence": "unresolved-asset-red.json",
+      "reason": "available but unresolved attachment was not counted as needing review; fixed and rerun"
+    },
+    {
+      "evidence": "sagan/20261125T115742Z-4eef9f/report.json",
+      "reason": "harness did not finish deferred analysis before requiring READY; exact task progression fixed"
+    },
+    {
+      "evidence": "sagan/20261125T120011Z-eb4dbb/report.json",
+      "reason": "Harness expected a different denial code; existing source ownership admission returns 400 with generic not-found detail. Final check requires exact denial detail and unchanged job/conversation rows, plus independent foreign attachment download denial."
+    },
+    {
+      "evidence": "sagan/20261125T121624Z-7aca45/report.json",
+      "reason": "47 checks passed; final cold child could not import local psycopg binary; retained and fresh full run succeeded without application change"
+    }
+  ],
+  "temp_evidence_root": "E:\\chat-reader-temp\\merge-failure-20261125",
+  "not_verified": [
+    "production retry",
+    "production deployment",
+    "640 MiB production performance",
+    "real mobile devices"
+  ],
+  "migration_head": "20261125_0065",
+  "merge_migration_added": false
+}

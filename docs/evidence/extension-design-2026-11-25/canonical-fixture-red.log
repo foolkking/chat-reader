@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "<TASK_EVIDENCE>\main\verify-real.py", line 40, in <module>
+    check(f"{c.external_source_id}: source text retained", [v.plain_text for _, v in messages] == ["Synthetic question", "Synthetic answer"])
+  File "<TASK_EVIDENCE>\main\verify-real.py", line 25, in check
+    assert ok, name
+AssertionError: source-a-assets: source text retained

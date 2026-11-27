@@ -459,6 +459,16 @@ function hasItemFailures(task: BackgroundTaskRead): boolean {
   return Array.isArray(task.result.failed) && task.result.failed.length > 0;
 }
 
+function mergeAttachmentRecovery(task: BackgroundTaskRead) {
+  const recovery = task.result.attachment_recovery;
+  if (task.status !== "committed" || task.job_type !== "conversation_merge" || !recovery) return null;
+  const count = (value: number) => Number.isSafeInteger(value) && value > 0 ? value : 0;
+  const missing = count(recovery.missing_attachments);
+  const repaired = count(recovery.repaired_occurrences);
+  const unlocated = count(recovery.unlocated_occurrences);
+  return { missing, repaired, unlocated, needsReview: missing > 0 || unlocated > 0 };
+}
+
 function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCheck, control, busy = false }: { busy?: boolean; task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void; onCancel?: () => void; onDismiss?: () => void; onCheck?: () => void; control?: TaskControl }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -493,6 +503,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
   const itemFailures = Array.isArray(task.result.failed) ? task.result.failed.length : 0;
   const completedItems = taskCompletedItems(task);
   const partial = committed && itemFailures > 0;
+  const attachmentRecovery = mergeAttachmentRecovery(task);
   const active = ["queued", "processing", "cancelling"].includes(task.status);
   const progress = Math.max(0, Math.min(100, task.progress));
   const format = taskFormatLabel(task, zh);
@@ -513,7 +524,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
       </div>
       {source ? <p className="mt-1 break-words text-sm text-primary">{source}</p> : null}
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className={failed ? "text-[var(--danger)]" : partial || cleanupPending || sourceCleanupPending ? "text-[var(--warning)]" : ""}>{task.execution_state === "stopping" ? (zh ? "正在停止并核对结果" : "Stopping and checking outcome") : partial ? (zh ? "部分完成" : "Partially completed") : phaseLabel(task, zh)}</span>
+        <span className={failed ? "text-[var(--danger)]" : attachmentRecovery?.needsReview ? "text-[var(--color-semantic-warning)]" : partial || cleanupPending || sourceCleanupPending ? "text-[var(--warning)]" : ""}>{task.execution_state === "stopping" ? (zh ? "正在停止并核对结果" : "Stopping and checking outcome") : partial ? (zh ? "部分完成" : "Partially completed") : phaseLabel(task, zh)}</span>
         {validTimestamp ? <time dateTime={timestamp} title={fullActivityTime(timestamp, resolvedLocale)} aria-label={`${zh ? "提交于" : "Submitted"} ${fullActivityTime(timestamp, resolvedLocale)}`} className="tabular-nums">{new Intl.DateTimeFormat(resolvedLocale, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(timestamp))}</time> : null}
         {task.total_items > 0 && (active || task.total_items > 1) ? <span className="tabular-nums">{task.processed_items} / {task.total_items}</span> : null}
       </div>
@@ -561,6 +572,18 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
         {onRetry ? <button type="button" disabled={busy} onClick={onRetry} className="min-h-11 font-medium underline">{zh ? "重试文件清理" : "Retry file cleanup"}</button> : null}
       </div> : null}
       {partial ? <p className="mt-2 text-[var(--warning)]" role="status">{zh ? `${completedItems} \u9879\u5b8c\u6210 \u00b7 ${itemFailures} \u9879\u5931\u8d25` : `${completedItems} completed \u00b7 ${itemFailures} failed`}</p> : null}
+      {attachmentRecovery && (attachmentRecovery.needsReview || attachmentRecovery.repaired > 0) ? (
+        <div role="status" data-testid="task-merge-attachment-recovery" className={`mt-2 min-w-0 space-y-1 break-words leading-5 ${attachmentRecovery.needsReview ? "text-[var(--color-semantic-warning)]" : ""}`}>
+          {attachmentRecovery.needsReview ? <>
+            <p>{zh ? "正文和原对话均已保留。请打开合并后的对话核对附件。" : "Message content and original conversations are retained. Open the merged conversation to review attachments."}</p>
+            <p>{[
+              attachmentRecovery.missing > 0 ? (zh ? `缺失附件 ${attachmentRecovery.missing} 个` : `Missing attachments: ${attachmentRecovery.missing}`) : null,
+              attachmentRecovery.unlocated > 0 ? (zh ? `未定位附件关联 ${attachmentRecovery.unlocated} 处` : `Unlocated attachment references: ${attachmentRecovery.unlocated}`) : null,
+              attachmentRecovery.repaired > 0 ? (zh ? `已修复 ${attachmentRecovery.repaired} 处附件关联` : `Attachment references repaired: ${attachmentRecovery.repaired}`) : null,
+            ].filter(Boolean).join(" · ")}</p>
+          </> : <p>{zh ? `已修复 ${attachmentRecovery.repaired} 处附件关联` : `Attachment references repaired: ${attachmentRecovery.repaired}`}</p>}
+        </div>
+      ) : null}
       {control ? <div className="mt-2 border-l-2 border-ui pl-3" role="status">
         <p>{control.state === "pending" ? (zh ? "正在提交操作…" : "Submitting…")
           : control.state === "checking" ? (zh ? "正在核对原任务…" : "Checking the original task…")
@@ -686,6 +709,7 @@ function taskCompletedItems(task: BackgroundTaskRead): number {
 }
 
 function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
+  if (mergeAttachmentRecovery(task)?.needsReview) return zh ? "已合并，附件待核对" : "Merged; attachments need review";
   if (task.status === "cancelled" && task.result.source_retained === true) return zh ? "已停止 · 来源保留" : "Stopped · sources retained";
   if (task.phase === "waiting_resources") return zh ? "等待可用资源" : "Waiting for resources";
   if (task.phase === "resource_paused") return zh ? "资源等待已暂停" : "Resource wait paused";

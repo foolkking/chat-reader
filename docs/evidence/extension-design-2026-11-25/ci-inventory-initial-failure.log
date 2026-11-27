@@ -1,0 +1,94 @@
+✖ product coverage is additive; frozen scheduling and original skips remain identical (5.4598ms)
+✔ coverage extensions reject unreviewed old files, shard bounds, counts, hashes and skip policy (29.6973ms)
+✔ reviewed Settings navigation adaptation preserves all original native cases and deadlines (64.4433ms)
+✔ two exact native Settings shards produce the original470-case evidence (11.6129ms)
+✔ runtime timeout mapping must contain the exact selected case IDs and exact original limits (8.2698ms)
+✔ frozen Settings source binding cannot be replaced by a synthetic470 collection (41.2157ms)
+✔ Settings merge rejects one missing shard (0.5327ms)
+✔ Settings merge rejects one extra shard (1.8352ms)
+✔ Settings merge rejects old --list instead of actual execution (0.7626ms)
+✔ Settings merge rejects a count-only470 pass without attempts (0.808ms)
+✔ Settings merge rejects duplicate case within one shard (1.0626ms)
+✔ Settings merge rejects duplicate case across shards (3.09ms)
+✔ Settings merge rejects a substituted case ID (1.3788ms)
+✔ Settings merge rejects a missing original case (1.5522ms)
+✔ Settings merge rejects a repeated project case (1.1451ms)
+✔ Settings merge rejects a replaced source location (1.3114ms)
+✔ Settings merge rejects an increased per-case deadline (1.4587ms)
+✔ Settings merge rejects a failed report-level error (0.4076ms)
+✔ Settings merge rejects an incorrect shard number (0.9244ms)
+✔ Settings merge rejects an incorrect shard total (0.4102ms)
+✔ Settings merge rejects a full execution reused as collection (0.2613ms)
+✔ Settings merge rejects a sharded full collection (0.2256ms)
+✔ Settings merge rejects a changed native version (0.5408ms)
+✔ Settings merge rejects concurrent workers in one physical fixture (1.8774ms)
+✔ Settings merge rejects fully parallel cases in one fixture (0.6553ms)
+✔ Settings merge rejects a new global deadline (0.6184ms)
+✔ Settings merge rejects early max-failures (0.6036ms)
+✔ Settings merge rejects configured retries (0.5233ms)
+✔ Settings merge rejects changed original test deadline (0.5635ms)
+✔ Settings merge rejects a skipped expected failure (0.8623ms)
+✔ Settings merge rejects a retry after a prior failure (1.1657ms)
+✔ Settings merge rejects a lone passed retry (1.1782ms)
+✔ Settings merge rejects unreported failed statistics (1.6187ms)
+✔ Settings merge rejects boolean numeric counts (0.768ms)
+✔ Settings merge rejects missing merged native case (2.4155ms)
+✔ Settings merge rejects merged attempt not from either original shard (2.8665ms)
+✔ Settings merge rejects incorrectly serial-looking merged worker total (1.7977ms)
+✔ Settings merge rejects missing physical merged project (1.7087ms)
+✔ Settings merge rejects an extra merged project (2.0966ms)
+✔ Settings merge rejects a different merged project name (1.4459ms)
+✔ Settings merge rejects concurrent actual workers in a merged physical project (1.3947ms)
+✔ Settings merge rejects configured retries in the second merged project (1.5014ms)
+✔ Settings merge rejects an increased deadline in the second merged project (1.6771ms)
+✔ Settings merge rejects a substituted merged case project (3.1341ms)
+✔ Settings merge rejects a native project ID invented by the merged report (2.177ms)
+✔ Settings merge rejects an actual failed attempt (0.7535ms)
+✔ Settings merge rejects an actual timedOut attempt (0.6345ms)
+✔ Settings merge rejects an actual skipped attempt (0.5824ms)
+✔ Settings merge rejects an actual interrupted attempt (0.6406ms)
+✔ Web merge preserves every original gate and legitimate conditional skips (0.7805ms)
+✔ Web merge rejects inherited source (0.188ms)
+✔ Web merge rejects missing gate (0.1041ms)
+✔ Web merge rejects duplicate gate (0.1006ms)
+✔ Web merge rejects gate in the wrong shard (0.1217ms)
+✔ Web merge rejects incomplete report (0.1356ms)
+✔ Web merge rejects nonexecuted gate (0.1456ms)
+✔ Web merge rejects all skipped gate (0.1735ms)
+✔ Web merge rejects failed native status (0.1989ms)
+✔ Web merge rejects misreported counts (0.134ms)
+✔ Web merge rejects boolean counts (0.1004ms)
+✔ Web merge rejects omitted count fields (0.0858ms)
+✔ artifact consumer preserves raw evidence and rejects ambiguous or linked summaries and overwrites (331.6394ms)
+✔ genuine pinned Playwright blob merge retains IDs and attempts, but four controls cannot release470 (3805.1816ms)
+✔ four genuine whole-file blob reports preserve every native attempt and reject wrong assignment or retry (5963.9408ms)
+✔ independent restore requires its actual original180-second native pass, never a count-only summary (0.9865ms)
+ℹ tests 65
+ℹ suites 0
+ℹ pass 64
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10371.1233
+
+✖ failing tests:
+
+test at scripts\ci\quality-coverage-extension.test.mjs:8:1
+✖ product coverage is additive; frozen scheduling and original skips remain identical (5.4598ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  7267 !== 7116
+
+      at TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ci/quality-coverage-extension.test.mjs:14:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 7267,
+    expected: 7116,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

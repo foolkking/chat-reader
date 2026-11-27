@@ -1,0 +1,28 @@
+{
+  "synthetic_only": true,
+  "database": "merge_html_review",
+  "caller_lf_sha256_before": "43b4fac82cd44a70717abe320958737d8ccd736164fb38469d8436f6597db593",
+  "children": [
+    {
+      "kind": "job",
+      "job_id_synthetic": "102e1db8-e402-4611-85b2-c8d7b8bb7a13",
+      "exit_code": 0,
+      "status": "committed",
+      "phase": "completed",
+      "finished_control": true,
+      "target_job": true
+    }
+  ],
+  "task_status": "committed",
+  "summary": {
+    "missing_attachments": 0,
+    "repaired_occurrences": 0,
+    "unlocated_occurrences": 0
+  },
+  "target_resolution_status": "unresolved",
+  "target_content_url_null": true,
+  "download_status": 409,
+  "pass": false,
+  "original_resolution_restored": true,
+  "caller_lf_sha256_after": "43b4fac82cd44a70717abe320958737d8ccd736164fb38469d8436f6597db593"
+}

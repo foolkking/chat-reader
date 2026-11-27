@@ -1035,6 +1035,7 @@ def process_background_job(
                     "source_conversation_ids": [str(value) for value in conversation_ids],
                     "title": result.conversation.display_title,
                     "message_count": result.message_count,
+                    "attachment_recovery": result.attachment_recovery,
                 }
                 processed_items = result.message_count
                 report("publishing", 99, processed_items, processed_items)
@@ -1138,6 +1139,8 @@ def process_background_job(
                     "byte_size": artifact.byte_size,
                     "download_url": f"/api/exports/{artifact.id}/download",
                 }
+                if payload.get("export_format") == "context_package":
+                    job_result["context_delivery"] = artifact.context_delivery
                 processed_items = job.total_items
             elif job.job_type == "conversation_auto_clean":
                 from app.services.editing.message_edit_service import auto_clean_conversation

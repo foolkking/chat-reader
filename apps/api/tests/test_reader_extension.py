@@ -99,16 +99,83 @@ def paired(auth_client, monkeypatch, tmp_path):
 def test_scope_rotation_and_revocation(paired):
     c,h,grant=paired
     assert c.get(EXT+"/capabilities",headers=h).json()["account_discovery"] is False
+    assert c.get(EXT+"/capabilities",headers=h).json()["web_import_project"] is True
     assert c.get(EXT+"/projects",headers=h).status_code == 200
     assert c.get(EXT+"/files",headers=h).status_code == 200
     assert c.get(EXT+"/conversations",headers=h).status_code == 200
     assert c.get(EXT+"/projects").status_code in (401,403)
     assert c.get(EXT+"/projects",headers={**h,"Origin":"https://example.invalid"}).status_code == 403
+    path = "/api/extension-devices/import-project"
+    body = {"device_id": grant["device_id"], "expected_user_id": grant["user_id"], "name": "Synthetic project"}
+    assert c.post(EXT+"/projects", json=body, headers=h).status_code == 405
+    assert c.post(path, json=body, headers=h).status_code == 403
+    assert c.post(path, json={**body, "name": " \t "}).status_code == 422
+    confirmed = c.post(path, json=body)
+    assert confirmed.status_code == 200 and confirmed.json()["client"] == CLIENT
+    assert c.post(path, json={**body, "name": "  Synthetic project  "}).json() == confirmed.json()
+    pid = confirmed.json()["id"]
+    assert [p["id"] for p in c.get(EXT+"/projects",headers=h).json() if p["name"] == body["name"]] == [pid]
+    assert c.patch("/api/projects/"+pid, json={"is_archived": True}).status_code == 200
+    assert c.post(path, json=body).status_code == 409
     assert c.delete("/api/extension-devices/"+grant["device_id"]).status_code == 204
+    assert c.post(path, json={**body, "name": "After revocation"}).status_code == 403
     c.cookies.clear()
     assert c.get("/api/preferences",headers=h).status_code == 401
     assert c.get(EXT+"/projects",headers=h).status_code == 401
     assert c.post(EXT+"/token",json={"client":CLIENT,"refresh":grant["refresh_token"]},headers=h).status_code==401
+
+
+def test_short_code_requires_both_website_consent_and_initiating_device(paired):
+    from datetime import datetime, timedelta, timezone
+    from app.models.reader_extension import ExtensionPairing
+    c,h,grant=paired
+    origin={"Origin":h["Origin"]}
+    start={"client":CLIENT,"device_name":"Chat Reader · Edge"}
+    assert c.post(EXT+"/pair/start",json=start).status_code==403
+    r=c.post(EXT+"/pair/start",headers=origin,json=start).json()
+    ticket={"client":CLIENT,"device_code":r["device_code"]}
+    code={"expected_user_id":grant["user_id"],"code":r["code"]}
+    assert "access_token" not in r and r["expires_in"]==600
+    assert c.post(EXT+"/pair/poll",headers=origin,json={**ticket,"device_code":r["code"]}).status_code==422
+    assert c.post(EXT+"/pair/poll",headers=origin,json=ticket).json()=={"state":"pending"}
+    assert c.post(EXT+"/pair/poll",headers=origin,json=ticket).status_code==429
+    web="/api/extension-devices/pair/"
+    assert c.post(web+"approve",json={**code,"expected_user_id":str(uuid.uuid4())}).status_code==401
+    assert c.post(web+"preview",json=code).json()["device_name"]==start["device_name"]
+    assert c.post(web+"approve",json=code,headers={"Origin":"https://elsewhere.invalid"}).status_code==403
+    assert c.post(web+"approve",json=code).status_code==204
+    assert c.post(web+"approve",json=code).status_code==404
+    with auth_middleware.SessionLocal() as db:
+        row=db.query(ExtensionPairing).one();row.next_poll=datetime.now(timezone.utc)-timedelta(seconds=1);db.commit()
+    new=c.post(EXT+"/pair/poll",headers=origin,json=ticket).json()
+    assert new["user_id"]==grant["user_id"] and new["device_id"]!=grant["device_id"]
+    assert c.post(EXT+"/pair/poll",headers=origin,json=ticket).status_code==410
+    assert c.delete("/api/extension-devices/"+new["device_id"]).status_code==204
+    assert c.get(EXT+"/projects",headers={**origin,"Authorization":"Bearer "+new["access_token"]}).status_code==401
+    for cancel in (True,False):
+        attempt=c.post(EXT+"/pair/start",json=start,headers=origin).json()
+        req={**ticket,"device_code":attempt["device_code"]}
+        if cancel:
+            assert c.post(EXT+"/pair/cancel",json=req,headers=origin).status_code==200
+        else:
+            with auth_middleware.SessionLocal() as db:
+                db.query(ExtensionPairing).one().expires_at=datetime.now(timezone.utc)-timedelta(seconds=1);db.commit()
+        assert c.post(EXT+"/pair/poll",json=req,headers=origin).status_code==410
+        assert c.post(web+"approve",json={**code,"code":attempt["code"]}).status_code==404
+
+
+def test_device_quick_settings_preserve_web_preset_and_reject_stale_changes(paired):
+    c,h,_=paired
+    path=EXT+"/context/options"
+    before=c.get(path,headers=h).json()
+    assert before["attachments"]=="include" and before["continuation"]=="auto" and before["preset_id"] is None
+    args=dict(preset_id=None, revision=0,include_attachments=False,include_continuation=False)
+    changed=c.put(path,json=args,headers=h)
+    assert changed.status_code==200 and changed.json()["attachments"]=="metadata_only"
+    assert c.get("/api/preferences/context-quick-preset").json()["preset_id"]==changed.json()["preset_id"]
+    assert c.put(path,json=args,headers=h).status_code==409
+    skill=c.get(EXT+"/context/skill",headers=h)
+    assert skill.status_code==200 and (skill.headers["content-type"]=="application/zip" or skill.json()=={"builtin":"/skills/context-acquisition.zip"})
 
 
 def test_catalog_recent_pins_full_paging_and_unique_live_attachment_hits(paired):
@@ -152,6 +219,14 @@ def test_catalog_recent_pins_full_paging_and_unique_live_attachment_hits(paired)
         assert a["project_name"]==b["project_name"]=="Synthetic catalog" and a["attachment_match"] and b["attachment_match"]
         assert a["attachment_count"]==2 and a["match_attachment_id"] is None
         assert b["attachment_count"]==1 and b["match_attachment_id"] is not None
+    by_project = get(match="names", q="THEtic CAT", limit=40)
+    remaining = get(match="names", q="THEtic CAT", offset=40)
+    assert by_project["has_more"] and not remaining["has_more"]
+    assert [x["id"] for x in by_project["items"]+remaining["items"]] == list(map(str, original[:42]))
+    assert by_project["items"][0]["attachment_count"] == 2
+    for term in ("chart.csv", "ocean floor", "%", "_"):
+        assert get(match="names", q=term)["items"] == []
+    assert [x["id"] for x in get(match="names", q="shelf 42", view="pinned", scope="unclassified")["items"]] == [str(original[42])]
     with auth_middleware.SessionLocal() as db:
         for ix in (2,42):db.add(RecentItem(conversation_id=original[ix],last_opened_at=stamp+timedelta(hours=ix)))
         db.commit()
@@ -312,6 +387,11 @@ def test_foreign_library_file_organize_and_context_are_not_capabilities(paired):
     project=c.post("/api/projects",json={"name":"Separate private project"})
     assert project.status_code==201
     pid=project.json()["id"]
+    for owner in (grant["user_id"], c.get("/api/auth/session").json()["user_id"]):
+        assert c.post("/api/extension-devices/import-project", json={
+            "device_id":grant["device_id"], "expected_user_id":owner, "name":"Wrong account project"
+        }).status_code == 403
+    assert all(p["name"]!="Wrong account project" for p in c.get("/api/projects").json())
     assert c.get(EXT+"/conversations?q=distinctive",headers=h).json()["items"]==[]
     assert all(p["id"]!=pid for p in c.get(EXT+"/projects",headers=h).json())
     assert c.get(f"{EXT}/conversations?project_id={pid}",headers=h).status_code==404

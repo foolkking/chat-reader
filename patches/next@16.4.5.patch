@@ -1,0 +1,28 @@
+diff --git a/dist/esm/server/lib/router-utils/proxy-request.js b/dist/esm/server/lib/router-utils/proxy-request.js
+index 44ee8af36de7e4e7d8a6888625ba1fe36e9d1ab4..b5776d1877b6f22f4376a3af1a77b7f139cb17d7 100644
+--- a/dist/esm/server/lib/router-utils/proxy-request.js
++++ b/dist/esm/server/lib/router-utils/proxy-request.js
+@@ -101,6 +101,9 @@ export async function proxyRequest(req, res, parsedUrl, upgradeHead, reqBody, pr
+         // (e.g. an abrupt client disconnect) even when an `error` listener is
+         // registered.
+         proxy.web(req, res, {
++            // Reader API requests use a fresh connection so an expired upstream socket cannot lose a read or write.
++            agent: target.pathname === '/api' || target.pathname.startsWith('/api/') ||
++                (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') ? false : undefined,
+             buffer: reqBody
+         }).catch(onProxyError);
+     }
+diff --git a/dist/server/lib/router-utils/proxy-request.js b/dist/server/lib/router-utils/proxy-request.js
+index 62acf58d72bb8ee101fbff98d5da1b62d587598c..1c5d0d04c26cee68f1d22bee87458abf251ce12f 100644
+--- a/dist/server/lib/router-utils/proxy-request.js
++++ b/dist/server/lib/router-utils/proxy-request.js
+@@ -116,6 +116,9 @@ async function proxyRequest(req, res, parsedUrl, upgradeHead, reqBody, proxyTime
+         // (e.g. an abrupt client disconnect) even when an `error` listener is
+         // registered.
+         proxy.web(req, res, {
++            // Reader API requests use a fresh connection so an expired upstream socket cannot lose a read or write.
++            agent: target.pathname === '/api' || target.pathname.startsWith('/api/') ||
++                (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') ? false : undefined,
+             buffer: reqBody
+         }).catch(onProxyError);
+     }

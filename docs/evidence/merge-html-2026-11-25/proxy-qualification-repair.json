@@ -1,0 +1,127 @@
+{
+  "at": "2026-11-25T14:48:39.040331+00:00",
+  "source_base": "33f02229d410c1b4a73ad7e7627536cdbbd25211",
+  "verified_changes": {
+    "patches/next@16.4.5.patch": "f811303b16e23cc55effa3ad0957ea739563161c16de3f6d377bd83df37f7cba",
+    "package.json": "d30e1c5acd0946549505b71fd3d0c1b889cb8712180c991f1b6f2181be99acce",
+    "pnpm-lock.yaml": "d4046fc8b40448584a4d59fefa98dd97ccdc40117661bf15975247d9062c6f79",
+    "scripts/ux/upstream-mutation-proxy.test.mjs": "77aa2f31e1fd43d1defb656f64493a5718d2221637e9b542a8ec09bfafa966e5"
+  },
+  "failed_tag": {
+    "tag": "v0.1.8",
+    "sha": "0411d4e140e7854c6c489afe21c3ec8a5afda7fa",
+    "parent": 45619810971,
+    "qualification": 45619843202,
+    "attempt": 1,
+    "job": 139224752776,
+    "artifact": 15026186281,
+    "archive_sha256": "587e7da38e021448bee049621c8fb95847cd576454dfc6dd14ec1fdaeec8c06b",
+    "browser_passed": 123,
+    "browser_failed": 1,
+    "cause_boundary": "Upstream ECONNRESET without corresponding API DELETE. Socket identity not captured in CI."
+  },
+  "tcp_before": {
+    "passed": 7,
+    "failed": 4,
+    "exit": 1
+  },
+  "tcp_after": {
+    "node20_windows": 11,
+    "node24_windows": 11,
+    "node22_linux": 11,
+    "skipped": 0,
+    "automatic_write_retry": false
+  },
+  "full_node": {
+    "passed": 2623,
+    "failed": 0,
+    "skipped": 0,
+    "exit": 0
+  },
+  "linux_build": {
+    "at": "2026-11-25T21:59:07.8849454+08:00",
+    "finish": "2026-11-25T22:04:32.8912135+08:00",
+    "exit": 0
+  },
+  "browser": {
+    "stats": {
+      "startTime": "2026-11-25T14:34:03.828Z",
+      "duration": 777601.971,
+      "expected": 124,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "receipt": {
+      "start": "2026-11-25T22:34:02.1654507+08:00",
+      "finish": "2026-11-25T22:47:01.5034021+08:00",
+      "exit": 0,
+      "set": "shard",
+      "webImage": "sha256:122344499f6608a53c48063105f30881ed793c4924c0bfa787c5675f1f208439",
+      "browser": "Microsoft Edge",
+      "config": "Original assertions, original limits, isolated Linux Web, PostgreSQL, API and worker"
+    },
+    "stack": {
+      "start": "2026-11-25T14:33:05.778588+00:00",
+      "purpose": "synthetic-local-only",
+      "api_source": "0411d4e140e7854c6c489afe21c3ec8a5afda7fa",
+      "network": "cr-proxy-linux-1125",
+      "production_touched": false,
+      "api_image": "sha256:e0ddb7658e5ca26861721b28b0c602ecdff5c87b157235a00c3b086c7317010a",
+      "postgres": "968d9bc0f6df4c4df55fc86fc01bf93be90e7d6f8e2d670f812270c32b92362b",
+      "api": "26616df178b2c61bfec78de387216185f0cd753c4c8495eb43d3f5ee1783c013",
+      "worker": "3f2d70051a4280621b5fd5c2cdd6d14a8e765a87a58fead6d08ef708498b3a55",
+      "web": "b833e91aff9de2438812813437e7dbaaf88ba5a12e42f7925dfdc83cadac8323",
+      "finish": "2026-11-25T14:33:24.541101+00:00",
+      "web_image": "sha256:122344499f6608a53c48063105f30881ed793c4924c0bfa787c5675f1f208439",
+      "health": 200,
+      "test_source_changed": false
+    },
+    "files": [
+      "release-mutation-lifecycle.spec.ts",
+      "ux-whole-site.spec.ts",
+      "ux-recovery-followup.spec.ts",
+      "recovery-consistency.spec.ts",
+      "manual-markdown-fidelity.spec.ts"
+    ],
+    "assertions_and_timeouts_unchanged": true,
+    "browser": "Microsoft Edge desktop; not a mobile-device acceptance"
+  },
+  "retained_failures": [
+    "Evidence recorder initially expected TAP markers; the full Node run used the native spec reporter. Read the actual 2623/0/0 counters without changing tests.",
+    "Three Windows production-build attempts exhausted memory; pinned Linux Docker build passed.",
+    "Initial focus process exited during memory pressure; a second used missing test-auth runtime environment. Corrected focus passed.",
+    "First full browser run interrupted after test 78; Docker-to-Windows ETIMEDOUT/ENETUNREACH and failed cleanup caused fixture duplicates. Original logs and traces retained.",
+    "Standalone Node22 runtime exercised 10 HTTP cases successfully but lacks unused ESM source required by case 11. Full pinned Node22 dependencies image subsequently passed all 11."
+  ],
+  "local_evidence_root": "E:\\chat-reader-temp\\merge-failure-20261125\\proxy-browser-regression",
+  "evidence_sha256": {
+    "results-shard2-linux.json": "5340ec8663488e783cd04ebcf05ef0d3264eb3df3be63d6eec5e07531e80ba5c",
+    "browser-shard2-linux.json": "ee5cefbf46795819e2a6c31f10feb7661772e4b38ebacdb19df12e8ceb3cf0c2",
+    "browser-shard2-linux.log": "f02c18999ef077949f567c668adf5e830e935dfebef97c1389cf714e096d1f88",
+    "linux-stack.json": "a75c9104f7d7a111378e29687300d5829d05a8757980797443d2df93b4b24555",
+    "linux-migration.log": "327f9bb763d75896f168cfb364bcc0e58ab3d3edd53ee863fa3293db35f56b0d",
+    "ux-node-all.log": "a9c78a65d7158292bef13184b5884bb998ceb3d4308abd8ed6ca05b3a6522c60",
+    "ux-node-all.json": "ca9dd23a77fd29aec1b569cf7f33e70cfc9191850ad020460a2046956404bdce",
+    "proxy-node22-deps-2.log": "ed305ab325ca7f61e7e26a4654e50ea9f21a15e1033d167fd956f719ef88c930",
+    "proxy-node22-deps-2.json": "c4fa413710a718ecb09e9bb977ce62c05163fdffe8df82044645be93abcf6038",
+    "docker-web-build.log": "eda6b159e44de9ecd0f30c2ce67dcb3bb1f501f76525108116fccfff1c7e873c",
+    "docker-web-build.json": "4e253776f24ec89110a23df30c34d4fa263e2ea570a3bfbfb9a6c284d9303f34",
+    "browser-shard1.log": "480b9e09a6fa900280789e399bf654509772bf6587dbcbd5e4bfc05294671a18",
+    "browser-shard1-interrupted.json": "6d776aabb7a20ec15db313a44a11a0849166a4eaed403447cedd0338f12b27a3",
+    "web-shard1-final.log": "77c3fe6b078a6e8150db3bbc6288fb7895a2b05340142ddb85470c0a36b91037",
+    "proxy-node22-linux.log": "7baaeabf1659e92a6f3924f2e678af6f3087cbd85609122f321c977d48e9457c",
+    "clean-build-2.log": "a5caa4ef294d67ea6ebe4a0d66f8e7fbe9fe405b743f4528a043c722c704d41e",
+    "clean-build.log": "782cd5f4358a80f9426654f74ab11d6668c2f35926e23cc781afe5a6ea1d917e",
+    "build.log": "2262dc020c2998454a4c24926bc30977defe41139d8f7b43961be89975354188",
+    "linux-final-web.log": "186121f3a78179d7cc526a85cdeaeda79bcb5321c0e6be52a4b8d9e08cb57ac1",
+    "linux-final-api.log": "8c6d8fe49a1bec3b07165061b1c6c0e30bcea5d547602fe7c39192070123a24f",
+    "linux-final-worker.log": "eb091d05e312c7263add16a87509801fc46eedbe2c3af3558bcc32caf4440420",
+    "linux-final-postgres.log": "becbea9b48d28f22afe6343344718cb194d2f5e7bba41cae7d97a63646ddcf5e"
+  },
+  "limits": [
+    "Local candidate only. New exact-commit full CI and signed publication are still required.",
+    "No production migration, deployment, merge retry, or backup removal performed by these checks.",
+    "Original failed tag and failed local attempts remain preserved."
+  ]
+}

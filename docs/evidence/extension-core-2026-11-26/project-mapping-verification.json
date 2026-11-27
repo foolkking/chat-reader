@@ -1,0 +1,307 @@
+{
+  "as_of": "2026-11-26T20:06:58.220510+08:00",
+  "time_zone": "Asia/Shanghai (lab receipts also retain UTC)",
+  "reader_base": "61daf63338b89e47c02ef6624ffa4487d11e2b8c",
+  "fork_base": "e18bb4cae7674af66a08fd3be50c113475f34e5a",
+  "source": "uncommitted worktrees",
+  "root": "E:\\chat-reader-temp\\extension-project-mapping-20261126",
+  "production_changed": false,
+  "real_chatgpt_verified_on_this_package": false,
+  "remote_ci_verified": false,
+  "packages": {
+    "started": "2026-11-26T19:46:13.6445984+08:00",
+    "finished": "2026-11-26T19:46:16.5489348+08:00",
+    "forkHead": "e18bb4cae7674af66a08fd3be50c113475f34e5a",
+    "node": "v24.22.3",
+    "independentPrivateRebuild": true,
+    "verifiedLocally": {
+      "private": {
+        "version": "0.3.0",
+        "files": 59,
+        "installSha256": "07b771c41d3ccc264d889e7af044fc45974836822e743bde6d9df309c04a946f",
+        "referenceSha256": "30a84d9e16feaa8fbdc6646e7cdf49cccf9fd70cdb84b95b9bad35142580cd31"
+      },
+      "loopback-28080": {
+        "version": "0.3.0",
+        "files": 59,
+        "installSha256": "c6e83ec07f3fb993ef086aa0d1b4c66ed4a99d835d33bbbd061fe86225b4ba35",
+        "referenceSha256": "30a84d9e16feaa8fbdc6646e7cdf49cccf9fd70cdb84b95b9bad35142580cd31"
+      }
+    },
+    "userInstalledIdentityMatched": true,
+    "ciQualified": false,
+    "sourcePackagerSHA256": "cb70be6f296ea5f52922afbac5625a9c2e38693ac0bf588d787d19eb75d9452f"
+  },
+  "private_dir": "delivery-r2/private/extension",
+  "private_zip": "delivery-r2/private/chat-reader-0.3.0.zip",
+  "browser_test_zip": "delivery-r2/loopback-28080/chat-reader-0.3.0.zip",
+  "module_comparison": "all 59 names match; only the two instance-binding files differ",
+  "web_confirmation_and_real_import": {
+    "project": "reader-g1-194aa673c73b",
+    "local_receipt": "mapping-integrated-exact/http-20261126T120245Z-cd034d/receipt.json",
+    "receipt_sha256": "78191ffa766b5a4c3891680698a7ff8bd7a54cee7f572f2b0bf22f1770864961",
+    "reader_head": "61daf63338b89e47c02ef6624ffa4487d11e2b8c",
+    "runtime_sources": 420,
+    "source_manifest_sha256": "f7e3859098011b8414047a2ebf4b43072f39f787b5d434e87d177197608255ec",
+    "harness_sha256": {
+      "backend-gate.py": "a178231cf22c68844c8ea3f221cf85fb88aac38ff8c8cce1630c76b30d665b25",
+      "backend-package.cjs": "8b46dc65ff241522add969e7ff05491a6c6a3b14d5290fae698d01c2acab503f",
+      "installed-projects-gate.py": "64317ac2b29932d66b90d1cbef04b7b9b6a1e98eaa57adb75f607e9dfd56d1cb",
+      "reader-project-mapping-check.cjs": "297ae139f553af0f799f9ecd2c6c1fcb00e59d5c9c76ddb8485e0431bbed7822"
+    },
+    "run": {
+      "started": "2026-11-26T20:02:44.8506055+08:00",
+      "finished": "2026-11-26T20:06:09.4053011+08:00",
+      "exitCode": 0,
+      "command": [
+        "E:\\anaconda\\python.exe",
+        "-B",
+        "scripts/extension-beta/installed-projects-gate.py",
+        "--parent",
+        "E:\\chat-reader-temp\\extension-project-mapping-20261126\\mapping-integrated-exact",
+        "--fork",
+        "E:\\1project\\chat-intelligent-ui-exporter",
+        "--web-build",
+        "E:\\chat-reader-temp\\extension-project-mapping-20261126\\web-02",
+        "--install",
+        "E:\\chat-reader-temp\\extension-project-mapping-20261126\\delivery-r2\\loopback-28080\\extension",
+        "--port",
+        "28080",
+        "--parser-fixture",
+        "E:\\chat-reader-temp\\extension-project-mapping-20261126\\delivery-r2\\fixture\\installed-image-partial.expected.json"
+      ]
+    },
+    "steps": [
+      "fresh-postgres",
+      "postgres-regressions",
+      "fresh-api-worker",
+      "project-confirmation",
+      "receive-complete",
+      "complete-canonical-readback",
+      "receive-complete",
+      "duplicate-source",
+      "receive-partial",
+      "mapped-projects-canonical",
+      "partial-missing-image",
+      "receive-parser-partial",
+      "actual-parser-missing-image-canonical",
+      "receive-invalid-index",
+      "invalid-index-diagnostic",
+      "live-schema-worker-and-single-receipts",
+      "installed-project-mapping"
+    ],
+    "owned_services_removed": true,
+    "unrelated_containers_unchanged": true,
+    "regressions": "20 passed in 101.15s (0:01:41)"
+  },
+  "installed_append": {
+    "project": "reader-g1-871c4daafba8",
+    "local_receipt": "lab-append-r2/http-20261126T115132Z-178e44/receipt.json",
+    "receipt_sha256": "407c70316c33956d4d77c1e729c7a4e24e8709d680f66c153902c2d59ade1638",
+    "reader_head": "61daf63338b89e47c02ef6624ffa4487d11e2b8c",
+    "runtime_sources": 420,
+    "source_manifest_sha256": "f7e3859098011b8414047a2ebf4b43072f39f787b5d434e87d177197608255ec",
+    "harness_sha256": {
+      "backend-gate.py": "a178231cf22c68844c8ea3f221cf85fb88aac38ff8c8cce1630c76b30d665b25",
+      "backend-package.cjs": "8b46dc65ff241522add969e7ff05491a6c6a3b14d5290fae698d01c2acab503f"
+    },
+    "run": {
+      "started": "2026-11-26T19:51:31.5240292+08:00",
+      "finished": "2026-11-26T19:56:35.0954350+08:00",
+      "exitCode": 0,
+      "availableHostKiB": 2630144,
+      "command": [
+        "E:\\anaconda\\python.exe",
+        "-B",
+        "scripts/extension-beta/installed-append-gate.py",
+        "--parent",
+        "E:\\chat-reader-temp\\extension-project-mapping-20261126\\lab-append-r2",
+        "--fork",
+        "E:\\1project\\chat-intelligent-ui-exporter",
+        "--evidence",
+        "E:\\chat-reader-temp\\extension-project-mapping-20261126\\delivery-r2\\fixture\\installed-append-251.expected.json"
+      ]
+    },
+    "steps": [
+      "fresh-postgres",
+      "g4-postgres-regressions",
+      "fresh-api-worker",
+      "range-http-1001-canonical",
+      "range-http-duplicates",
+      "installed-251-append",
+      "installed-251-duplicate",
+      "g4-runtime-and-source"
+    ],
+    "owned_services_removed": true,
+    "unrelated_containers_unchanged": true,
+    "regressions": "36 passed in 157.92s (0:02:37)"
+  },
+  "browser": {
+    "start": "2026-11-26T12:05:33.434Z",
+    "end": "2026-11-26T12:06:04.284Z",
+    "version": "Edg/158.0.4370.33",
+    "checks": [
+      "existing same-name choice bound to its Reader UUID",
+      "ID-only group leaves name empty and shows a conversation for recognition",
+      "new same-name project prefills the verified source label",
+      "930px mapping fits and all destination controls stay reachable",
+      "375px mapping fits and all destination controls stay reachable",
+      "320px mapping fits and all destination controls stay reachable",
+      "editing a name cannot start import before confirmation",
+      "Reader Web shows the proposed name before a write",
+      "Reader has not created the proposed project on opening its window",
+      "callback selects only its original row",
+      "three real worker receipts retain the three confirmed targets",
+      "no runtime errors"
+    ],
+    "step": "complete"
+  },
+  "screenshots_sha256": {
+    "mapping-930.png": "d36a2b312d634e16d41db40ed135885d5b3105476a1ae56e7067f274151af502",
+    "mapping-320.png": "4bd85fd2b2e2ce3dc3d3031f7bc1c01d472f033d360661eee60421d7f29cbc18",
+    "reader-confirmation.png": "310b35e1c292700721ba71aaae9bb5dd911b44e43cdaaebe10b16521bff75fca"
+  },
+  "extension_tests": {
+    "mapping-focused-final": {
+      "local_receipt": "mapping-focused-final.json",
+      "receipt_sha256": "0106d4fad2108868ed03a1967832c8417a24973ab8490300bf318fc81f0711ac",
+      "started": "2026-11-26T19:46:13.8840460+08:00",
+      "finished": "2026-11-26T19:46:22.8436049+08:00",
+      "command": [
+        "C:\\Users\\86182\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "--test",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "tests/reader-center-lifecycle.test.cjs",
+        "tests/reader-navigation-boundaries.test.cjs",
+        "tests/reader-batch.test.cjs",
+        "tests/reader-contract.test.cjs",
+        "tests/reader-distribution.test.cjs",
+        "tests/reader-project-callback.test.cjs",
+        "tests/reader-surface-package.test.cjs"
+      ],
+      "counted_inputs": 216,
+      "inputs_sha256_canonical_json": "4fff20887f43fd2697230decfb58e157519b0dcbd4c80269e85b992994508575",
+      "exit": 0,
+      "summary": [
+        "# tests 63",
+        "# pass 63",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 8574.1059"
+      ]
+    },
+    "extension-full-r2-01": {
+      "local_receipt": "extension-full-r2-01.json",
+      "receipt_sha256": "75ecff6a94bd206db2c4c5ad0d599a88ae12bf78c3105893a989c36ad30cee54",
+      "started": "2026-11-26T19:46:43.9974866+08:00",
+      "finished": "2026-11-26T19:47:19.3526686+08:00",
+      "command": [
+        "C:\\Users\\86182\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "--test",
+        "--test-force-exit",
+        "--test-reporter=tap",
+        "all tests/*.test.cjs (explicit list in local receipt)"
+      ],
+      "counted_inputs": 216,
+      "inputs_sha256_canonical_json": "4fff20887f43fd2697230decfb58e157519b0dcbd4c80269e85b992994508575",
+      "exit": 0,
+      "summary": [
+        "# tests 457",
+        "# pass 394",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 63",
+        "# todo 0",
+        "# duration_ms 34948.2277"
+      ]
+    }
+  },
+  "web": [
+    {
+      "gate": "lint",
+      "start": "2026-11-26T19:59:14.1198330+08:00",
+      "end": "2026-11-26T19:59:48.6901852+08:00",
+      "command": "corepack pnpm run lint",
+      "exit": 0,
+      "head": "61daf63338b89e47c02ef6624ffa4487d11e2b8c",
+      "manifestSHA256": "3c34dd57e104a4c04a78d2ac1cc7500f3d27dc3720e0175c980a4e402ab59aea"
+    },
+    {
+      "gate": "typecheck",
+      "start": "2026-11-26T19:59:48.6967313+08:00",
+      "end": "2026-11-26T20:00:33.7531123+08:00",
+      "command": "corepack pnpm run typecheck",
+      "exit": 0,
+      "head": "61daf63338b89e47c02ef6624ffa4487d11e2b8c",
+      "manifestSHA256": "3c34dd57e104a4c04a78d2ac1cc7500f3d27dc3720e0175c980a4e402ab59aea"
+    },
+    {
+      "gate": "build",
+      "start": "2026-11-26T20:00:33.7552996+08:00",
+      "end": "2026-11-26T20:02:28.6366680+08:00",
+      "command": "corepack pnpm --filter web build",
+      "exit": 0,
+      "head": "61daf63338b89e47c02ef6624ffa4487d11e2b8c",
+      "manifestSHA256": "3c34dd57e104a4c04a78d2ac1cc7500f3d27dc3720e0175c980a4e402ab59aea"
+    },
+    {
+      "gate": "browser",
+      "start": "2026-11-26T20:02:28.6416285+08:00",
+      "end": "2026-11-26T20:02:44.7671065+08:00",
+      "command": "corepack pnpm --filter web exec playwright test --config=playwright.config.ts e2e/extension-consent.spec.ts",
+      "exit": 0,
+      "head": "61daf63338b89e47c02ef6624ffa4487d11e2b8c",
+      "manifestSHA256": "3c34dd57e104a4c04a78d2ac1cc7500f3d27dc3720e0175c980a4e402ab59aea"
+    }
+  ],
+  "web_playwright": {
+    "startTime": "2026-11-26T12:02:31.506Z",
+    "duration": 13219.776,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "reader_unit_and_schedule": {
+    "started": "2026-11-26T19:24:15.0031391+08:00",
+    "finished": "2026-11-26T19:29:57.2106319+08:00",
+    "exit": 0,
+    "testSHA": "E34580D3BE081149D3412B18A54153B1C4B72CA24BBAC2E180C68DB952D28684"
+  },
+  "exact_final_api_access_subset": {
+    "command": "python -B -m pytest apps/api/tests/test_reader_extension.py -k \"scope_rotation_and_revocation or foreign_library\" -q --tb=short (scoped basetemp/cache)",
+    "started": "2026-11-26T19:37:18.3804623+08:00",
+    "end": "2026-11-26T19:38:04.3107320+08:00",
+    "exit": 0,
+    "routeSha": "9C75C5082EF591758DEDF2B4BF4F1412411EF8D8FF336776A7F28325F30E416C"
+  },
+  "reader_node": {
+    "started": "2026-11-26T19:28:18.6419309+08:00",
+    "finished": "2026-11-26T19:28:24.1247308+08:00",
+    "exitCode": 0,
+    "sha": "61daf63338b89e47c02ef6624ffa4487d11e2b8c"
+  },
+  "scope_note": "23 Python tests preceded the final NUL guard. Two exact access/ownership tests, the PostgreSQL tests and the live HTTP/installation gate also ran after it. No full upstream CI claim.",
+  "changed_reader_input_sha256": {
+    "apps/api/app/api/routes/reader_extension.py": "9c75c5082ef591758dedf2b4bf4f1412411ef8d8ff336776a7f28325f30e416c",
+    "apps/api/tests/test_reader_extension.py": "e34580d3be081149d3412b18a54153b1c4b72ca24bbac2e180c68db952d28684",
+    "apps/web/app/extension/import-project/page.tsx": "1c1809be30a705fc3efb64251e2c4e9ebd534fc0969c436efb580fcc7156e0b5",
+    "apps/web/e2e/extension-consent.spec.ts": "2d2df0f561e6c96d5ce85051cb3d11453e836165fbd7972c0e3241519b64e57d",
+    ".github/workflows/web-quality.yml": "381322e8e565070d9fb00e92aefcfed449262339d8545bb55d3d9a2a80661ec7",
+    "scripts/extension-beta/backend-gate.py": "a178231cf22c68844c8ea3f221cf85fb88aac38ff8c8cce1630c76b30d665b25",
+    "scripts/extension-beta/installed-projects-gate.py": "64317ac2b29932d66b90d1cbef04b7b9b6a1e98eaa57adb75f607e9dfd56d1cb",
+    "scripts/ci/quality-coverage-extension.json": "0aa23374fe608a0756ca285c2401ccac971a93b89dde2eb0affae9e4b7dc2ab6",
+    "scripts/ci/quality-schedule.mjs": "1681b7975c1bd14d755f592fc99b985cdd5a1fb56a61395b3850482f54998003",
+    "scripts/ci/quality_schedule.py": "d00be1416e20e836480a8f4401c1ec29f05b69563685b1ae37210503de3f6616"
+  },
+  "failed_receipts_preserved": {
+    "mapping-red.json": "4d3a97cac915a77cc71ab050df89778ddb8c50714fbef02227f0198fcda6a2c1",
+    "extension-full-01.json": "483c3ef775554600517cb9aa695b42cb07a8bdccc467472f0438076d091ec168",
+    "delivery-final/lab-runs.json": "856e94e1f4d8ce50b134c643ca66efcaa233b52ce47c57770c347d6d206f584e",
+    "mapping-integrated-01/run.json": "51294b26abee0095bd3db3e3f47239e012d686eded4f2564375cd9a2d7bb25dd",
+    "mapping-integrated-02/run.json": "d797575b3003d44ee234971ef3d114c452743061e25734a1da865e20a9ea7061"
+  }
+}

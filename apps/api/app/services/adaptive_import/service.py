@@ -82,13 +82,14 @@ def begin_session(
     repair_profile_id: uuid.UUID | None = None,
     target_project_id: uuid.UUID | None = None,
     owner_user_id: uuid.UUID | None = None,
+    record_id: uuid.UUID | None = None,
 ) -> ImportRecord:
     if file_count < 1:
         raise AdaptiveImportError("FILES_REQUIRED", "Choose at least one JSON, Markdown, or ZIP source file.", layer="file")
     if file_count > MAX_ADAPTIVE_FILES:
         raise AdaptiveImportError("FILE_COUNT_LIMIT", f"At most {MAX_ADAPTIVE_FILES} files can be analyzed at once.", layer="file")
     record = ImportRecord(
-        id=uuid.uuid4(),
+        id=record_id or uuid.uuid4(),
         owner_user_id=owner_user_id,
         source_profile="adaptive_json_markdown",
         source_fingerprint="pending",
@@ -188,6 +189,9 @@ def add_session_source_stream(
 
 def queue_session_analysis(db: Session, record: ImportRecord, *, rebuild_preview: bool = False) -> BackgroundJob:
     """Queue first-pass structure analysis after source files are safely staged."""
+    transfer = (record.analysis_summary or {}).get("extension_transfer")
+    if transfer and not transfer.get("accepted"):
+        raise AdaptiveImportError("IMPORT_UPLOAD_INCOMPLETE", "Finish the staged upload before analysis.", layer="file")
     previous_state = record.session_state
     _refresh_source_fingerprint(record)
     record.session_state = "ANALYZING"
@@ -1232,6 +1236,8 @@ def evaluate_family(record: ImportRecord, family: ImportStructureFamily, mapping
             with analysis_unit(record, _group_artifacts(record, group)):
                 documents = _group_documents(record, group)
                 drafts = normalize_builtin(builtin_key, documents) if builtin_key else normalize_group(documents, mapping_spec or {}, profile_name)
+                if any(document.reader_archive is not None for document in documents):
+                    drafts = _enrich_archive_drafts(record, group, drafts)
                 result = validate_drafts(drafts, validation_spec)
                 result["valid"] = result["valid"] and bool(drafts)
                 result["issues"] = [{**issue, "group_id": str(group.id)} for issue in result["issues"]]
@@ -1408,15 +1414,21 @@ def _group_documents(record: ImportRecord, group: ImportInputGroup) -> list[Sour
             raise AdaptiveImportError(failure["code"], failure["message"], layer=failure["layer"],
                                       action="replace_source", details=failure.get("details"))
         path = _source_path(record, artifact)
+        reader_archive = None
+        source_id = (artifact.parsed_summary or {}).get("archive_artifact_id")
+        if source_id:
+            original = next((a for a in record.artifacts if str(a.id) == str(source_id)), None)
+            if original is not None and (original.parsed_summary or {}).get("reader_profile") == "reader-chat-v1":
+                reader_archive = _source_path(record, original)
         from app.services.adaptive_import.memory_budget import streaming_budget
-        streamed = streaming_budget() and (
+        streamed = reader_archive is not None or streaming_budget() and (
             artifact.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE
             or (artifact.source_type == "adaptive_source"
                 and (artifact.file_extension or "").casefold() in {".md", ".markdown"})
         )
         result.append(SourceDocument(
             artifact_id=str(artifact.id), filename=artifact.filename, extension=artifact.file_extension or _extension(artifact.filename),
-            content=b"" if streamed else path.read_bytes(), path=path if streamed else None,
+            content=b"" if streamed else path.read_bytes(), path=path if streamed else None, reader_archive=reader_archive,
         ))
     return result
 
@@ -1438,7 +1450,7 @@ def _mode_for_artifacts(artifacts: list[SourceArtifact]) -> str | None:
 def _summary(record: ImportRecord) -> dict[str, Any]:
     statuses = _count_statuses(family.resolution_status for family in record.structure_families)
     return {
-        **{k: (record.analysis_summary or {})[k] for k in ("extension_device","extension_decision","append_only")
+        **{k: (record.analysis_summary or {})[k] for k in ("extension_device","extension_decision","extension_transfer","append_only")
            if k in (record.analysis_summary or {})},
         **({"repair_profile_id": record.analysis_summary["repair_profile_id"]} if (record.analysis_summary or {}).get("repair_profile_id") else {}),
         **({"analysis_task_id": record.analysis_summary["analysis_task_id"]} if (record.analysis_summary or {}).get("analysis_task_id") else {}),

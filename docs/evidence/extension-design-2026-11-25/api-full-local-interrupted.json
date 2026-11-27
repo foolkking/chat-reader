@@ -1,0 +1,6 @@
+{
+  "date": "2026-11-25T16:58:16.5024418+08:00",
+  "status": "interrupted-not-passed",
+  "reason": "Unsharded local full-suite attempt stopped; retain partial evidence. Full exact-revision CI shards remain mandatory. No assertion or skip changed.",
+  "earlier_attempt": "pytest-01 stopped after detecting shared disposable DB with browser test; restarted pytest-02 in independent extension_suite_review"
+}

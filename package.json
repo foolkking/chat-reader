@@ -17,7 +17,8 @@
       "zod@<4.6.6": "4.6.6"
     },
     "patchedDependencies": {
-      "braces@3.0.3": "patches/braces@3.0.3.patch"
+      "braces@3.0.3": "patches/braces@3.0.3.patch",
+      "next@16.4.5": "patches/next@16.4.5.patch"
     }
   },
   "scripts": {

@@ -1,0 +1,35 @@
+{
+  "at": "2026-11-25T10:09:47.001Z",
+  "kind": "Actual isolated Edge, real navigation/control scripts with synthetic page and chrome.runtime stub. Not live ChatGPT or Reader E2E.",
+  "before": {
+    "glyphs.js": "f54acfefd6aa182d1b3d79a66a10bd38e153204058c2ca3b6282746e509753c5",
+    "progress.js": "73fd3d3523373501300116d1f6ee46688b5e8abd1c7a01b59d63c80de38d924b",
+    "routes.js": "1a94a580d3717b475ae41227a339b7fda34ef59d454854b0171285f0dd0d1049",
+    "page-index.js": "16389a240646caace507a444431a6d0348212ddccff67c3ac6cc4d05fc1ad0ee",
+    "overlay.js": "f5206db9b320783f87cd77ae0679517e38f536e0bb0f62b4839775fb9d755397",
+    "source-control.js": "6d173cd444bf7fb47d2a23a6d47679feaf4e1c9ff93c0f679b792606a7edbcea"
+  },
+  "scenarios": [
+    {
+      "width": 1440,
+      "height": 900,
+      "locale": "en-US",
+      "dark": false,
+      "checks": [
+        "no eager body preload",
+        "hover reveals exact full question with tail"
+      ],
+      "errors": [
+        "NotFoundError: Failed to execute 'remove' on 'Element': The node to be removed is no longer a child of this node. Perhaps it was moved in a 'blur' event handler?"
+      ],
+      "screens": [
+        "1440-en-US-light-full-question.png"
+      ]
+    }
+  ],
+  "browser": "Edg/158.0.4370.33",
+  "failure": {
+    "message": "Escape releases full body and restores question focus without reloading",
+    "stack": "AssertionError [ERR_ASSERTION]: Escape releases full body and restores question focus without reloading\n    at ok (<TASK_EVIDENCE>\\extension\\nav-bound-entry-check.cjs:22:36)\n    at <TASK_EVIDENCE>\\extension\\nav-bound-entry-check.cjs:49:5"
+  }
+}

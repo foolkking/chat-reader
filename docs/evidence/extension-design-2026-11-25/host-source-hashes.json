@@ -1,0 +1,77 @@
+{
+  "utc": "2026-11-25T10:10:48.4416455Z",
+  "head": "be5e8dabd772809635db345a51c8c15c26b468ed",
+  "branch": "codex/reader-extension",
+  "exitCode": 0,
+  "sourceChangesDuringTest": [],
+  "files": [
+    {
+      "path": "<EXTENSION_REPO>\\reader\\host.js",
+      "sha256": "BB2E16C10152C96B09E78139E1C11C68EA01E10806E067A01190A7A2F488B7F1"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\reader\\upload.js",
+      "sha256": "D39A57336958D91D99EC1102B2767DC1AFA88FA0CD0428324BFD03CFDF1C11E7"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\reader\\progress.js",
+      "sha256": "73FD3D3523373501300116D1F6EE46688B5E8ABD1C7A01B59D63C80DE38D924B"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\reader\\transfer-state.js",
+      "sha256": "BCFAE593C8ED6FEFB86BA7FA69CA3ABA443E639322C56BC989246A01E19FA1C2"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\reader\\center.js",
+      "sha256": "DED0C745D8505D9167D66927FA860F2EBAF4216DB3560693E74D80025484667A"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\reader\\center.html",
+      "sha256": "5ABE662097B50FA11BC51923A2E01F3E6920BC498140251E9C3E7D2680F5F7BB"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\reader\\center-selection.js",
+      "sha256": "6350CD2A83906B8367AA4931D2C676AC66B6BC89F18C3C2566029DCC4331BBF5"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\reader\\batch-model.js",
+      "sha256": "A4F7153DDCAF5CF617BE2C3048876743B1460F5178DA0E5CF88A6CE0505DAD52"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\reader\\background.js",
+      "sha256": "A16DD712A2051749CED75ECD90CF9071A15DE979903536B4352896384EC46EC6"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\reader\\batch-worker.js",
+      "sha256": "E9F9295B33B00D1CAF22D3FDCAF17BE8B7AF3127FA3A0005227444EA8C23B6DC"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\reader\\source-file.js",
+      "sha256": "4CB8BBC563C24D18244733BD018018948E645B850978FCC97B658C46A0E8ADA9"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\tests\\reader-host.test.cjs",
+      "sha256": "B1447764CB658DF011957E597E23E482BB338538ECC789CB0773C70357903D3D"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\tests\\reader-center-lifecycle.test.cjs",
+      "sha256": "3BF6445C3FF410DA87FBB0C758154A4092A4B6003946C5DC0C0D82C364B0719F"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\tests\\reader-center-selection.test.cjs",
+      "sha256": "55F80CBEDEA6A3E8E146BF85DD9C650668A1DEE48CB72899C41E91CF1F15A432"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\tests\\reader-batch.test.cjs",
+      "sha256": "23AEC2505E2C1D6D249A3299C8FB2D34FA232B706AD8C9F54929CB802F1FCCC1"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\tests\\reader-batch-ticket.test.cjs",
+      "sha256": "9F033C1DE704CB88F24B5B189125453DB2FDE54AA52EF7685470082534FCE9F8"
+    },
+    {
+      "path": "<EXTENSION_REPO>\\tests\\reader-source-cache.test.cjs",
+      "sha256": "5840C320BAF7AB6701185C7D743A9629832B48BE696DB4DAF4767033FA958434"
+    }
+  ]
+}

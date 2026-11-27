@@ -1,0 +1,502 @@
+{
+  "synthetic_only": true,
+  "database": "merge_html_review",
+  "run_id": "20261125T122135Z-d0dea5",
+  "transport": "FastAPI TestClient + real PostgreSQL + fresh execution_child processes",
+  "not_tested": [
+    "production",
+    "production memory limit",
+    "browser UI"
+  ],
+  "checks": [
+    {
+      "name": "analysis_ready",
+      "pass": true,
+      "state": "READY"
+    },
+    {
+      "name": "import_message_count",
+      "pass": true,
+      "actual": 375,
+      "expected": 375
+    },
+    {
+      "name": "cold_merge_committed",
+      "pass": true,
+      "status": "committed",
+      "phase": "completed",
+      "error": null
+    },
+    {
+      "name": "target_canonical_graph",
+      "pass": true,
+      "messages": 376,
+      "versions": 376,
+      "attachments": 289,
+      "occurrences": 289
+    },
+    {
+      "name": "target_file_directory_count",
+      "pass": true,
+      "actual": 289
+    },
+    {
+      "name": "downloaded_bytes_all_equal",
+      "pass": true,
+      "files": 289
+    },
+    {
+      "name": "both_sources_byte_exact",
+      "pass": true
+    },
+    {
+      "name": "receipt_replay_same_job",
+      "pass": true
+    },
+    {
+      "name": "wrong_occurrence_recovers_target_not_whole_failure",
+      "pass": true,
+      "status": "committed",
+      "summary": {
+        "missing_attachments": 0,
+        "repaired_occurrences": 1,
+        "unlocated_occurrences": 0
+      }
+    },
+    {
+      "name": "target_canonical_graph",
+      "pass": true,
+      "messages": 376,
+      "versions": 376,
+      "attachments": 289,
+      "occurrences": 289
+    },
+    {
+      "name": "target_file_directory_count",
+      "pass": true,
+      "actual": 289
+    },
+    {
+      "name": "downloaded_bytes_all_equal",
+      "pass": true,
+      "files": 289
+    },
+    {
+      "name": "occurrence_recovery_keeps_damaged_source_exact",
+      "pass": true
+    },
+    {
+      "name": "unmatched_canonical_html_projection_rejected",
+      "pass": true,
+      "status": "failed"
+    },
+    {
+      "name": "failed_merge_atomic_rollback",
+      "pass": true
+    },
+    {
+      "name": "failed_receipt_same_job",
+      "pass": true
+    },
+    {
+      "name": "synthetic_fault_exactly_restored",
+      "pass": true
+    },
+    {
+      "name": "double_retry_single_queued_task",
+      "pass": true
+    },
+    {
+      "name": "same_task_retry_committed",
+      "pass": true
+    },
+    {
+      "name": "retry_only_one_new_target",
+      "pass": true,
+      "before": 26,
+      "after": 27
+    },
+    {
+      "name": "retry_sources_unchanged",
+      "pass": true
+    },
+    {
+      "name": "analysis_ready",
+      "pass": true,
+      "state": "READY"
+    },
+    {
+      "name": "import_message_count",
+      "pass": true,
+      "actual": 3,
+      "expected": 3
+    },
+    {
+      "name": "foreign_source_admission_denied",
+      "pass": true,
+      "status": 400,
+      "rows_unchanged": true
+    },
+    {
+      "name": "foreign_attachment_direct_download_denied",
+      "pass": true,
+      "status": 404
+    },
+    {
+      "name": "owned-missing_committed",
+      "pass": true,
+      "status": "committed"
+    },
+    {
+      "name": "owned_missing_summary",
+      "pass": true,
+      "summary": {
+        "missing_attachments": 1,
+        "repaired_occurrences": 0,
+        "unlocated_occurrences": 0
+      }
+    },
+    {
+      "name": "owned_missing_available_bytes_and_missing_denial",
+      "pass": true,
+      "available_files": 3,
+      "missing_files": 1
+    },
+    {
+      "name": "owned_missing_sources_untouched",
+      "pass": true
+    },
+    {
+      "name": "deleted-reference_committed",
+      "pass": true,
+      "status": "committed"
+    },
+    {
+      "name": "deleted_reference_generic_target_placeholder",
+      "pass": true
+    },
+    {
+      "name": "deleted_reference_available_bytes_and_missing_denial",
+      "pass": true,
+      "available_files": 3,
+      "missing_files": 1
+    },
+    {
+      "name": "deleted_source_untouched",
+      "pass": true
+    },
+    {
+      "name": "foreign-reference_committed",
+      "pass": true,
+      "status": "committed"
+    },
+    {
+      "name": "foreign_reference_never_borrows_metadata_or_asset",
+      "pass": true
+    },
+    {
+      "name": "foreign_reference_available_bytes_and_missing_denial",
+      "pass": true,
+      "available_files": 4,
+      "missing_files": 1
+    },
+    {
+      "name": "foreign_reference_all_sources_exact",
+      "pass": true
+    },
+    {
+      "name": "unknown-reference_committed",
+      "pass": true,
+      "status": "committed"
+    },
+    {
+      "name": "unknown_reference_missing_and_repaired",
+      "pass": true,
+      "summary": {
+        "missing_attachments": 1,
+        "repaired_occurrences": 1,
+        "unlocated_occurrences": 0
+      }
+    },
+    {
+      "name": "unknown_reference_available_bytes_and_missing_denial",
+      "pass": true,
+      "available_files": 4,
+      "missing_files": 1
+    },
+    {
+      "name": "unknown_reference_source_exact",
+      "pass": true
+    },
+    {
+      "name": "same-id-other-selected-source_committed",
+      "pass": true,
+      "status": "committed"
+    },
+    {
+      "name": "same_id_other_selected_source_not_borrowed",
+      "pass": true
+    },
+    {
+      "name": "source_body_uses_own_missing_map_not_available_peer",
+      "pass": true
+    },
+    {
+      "name": "same_id_other_source_available_bytes_and_missing_denial",
+      "pass": true,
+      "available_files": 4,
+      "missing_files": 1
+    },
+    {
+      "name": "same_id_other_source_rows_untouched",
+      "pass": true
+    },
+    {
+      "name": "all_synthetic_corruptions_restored_exactly",
+      "pass": true
+    },
+    {
+      "name": "repeated-url-missing-occurrences_committed",
+      "pass": true,
+      "status": "committed"
+    },
+    {
+      "name": "repeated_real_url_all_occurrences_restored",
+      "pass": true,
+      "occurrence_count": 2,
+      "summary": {
+        "missing_attachments": 0,
+        "repaired_occurrences": 2,
+        "unlocated_occurrences": 0
+      }
+    },
+    {
+      "name": "repeated_source_exact_after_merge",
+      "pass": true
+    }
+  ],
+  "children": [
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 3.016,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-01.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "import",
+      "exit_code": 0,
+      "elapsed_seconds": 17.906,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-02.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "import",
+      "exit_code": 0,
+      "elapsed_seconds": 2.469,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-03.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 6.141,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-04.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 5.938,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-05.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 2.844,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-06.log",
+      "status": "failed",
+      "phase": "failed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 5.984,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-07.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 2.36,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-08.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "import",
+      "exit_code": 0,
+      "elapsed_seconds": 2.704,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-09.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 2.672,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-10.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 2.735,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-11.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 2.703,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-12.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 2.657,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-13.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 2.672,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-14.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 2.281,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-15.log",
+      "status": "committed",
+      "phase": "completed"
+    },
+    {
+      "kind": "job",
+      "exit_code": 0,
+      "elapsed_seconds": 3.0,
+      "finished_control": true,
+      "log": "E:\\chat-reader-temp\\merge-failure-20261125\\sagan\\20261125T122135Z-d0dea5\\child-16.log",
+      "status": "committed",
+      "phase": "completed"
+    }
+  ],
+  "source_sha256": {
+    "app/services/editing/attachment_reference_rewriter.py": "5b809a7106044d4f598962a0e18e37f52ee4cb1c0b0cd1a9de89dbb152c0d159",
+    "app/services/editing/merge_attachment_recovery.py": "bbe20ddcb57b8af050f7288ee94f80844f476b33325ffd0267986db5a6347b23",
+    "app/services/editing/markdown_attachment_references.py": "7a2da2174f75e3d6c46c8834aee344372d5fa1ece6a76e63acb50b78d5dfd756",
+    "app/services/editing/attachment_integrity.py": "98a73b317cdcedcedf6e49c3484ef907d75e60b206dd071400018dc7f5732ccb",
+    "app/services/editing/message_edit_service.py": "70a6946ad92a029430686eb9f59baf0e8834b08c0b0a82c28ee62ff63bb9035e",
+    "app/services/editing/conversation_merge_service.py": "2d47f91060a0a411457fc3eaae5a1ad7243fde28efb33a12b37b35a5027acfd4",
+    "app/services/background_jobs.py": "9ff596ba0b59b1ebbfa2fac5f82f9d897617b747ffb0bba4fd022cfc50bdcb4a",
+    "app/workers/execution_child.py": "a3bdcc927aa52c1735be5b161120e31e77ce71e7b6bcb624eb41216a15817d28",
+    "app/services/canonical/block_builder.py": "f19bb12ded6dd823b8ed6e6999b186a9f123dea993f8309ba4f239b614113e05",
+    "app/services/database/bulk_insert.py": "d7d4d425f51440f6ed5fc0217c63a7e20a6da3d36118aa4f90445c17a79d1922",
+    "app/schemas/task.py": "34fd9cd7fb25fed8dedb949576e1fb571836605db6695e7dd4e20ceea82555b4",
+    "app/api/routes/tasks.py": "9efc6aae38fbf2b72fe607462758c6f1f4399babd4853ba832369d0360f6fae0",
+    "tests/test_merge_html_attachment_api.py": "9c8f8c5d016bfed71fb1d4392280da463b9de90382b8c21335b64d8f7124221d",
+    "tests/test_merge_html_attachment_references.py": "b166728cedc3ebbefbc70bb0338d8b01aea4bfa713df85296d297de5f369de0c",
+    "tests/test_merge_reference_recovery_helper.py": "eca505d6c9b4c1ace938eeb881ffbedfb3110b5319b1a93a8a94ac93cc2af395"
+  },
+  "lf_sha256": {
+    "app/services/editing/attachment_reference_rewriter.py": "5b809a7106044d4f598962a0e18e37f52ee4cb1c0b0cd1a9de89dbb152c0d159",
+    "app/services/editing/merge_attachment_recovery.py": "bbe20ddcb57b8af050f7288ee94f80844f476b33325ffd0267986db5a6347b23",
+    "app/services/editing/markdown_attachment_references.py": "7a2da2174f75e3d6c46c8834aee344372d5fa1ece6a76e63acb50b78d5dfd756",
+    "app/services/editing/attachment_integrity.py": "98a73b317cdcedcedf6e49c3484ef907d75e60b206dd071400018dc7f5732ccb",
+    "app/services/editing/message_edit_service.py": "8bae2df6df6a44091ee2fa84be6103dca63309f08b0a18bdf3976f88da7d3884",
+    "app/services/editing/conversation_merge_service.py": "c516958bfb8f513c477c5ecaa10fe2649cb17be38ea6f123d3c113637169a644",
+    "app/services/background_jobs.py": "086d467f2782de49782fd9ed0608bcff6cc38a086c7c651a63b718166e7db62a",
+    "app/workers/execution_child.py": "a3bdcc927aa52c1735be5b161120e31e77ce71e7b6bcb624eb41216a15817d28",
+    "app/services/canonical/block_builder.py": "f19bb12ded6dd823b8ed6e6999b186a9f123dea993f8309ba4f239b614113e05",
+    "app/services/database/bulk_insert.py": "d7d4d425f51440f6ed5fc0217c63a7e20a6da3d36118aa4f90445c17a79d1922",
+    "app/schemas/task.py": "34fd9cd7fb25fed8dedb949576e1fb571836605db6695e7dd4e20ceea82555b4",
+    "app/api/routes/tasks.py": "fc55079c4fae3228657c37954c3cd81ef1c9d8e498c582d6f113fa55f56fd643",
+    "tests/test_merge_html_attachment_api.py": "9c8f8c5d016bfed71fb1d4392280da463b9de90382b8c21335b64d8f7124221d",
+    "tests/test_merge_html_attachment_references.py": "b166728cedc3ebbefbc70bb0338d8b01aea4bfa713df85296d297de5f369de0c",
+    "tests/test_merge_reference_recovery_helper.py": "eca505d6c9b4c1ace938eeb881ffbedfb3110b5319b1a93a8a94ac93cc2af395"
+  },
+  "head": "64577eafaf06ae51b03c5c1b2f9c3175991467c7",
+  "positive_target_count": 25,
+  "source_ids_synthetic": [
+    "28a2e357-d455-42ab-b70b-54b587cfa60c",
+    "e351cad5-79ac-4f11-8615-a9546dd19fd6"
+  ],
+  "result_id_synthetic": "335e03c7-d3f4-47c2-acb2-b5a849b0284a",
+  "positive_job_id_synthetic": "68c8afa9-a006-4f15-ab34-73636294b073",
+  "finished": true,
+  "source_sha256_after": {
+    "app/services/editing/attachment_reference_rewriter.py": "5b809a7106044d4f598962a0e18e37f52ee4cb1c0b0cd1a9de89dbb152c0d159",
+    "app/services/editing/merge_attachment_recovery.py": "bbe20ddcb57b8af050f7288ee94f80844f476b33325ffd0267986db5a6347b23",
+    "app/services/editing/markdown_attachment_references.py": "7a2da2174f75e3d6c46c8834aee344372d5fa1ece6a76e63acb50b78d5dfd756",
+    "app/services/editing/attachment_integrity.py": "98a73b317cdcedcedf6e49c3484ef907d75e60b206dd071400018dc7f5732ccb",
+    "app/services/editing/message_edit_service.py": "70a6946ad92a029430686eb9f59baf0e8834b08c0b0a82c28ee62ff63bb9035e",
+    "app/services/editing/conversation_merge_service.py": "2d47f91060a0a411457fc3eaae5a1ad7243fde28efb33a12b37b35a5027acfd4",
+    "app/services/background_jobs.py": "9ff596ba0b59b1ebbfa2fac5f82f9d897617b747ffb0bba4fd022cfc50bdcb4a",
+    "app/workers/execution_child.py": "a3bdcc927aa52c1735be5b161120e31e77ce71e7b6bcb624eb41216a15817d28",
+    "app/services/canonical/block_builder.py": "f19bb12ded6dd823b8ed6e6999b186a9f123dea993f8309ba4f239b614113e05",
+    "app/services/database/bulk_insert.py": "d7d4d425f51440f6ed5fc0217c63a7e20a6da3d36118aa4f90445c17a79d1922",
+    "app/schemas/task.py": "34fd9cd7fb25fed8dedb949576e1fb571836605db6695e7dd4e20ceea82555b4",
+    "app/api/routes/tasks.py": "9efc6aae38fbf2b72fe607462758c6f1f4399babd4853ba832369d0360f6fae0",
+    "tests/test_merge_html_attachment_api.py": "9c8f8c5d016bfed71fb1d4392280da463b9de90382b8c21335b64d8f7124221d",
+    "tests/test_merge_html_attachment_references.py": "b166728cedc3ebbefbc70bb0338d8b01aea4bfa713df85296d297de5f369de0c",
+    "tests/test_merge_reference_recovery_helper.py": "eca505d6c9b4c1ace938eeb881ffbedfb3110b5319b1a93a8a94ac93cc2af395"
+  },
+  "source_unchanged_during_run": true,
+  "lf_sha256_after": {
+    "app/services/editing/attachment_reference_rewriter.py": "5b809a7106044d4f598962a0e18e37f52ee4cb1c0b0cd1a9de89dbb152c0d159",
+    "app/services/editing/merge_attachment_recovery.py": "bbe20ddcb57b8af050f7288ee94f80844f476b33325ffd0267986db5a6347b23",
+    "app/services/editing/markdown_attachment_references.py": "7a2da2174f75e3d6c46c8834aee344372d5fa1ece6a76e63acb50b78d5dfd756",
+    "app/services/editing/attachment_integrity.py": "98a73b317cdcedcedf6e49c3484ef907d75e60b206dd071400018dc7f5732ccb",
+    "app/services/editing/message_edit_service.py": "8bae2df6df6a44091ee2fa84be6103dca63309f08b0a18bdf3976f88da7d3884",
+    "app/services/editing/conversation_merge_service.py": "c516958bfb8f513c477c5ecaa10fe2649cb17be38ea6f123d3c113637169a644",
+    "app/services/background_jobs.py": "086d467f2782de49782fd9ed0608bcff6cc38a086c7c651a63b718166e7db62a",
+    "app/workers/execution_child.py": "a3bdcc927aa52c1735be5b161120e31e77ce71e7b6bcb624eb41216a15817d28",
+    "app/services/canonical/block_builder.py": "f19bb12ded6dd823b8ed6e6999b186a9f123dea993f8309ba4f239b614113e05",
+    "app/services/database/bulk_insert.py": "d7d4d425f51440f6ed5fc0217c63a7e20a6da3d36118aa4f90445c17a79d1922",
+    "app/schemas/task.py": "34fd9cd7fb25fed8dedb949576e1fb571836605db6695e7dd4e20ceea82555b4",
+    "app/api/routes/tasks.py": "fc55079c4fae3228657c37954c3cd81ef1c9d8e498c582d6f113fa55f56fd643",
+    "tests/test_merge_html_attachment_api.py": "9c8f8c5d016bfed71fb1d4392280da463b9de90382b8c21335b64d8f7124221d",
+    "tests/test_merge_html_attachment_references.py": "b166728cedc3ebbefbc70bb0338d8b01aea4bfa713df85296d297de5f369de0c",
+    "tests/test_merge_reference_recovery_helper.py": "eca505d6c9b4c1ace938eeb881ffbedfb3110b5319b1a93a8a94ac93cc2af395"
+  }
+}

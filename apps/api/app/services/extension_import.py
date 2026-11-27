@@ -37,16 +37,14 @@ def canonical_stamp(db, cid):
 
 def source_summary(path, before=0):
     """Only called for a validated, retained staged source. Do not read media to check a prefix."""
-    from app.services.adaptive_import.reader_package import _json, require
+    from app.services.adaptive_import.reader_package import index_rows
     with zipfile.ZipFile(path) as z:
         head = package_header(z)
         roots = {a["path"]:a["root"] for a in head["assets"]}
         sha = hashlib.sha256((head["lineage"] + "\n").encode())
         count, prefix = 0, sha.hexdigest()
         with z.open(INDEX) as f:
-            while line := f.readline(65537):
-                require(len(line) <= 65536 and count < 50000)
-                r = _json(line)
+            for r in index_rows(f):
                 sha.update(json.dumps([r["id"],r["parent"],r["source_path"],r["role"],r["at"],r["sha256"],
                            [(p, roots[p]) for p in r["assets"]]], ensure_ascii=False, separators=(",",":")).encode() + b"\n")
                 count += 1

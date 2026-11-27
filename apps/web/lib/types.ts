@@ -870,6 +870,11 @@ export type BackgroundTaskRead = {
   export_format?: string | null;
   offline_target?: OfflineDownloadTarget | null;
   result: {
+    attachment_recovery?: {
+      missing_attachments: number;
+      repaired_occurrences: number;
+      unlocated_occurrences: number;
+    };
     context_return_recovery?: {
       action: "retry" | "update_files" | "open_list";
       reason: string;

@@ -9,6 +9,7 @@ from datetime import datetime
 
 from app.services.adaptive_import.contracts import AdaptiveImportError
 from app.services.import_pipeline.canonical_draft import CanonicalDraftMessage, content_hash, preview_text
+from app.core.config import get_settings
 
 PROFILE = "reader-chat-v1"
 INDEX = "reader/source.jsonl"
@@ -22,9 +23,13 @@ def require(ok):
         raise AdaptiveImportError("READER_PACKAGE_INVALID", "The Reader package does not match its source index.", layer="archive")
 
 
+def _reject_constant(_value):
+    raise ValueError("Non-JSON metadata number.")
+
+
 def _json(data):
     try:
-        obj = json.loads(data)
+        obj = json.loads(data, parse_constant=_reject_constant)
     except (UnicodeError, ValueError, RecursionError) as exc:
         raise AdaptiveImportError("READER_PACKAGE_INVALID", "Invalid Reader package metadata.", layer="archive") from exc
     require(isinstance(obj, dict))
@@ -33,13 +38,13 @@ def _json(data):
 
 def package_header(z):
     info = z.getinfo("manifest.json")
-    require(info.file_size <= 1024 * 1024)
+    require(info.file_size <= min(4 * 1024 * 1024, get_settings().bundle_max_object_bytes))
     m = _json(z.read(info))
     require(set(m) == {"version","source_id","title","lineage","messages","assets","partial"})
     require(m["version"] == PROFILE and isinstance(m["source_id"], str) and ID.fullmatch(m["source_id"]))
     require(isinstance(m["title"], str) and 0 < len(m["title"]) <= 512 and "\n" not in m["title"] and "\r" not in m["title"])
     require(m["lineage"] in ("tree", "list") and m["messages"] == [] and type(m["partial"]) is bool)
-    require(isinstance(m["assets"], list) and len(m["assets"]) <= 2000)
+    require(isinstance(m["assets"], list) and len(m["assets"]) + 3 <= get_settings().bundle_max_entries)
     paths = set()
     for asset in m["assets"]:
         require(isinstance(asset, dict) and set(asset) == {"path","kind","root"})
@@ -63,18 +68,56 @@ def verify_assets(z, m):
         require(chain.hex() == a["root"])
 
 
+def index_rows(source):
+    """Parse JSONL metadata in bounded chunks, never an archive-sized readline.
+
+    The existing metadata scalar/depth and archive-byte guards still apply.
+    Message bodies and message counts are not limited here; array growth visits
+    the live workspace/control checkpoint every 64 KiB of input.
+    """
+    from app.services.adaptive_import.manifest_stream import _Reader
+    from app.services.uploads import UploadLimitError
+
+    class IndexReader(_Reader):
+        whitespace_pattern = re.compile(r"[ \t\r]*")
+
+    reader = IndexReader(source, max_bytes=get_settings().bundle_max_object_bytes)
+    try:
+        while reader.peek():
+            # json.loads(bytes) accepted a UTF-8 BOM at the start of each row.
+            if reader.peek() == "\ufeff":
+                reader.take()
+            end = reader.buffer.find("\n", reader.offset)
+            if end >= 0:
+                # Most rows fit in the already-bounded input buffer. Preserve
+                # json.loads' fast path without ever reading a whole large row.
+                row = _json(reader.buffer[reader.offset:end])
+                reader.offset = end + 1
+                yield row
+                continue
+            reader.whitespace()
+            require(reader.peek() == "{")
+            row = reader.value(keep=True)
+            reader.whitespace()
+            require(reader.take() == "\n")
+            yield row
+    except (UnicodeError, ValueError, RecursionError) as exc:
+        if isinstance(exc, (AdaptiveImportError, UploadLimitError)):
+            raise
+        raise AdaptiveImportError("READER_PACKAGE_INVALID", "Invalid Reader package metadata.", layer="archive") from exc
+
+
 def messages(z, m):
     """Consumes Markdown and JSONL in lockstep; never inflate the entire archive/text."""
     from app.services.adaptive_import.bounded_io import checkpoint
+    from app.services.import_pipeline.record_spool import TextIntegrityError, read_verified_text
     roots = {a["path"]: a["root"] for a in m["assets"]}
     seen, tree_nodes, used, previous, last_user = set(), set(), set(), None, None
     with z.open("conversation.md") as md, z.open(INDEX) as idx:
         header = f"# {m['title']}\n\n".encode()
         require(md.read(len(header)) == header)
-        while line := idx.readline(64 * 1024 + 1):
+        for row in index_rows(idx):
             checkpoint()
-            require(len(line) <= 64 * 1024 and line.endswith(b"\n") and len(seen) < 50000)
-            row = _json(line)
             fields = {"id","parent","source_path","role","offset","bytes","sha256","assets","at"}
             require(isinstance(row, dict) and set(row) in (fields, fields | {"question"}))
             key, role, n = row["id"], row["role"], row["bytes"]
@@ -87,11 +130,11 @@ def messages(z, m):
                 last_user = key
             require(row["parent"] == (previous if m["lineage"] == "tree" else None))
             segment = row["source_path"]
-            require(isinstance(segment, list) and (0 < len(segment) <= 128 if m["lineage"] == "tree" else not segment))
+            require(isinstance(segment, list) and (bool(segment) if m["lineage"] == "tree" else not segment))
             for node in segment:
-                require(isinstance(node, str) and ID.fullmatch(node) and node not in tree_nodes and len(tree_nodes) < 50000)
+                require(isinstance(node, str) and ID.fullmatch(node) and node not in tree_nodes)
                 tree_nodes.add(node)
-            require(type(n) is int and 0 < n <= 2 * 1024 * 1024)
+            require(type(n) is int and 0 < n <= z.getinfo("conversation.md").file_size - md.tell())
             at = row["at"]
             if at is not None:
                 require(isinstance(at, str) and len(at) <= 40)
@@ -101,18 +144,17 @@ def messages(z, m):
                     require(False)
             prefix = f"## {role.capitalize()}\n\n".encode()
             require(md.read(len(prefix)) == prefix and type(row["offset"]) is int and md.tell() == row["offset"])
-            raw = md.read(n)
-            require(len(raw) == n and hashlib.sha256(raw).hexdigest() == row["sha256"] and md.read(2) == b"\n\n")
+            try:
+                body = read_verified_text(md, n, row["sha256"])
+            except (TextIntegrityError, UnicodeError):
+                require(False)
+            require(md.read(2) == b"\n\n")
             assets = row["assets"]
             require(isinstance(assets, list) and len(assets) <= len(roots)
                     and all(isinstance(p, str) and p in roots for p in assets) and len(set(assets)) == len(assets))
             used.update(assets)
             seen.add(key)
             previous = key
-            try:
-                body = raw.decode("utf-8")
-            except UnicodeDecodeError:
-                require(False)
             from app.services.adaptive_import.archive_sources import archive_reference_matches
             # Do not adopt direct Reader asset IDs supplied as source Markdown.
             refs = [match["target"] for match in archive_reference_matches(body)]
@@ -122,6 +164,20 @@ def messages(z, m):
                                      ensure_ascii=False, separators=(",",":")).encode()
             yield row, body, hashlib.sha256(fingerprint).hexdigest()
         require(seen and not md.read(1) and used == set(roots))
+
+
+def analyze_index(path):
+    """Recognition is based on explicit byte-index authority, never role headings inside prose/code."""
+    from app.services.adaptive_import.analysis import ANALYZER_VERSION, signature_digest
+    from app.services.adaptive_import.contracts import AnalysisResult
+    with zipfile.ZipFile(path) as archive:
+        package_header(archive)
+    signature = {"version": ANALYZER_VERSION, "mode": "MARKDOWN", "builtin": PROFILE}
+    return AnalysisResult(mode="MARKDOWN", signature=signature, signature_digest=signature_digest(signature),
+        mapping_candidates={"boundaries": [], "suggested": {
+            "title": "FIRST_H1_OR_FILENAME", "boundary": {"kind": "HEADING", "level": 2},
+            "role_mapping": {"User": "user", "Assistant": "assistant"}, "preamble": "IGNORE",
+        }}, semantic={}, handling_class="SUPPORTED")
 
 
 def indexed_draft(record, source, template, catalog):
@@ -164,7 +220,7 @@ def indexed_draft(record, source, template, catalog):
                     ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
                 yield {"message":message, "source_refs":[ref]}
         if streaming_budget():
-            spool = RecordSpool.write(path.parent, rows(), prefix="reader-source")
+            spool = RecordSpool.write(path.parent, rows(), prefix="reader-source", spill_text=True)
             sequence, refs = MappedSequence(spool, lambda r: decode_message(r["message"])), []
         else:
             data = list(rows())

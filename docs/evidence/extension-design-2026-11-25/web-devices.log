@@ -1,0 +1,29 @@
+[WebServer] (node:30628) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:22708) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+
+Running 6 tests using 1 worker
+
+
+
+  ok 1 e2e\extension-consent.spec.ts:72:7 › en-US: a device-limit 409 gives the user an actionable recovery path (972ms)
+
+  ok 2 e2e\extension-consent.spec.ts:72:7 › zh-CN: a device-limit 409 gives the user an actionable recovery path (700ms)
+
+  ok 3 e2e\extension-consent.spec.ts:93:5 › an unrelated authorization error keeps the existing generic message (703ms)
+
+  ok 4 e2e\extension-consent.spec.ts:103:7 › en-US: short code requires explicit review and approval; a changed account cannot approve (949ms)
+
+  ok 5 e2e\extension-consent.spec.ts:103:7 › zh-CN: short code requires explicit review and approval; a changed account cannot approve (993ms)
+
+  ok 6 e2e\extension-consent.spec.ts:141:5 › short-code approval refreshes the device list and revocation has an explicit recovery (970ms)
+
+
+
+  6 passed (8.9s)

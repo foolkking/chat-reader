@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
@@ -29,6 +30,17 @@ class DerivedRebuildResult:
     rebuilt_blocks: int
 
 
+def _lock_rebuild_target(db: Session, conversation_id: uuid.UUID) -> None:
+    # Take the parent lock before touching children. KEY SHARE lets deletion
+    # mark the conversation deleted, while its FOR UPDATE cascade waits for
+    # this transaction to release the message and index rows.
+    target = select(Conversation.id).where(
+        Conversation.id == conversation_id, Conversation.deleted_at.is_(None),
+    ).with_for_update(read=True, key_share=True)
+    if db.scalar(target) is None:
+        raise ValueError("Conversation not found.")
+
+
 def rebuild_conversation_derived_data(
     db: Session,
     conversation_id: uuid.UUID,
@@ -37,9 +49,7 @@ def rebuild_conversation_derived_data(
     rebuild_versions: bool = True,
     commit_batches: bool = False,
 ) -> DerivedRebuildResult:
-    conversation = db.get(Conversation, conversation_id)
-    if conversation is None or conversation.deleted_at is not None:
-        raise ValueError("Conversation not found.")
+    _lock_rebuild_target(db, conversation_id)
 
     version_ids = [
         row[0]
@@ -105,6 +115,8 @@ def rebuild_conversation_derived_data(
             db.commit()
         if progress_callback:
             progress_callback("rebuilding_versions", min(85, 10 + round(75 * rebuilt_versions / max(total, 1))), rebuilt_versions, total)
+        if commit_batches:
+            _lock_rebuild_target(db, conversation_id)
 
     # Derived indexes and render blocks are rebuilt asynchronously after the
     # user mutation has committed. They must not create a second conversation
@@ -117,6 +129,8 @@ def rebuild_conversation_derived_data(
         db.commit()
     if progress_callback:
         progress_callback("rebuilding_indexes", 90, rebuilt_versions, total)
+    if commit_batches:
+        _lock_rebuild_target(db, conversation_id)
     rebuild_search_and_toc_for_conversation(db, conversation_id)
     db.add(
         ConversationEvent(

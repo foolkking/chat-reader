@@ -259,6 +259,12 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reading-feedback-browser.mjs
 
+      - name: Merged attachment recovery result and retained original navigation
+        if: ${{ inputs.shard == 3 }}
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/merge-attachment-result-browser.mjs
+
       - name: Context and Skill upload proxy transport
         if: ${{ inputs.shard == 1 }}
         run: |
@@ -390,6 +396,24 @@ jobs:
           pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reading-stability.spec.ts e2e/image-natural-flow.spec.ts
           node scripts/ci/verify-reading-stability.mjs
 
+      - name: Archive native activation across late project and preference reads
+        if: ${{ inputs.shard == 1 }}
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/archive-navigation.json
+          E2E_ARCHIVE_NAVIGATION: "1"
+        run: |
+          pnpm --filter web exec playwright test --config=archive-navigation.config.ts
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "archive-navigation.json").read_text())
+          stats = report["stats"]
+          assert stats["expected"] == 12
+          assert stats["unexpected"] == stats["flaky"] == stats["skipped"] == 0
+          assert not report["errors"]
+          PY
+
       - name: PDF.js maintained-line browser checks
         if: ${{ inputs.shard == 3 }}
         env:
@@ -452,6 +476,26 @@ jobs:
             if curl -fsS http://127.0.0.1:8000/api/health >/dev/null; then break; fi
             sleep 1
           done
+
+      # Keep the original fourteen gate commands intact. These device cases
+      # need AUTH_ENABLED and would otherwise be skipped by the default PWA run.
+      - name: Browser extension pairing and authorization recovery
+        if: ${{ inputs.shard == 3 }}
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          AUTH_ENABLED: "true"
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/extension-consent.json
+        run: |
+          pnpm --filter web exec playwright test --config=playwright.config.ts e2e/extension-consent.spec.ts
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report = json.loads((Path(os.environ["RUNNER_TEMP"]) / "extension-consent.json").read_text())
+          stats = report["stats"]
+          assert stats["expected"] == 8
+          assert stats["unexpected"] == stats["flaky"] == stats["skipped"] == 0
+          assert not report["errors"]
+          PY
 
       - name: Release E production-build PWA negative matrix
         if: ${{ inputs.shard == 1 }}
@@ -534,6 +578,27 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Preserve merge attachment result evidence
+        if: ${{ always() && inputs.shard == 3 }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: merge-attachment-result-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/merge-attachment-result-browser/result.json
+            ${{ runner.temp }}/merge-attachment-result-browser/failure.json
+            ${{ runner.temp }}/merge-attachment-result-browser/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve device authorization native results
+        if: ${{ always() && inputs.shard == 3 }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: extension-consent-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/extension-consent.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Preserve navigation and import component evidence
         if: ${{ always() && inputs.shard == 1 }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -546,6 +611,17 @@ jobs:
             ${{ runner.temp }}/navigation-import-layout-browser/result.json
             ${{ runner.temp }}/navigation-import-layout-browser/failure.json
             ${{ runner.temp }}/navigation-import-layout-browser/*.png
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve native archive activation evidence
+        if: ${{ always() && inputs.shard == 1 }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: archive-navigation-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/archive-navigation.json
+            ${{ runner.temp }}/archive-navigation-results
           if-no-files-found: error
           retention-days: 14
 

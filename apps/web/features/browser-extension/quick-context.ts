@@ -10,6 +10,7 @@ export function useQuickContext(cid: string, revision: number | undefined, zh: b
   const scope = `${generation}:${cid}:${revision ?? ""}`;
   const run = useMemo(() => ({ scope, active: true, sending: false, key: "", claimedJob: "" }), [scope]);
   const [state, setState] = useState({ scope: "", id: "", error: "" as "" | "preset" | "export", sending: false });
+  const [ready,setReady] = useState<{scope:string;artifact:string;summary:string}|null>(null);
   const id = state.scope === scope ? state.id : "";
   const current = useCallback(() => run.active && generation === authenticationGeneration(), [generation, run]);
   useEffect(() => { run.active = true; return () => {run.active = false;}; }, [run]);
@@ -37,13 +38,20 @@ export function useQuickContext(cid: string, revision: number | undefined, zh: b
     }
   }, [current, scope, run]);
   useEffect(() => {
-    if (artifact && run.claimedJob !== id && current()) {run.claimedJob = id; void save(artifact);}
-  }, [id, artifact, run, current, save]);
+    if (artifact && run.claimedJob !== id && current()) {
+      run.claimedJob = id;
+      const d = job?.result?.context_delivery as {files:number;partial:boolean;current:boolean;index:boolean;continuation:string}|undefined;
+      const summary=d?`${zh?"附件文件":"Files"}: ${d.files}${d.partial?(zh?"（部分未包含）":" (some not included)"):""} · ${[d.current?"Current":"",d.index?"Index":""].filter(Boolean).join(" + ")||
+          (d.continuation==="unavailable"?(zh?"交接文件不可用":"Handoff unavailable"):(zh?"未含交接文件":"No handoff files"))}`:"";
+      setReady({scope,artifact,summary});void save(artifact);
+    }
+  }, [id, artifact, run, current, save, scope, zh, job]);
   async function start() {
     if (busy || run.sending || !current()) return;
     if (id && task.isError && !terminalFailure) {await task.refetch(); return;}
     if (terminalFailure) run.key = "";
     run.key ||= crypto.randomUUID(); run.sending = true;
+    setReady(null);
     setState({scope, id: "", sending: true, error: ""});
     try {
       const r = await fetch(`/api/conversations/${cid}/quick-context`, {method: "POST", headers: {"Idempotency-Key": run.key}});
@@ -61,5 +69,6 @@ export function useQuickContext(cid: string, revision: number | undefined, zh: b
   const reason = state.scope === scope && (state.error || (failed ? "export" : ""));
   const error = reason === "preset" ? (zh ? "快捷预设已更改或不可用。请在「导出预设」中重新选择，再导出。" : "The quick preset changed or is unavailable. Choose a default in Export presets, then export again.")
     : reason ? (zh ? "上下文包未下载。请从对话菜单重试。" : "The context package was not downloaded. Retry from the conversation menu.") : "";
-  return {start, busy, error, label: busy ? (zh ? "正在生成上下文包…" : "Preparing context…") : (zh ? "导出上下文 .context.zip" : "Export .context.zip")};
+  return {start, busy, error, ready:ready?.scope===scope?ready:null, download:()=>ready?.scope===scope?save(ready.artifact):undefined,
+    dismiss:()=>setReady(null),label: busy ? (zh ? "正在生成上下文包…" : "Preparing context…") : (zh ? "交给 AI · .context.zip" : "For AI · .context.zip")};
 }

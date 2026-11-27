@@ -1,22 +1,26 @@
 """Selective JSON reader: exporter message bodies are validated then discarded."""
 import codecs
 import json
+import re
 
 from app.services.adaptive_import.bounded_io import CHUNK_BYTES, checkpoint
 
 
 class _Reader:
-    def __init__(self, source):
+    whitespace_pattern = re.compile(r"[ \t\r\n]*")
+
+    def __init__(self, source, *, max_bytes=4 * 1024 * 1024):
         self.source, self.buffer, self.offset = source, "", 0
         self.decoder = codecs.getincrementaldecoder("utf-8-sig")()
         self.total = 0
         self.ended = False
+        self.max_bytes = max_bytes
 
     def peek(self):
         if self.offset == len(self.buffer) and not self.ended:
             raw = self.source.read(CHUNK_BYTES)
             self.total += len(raw)
-            if self.total > 4 * 1024 * 1024:
+            if self.total > self.max_bytes:
                 raise ValueError("Manifest is too large.")
             self.ended = not raw
             self.buffer = self.decoder.decode(raw, final=self.ended)
@@ -32,8 +36,13 @@ class _Reader:
         return token
 
     def whitespace(self):
-        while self.peek() and self.peek() in " \t\r\n":
-            self.take()
+        # Skip whitespace within each bounded chunk, not one Python call per
+        # byte. JSONL indexes can contain large amounts of harmless whitespace.
+        while self.peek():
+            end = self.whitespace_pattern.match(self.buffer, self.offset).end()
+            if end == self.offset:
+                break
+            self.offset = end
 
     def expect(self, token):
         self.whitespace()

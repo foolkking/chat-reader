@@ -1,0 +1,290 @@
+﹣ the AppBlock page gets the capture script first, Tailwind utilities and ChatGPT color variables (2.7921ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-survey
+✔ the sandbox frame sits in the viewport, transparent and click-through (216.6536ms)
+﹣ panel: each AppBlock gets its preview image above its link, also inside a folded card note (1.1286ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-survey
+﹣ panel: a preview that fails keeps the link and says why (0.6799ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-survey
+﹣ real fixture: prose outside the card stays Markdown, each card is its own segment (2.9658ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\dil-checkbox-longcard-appblock.raw.json
+﹣ real fixture: card HTML is well-formed XHTML with layout props and every row (0.9482ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\dil-checkbox-longcard-appblock.raw.json
+﹣ sandbox snapshot keeps text when a card cannot be rasterized (130.7893ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\dil-checkbox-longcard-appblock.raw.json
+﹣ panel: ZIP embeds one PNG per card with folded text, prose stays outside (1.0064ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\dil-checkbox-longcard-appblock.raw.json
+✔ panel: search images inside a card are downloaded once, drawn into the card and left out of its folded text (622.8859ms)
+✔ card HTML draws a downloaded picture and keeps a placeholder otherwise; alt text stays on one line (3.3979ms)
+✔ panel: a row of search images becomes one strip image, with the originals in a folded list (396.2297ms)
+✔ panel: a map is copied from the page with its rating pins; without it on the page the place list stays and a warning says so (653.8856ms)
+✔ picture lists are recognized only when every image sits alone beside plain text (27.7358ms)
+✔ panel: a picture-list card becomes a table of thumbnails and text; every failure falls back to the PNG or the text (3098.364ms)
+✔ a chart in a card with no size of its own is drawn whole, not cropped to 180px (1.2421ms)
+✔ a search image with no result shows its fallback, as ChatGPT does (12.0855ms)
+﹣ only real UI becomes an image; Markdown tables, lists, quotes and math stay text (2.3309ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\mainlab
+﹣ Markdown side: GFM tables with alignment, $$ block math, nested numbered lists, headings by size (0.8211ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\mainlab
+﹣ Markdown side: UI text inside cards uses emphasis, controls and charts become readable text (5.9145ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\mainlab
+﹣ card HTML is well-formed and draws each component kind (0.9008ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\mainlab
+﹣ client-defined widgets: code blocks become fenced Markdown, visualizations become charts (0.6982ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\mainlab
+﹣ a checkbox inside a list item is a task-list item (0.8328ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\mainlab
+✔ pie charts, unsafe style values and unknown icons degrade safely (6.046ms)
+﹣ panel end to end: ZIP Markdown keeps widget code blocks and draws the widget chart (1.7531ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\mainlab
+✔ image pointers become asset placeholders instead of page work, and DIL is kept on the record (7.335ms)
+✔ files download in parallel, falls back to the legacy route, and reports failures per file (156.748ms)
+✔ ZIP is data-first: original images, ui JSON, raw debug export (1241.2217ms)
+﹣ real fixture: records keep DIL source, compiled program and content_references (3.2622ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\dil-checkbox-longcard-appblock.raw.json
+﹣ real fixture: static render recovers what fallbackMarkdown omits (0.8099ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\dil-checkbox-longcard-appblock.raw.json
+✔ unknown hooks and components degrade to their text instead of failing (43.0471ms)
+﹣ real fixture: AppBlock resolves through clientDefinedWidgets and becomes standalone HTML (0.6614ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\dil-checkbox-longcard-appblock.raw.json
+﹣ sandbox page handler executes code with Function and reports errors (1.7068ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\dil-checkbox-longcard-appblock.raw.json
+﹣ panel: default ZIP uses static render, exports AppBlock HTML and complete ui JSON (1.2533ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\dil-checkbox-longcard-appblock.raw.json
+﹣ every edge case exports without errors (3.942ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-01.raw.json
+﹣ EDGE-02: card text shows its characters literally, not as Markdown or HTML (0.8212ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-02.raw.json
+﹣ EDGE-10: files a card names only in its data are downloaded and linked (0.7051ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-10.raw.json
+✔ EDGE-02: a run without spaces breaks inside the card instead of overflowing (1.0486ms)
+﹣ EDGE-09/11: headings inside an answer sit below the per-message ## headings (0.7446ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-09.raw.json
+﹣ small fixes: one section per answer, no tracking tags, tidy badges and code blocks (0.6636ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-01.raw.json
+﹣ EDGE-01/03/04: text shown only in another card state is exported, folded (0.64ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-01.raw.json
+﹣ EDGE-04: cards interleaved with prose keep order and default values (0.5809ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-04.raw.json
+﹣ EDGE-09: business ratings (server-resolved Rating) show in the card text and the card picture (0.8944ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-09.raw.json
+✔ default fast panel loads unloaded history, selects messages, previews repeatedly without extra requests or scrolling (652.1279ms)
+✔ ZIP download names the file by title and date, honours save-as, refuses a switched chat and survives re-injection (711.4117ms)
+✔ a chat ChatGPT keeps hidden in the page (display:none, 2026-11) is not the chat on screen (295.2408ms)
+✔ by default the ZIPs hold only what the user wants: manifest.json only with its own switch in 高级 (1142.3242ms)
+✔ shared links are read through the share endpoint; files use the conversation behind the link (260.7345ms)
+✔ switching chats re-reads the open panel once; a hidden panel waits until it is shown (4186.7542ms)
+✔ a chat that changed since it was read is read again at export, and the status says so (133.1906ms)
+✔ on the 2026-10 page a new answer is still noticed, and exporting while ChatGPT answers is refused (255.204ms)
+✔ a chat opened while ChatGPT is answering is read by itself once the answer is finished (995.9267ms)
+﹣ actual T01 inline pipe stays in one cell without losing backslashes (2.5386ms) # 缺少本地私有夹具：archive/Output - test 1/V0.5-1-项目分析撰写.md
+﹣ actual genui chart becomes readable structured data with UI metadata (0.5094ms) # 缺少本地私有夹具：archive/Output - test 1/V0.5-1-项目分析撰写.md
+✔ unavailable live values stay explicitly missing and request UI completion (8.9511ms)
+✔ literal code and math including pipes, unavailable words, and PUA are unchanged (1.4866ms)
+✔ raw code content beats transformed fallback preserving blank lines (1.3502ms)
+✔ raw fenced program whitespace restored only for identical nonblank lines (1.3444ms)
+✔ 5000 messages are read with two requests, without DOM or scrolling (123.6298ms)
+✔ branch choice keeps selected alternative and never mixes regenerated answers (3.9285ms)
+✔ text preserves Markdown, formulas, code and fallback, excluding hidden plumbing (3.5016ms)
+✔ older pages prepend, overlap deduplicates, request failures never export partial history (1.9664ms)
+✔ missing parents, other conversation, invalid sessions and abort are explicit errors (2.0176ms)
+✔ awkward card text stays one whole HTML block with the same words as the table (7686.4975ms)
+✔ links, citations, code and badges become the allowed tags (91.7566ms)
+✔ a formula keeps the Markdown table, with the reason in manifest.json (95.7519ms)
+✔ a strikethrough, as a node or a lineThrough style, becomes <del> in both layouts (249.026ms)
+✔ the fault switch "html" shows the table fallback on a real page (111.4651ms)
+✔ the validator rejects each way an HTML block can break (6.309ms)
+✔ checking one card takes under 5 ms, also while other test files run (319.6466ms)
+﹣ HT fixtures: HTML with the option on (loose recognition), PNG as before with it off (0.7595ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\html-table-2026-10\HT-01.raw.json
+✔ loose recognition: image in its own box and text in a col; a heading outside the rows becomes the header (0.7784ms)
+﹣ EDGE-09 (real picture list): HTML whole in markdown-it; with the option off the table is unchanged (0.5549ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-09.raw.json
+﹣ HT-03: the heading, badge and caption go in the same HTML block as the pictures (0.4692ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\html-table-2026-10\HT-03.raw.json
+✔ text above the pictures that HTML cannot carry keeps the PNG, never a table without it (290.5801ms)
+✔ the validator checks the text above and below the pictures (2.8119ms)
+✔ Markdown: a text, caption or title struck through by lineThrough reads as ~~…~~, line by line (0.3189ms)
+﹣ html-check passes on a spread of fixtures (cards, AppBlocks, map, lab cards) (2.758ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10
+✔ the check notices missing text, and a card whose controls do nothing (442.7414ms)
+﹣ EDGE-01: the live card starts at its default state and its tab bar switches the content (1.2747ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-01.raw.json
+﹣ the two forms show the same page; the folder links its files, the single file inlines them (0.8452ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-10.raw.json
+﹣ EDGE-05: each AppBlock runs in a sandboxed srcdoc frame that reports its height (0.9331ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-05.raw.json
+﹣ EDGE-09: the map keeps its places for the draggable map, the place list stays text (1.2317ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-09.raw.json
+﹣ EDGE-09: the page asks for no tile until the map button is clicked, and falls back to the picture (0.9673ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-09.raw.json
+✔ formulas become MathML with their source kept; unreadable input is left to the caller (3.7907ms)
+✔ prose HTML kept as is loses scripts, event attributes and script URLs; SVG stays (51.3842ms)
+✔ removed content that showed on the page leaves an English notice linking to its section; invisible parts go silently (83.0143ms)
+✔ a code block keeps its own copy button and no "Removed" notice; a button written in the chat is still removed (922.819ms)
+✔ script URLs hidden by tabs, line breaks or control characters are removed too (51.0149ms)
+✔ toHtml without options is unchanged by the live mode; live controls carry handler numbers (49.3821ms)
+✔ the panel offers the HTML export, remembers its form and the background accepts .html (6.7447ms)
+✔ the ten languages are the ones decided, with English as the base (9.5617ms)
+✔ every language has every text, no extra ones, with the same {0} slots and full plural forms (177.4103ms)
+✔ Russian counts in its three forms; English in two; a missing text shows English (1.4792ms)
+✔ the manifest words exist in all ten languages, within the store limits (3.8466ms)
+✔ the code and the language files name the same texts (20.0729ms)
+✔ no Chinese is left in the extension code, outside comments and what ChatGPT itself writes (13.8743ms)
+✔ the sidebar, its settings and the buttons by the input box show each language (2928.9618ms)
+✔ picking another language draws the sidebar again in it; auto follows the browser (900.0127ms)
+✔ the toolbar panel and the settings tab show each language (2523.1171ms)
+﹣ exports in each language carry its fixed words and none of the Chinese ones (3.9636ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-01.raw.json
+﹣ the print page lays out in the language of the export, also for a payload that does not say it (1.3189ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-01.raw.json
+﹣ the exported page carries its own words for the cards it runs, in the language of the export (5.4288ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-01.raw.json
+﹣ search answers keep inline links and citations resolved from componentResults (9.3819ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-energy
+﹣ link and citation pages are not downloaded as UI images (1.7696ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-energy
+﹣ writing blocks (the document view replacing Canvas) export as their Markdown (1.2073ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-energy
+﹣ code-interpreter file links keep their sandbox target and draw as links in cards (0.7507ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-energy
+﹣ a card table without header cells uses its first row as the header (2.0745ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-energy
+✔ generated images and code plots are exported; tool plumbing and hidden copies are not (10.7564ms)
+﹣ panel end to end: generated image, plot and sandbox CSV land in the ZIP (1.4544ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-energy
+﹣ card formulas render as readable math, not LaTeX source; known icons are drawn (0.7934ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-energy
+✔ downloaded files without a content type are named by their header (3.1244ms)
+﹣ links keep the text written between their tags; entities keep their names (2.494ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-survey
+﹣ search images inside a card keep their own size instead of filling the row (0.9857ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-survey
+﹣ search images at the top level are Markdown images; a learning block keeps its formula (0.8629ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\lab-survey
+✔ the panel warns when the loaded extension is older than the injected panel (641.0937ms)
+✔ names Chrome refuses are cleaned: format characters, ~, .lnk, cut emoji (user report, 2026-10-20) (3.3881ms)
+✔ if Chrome still refuses the folder name, a plainer one is used and the note is written (6.6199ms)
+✔ names are safe on Windows; paths cannot leave the chosen folder (1.9127ms)
+✔ a long note and files larger than one chunk arrive whole and in order (1255.7432ms)
+✔ a file that did not arrive whole is refused, not written short (1.2771ms)
+✔ the note and its files land in <folder>/<title>/ as in the ZIP; a second send gets its own folder (10.9586ms)
+Error: Not implemented: navigation (except hash changes)
+    at module.exports (<EXTENSION_REPO>\node_modules\jsdom\lib\jsdom\browser\not-implemented.js:9:17)
+    at navigateFetch (<EXTENSION_REPO>\node_modules\jsdom\lib\jsdom\living\window\navigation.js:77:3)
+    at exports.navigate (<EXTENSION_REPO>\node_modules\jsdom\lib\jsdom\living\window\navigation.js:55:3)
+    at LocationImpl._locationObjectNavigate (<EXTENSION_REPO>\node_modules\jsdom\lib\jsdom\living\window\Location-impl.js:30:5)
+    at LocationImpl._locationObjectSetterNavigate (<EXTENSION_REPO>\node_modules\jsdom\lib\jsdom\living\window\Location-impl.js:24:17)
+    at set href (<EXTENSION_REPO>\node_modules\jsdom\lib\jsdom\living\window\Location-impl.js:46:10)
+    at set href (<EXTENSION_REPO>\node_modules\jsdom\lib\jsdom\living\generated\Location.js:125:37)
+    at opened (eval at <anonymous> (<EXTENSION_REPO>\tests\obsidian-send.test.cjs:68:100), <anonymous>:420:34)
+    at eval (eval at <anonymous> (<EXTENSION_REPO>\tests\obsidian-send.test.cjs:68:100), <anonymous>:426:95)
+    at <EXTENSION_REPO>\tests\obsidian-send.test.cjs:11:71 undefined
+✔ with Obsidian as the export kind, 保存到 Obsidian streams the ZIP's Markdown and original images to the relay tab (669.6635ms)
+✔ saved note links move from the page's localStorage to chrome.storage.local once, and new ones are kept there (482.3257ms)
+✔ extension files hold no characters Chrome refuses to load ("isn't UTF-8 encoded") (47.0293ms)
+✔ settings move from the page's localStorage to chrome.storage.local once, then stay there (6.1929ms)
+✔ one change reaches every place at once; a reset goes back to the defaults (7.9195ms)
+✔ file names: title and date in the chosen order, a prefix, the version only when asked (24.7669ms)
+✔ Markdown settings: Obsidian properties with the model, timestamps and role names (5.3902ms)
+✔ settings rows change in place: same elements, focus kept, values and summaries updated; ⓘ floats (645.2028ms)
+✔ on chatgpt.com the buttons are there, the sidebar opens from them, and nothing is read before it is needed (793.3382ms)
+✔ with HTML as one file and more than 10 pictures and files, the file-name line becomes a clickable suggestion to use ZIP (2470.1559ms)
+✔ the toolbar panel's info line becomes the same clickable suggestion, before the kind, and switches to ZIP (324.6763ms)
+✔ the toolbar panel reads the chat's summary and exports through the page, closed sidebar or not (414.9138ms)
+✔ the ⓘ of 折叠块等特殊标签, 图文卡片用 HTML and HTML 网页的形式 open their explanation; the others only show a tip (121.5401ms)
+✔ 侧边栏快捷键 shows the key Chrome bound, says when there is none, and when it sits on the toolbar-panel row (232.053ms)
+✔ the toolbar panel and the settings tab are extension pages; the manifest keeps the panel on ChatGPT (3.9122ms)
+✔ a page opened with Obsidian already the kind shows the pill and 选择 still opens the sidebar (312.7783ms)
+✔ the document splits into its messages; "## " lines inside code stay code (4.9065ms)
+✔ HTML in the text shows as text, as on the ChatGPT page; the exporter's <br> stays a break (193.4519ms)
+✔ formulas become readable text in answers; prompts keep their dollars and line breaks (57.2978ms)
+✔ formula environments, alignment and symbols the card converter lacks read as text (1.3218ms)
+✔ links to the web stay links; links to archive files keep only their text (49.6261ms)
+✔ long code wraps instead of scrolling; wide tables get a landscape page (1.1514ms)
+﹣ "导出 PDF" posts the ZIP's Markdown and images to its hidden print frame (1.6547ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-01.raw.json
+﹣ print page: messages, opened callouts and links (jsdom; image slicing needs a browser) (1.8155ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\edge-2026-10\EDGE-01.raw.json
+✔ a picture-list table (empty header, thumbnail | text) is laid out as a picture list (95.0538ms)
+﹣ HT-01: a card image with width="100%" fills its 124px column instead of spilling over the text (7.1261ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\pdf-layout\HT-01.raw.json
+✔ pdf-check reads every Markdown line, table cells one by one, formulas as their text (4.9945ms)
+✔ the print page is a web-accessible extension page; permissions are the panel redesign's (1.6092ms)
+﹣ pdf-check: EDGE-10 prints with all text, links and images (1.0389ms) # Chrome not found
+✔ a picture-list card row stays one table row when its text has a lone carriage return (646.4995ms)
+﹣ every profession case exports without errors (2.7656ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\pro-2026-10\PRO-01.raw.json
+﹣ a file a card links and also names in its data is downloaded once (0.9698ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\pro-2026-10\PRO-01.raw.json
+﹣ a file with a space in its name, URL-encoded in the card and in the link, is saved once under its real name (0.8704ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\pro-2026-10\PRO-11.raw.json
+﹣ PRO-03: struck-out text in a redline keeps its strikethrough (0.7944ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\pro-2026-10\PRO-03.raw.json
+﹣ PRO-03/05/11: files the user attached are saved and linked above the prompt (0.932ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\pro-2026-10\PRO-03.raw.json
+﹣ PRO-11: a scrollable DataFrame is saved as CSV with its first rows as a table (1.1945ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\pro-2026-10\PRO-11.raw.json
+﹣ PRO-07: a title ending in a newline gives a clean heading and file name (0.9923ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\pro-2026-10\PRO-07.raw.json
+﹣ PRO-11: charts a card shows from sandbox:/mnt/data are drawn into the card and downloaded once (4.6996ms) # 缺少本地私有夹具：<EXTENSION_REPO>\tests\fixtures\pro-2026-10\PRO-11.raw.json
+✔ prose HTML is escaped only when asked, outside code, inline code and math (6.007ms)
+✔ 通用 Markdown is the default profile: HTML cards off, prose HTML escaped (682.1865ms)
+✔ Obsidian profile: prose HTML kept, HTML cards still off; options stay editable and are remembered (1005.6633ms)
+✔ raw HTML in the prose of a message with cards is escaped in every profile (it goes through the DIL tree) (20.3708ms)
+✔ a one-use batch ticket belongs to the current fixed, uncancelled plan item (57.4088ms)
+✔ ZIP local source indexes unknown membership separately, builds only selected chat and keeps exact lineage (123.4283ms)
+✔ official ZIP selected attachment bytes are verified; missing files are explicit partials, never fetched (103.558ms)
+✔ local archive accepts a message over old 2 MiB and source over 8 MiB without an arbitrary conversation limit (2272.0049ms)
+✔ ZIP rejects traversal, symlinks, duplicated names and corrupt contents before claiming success (8.0857ms)
+✔ catalogue rejects duplicate source identities and aborted reads retain no claimed result (6.9008ms)
+✔ fixed batch plan is account-scoped, holds cross-project ids and never changes existing destination (2.3779ms)
+✔ source workspace never guesses a default workspace or exposes its session credentials (1358.7052ms)
+✔ capture beyond old JSON/message/resource caps is lossless and reports real reading/asset counters (2357.1091ms)
+✔ an interrupted large media response is dropped, explicitly partial, never silently complete (908.8342ms)
+✔ an explicit text-only choice does not fetch media and never truncates long text (814.8386ms)
+✔ another selection cannot silently replace an unfinished durable plan (445.071ms)
+✔ resume wakes the host even when every item already has an active server receipt (231.0996ms)
+✔ resume waits for an active capture without a receipt instead of staging it again (817.8278ms)
+✔ skip review only dismisses this plan item, preserves the original receipt and source, and allows a new plan (96.6707ms)
+✔ stale review skip is rejected after each receipt replacement, without commit, cancel or source removal (103.1222ms)
+✔ another center window can cancel the next item while the first is building; the running queue never submits that cancelled item (203.1608ms)
+✔ a tab query is only a confirmed-source hint and never starts discovery automatically (55.8549ms)
+✔ saved-reference lookup requires an explicit click and sends only the selected source ids (307.4489ms)
+✔ a Reader account change invalidates a held saved-reference response and stops the remaining lookups (90.7178ms)
+✔ a deleted Reader destination blocks confirmation instead of silently falling back to unclassified (76.6959ms)
+✔ refreshing Reader projects preserves the current per-project mapping, attachment choice and remember choice (103.3904ms)
+✔ fixed pages cover every row exactly once without accumulated DOM ranges or a result cap (180.5824ms)
+✔ empty and filtered pages expose truthful ranges, not fake totals (2.315ms)
+✔ page selection chooses 50; filtered selection chooses the actual 150-id snapshot (3.9998ms)
+✔ cross-page/project filters retain the same Set; selected list removes hidden selections (1.776ms)
+✔ selected list itself is fixed-page and adjusts after removing the final page (2.7011ms)
+✔ title search supports Chinese and identifiers without reading body, filename or project names (0.8961ms)
+✔ known metadata remains known; unknown attachment/time data is not invented as zero (0.9175ms)
+✔ local whole-project selection requires digest-bound completion and ignores only the title filter (2.6221ms)
+✔ web sources can never claim whole-project even with fabricated complete/digest flags (3.2919ms)
+✔ incomplete, unknown-membership, unclassified and digest-mismatched archives reject whole-project (3.7793ms)
+✔ frozen range is immutable, belongs to this model and does not adopt later source additions (1.3487ms)
+✔ a changed catalogue cannot mint a new whole-project claim, while old fixed selections stay frozen (1.4461ms)
+✔ changed identity or missing/reassigned IDs fail atomically before shared choices change (3.6997ms)
+✔ source replacement clears old selection and invalidates old confirmation even for identical IDs (1.4599ms)
+✔ duplicate/invalid IDs are rejected without destroying prior source or selection (1.2781ms)
+✔ same-name projects remain independent; unknown membership is not unclassified (0.596ms)
+✔ already-discovered long project identifiers are not silently truncated or capped (0.481ms)
+✔ selection reconciles external Set changes and never retains bodies or source credentials (0.5803ms)
+✔ the existing selected-tree parser gives the Reader three visible IDs and their actual node chains (11.4062ms)
+✔ a model-authored program is never exported instead of the static card, including code-type messages (2.2331ms)
+✔ Reader ZIP preserves UTF-8 message boundaries, hidden ancestry and multi-chunk attachment bytes (90.7154ms)
+✔ private package is origin-bound, has no generic tab/cookie permissions, and cannot overwrite a build (1188.1777ms)
+✔ installable ZIP is reproducible and its root is the same allowlisted directory that was tested (937.0108ms)
+✔ a sparse ZIP contains only selected rows in source order, and never claims a missing parent or source asset (6.5875ms)
+✔ settlement and completeness are independent; a historical or unknown receipt is never proof of this page (6.1582ms)
+✔ without a retained local receipt, source status looks up only the open ChatGPT conversation (34.6739ms)
+✔ changing the configured Reader origin forgets only the old device data, without any network request (4.4266ms)
+✔ the CI reference and private installer are independent of Git checkout line endings (3519.3705ms)
+✔ verify private binding against a pinned neutral ZIP checksum, not a self-declared program hash (1425.6474ms)
+✔ host restart keeps a sealed package but deletes unfinished capture; it queries before an explicit resume (158.6795ms)
+✔ host restart reconciles an accepted receipt without re-uploading, even when its final response was lost (12.1897ms)
+✔ disconnecting the Reader account removes its retained plaintext package without a network request (5.6262ms)
+✔ discard and resume are serialized; a cancelled package cannot be uploaded by a waiting check (15.3406ms)
+✔ a discard waiting behind an accepted upload cannot cancel or overwrite its receipt (12.7839ms)
+✔ check re-reads the ledger after its local lock, not the earlier panel snapshot (4.5013ms)
+✔ startup cleanup keeps a package sealed after the original ledger snapshot but before the OPFS lock (11.9238ms)
+✔ device cleanup re-reads sealed packages after the OPFS lock instead of using an old retained set (5.3135ms)
+✔ discard reconciles an accepted receipt without deleting the server import (4.206ms)
+✔ a failed server cancellation preserves the resumable package and binding (4.6834ms)
+✔ project homepage and project-chat hints are distinct from custom GPTs, shares and malformed paths (299.3178ms)
+✔ project homepage offers only Import to Reader and opens the center without discovery, session or Reader queries (182.2401ms)
+✔ project-chat discovery keeps a project hint and own membership, ignores body links and never upgrades partial scope (132.691ms)
+✔ project-home visible directory discovery cannot resolve conflicting project claims or guess a missing workspace (84.0981ms)
+✔ source project entry opens only a tab hint and preserves live-document authorization (6.1288ms)
+✔ attachment navigation mounts a fixed page and reaches every file without accumulating earlier pages (364.8685ms)
+✔ full question preview is loaded only on demand, preserves >2 MiB exact text and releases it on blur (175.3064ms)
+✔ late preview callbacks cannot recreate text after blur, list replacement or route change (83.6545ms)
+✔ latest capture navigation keeps metadata only, reuses one Blob, and search cancellation does not invalidate later random reads (1900.8214ms)
+✔ capture navigation survives ordinary history mounting but refuses changed content, route and explicit branch (1309.2251ms)
+✔ literal navigation matches retain Unicode text offsets, all repeated hits and regex punctuation (247.2281ms)
+✔ search resolves a real Range in the requested repeated occurrence, including inline elements (178.0065ms)
+✔ unverifiable duplicate search text does not fall back to an unrelated first hit or message (56.2332ms)
+✔ duplicate attachment names use file identity; unknown identity is an explicitly typed message fallback (52.0824ms)
+✔ headings keep real Setext and ATX hierarchy but exclude fenced examples (16.2ms)
+✔ file-backed navigation scans 50001 messages and a >2 MiB body without retaining bodies or dropping later matches (2304.4064ms)
+✔ body scanning is cancellable between batches and never reads for an empty query (18.6686ms)
+✔ dynamic WAR sender is accepted only with the stable authenticated extension origin and a one-use live-parent grant (4.8042ms)
+✔ expired, other-tab and replaced parent document tickets cannot authorize a frame (6.377ms)
+✔ a previously authorized frame loses host action permission when its parent changes (1.8703ms)
+✔ file reader never caches a large record and paginated readers share a bounded window (44.1297ms)
+✔ twelve 3MiB pages do not retain twelve decoded parser buffers after GC (1559.6829ms)
+✔ streamed source: more than 8 MiB, long message, Unicode byte ranges, no full JSON decode (1696.9048ms)
+✔ streamed source: 50,001 messages keep the last row, no 50k rejection (3176.3134ms)
+✔ streamed JSON scans escaped delimiters across bytes and rejects truncation and wrong outer shape (33.4845ms)
+✔ hidden ancestry, duplicate ids and broken/looping branches do not turn into successful partial captures (10.369ms)
+✔ incremental SHA matches independent crypto across padding, large and tiny chunks (29.2436ms)
+✔ progress never invents totals or returns source text, filenames, ids or credentials (0.5729ms)
+✔ floating Reader package keeps its ID, has all sizes of its own icon and no native side-panel surface (645.2227ms)
+✔ real archive writer: >100 MiB, >16 MiB attachment, >2 MiB Unicode body and 50,001 messages retain every byte (13255.4991ms)
+ℹ {"evidence":"<TASK_EVIDENCE>\\main\\reader-transfer-lzjx54","archiveBytes":121218852,"assetBytes":105906195,"bodyBytes":3456033,"messages":50001,"sha256":"e71501690246fe4228843ddaf087a2efe0c9752a456f36407fca8567553795b6","maximumWrites":{"source.bin":65536,"body.tmp":270038,"index.tmp":262282,"import.zip":262144}}
+✔ upload response loss: query receipt first, resume same binding at durable offset, never duplicate a chunk (81.0257ms)
+✔ lost final receipt: next attempt only reads receipt, with no second begin, upload or finish (47.1199ms)
+✔ digest rejection and changed target/package binding stop immediately; no unsafe fallback (132.0853ms)
+✔ impossible server offsets and mismatched acknowledgements are not interpreted as completion (1.9077ms)
+✔ progress throttling retains the last measured update during a stall, and announces phase changes immediately (80.9621ms)
+✔ phase changes flush the previous measured final counters before showing the new phase (0.7371ms)
+✔ source control shares real PageIndex semantics: virtual history keeps progress/receipt; actual edits and branches invalidate (667.7781ms)
+✔ Entity keeps the name in the sentence (8.6826ms)
+✔ AsyncImage and AsyncImageGroup become Markdown images of their resolved content URLs (5.4096ms)
+✔ file and memory citations, quizzes and unknown widgets keep readable text (7.0003ms)
+✔ form controls are visible in cards and readable in Markdown (5.3113ms)
+✔ learning blocks keep their formula and description (3.9958ms)
+✔ plain-text replies resolve old citation markers into source links (5.5769ms)
+✔ search images are fetched through the extension, other hosts through the page (3.8858ms)
+✔ map widgets become a map picture marker, then a place list with category, rating, address and links (5.7065ms)
+✔ extension, panel and package versions match (5.199ms)
+ℹ tests 270
+ℹ suites 0
+ℹ pass 207
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 63
+ℹ todo 0
+ℹ duration_ms 20678.5604

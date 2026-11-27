@@ -11,11 +11,23 @@ test("product coverage is additive; frozen scheduling and original skips remain 
   assert.deepEqual(active.settings, base.settings);
   assert.deepEqual(active.web, base.web);
   assert.deepEqual(active.api.allowed_skips, base.api.allowed_skips);
-  assert.equal(active.api.collected_count, base.api.collected_count + 106);
-  assert.equal(active.api.expected_passed, base.api.expected_passed + 106);
+  assert.equal(active.api.collected_count, base.api.collected_count + 490);
+  assert.equal(active.api.expected_passed, base.api.expected_passed + 490);
+  for (const [file, count] of Object.entries({
+    "test_extension_diagnostics.py": 34, "test_append_selection_ranges.py": 24,
+    "test_selective_append_postgres.py": 8, "test_append_ranges_postgres.py": 6,
+    "test_append_recovery.py": 7, "test_derived_rebuild_delete_postgres.py": 3,
+  })) assert.equal(active.api.added_file_counts[`tests/${file}`], count);
   assert.equal(active.api.added_file_counts["tests/test_project_export_scope.py"], 6);
   assert.equal(active.api.added_file_counts["tests/test_selective_append.py"], 6);
-  assert.equal(active.api.added_file_counts["tests/test_reader_extension.py"], 15);
+  assert.equal(active.api.added_file_counts["tests/test_reader_extension.py"], 17);
+  assert.equal(active.api.added_file_counts["tests/test_extension_release_postgres.py"], 18);
+  assert.equal(active.api.added_file_counts["tests/test_extension_retry.py"], 18);
+  assert.equal(active.api.added_file_counts["tests/test_extension_transfer.py"], 4);
+  assert.equal(active.api.added_file_counts["tests/test_extension_transfer_postgres.py"], 2);
+  assert.equal(active.api.added_file_counts["tests/test_memory_probe_windows.py"], 5);
+  assert.equal(active.api.added_file_counts["tests/test_reader_index_metadata.py"], 19);
+  assert.equal(active.api.added_file_counts["tests/test_reader_long_message_storage.py"], 83);
   assert.equal(active.api.added_file_counts["tests/test_import_message_units.py"], 39);
   assert.equal(active.api.added_file_counts["tests/test_program_update_confirmation.py"], 1);
   assert.equal(active.api.added_file_counts["tests/test_admin_updates.py"], 9);
