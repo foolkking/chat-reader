@@ -1,0 +1,9 @@
+name: Observe disposable worker claim
+on:
+  push:
+    branches: [codex/diagnose-claim-68607e4]
+permissions: {contents: read}
+jobs:
+  original-api-shard-three:
+    uses: ./.github/workflows/api-quality-shard.yml
+    with: {shard: 3}

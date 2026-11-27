@@ -75,3 +75,14 @@ class ExecutionRecorder:
         with output.open("x", encoding="utf8") as stream:
             json.dump(state, stream, indent=2)
             stream.write("\n")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call(item):
+    if ("test_settings_action_task_fixture.py::test_own_action_fixture_cleanup_unblocks" in item.nodeid
+            and os.environ.get("GITHUB_REF_NAME") == "codex/diagnose-claim-68607e4"):
+        from claim_observation import sample
+        with sample(item.name):
+            yield
+    else:
+        yield
