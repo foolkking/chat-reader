@@ -361,6 +361,12 @@ returns `derived_status` (`ready` or `queued`) plus an optional
 `derived_job_id`. Search and TOC rebuilds run through the existing idempotent
 BackgroundJob path after the canonical transaction commits.
 
+The rebuild takes `FOR KEY SHARE` on the live conversation before changing
+child rows. A batched worker reacquires this lock after each commit and
+progress callback, including before it publishes search and TOC rows. Deletion
+can record its tombstone during a batch. Its `FOR UPDATE` cleanup waits for
+that batch to release the parent, and a new batch stops at the tombstone.
+
 ## Conversation merge execution (current)
 
 - The November 25 source candidate recognizes actual HTML `href/src/poster` resource attributes inside imported Markdown/paragraph text as well as Markdown destinations. Copying and source-edit occurrence generation use source coordinates and canonical block context; literal code, comments, escaped markup and link-title text are not bindings. This fixes valid imported HTML cards being rejected before copying; it is not a production data migration or permission to repair source rows automatically. [Incident and verification boundary](../evidence/merge-html-2026-11-25/README.md).

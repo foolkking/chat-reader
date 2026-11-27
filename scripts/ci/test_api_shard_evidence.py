@@ -50,9 +50,9 @@ class ApiShardTests(unittest.TestCase):
         original = json.loads((ROOT / "scripts/ci/quality-schedule-v2.json").read_text("utf8"))
         self.assertEqual(original["api"]["collected_count"], 7010)
         self.assertEqual(original["api"]["expected_passed"], 7007)
-        self.assertEqual(plan["api"]["collected_count"], 7497)
-        self.assertEqual(plan["api"]["expected_passed"], 7494)
-        self.assertEqual(sum(plan["api"]["added_file_counts"].values()), 487)
+        self.assertEqual(plan["api"]["collected_count"], 7500)
+        self.assertEqual(plan["api"]["expected_passed"], 7497)
+        self.assertEqual(sum(plan["api"]["added_file_counts"].values()), 490)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_project_export_scope.py"], 6)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_selective_append.py"], 6)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_reader_extension.py"], 17)
@@ -63,7 +63,7 @@ class ApiShardTests(unittest.TestCase):
             "test_reader_long_message_storage.py": 83,
             "test_extension_diagnostics.py": 34, "test_append_selection_ranges.py": 24,
             "test_selective_append_postgres.py": 8, "test_append_ranges_postgres.py": 6,
-            "test_append_recovery.py": 7,
+            "test_append_recovery.py": 7, "test_derived_rebuild_delete_postgres.py": 3,
         }.items():
             self.assertEqual(plan["api"]["added_file_counts"]["tests/" + file], count)
         self.assertEqual(plan["api"]["added_file_counts"]["tests/test_program_update_confirmation.py"], 1)

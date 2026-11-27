@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "base_schedule_sha256": "34cffe5e0c2057c9eb9ad6f616773996260e7e785b50162a4702dfbd6e761aee",
-  "reason": "Add merge HTML literal/source-coordinate, target-only missing reference recovery and result regressions to the existing extension qualification. Also bind 77 collected extension-diagnostic, append-range, tail-concurrency, device-receipt and append-recovery cases from five new files. Preserve original collection and source-audit detection; whole-merge reference failure behavior is changed only with explicit user approval. No timeouts, skips or security gates relaxed.",
+  "reason": "Add merge HTML literal/source-coordinate, target-only missing reference recovery and result regressions to the existing extension qualification. Also bind 77 collected extension-diagnostic, append-range, tail-concurrency, device-receipt and append-recovery cases from five new files. Preserve original collection and source-audit detection; whole-merge reference failure behavior is changed only with explicit user approval. Add three PostgreSQL cases for conversation deletion during search publication and between committed rebuild phases. No timeouts, skips or security gates relaxed.",
   "api": {
     "tests/test_admin_updates.py": {
       "count": 9,
@@ -132,6 +132,11 @@
       "count": 6,
       "shard": 4,
       "source_lf_sha256": "a953c6017fcd6bc6acf786df10c381e1e59b54380194c12a7fd2f5b90887c76f"
+    },
+    "tests/test_derived_rebuild_delete_postgres.py": {
+      "count": 3,
+      "shard": 2,
+      "source_lf_sha256": "31ac6f3199e5ff3c39e20240229584b0543df538f5a50f352107aa1fcf80e2a7"
     },
     "tests/test_append_recovery.py": {
       "count": 7,

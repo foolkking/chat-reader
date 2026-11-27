@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-27，`v0.1.11` 资格运行 `45857898638/1` 的 Web 分片 2 在插入消息后删除对话时返回 500。PostgreSQL 记录了搜索索引写入与消息版本级联删除之间的死锁。修复及真实 PostgreSQL 并发回归见[后台重建的事务边界](system/BACKEND_AND_API.md)和 `apps/api/tests/test_derived_rebuild_delete_postgres.py`。
+
 2026-11-26 发布复审：补记[旧版读取范围决策的边界](system/BROWSER_EXTENSION.md#core-remediation-candidate)及[生产容量下界](deployment.md)，核心候选的本机验收与线上状态分开。
 
 2026-11-26 项目映射补充：[逐行映射与旧服务回退](system/BROWSER_EXTENSION.md#core-remediation-candidate)、[Web 会话创建合同](api-reference.md#插件导入项目确认2026-11-26-工作树未部署)及[独立安装包与测试回执](evidence/extension-core-2026-11-26/project-mapping.md)。旧包、旧失败与生产事实保留。
