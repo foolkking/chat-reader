@@ -1,5 +1,7 @@
 # Project State
 
+**2026-11-27：`v0.1.12` 已签名发布，`king` 未升级。** Reader `5206bd8` 的分支及标签 CI 各 19/19，签名发布 4/4。12:04（北京时间）按签名镜像包、数据库、四业务卷和原有余量核算，部署盘在传输前仍差 **129.95 MiB**。未上传、停服或清理；12:06 独立复核现网仍是 `v0.1.10`，worker 正常，两套恢复点及桌面插件均保留。真实账号的最终导入和长对话导航仍由用户验收。[发布、失败及容量回执](docs/evidence/extension-source-acceptance-2026-11-26/v0.1.12-release-and-capacity.json) · [部署边界](docs/deployment.md#v0112-pretransfer)
+
 **来源整改验收候选（2026-11-26，未发布）。** 插件 `6725193` 已修复分页重叠和顺序、失败进度、区间勾选及章节定位。配套 Reader 运行基线 `41e0ebf` 没有新增应用代码或 migration。两份精确 CI 绿色；新版插件包的合成缺图导入、251 条追加及去重在隔离 API/worker/PostgreSQL 完成，不能代替个人账号实测。真实来源导入、长对话双向跳转和截图由用户执行。[状态矩阵、回执与安装包摘要](docs/evidence/extension-source-acceptance-2026-11-26/README.md) · [浏览器验收单](docs/evidence/extension-source-acceptance-2026-11-26/manual.md)
 
 **发布复审（2026-11-26，未上线）。** 复现 v0.1.10 读取新版未完成范围追加时缺少 `indexes`；候选已分开保存两种决策，旧 worker 不会执行范围，新版可恢复原选择。`king` 20:22（北京时间）只读测得仅新备份下界就超过剩余容量；两套恢复点均保留。[容量与部署边界](docs/deployment.md) · [新旧版本合同](docs/system/BROWSER_EXTENSION.md#core-remediation-candidate)

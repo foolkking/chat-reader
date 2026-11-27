@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-27：[v0.1.12 运行与制品回执](evidence/extension-source-acceptance-2026-11-26/v0.1.12-release-and-capacity.json)及[传输前的容量判定](deployment.md#v0112-pretransfer)。保留 v0.1.11 的死锁和后续两次 worker 计时失败，区分已签名发布、未部署与待用户验收的真实浏览器场景。
+
 2026-11-26：[来源整改验收矩阵](evidence/extension-source-acceptance-2026-11-26/README.md)、[用户浏览器验收单](evidence/extension-source-acceptance-2026-11-26/manual.md)及[机器回执](evidence/extension-source-acceptance-2026-11-26/verification.json)区分精确插件 CI、离线对照、隔离服务端提交与未执行的个人实测。同步[插件来源合同](system/BROWSER_EXTENSION.md#source-acceptance)，新增只读对照工具；不改变服务部署、权限或 schema。
 
 2026-11-26 发布复审：补记[旧版读取范围决策的边界](system/BROWSER_EXTENSION.md#core-remediation-candidate)及[生产容量下界](deployment.md)，核心候选的本机验收与线上状态分开。

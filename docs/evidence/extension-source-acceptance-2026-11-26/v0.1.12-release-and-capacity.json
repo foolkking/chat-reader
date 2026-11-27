@@ -1,0 +1,855 @@
+{
+  "recorded_at": "2026-11-27T12:08:02.294035+08:00",
+  "decision": "Signed public release; pre-transfer capacity refusal. Production was not replaced.",
+  "candidate": {
+    "pushed_at": "2026-11-27T11:13:52.066219+08:00",
+    "tag": "v0.1.12",
+    "tag_object": "8a14e2a20ce483ed900d60d220f1e8087c36cdf0",
+    "sha": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+    "failed_tag_preserved": true,
+    "qualified": "45930295682/1",
+    "jobs": 19
+  },
+  "branch_tag_and_publish_workflows": [
+    {
+      "id": 45930295682,
+      "run_attempt": 1,
+      "head_sha": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+      "head_branch": "codex/reader-extension",
+      "path": ".github/workflows/build-release-images.yml",
+      "event": "workflow_dispatch",
+      "created_at": "2026-11-27T02:46:27Z",
+      "updated_at": "2026-11-27T03:10:43Z",
+      "observed": "2026-11-27T11:12:18+08:00",
+      "conclusion": "success",
+      "counts": {
+        "success": 19
+      },
+      "jobs": [
+        {
+          "id": 140281112246,
+          "name": "settings-restore",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112606,
+          "name": "image-preparation",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112615,
+          "name": "settings-quality-shard-2 / matrix",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112620,
+          "name": "web-quality-shard-2 / gates",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112655,
+          "name": "reading-performance-comparison / compare",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112656,
+          "name": "api-quality-shard-3 / suite",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112673,
+          "name": "api-quality-shard-1 / suite",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112699,
+          "name": "web-quality-shard-1 / gates",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112740,
+          "name": "settings-quality-shard-4 / matrix",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112775,
+          "name": "api-quality-shard-4 / suite",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112788,
+          "name": "settings-quality-shard-1 / matrix",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112816,
+          "name": "web-quality-shard-3 / gates",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112896,
+          "name": "api-quality-shard-2 / suite",
+          "conclusion": "success"
+        },
+        {
+          "id": 140281112917,
+          "name": "settings-quality-shard-3 / matrix",
+          "conclusion": "success"
+        },
+        {
+          "id": 140286284825,
+          "name": "api-quality",
+          "conclusion": "success"
+        },
+        {
+          "id": 140286288947,
+          "name": "settings-quality",
+          "conclusion": "success"
+        },
+        {
+          "id": 140288089813,
+          "name": "web-quality",
+          "conclusion": "success"
+        },
+        {
+          "id": 140288189109,
+          "name": "build-images",
+          "conclusion": "success"
+        },
+        {
+          "id": 140288340840,
+          "name": "inspect-release-artifact",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 45932950696,
+      "run_attempt": 1,
+      "head_sha": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+      "head_branch": "v0.1.12",
+      "path": ".github/workflows/build-release-images.yml",
+      "event": "workflow_dispatch",
+      "created_at": "2026-11-27T03:14:01Z",
+      "updated_at": "2026-11-27T03:37:53Z",
+      "observed": "2026-11-27T11:38:05+08:00",
+      "conclusion": "success",
+      "counts": {
+        "success": 19
+      },
+      "jobs": [
+        {
+          "id": 140289536126,
+          "name": "image-preparation",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536375,
+          "name": "settings-quality-shard-1 / matrix",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536388,
+          "name": "settings-quality-shard-4 / matrix",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536400,
+          "name": "settings-restore",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536445,
+          "name": "settings-quality-shard-2 / matrix",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536485,
+          "name": "api-quality-shard-1 / suite",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536515,
+          "name": "api-quality-shard-3 / suite",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536518,
+          "name": "api-quality-shard-4 / suite",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536558,
+          "name": "web-quality-shard-2 / gates",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536603,
+          "name": "web-quality-shard-3 / gates",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536622,
+          "name": "web-quality-shard-1 / gates",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536655,
+          "name": "reading-performance-comparison / compare",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536657,
+          "name": "api-quality-shard-2 / suite",
+          "conclusion": "success"
+        },
+        {
+          "id": 140289536721,
+          "name": "settings-quality-shard-3 / matrix",
+          "conclusion": "success"
+        },
+        {
+          "id": 140294682877,
+          "name": "settings-quality",
+          "conclusion": "success"
+        },
+        {
+          "id": 140295380606,
+          "name": "api-quality",
+          "conclusion": "success"
+        },
+        {
+          "id": 140296558587,
+          "name": "web-quality",
+          "conclusion": "success"
+        },
+        {
+          "id": 140296705646,
+          "name": "build-images",
+          "conclusion": "success"
+        },
+        {
+          "id": 140296849502,
+          "name": "inspect-release-artifact",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 45932921879,
+      "run_attempt": 1,
+      "head_sha": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+      "head_branch": "v0.1.12",
+      "path": ".github/workflows/publish-update.yml",
+      "event": "push",
+      "created_at": "2026-11-27T03:13:43Z",
+      "updated_at": "2026-11-27T04:03:55Z",
+      "observed": "2026-11-27T12:03:58+08:00",
+      "conclusion": "success",
+      "counts": {
+        "success": 4
+      },
+      "jobs": [
+        {
+          "id": 140289438605,
+          "name": "qualify",
+          "conclusion": "success"
+        },
+        {
+          "id": 140297112572,
+          "name": "program-acceptance",
+          "conclusion": "success"
+        },
+        {
+          "id": 140297112603,
+          "name": "rehearse",
+          "conclusion": "success"
+        },
+        {
+          "id": 140304408474,
+          "name": "publish",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "native_regressions": [
+    {
+      "sha": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+      "run": 45930295682,
+      "attempt": 1,
+      "artifacts": {
+        "api-quality-shard-2": {
+          "id": 15168274679,
+          "digest": "sha256:24cb736ac0b22492b40cf38ba4f1c2d3e38f06a106b290099cea1165a21d41b3",
+          "size_in_bytes": 412612
+        },
+        "api-quality-shard-3": {
+          "id": 15168377742,
+          "digest": "sha256:85b2ee64c143a9f7aaee6341130c30a2134ead01343185c341b95474c9e1a613",
+          "size_in_bytes": 226100
+        },
+        "web-quality-shard-2": {
+          "id": 15168958163,
+          "digest": "sha256:5c3d35e929deaf4da81c961930d7c8b01169b9edeab7c628bcca69b2cb24ae8a",
+          "size_in_bytes": 13215260
+        }
+      },
+      "test_derived_rebuild_delete_postgres": [
+        {
+          "case": "test_delete_during_worker_search_publication",
+          "native_seconds_including_fixture": "4.262"
+        },
+        {
+          "case": "test_tombstone_between_committed_phases_stops_rebuild[rebuilding_versions]",
+          "native_seconds_including_fixture": "2.050"
+        },
+        {
+          "case": "test_tombstone_between_committed_phases_stops_rebuild[rebuilding_indexes]",
+          "native_seconds_including_fixture": "2.186"
+        }
+      ],
+      "test_settings_action_task_fixture": [
+        {
+          "case": "test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[conversation_export-processing]",
+          "native_seconds_including_fixture": "5.669"
+        },
+        {
+          "case": "test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[conversation_export-cancelling]",
+          "native_seconds_including_fixture": "3.473"
+        },
+        {
+          "case": "test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[offline_package-processing]",
+          "native_seconds_including_fixture": "3.416"
+        },
+        {
+          "case": "test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[offline_package-cancelling]",
+          "native_seconds_including_fixture": "3.433"
+        }
+      ],
+      "source_editor_mutation": {
+        "schema_version": 2,
+        "gate_id": "source-editor-mutation",
+        "status": "passed",
+        "started_at": "2026-11-27T02:51:24.789Z",
+        "test_count": 124,
+        "completed_at": "2026-11-27T03:01:39.819Z",
+        "duration_ms": 616983,
+        "result_counts": {
+          "passed": 124,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      "verified_at": "2026-11-27T11:12:29.082860+08:00"
+    },
+    {
+      "sha": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+      "run": 45932950696,
+      "attempt": 1,
+      "artifacts": {
+        "api-quality-shard-2": {
+          "id": 15169713921,
+          "digest": "sha256:b576426d8b8a6aef3073e7597b515162e7f483a15c9605fe26ddd44213c25605",
+          "size_in_bytes": 414075
+        },
+        "api-quality-shard-3": {
+          "id": 15169079814,
+          "digest": "sha256:6c6c5309781b13eae339789bb9e4603f48aedd08bb5da4a1305179e518b5d97d",
+          "size_in_bytes": 226847
+        },
+        "web-quality-shard-2": {
+          "id": 15170222742,
+          "digest": "sha256:c31ad876dd69eae7facc9f1511fba54d8abff8c06cdacdd2b0469c8060e93597",
+          "size_in_bytes": 13203544
+        }
+      },
+      "test_derived_rebuild_delete_postgres": [
+        {
+          "case": "test_delete_during_worker_search_publication",
+          "native_seconds_including_fixture": "5.159"
+        },
+        {
+          "case": "test_tombstone_between_committed_phases_stops_rebuild[rebuilding_versions]",
+          "native_seconds_including_fixture": "2.844"
+        },
+        {
+          "case": "test_tombstone_between_committed_phases_stops_rebuild[rebuilding_indexes]",
+          "native_seconds_including_fixture": "2.922"
+        }
+      ],
+      "test_settings_action_task_fixture": [
+        {
+          "case": "test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[conversation_export-processing]",
+          "native_seconds_including_fixture": "6.458"
+        },
+        {
+          "case": "test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[conversation_export-cancelling]",
+          "native_seconds_including_fixture": "4.066"
+        },
+        {
+          "case": "test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[offline_package-processing]",
+          "native_seconds_including_fixture": "4.183"
+        },
+        {
+          "case": "test_own_action_fixture_cleanup_unblocks_next_task_without_stale_recovery[offline_package-cancelling]",
+          "native_seconds_including_fixture": "4.074"
+        }
+      ],
+      "source_editor_mutation": {
+        "schema_version": 2,
+        "gate_id": "source-editor-mutation",
+        "status": "passed",
+        "started_at": "2026-11-27T03:18:51.918Z",
+        "test_count": 124,
+        "completed_at": "2026-11-27T03:28:48.238Z",
+        "duration_ms": 598185,
+        "result_counts": {
+          "passed": 124,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      },
+      "verified_at": "2026-11-27T11:38:39.190727+08:00"
+    }
+  ],
+  "failed_gates_preserved": {
+    "v0.1.11": [
+      {
+        "id": 45857898638,
+        "attempt": 1,
+        "sha": "41e0ebfd9e8a3f68f43645c84d333c616fde85be",
+        "observed": "2026-11-27T09:18:18+08:00",
+        "counts": {
+          "success": 15,
+          "failure": 1,
+          "skipped": 3
+        }
+      },
+      {
+        "id": 45857847382,
+        "attempt": 1,
+        "sha": "41e0ebfd9e8a3f68f43645c84d333c616fde85be",
+        "observed": "2026-11-27T09:18:14+08:00",
+        "counts": {
+          "failure": 1,
+          "skipped": 3
+        }
+      }
+    ],
+    "original_browser": {
+      "job": 140040993934,
+      "artifact": 15138021578,
+      "transport_sha256": "sha256:55ec8429220214ea8f796cc87afc5530a2aa9709781901f806b4eb60f4f283e8",
+      "gate": {
+        "schema_version": 2,
+        "gate_id": "source-editor-mutation",
+        "status": "failed",
+        "started_at": "2026-11-26T16:26:16.089Z",
+        "test_count": 124,
+        "completed_at": "2026-11-26T16:36:56.250Z",
+        "duration_ms": 642414,
+        "result_counts": {
+          "passed": 123,
+          "failed": 1,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        }
+      }
+    },
+    "original_fault": "HTTP DELETE 500; PostgreSQL reported a cycle between derived search publication and the deletion cascade. Disposable PostgreSQL reproduced the race.",
+    "worker_latency": [
+      {
+        "id": 45923416147,
+        "run_attempt": 1,
+        "head_sha": "68607e407cb493247444b5e4156c561e7678277d",
+        "head_branch": "codex/reader-extension",
+        "path": ".github/workflows/build-release-images.yml",
+        "event": "workflow_dispatch",
+        "created_at": "2026-11-27T01:35:22Z",
+        "updated_at": "2026-11-27T02:00:37Z",
+        "observed": "2026-11-27T10:00:54+08:00",
+        "conclusion": "failure",
+        "counts": {
+          "success": 15,
+          "failure": 1,
+          "skipped": 3
+        },
+        "jobs": [
+          {
+            "id": 140259171261,
+            "name": "settings-restore",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171481,
+            "name": "web-quality-shard-3 / gates",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171497,
+            "name": "api-quality-shard-2 / suite",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171510,
+            "name": "image-preparation",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171523,
+            "name": "api-quality-shard-3 / suite",
+            "conclusion": "failure"
+          },
+          {
+            "id": 140259171544,
+            "name": "api-quality-shard-1 / suite",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171555,
+            "name": "web-quality-shard-1 / gates",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171556,
+            "name": "api-quality-shard-4 / suite",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171583,
+            "name": "settings-quality-shard-2 / matrix",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171648,
+            "name": "reading-performance-comparison / compare",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171651,
+            "name": "settings-quality-shard-4 / matrix",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171675,
+            "name": "settings-quality-shard-3 / matrix",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171776,
+            "name": "web-quality-shard-2 / gates",
+            "conclusion": "success"
+          },
+          {
+            "id": 140259171802,
+            "name": "settings-quality-shard-1 / matrix",
+            "conclusion": "success"
+          },
+          {
+            "id": 140263895912,
+            "name": "settings-quality",
+            "conclusion": "success"
+          },
+          {
+            "id": 140264137826,
+            "name": "api-quality",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 140266516949,
+            "name": "web-quality",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266658041,
+            "name": "inspect-release-artifact",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 140266658130,
+            "name": "build-images",
+            "conclusion": "skipped"
+          }
+        ]
+      },
+      {
+        "id": 45923416147,
+        "run_attempt": 2,
+        "head_sha": "68607e407cb493247444b5e4156c561e7678277d",
+        "head_branch": "codex/reader-extension",
+        "path": ".github/workflows/build-release-images.yml",
+        "event": "workflow_dispatch",
+        "created_at": "2026-11-27T01:35:22Z",
+        "updated_at": "2026-11-27T02:23:27Z",
+        "observed": "2026-11-27T10:23:40+08:00",
+        "conclusion": "failure",
+        "counts": {
+          "success": 15,
+          "failure": 1,
+          "skipped": 3
+        },
+        "jobs": [
+          {
+            "id": 140266930376,
+            "name": "image-preparation",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930516,
+            "name": "web-quality-shard-2 / gates",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930517,
+            "name": "settings-quality-shard-2 / matrix",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930560,
+            "name": "settings-restore",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930657,
+            "name": "api-quality-shard-1 / suite",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930672,
+            "name": "api-quality-shard-2 / suite",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930725,
+            "name": "web-quality-shard-1 / gates",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930739,
+            "name": "settings-quality-shard-4 / matrix",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930749,
+            "name": "reading-performance-comparison / compare",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930754,
+            "name": "web-quality-shard-3 / gates",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930770,
+            "name": "api-quality-shard-3 / suite",
+            "conclusion": "failure"
+          },
+          {
+            "id": 140266930800,
+            "name": "api-quality-shard-4 / suite",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930807,
+            "name": "settings-quality-shard-1 / matrix",
+            "conclusion": "success"
+          },
+          {
+            "id": 140266930892,
+            "name": "settings-quality-shard-3 / matrix",
+            "conclusion": "success"
+          },
+          {
+            "id": 140271938469,
+            "name": "settings-quality",
+            "conclusion": "success"
+          },
+          {
+            "id": 140272483824,
+            "name": "api-quality",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 140273803115,
+            "name": "web-quality",
+            "conclusion": "success"
+          },
+          {
+            "id": 140273921269,
+            "name": "build-images",
+            "conclusion": "skipped"
+          },
+          {
+            "id": 140273922517,
+            "name": "inspect-release-artifact",
+            "conclusion": "skipped"
+          }
+        ]
+      }
+    ],
+    "worker_latency_samples_seconds": [
+      3.0356204549999575,
+      2.6537430820000054
+    ],
+    "worker_latency_limit_seconds": 2,
+    "worker_diagnostics": [
+      {
+        "run": 45927769711,
+        "job": 140273061609,
+        "sha": "ef3d851b009b90e4e66ac42d5f8139e88a241cab",
+        "log_sha256": "0b73f907b95a2786f99fccb1b05df5fe8edd8f15902adb48d0b1905cc239d38a"
+      },
+      {
+        "run": 45929265182,
+        "job": 140277824585,
+        "sha": "cd758ef03e8be036c57a553a19dd4e551d540543",
+        "log_sha256": "5e3b600b3d368fba61dc944e364b7ecfd5338eac6565b349cc01579cbb91effd"
+      }
+    ],
+    "worker_diagnostics_limit": "Two diagnostic shard runs observed natural generation-2 pauses of 2.104 s / 149898 objects and 2.627 s / 139932 objects outside the timed claim. Neither original failing job had a stack trace proving the cause of its overrun. The CI-only change reclaims old fixtures between files; the original tests, clocks, ceilings, automatic GC and production worker were not changed."
+  },
+  "local_validation": {
+    "command_families": [
+      "python -m pytest on a disposable PostgreSQL cluster (synthetic data)",
+      "python -B -m unittest discover -s scripts/ci -p test_api_shard_evidence.py",
+      "node --test scripts/ci/quality-coverage-extension.test.mjs",
+      "python -B -m alembic heads"
+    ],
+    "focused_postgres": "26 passed, including 3 new cases; independent rerun of the 3 also passed",
+    "restore_control": "Initial environment: 8 passed, 1 failed due to missing synthetic session secret; all 9 passed with a task-local random secret.",
+    "local_original_shard_3": "1207 passed, 7 skipped on Windows, 6286 deselected; not release qualification",
+    "new_ci_harness": "Python 7/7 and Node 3/3 passed; originals preserved; schema single head 20261125_0065"
+  },
+  "published_identity": {
+    "observed": "2026-11-27T12:04:36.292199+08:00",
+    "tag": "v0.1.12",
+    "sha": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+    "release_id": 460152473,
+    "published_at": "2026-11-27T04:03:52Z",
+    "publish_run": 45932921879,
+    "qualification_run": 45932950696,
+    "ci_artifact_id": 15169778489,
+    "release_archive_asset_id": 798895956,
+    "signed_manifest_sha256": "6b07a7270e9efa6cebde4eb9fc44e8171d42fd00d32a1872a112ba32de129613",
+    "enrolled_ed25519_signature_verified": true,
+    "archive_sha256": "50e157d9c787331c45bbf9fb167079ff994567b492cb6c456ce16d55e6ca0d2d",
+    "archive_bytes": 178317496,
+    "actual_ci_archive_matches_published_asset": true
+  },
+  "tag_qualification_archive": {
+    "observed": "2026-11-27T11:41:06.850064+08:00",
+    "sha": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+    "tag": "v0.1.12",
+    "run": 45932950696,
+    "attempt": 1,
+    "artifact": 15169778489,
+    "transport_sha256": "sha256:1796ae32040bad0d82792de9cdeb3fde8e4f829cb702c9a0bf9ad874daf482d5",
+    "archive_sha256": "50e157d9c787331c45bbf9fb167079ff994567b492cb6c456ce16d55e6ca0d2d",
+    "archive_bytes": 178317496,
+    "expanded_bytes": 179226624,
+    "exact_full_qualification": true,
+    "signed_release_verified_at_this_step": false
+  },
+  "king": {
+    "enrolled_source_checked_at": "2026-11-27T12:04:54.278560+08:00",
+    "enrolled_candidate": {
+      "archive_asset_id": 798895956,
+      "archive_bytes": 178317496,
+      "archive_sha256": "50e157d9c787331c45bbf9fb167079ff994567b492cb6c456ce16d55e6ca0d2d",
+      "ci_artifact_id": 15169778489,
+      "ci_attempt": 1,
+      "ci_run": 45932950696,
+      "images": {
+        "api": {
+          "config": "sha256:2ef67b8bc3b1053aecc00ba8f4a25abbeb39b2da32983c943117235ee63fc33a",
+          "registry_digest": "sha256:126e774cea4dfbe1bd35494ea41057fa97e2c93bf05dd51f867235cf6e564fc4"
+        },
+        "web": {
+          "config": "sha256:1bb3421aff580e89bbcf0a56425b9ac62116459955653be090f96da9057050a5",
+          "registry_digest": "sha256:a19af43c84396761d77d575b846e31ebe5fde91a31f2725c8bfe721873a383b6"
+        }
+      },
+      "revision": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+      "schema": "20261125_0065",
+      "version": "v0.1.12"
+    },
+    "pretransfer_admission": {
+      "all_archive_checks": true,
+      "archive_bytes": 178317496,
+      "available_kib": 7714144,
+      "available_observed_at": "2026-11-27T12:04:47.319149+08:00",
+      "backup_min_kib": 6842688,
+      "ed25519_verified": true,
+      "expanded_bytes": 179226624,
+      "image_headroom_kib": 524288,
+      "margin_kib": -133069,
+      "passed": false,
+      "required_pretransfer_kib": 7847213,
+      "revision": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+      "role_config_sha256": {
+        "api": "2ef67b8bc3b1053aecc00ba8f4a25abbeb39b2da32983c943117235ee63fc33a",
+        "import-worker": "2ef67b8bc3b1053aecc00ba8f4a25abbeb39b2da32983c943117235ee63fc33a",
+        "migrate": "2ef67b8bc3b1053aecc00ba8f4a25abbeb39b2da32983c943117235ee63fc33a",
+        "web": "1bb3421aff580e89bbcf0a56425b9ac62116459955653be090f96da9057050a5"
+      },
+      "sha256": "50e157d9c787331c45bbf9fb167079ff994567b492cb6c456ce16d55e6ca0d2d",
+      "time": "2026-11-27T12:05:25.533825+08:00",
+      "transfer_headroom_kib": 131072,
+      "verified_by": "enrolled signature check plus exact independent bytes"
+    },
+    "transfer_filesystems_identical": true,
+    "admission_exit": 3,
+    "maintenance_started": false,
+    "prepare_or_apply_submitted": false,
+    "new_archive_transferred_to_host": false,
+    "current_version": "v0.1.10",
+    "actual_revisions": {
+      "api": "7c4574b005d663a79e99698a2fa7d9eabf3e4cc4",
+      "import-worker": "7c4574b005d663a79e99698a2fa7d9eabf3e4cc4",
+      "web": "7c4574b005d663a79e99698a2fa7d9eabf3e4cc4"
+    },
+    "independent_check_at": "2026-11-27T12:06:06.952088+08:00",
+    "health": {
+      "exact_origin_web_api_marker": {
+        "api": true,
+        "web": true
+      },
+      "http": {
+        "/__updates/status": 404,
+        "/api/admin/runtime-status": 401,
+        "/api/health": 200,
+        "/login": 200
+      },
+      "schema": "20261125_0065",
+      "worker_heartbeat": "fresh"
+    },
+    "existing_backup_sets_retained": 2,
+    "postgres_config_mounts_and_unrelated_runtime_unchanged": true,
+    "incumbent_rollback_manifests_unchanged": true,
+    "fast_profile_enabled": false,
+    "backups_images_user_data_deleted_this_ci_task": false
+  },
+  "extension": {
+    "fork_commit": "6725193cfe6f34e8f15f40f3be0e6c5f775e0d4e",
+    "fork_ci_run": "45831936898/1",
+    "reference_zip_sha256": "1550d75e2f459942e96a894494293dc55a7dd1c45cf24e9e03131fde8fbcc281",
+    "private_staged_zip_sha256": "3638a1d71d4c18d979581592d704e534af66551f93d353696389fa7ead1a9e79",
+    "zip_bytes": 226911,
+    "members": 59,
+    "version": "0.3.0",
+    "desktop_replaced": false
+  },
+  "acceptance": {
+    "implementation": "Project mapping, source capture, navigation and append candidate; see the companion matrix.",
+    "automation": "Qualified Reader and the separate extension revision. Synthetic exports/committed receipts are not an authenticated user acceptance.",
+    "real_chatgpt_page": "Assigned to user; this task did not use a browser or produce a new real-page screenshot.",
+    "user_source_final_committed_receipt": false,
+    "user_long_history_navigation_verified": false
+  }
+}
