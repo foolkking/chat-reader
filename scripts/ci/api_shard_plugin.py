@@ -81,8 +81,29 @@ class ExecutionRecorder:
 def pytest_runtest_call(item):
     if ("test_settings_action_task_fixture.py::test_own_action_fixture_cleanup_unblocks" in item.nodeid
             and os.environ.get("GITHUB_REF_NAME") == "codex/diagnose-claim-68607e4"):
-        from claim_observation import sample
-        with sample(item.name):
+        # No wrappers on the worker or SQLAlchemy, no sampler thread, no
+        # changes to normal GC. Inspect the stack only after a Gen2 GC begins.
+        import gc
+        import sys
+        import time
+        observations = []
+
+        def record(phase, info):
+            if info["generation"] == 2:
+                if phase == "start":
+                    frames = []
+                    frame = sys._getframe(1)
+                    while frame is not None and len(frames) < 40:
+                        frames.append((Path(frame.f_code.co_filename).name, frame.f_code.co_name, frame.f_lineno))
+                        frame = frame.f_back
+                    observations.append({"start": time.monotonic(), "frames": frames})
+                elif observations:
+                    observations[-1].update(end=time.monotonic(), collected=info["collected"])
+        gc.callbacks.append(record)
+        try:
             yield
+        finally:
+            gc.callbacks.remove(record)
+            print("GEN2_OBSERVATION " + json.dumps({"case": item.name, "events": observations}))
     else:
         yield
