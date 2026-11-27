@@ -6,6 +6,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 from api_shard_evidence import validate
@@ -44,6 +46,15 @@ def fixture():
 
 
 class ApiShardTests(unittest.TestCase):
+    def test_shard_collects_previous_module_cycles_once_at_the_boundary(self):
+        from api_shard_plugin import ExecutionRecorder
+
+        recorder = ExecutionRecorder(None)
+        with patch("api_shard_plugin.gc.collect") as collect:
+            for name, calls in (("a.py", 0), ("a.py", 0), ("b.py", 1), ("b.py", 1), ("c.py", 2)):
+                recorder.pytest_runtest_setup(SimpleNamespace(path=Path(name)))
+                self.assertEqual(collect.call_count, calls)
+
     def test_reviewed_sources_and_deterministic_complete_partitions(self):
         plan = load_schedule()
         validate_api_sources(plan)

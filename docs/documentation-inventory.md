@@ -1,5 +1,7 @@
 # Markdown 文档台账
 
+2026-11-27，`45923416147` 两次完整运行均在 API 分片 3 的同一项 2 秒领取门槛失败。独立诊断 `45927769711/1` 在同组用例记录到 2.104 秒的全堆回收（149,898 个对象）；该次观测在领取窗口外，不能作为原两次超时的直接栈证据。[分片按测试模块回收垃圾的边界](system/RELEASE_SAFETY_BASELINE.md)，原计时、断言、调度和 worker 均不变。
+
 2026-11-27，`v0.1.11` 资格运行 `45857898638/1` 的 Web 分片 2 在插入消息后删除对话时返回 500。PostgreSQL 记录了搜索索引写入与消息版本级联删除之间的死锁。修复及真实 PostgreSQL 并发回归见[后台重建的事务边界](system/BACKEND_AND_API.md)和 `apps/api/tests/test_derived_rebuild_delete_postgres.py`。
 
 2026-11-26 发布复审：补记[旧版读取范围决策的边界](system/BROWSER_EXTENSION.md#core-remediation-candidate)及[生产容量下界](deployment.md)，核心候选的本机验收与线上状态分开。
