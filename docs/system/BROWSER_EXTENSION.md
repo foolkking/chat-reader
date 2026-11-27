@@ -1,11 +1,11 @@
 # Chat Reader 浏览器插件（桌面 Chrome / Edge 私有内测）
 
-插件是本实例的客户端，不是第二个文件库。扩展的采集、资源转换及界面在 `foolkking/chat-intelligent-ui-exporter` 的 `codex/reader-extension` 分支；本仓库负责账号、数据归属、导入和导出。两边的合同名是 `reader-chat-v1`。**`king` 已部署 [`v0.1.10`](../deployment.md#v0110-production)，用户实际加载目录已原位交付同 ID 的插件 0.3.0；仍需在浏览器重新加载扩展并刷新 ChatGPT。其他实例需要自行部署和登记。** 见[精确分发与部署回执](../evidence/merge-html-2026-11-25/v0.1.10-production.json)。
+插件是本实例的客户端，不是第二个文件库。扩展的采集、资源转换及界面在 `foolkking/chat-intelligent-ui-exporter` 的 `codex/reader-extension` 分支；本仓库负责账号、数据归属、导入和导出。两边的合同名是 `reader-chat-v1`。**`king` 已部署 [`v0.1.12`](../deployment.md#v0112-production)，用户原桌面目录已交付同 ID 的插件 0.3.0（`6725193`，59 个文件）。仍需在浏览器重新加载扩展并刷新 ChatGPT。其他实例需要自行部署和登记。** 见[实例包与服务端回执](../evidence/extension-source-acceptance-2026-11-26/v0.1.12-production.json)。
 
 <a id="core-remediation-candidate"></a>
-## 当前源码：核心整改候选 — 2026-11-26，尚未发布
+## 核心整改与来源验收 — 2026-11-27 已交付
 
-本节优先描述当前工作树；下方标为“0.3.0 已交付”的章节描述此前发布版本，不表示本轮候选已安装。验收及未覆盖项见[整改审查](../execution/ux-audit-extension-core-2026-11-26.md)。
+本节描述此次交付；下方早期 0.3.0 记录也使用相同版本标签，应以提交和 ZIP 摘要区分。实际来源导入和长对话跳转未由运维代验。[状态矩阵](../evidence/extension-source-acceptance-2026-11-26/README.md)。
 
 <a id="source-acceptance"></a>
 **`6725193` 来源验收候选。** 完整 JSON 与按字节读取两种路径按“较早页优先、保留页内首次出现、创建时间齐全时稳定排序”合并重叠；仅对象属性顺序、正常类型的记录更新时间与请求标记等非内容差异可接受。数组、附件、可见性、分支、创建时间或未知内容字段冲突则停止。字节路径不因可见消息无 ID 而静默跳过；跨分支的歧义别名也不能作为成功依据。停止读取时先冲刷累计计数，后台按允许列表记录原因/阶段，不存原始异常；无包时不提示续传。已封存的上传仍按原收据协调。

@@ -1,6 +1,6 @@
 # Project State
 
-**2026-11-27：`v0.1.12` 已签名发布，`king` 未升级。** Reader `5206bd8` 的分支及标签 CI 各 19/19，签名发布 4/4。12:04（北京时间）按签名镜像包、数据库、四业务卷和原有余量核算，部署盘在传输前仍差 **129.95 MiB**。未上传、停服或清理；12:06 独立复核现网仍是 `v0.1.10`，worker 正常，两套恢复点及桌面插件均保留。真实账号的最终导入和长对话导航仍由用户验收。[发布、失败及容量回执](docs/evidence/extension-source-acceptance-2026-11-26/v0.1.12-release-and-capacity.json) · [部署边界](docs/deployment.md#v0112-pretransfer)
+**2026-11-27：`king` 已部署 `v0.1.12`（`5206bd8`）。** 仅清理 DNF 仓库缓存，实际释放 **61.54 MiB**；按原容量门槛重新准入。北京时间 12:50 切换成功，12:53 独立复核 Web/API 构建、worker 和 `0065` 数据库正常。未删备份、镜像或业务卷；两份旧备份及本次 `v0.1.10` 停写备份均保留。插件 `6725193` 的 59 个文件已在原桌面目录逐一核对。重新加载扩展后，真实账号最终导入及长对话导航仍由用户验收。[生产回执](docs/evidence/extension-source-acceptance-2026-11-26/v0.1.12-production.json) · [发布与原拒绝记录](docs/evidence/extension-source-acceptance-2026-11-26/v0.1.12-release-and-capacity.json)
 
 **来源整改验收候选（2026-11-26，未发布）。** 插件 `6725193` 已修复分页重叠和顺序、失败进度、区间勾选及章节定位。配套 Reader 运行基线 `41e0ebf` 没有新增应用代码或 migration。两份精确 CI 绿色；新版插件包的合成缺图导入、251 条追加及去重在隔离 API/worker/PostgreSQL 完成，不能代替个人账号实测。真实来源导入、长对话双向跳转和截图由用户执行。[状态矩阵、回执与安装包摘要](docs/evidence/extension-source-acceptance-2026-11-26/README.md) · [浏览器验收单](docs/evidence/extension-source-acceptance-2026-11-26/manual.md)
 

@@ -1,0 +1,317 @@
+{
+  "recorded_at": "2026-11-27T12:53:26.035572+08:00",
+  "host": "king",
+  "release": {
+    "version": "v0.1.12",
+    "commit": "5206bd8c547e781fbbcff64d859f70f221b945cb",
+    "previous": "v0.1.10",
+    "previous_commit": "7c4574b005d663a79e99698a2fa7d9eabf3e4cc4",
+    "release_id": 460152473,
+    "image_archive_sha256": "50e157d9c787331c45bbf9fb167079ff994567b492cb6c456ce16d55e6ca0d2d",
+    "image_archive_bytes": 178317496,
+    "enrolled_ed25519_verified": true,
+    "image_archive_asset_id": 798895956,
+    "ci_artifact_id": 15169778489,
+    "stored_ci_evidence": [
+      {
+        "run": 45930295682,
+        "attempt": 1,
+        "successful_jobs": 19
+      },
+      {
+        "run": 45932950696,
+        "attempt": 1,
+        "successful_jobs": 19
+      },
+      {
+        "run": 45932921879,
+        "attempt": 1,
+        "successful_jobs": 4
+      }
+    ],
+    "prior_failures_preserved_in": "v0.1.12-release-and-capacity.json"
+  },
+  "cleanup": {
+    "operations": [
+      "dnf clean metadata",
+      "dnf clean dbcache"
+    ],
+    "cache_scope": "DNF regenerated repository indexes and solver caches only; cache-only mode and plugins off",
+    "start": "2026-11-27T12:40:58.011088+08:00",
+    "end": "2026-11-27T12:40:58.757913+08:00",
+    "both_exit_codes": [
+      0,
+      0
+    ],
+    "released_allocated_bytes": 64524288,
+    "rpm_packages_removed": 0,
+    "backups_deleted": 0,
+    "images_deleted": 0,
+    "business_volumes_deleted": 0,
+    "other_cache_log_or_home_items_removed": false
+  },
+  "admission": {
+    "available_before_kib": 7816636,
+    "before_observed_at": "2026-11-27T12:39:42.252562+08:00",
+    "required_pretransfer_kib": 7875209,
+    "available_after_kib": 7879444,
+    "after_observed_at": "2026-11-27T12:41:24.860751+08:00",
+    "margin_kib": 4235,
+    "preapply_minimum_backup_kib": 6870684,
+    "preapply_available_kib": 7589924
+  },
+  "deployment": {
+    "prepare_job": "6b06b842f60041508d12f08fa8c9289d",
+    "prepare_observed_at": "2026-11-27T12:42:41.832717+08:00",
+    "download_ms": 6427,
+    "online_ready_ms": 47410,
+    "apply_job": "9d2ed624cbab44b7bc501887039a584e",
+    "apply_accepted_observation": "2026-11-27T12:43:42.700642+08:00",
+    "apply_terminal_observed": "2026-11-27T12:50:43.735833+08:00",
+    "outcome": "succeeded",
+    "mode": "full",
+    "apply_timings_ms": {
+      "admission": 62430,
+      "backup": 330656,
+      "commit": 3926,
+      "draining": 6280,
+      "fencing": 1189,
+      "health": 12460,
+      "migration": 526,
+      "switching": 2961
+    },
+    "phase_observations": [
+      {
+        "at": "2026-11-27T12:44:11.149435+08:00",
+        "maintenance_gate": false,
+        "phase": "admission"
+      },
+      {
+        "at": "2026-11-27T12:44:47.279836+08:00",
+        "maintenance_gate": true,
+        "phase": "draining"
+      },
+      {
+        "at": "2026-11-27T12:44:55.338098+08:00",
+        "maintenance_gate": true,
+        "phase": "backup"
+      },
+      {
+        "at": "2026-11-27T12:50:23.712395+08:00",
+        "maintenance_gate": true,
+        "phase": "switching"
+      },
+      {
+        "at": "2026-11-27T12:50:27.716694+08:00",
+        "maintenance_gate": true,
+        "phase": "health"
+      },
+      {
+        "at": "2026-11-27T12:50:39.731362+08:00",
+        "maintenance_gate": true,
+        "phase": "commit"
+      },
+      {
+        "at": "2026-11-27T12:50:43.735582+08:00",
+        "maintenance_gate": false,
+        "phase": "succeeded"
+      }
+    ],
+    "probe_scope": "independent anonymous samples began after apply; not total downtime or browser acceptance",
+    "anonymous_probe": [
+      {
+        "first": "2026-11-27T12:46:22.679765+08:00",
+        "last": "2026-11-27T12:50:12.444134+08:00",
+        "samples": 20,
+        "state": {
+          "job_phase": "backup",
+          "pair": {
+            "api": [
+              502,
+              "absent_or_other"
+            ],
+            "web": [
+              503,
+              "absent_or_other"
+            ]
+          }
+        }
+      },
+      {
+        "first": "2026-11-27T12:50:24.563373+08:00",
+        "last": "2026-11-27T12:50:24.563373+08:00",
+        "samples": 1,
+        "state": {
+          "job_phase": "switching",
+          "pair": {
+            "api": [
+              502,
+              "absent_or_other"
+            ],
+            "web": [
+              503,
+              "absent_or_other"
+            ]
+          }
+        }
+      },
+      {
+        "first": "2026-11-27T12:50:36.772367+08:00",
+        "last": "2026-11-27T12:50:36.772367+08:00",
+        "samples": 1,
+        "state": {
+          "job_phase": "health",
+          "pair": {
+            "api": [
+              200,
+              "target"
+            ],
+            "web": [
+              503,
+              "absent_or_other"
+            ]
+          }
+        }
+      },
+      {
+        "first": "2026-11-27T12:50:48.916324+08:00",
+        "last": "2026-11-27T12:50:48.916324+08:00",
+        "samples": 1,
+        "state": {
+          "job_phase": "succeeded",
+          "pair": {
+            "api": [
+              200,
+              "target"
+            ],
+            "web": [
+              200,
+              "target"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "post_verification": {
+    "observed_at": "2026-11-27T12:53:18.862322+08:00",
+    "same_revision_in_web_api_worker": true,
+    "health": {
+      "exact_origin_web_api_marker": {
+        "api": true,
+        "web": true
+      },
+      "http": {
+        "/__updates/status": 404,
+        "/api/admin/runtime-status": 401,
+        "/api/health": 200,
+        "/login": 200
+      },
+      "schema": "20261125_0065",
+      "worker_heartbeat": "fresh"
+    },
+    "maintenance": false,
+    "stable_against_predeployment": {
+      "postgres_container": true,
+      "business_volume_mounts": true,
+      "protected_configuration": true,
+      "unrelated_containers_count": 5,
+      "unrelated_runtime_unchanged": true
+    },
+    "four_current_and_four_previous_role_images_match_signed_specs": true,
+    "deployed_extension_contract": {
+      "account_discovery": false,
+      "capture": true,
+      "import_diagnostics": true,
+      "project_discovery": false,
+      "protocol": 1,
+      "resumable_capture": true,
+      "selective_append": true,
+      "selective_append_ranges": true,
+      "web_import_project": true
+    },
+    "anonymous_extension_routes": {
+      "/api/extension/v1/capabilities": 401,
+      "/api/extension/v1/projects": 401
+    },
+    "fs_available_bytes_after": 3251044352
+  },
+  "recovery": {
+    "data_and_program_sets": {
+      "6da435a70f0485a116c84525da899bfd8f234434": {
+        "all_four_role_tags_match_predeployment_ids": true,
+        "backup_name": "chat-reader-20261125T190912Z",
+        "manifest_sha256": "0b0d2c8c57dab3d7bbb4fa389ae606e78c2b5807108c2c584c8574377db16bd8"
+      },
+      "7c4574b005d663a79e99698a2fa7d9eabf3e4cc4": {
+        "all_four_role_tags_match_predeployment_ids": true,
+        "backup_name": "chat-reader-20261127T044453Z",
+        "manifest_sha256": "a121c78f1593668d9a33247b475624713a9b2c558f8181e300b452af0b9e7933"
+      },
+      "b824ee949f03ec403e7e60beb677731c2fcff9c4": {
+        "all_four_role_tags_match_predeployment_ids": true,
+        "backup_name": "chat-reader-20261125T023127Z",
+        "manifest_sha256": "d0e94524f8e52a86856126d0cadec5ac3f8946de5168c716bf251a0deccb0a40"
+      }
+    },
+    "new_backup": {
+      "backup_name": "chat-reader-20261127T044453Z",
+      "source_sha": "7c4574b005d663a79e99698a2fa7d9eabf3e4cc4",
+      "manifest_sha256": "a121c78f1593668d9a33247b475624713a9b2c558f8181e300b452af0b9e7933",
+      "logical_component_bytes": 4308934207,
+      "five_checksums_verified": true,
+      "four_full_archive_reads": true,
+      "postgres_toc_reread": true,
+      "independent_restore": false,
+      "end": "2026-11-27T12:52:49.275595+08:00"
+    },
+    "prior_isolated_restore_proven_for_version": "v0.1.5",
+    "v0.1.7_or_v0.1.10_isolated_restore_proven": false
+  },
+  "extension": {
+    "label": "0.3.0",
+    "fork_sha": "6725193cfe6f34e8f15f40f3be0e6c5f775e0d4e",
+    "fork_ci": "45831936898/1",
+    "reference_artifact_id": 15122244228,
+    "reference_sha256": "1550d75e2f459942e96a894494293dc55a7dd1c45cf24e9e03131fde8fbcc281",
+    "private_zip_sha256": "3638a1d71d4c18d979581592d704e534af66551f93d353696389fa7ead1a9e79",
+    "private_zip_bytes": 226911,
+    "installed_files": 59,
+    "retained_previous_files": 54,
+    "existing_registered_directory_used": true,
+    "unchanged_extension_id": true,
+    "independent_installed_and_rollback_byte_check": true,
+    "browser_reload_required": true
+  },
+  "acceptance": {
+    "automatic_release_and_caps_verified": true,
+    "personal_browser_verification_assigned_to_user": true,
+    "no_production_user_import_performed": true,
+    "personal_source_committed_receipt": false,
+    "real_long_conversation_navigation": false,
+    "real_browser_screenshots_collected": false
+  },
+  "evidence_sha256": {
+    "v0.1.12-release-and-capacity.json": "34b679224d4970b335dd1076764a5cfe278ea0b79a38c56faaeecd0c2404220e",
+    "published-identity.json": "aa2698c74704389416c33e27239af05cf3d9cae829048b6e24e6286f1be1399a",
+    "dnf-clean-01.json": "b2ea153d567759042af7aa374c46d5c414b6510a55921203a55423d5ce2c5e14",
+    "safe-cache-before-01.json": "861720e7eed7f6fe8a5e0108929ccaeea816ff30708c841e0ba05cb46ed2356a",
+    "safe-cache-signed-01.json": "eb62278a47a8d92cb0639566223b5ee935a39f39ef0fefcfdf35609909b5cd84",
+    "artifact-admission-safe-cache-after-01.json": "c85a756a0f001a4a0885f93ef72fed280ce9f7ff1658089205de471de7198569",
+    "safe-cache-prepare-01.json": "0d13eeab6849a1113c7d94f82cb2defe383d5d5d53bae98ba9bf6c5fd858691d",
+    "safe-cache-apply-01.json": "fc24f34b8ddade9cabbc37916abee549b5056be1f7f94eea9a93bede58d173a6",
+    "safe-cache-watch-prepare-01.json": "d6f19c434b7fd0d9b7392e4413e9726f527f77554ade0d47833d4807f4ccbe52",
+    "safe-cache-watch-apply-01.json": "2543eb300483c8f4967b3d5a5a4f6e26f7cf41c6935fb5f579a2de58f2732b83",
+    "safe-cache-after-prepare-01.json": "47a27f7052c8a5e1672c637576df3e6fd174121942f557fb7640d9e629acb7d6",
+    "safe-cache-after-01-state.json": "7ad0e6214fff6a77dbd77bbce5757db8eaada1a27b7a7a61230363a24a4d37bb",
+    "deployment-baseline-01.json": "f93cc2dd40be6d82445a843fe01894e566779d1668d0d1fb21c0dfa14eea90e1",
+    "safe-cache-contract-01.json": "12adafc6078eb8bf9300e22f387aa05eb4c6f6d16f51ffba988a601264afc489",
+    "safe-cache-backup-01.json": "bfb1e2c46221f219b90d8e56ff1c043ed972d7fec0601312cea26b740ce0227f",
+    "rollback-pairs-01.json": "e7f97602f60f1bb1b5c4aab0de895861435ce137fcf7b0c606f5cbae9edfd4ab",
+    "public-observation-01.json": "883635bddfef2b38da7f3cbc7580f8e024fea61e3e3bc1aad8ac0bc2facfa916",
+    "extension-distribution-01.json": "ecf630531a79c8f88bf91e746daa085a76569245df3b5f55243f8904a9be08f2",
+    "desktop-delivery-safe-cache-after-01-state.json": "a9fd0641b8a22a259486825bc1310cf52b5d8dbe606bea5102768d8c8a5ae981",
+    "desktop-independent-01.json": "a9e21b86a7629242e54242855d43d5090586bb0ca39a8fb152e557f57b3b94d2",
+    "safe-cache-after-final.json": "242ba512c39ca72bf7fabd373f25e9d01247a27ccc8ac6a9be81457daac713ac"
+  }
+}
